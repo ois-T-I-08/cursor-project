@@ -1,0 +1,93 @@
+// Prisma スキーマ
+// 開発初期は SQLite を使用。本番では provider を "postgresql" に変更するだけで移行できるよう、
+// SQLite 固有の機能は使わない方針。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// マスターデータ（外部APIから同期して保存する）
+// ============================================================
+
+/// キャラクターの基本情報
+model Character {
+  id         String   @id // APIのスラッグ（例: "hu-tao"）
+  name       String
+  element    String // 元素（pyro / hydro / electro / cryo / anemo / geo / dendro）
+  weaponType String // 武器種（sword / claymore / polearm / bow / catalyst）
+  rarity     Int // レアリティ（4 or 5）
+  region     String // 出身地域（Mondstadt など）
+  iconUrl    String // アイコン画像URL
+  scoreType  String @default("atk") // 聖遺物スコア計算タイプ（atk / hp / def / em）
+  syncedAt   DateTime @updatedAt // 最終同期日時
+
+  progresses UserProgress[]
+}
+
+/// 武器の基本情報
+model Weapon {
+  id         String   @id
+  name       String
+  weaponType String
+  rarity     Int
+  iconUrl    String
+  syncedAt   DateTime @updatedAt
+}
+
+/// 素材の基本情報
+model Material {
+  id       String   @id
+  name     String
+  category String // 種類（talent-book / boss-material / local-specialties など）
+  rarity   Int? // レアリティ（APIに存在する場合のみ）
+  iconUrl  String
+  syncedAt DateTime @updatedAt
+}
+
+// ============================================================
+// ユーザーデータ（マスターデータとは別管理）
+// ============================================================
+
+/// ユーザーごとのキャラクター育成状況
+/// Ver.1 ではログインなし。ブラウザに保存した匿名IDを userId として使う。
+model UserProgress {
+  id          String  @id @default(cuid())
+  userId      String // 匿名ユーザーID
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id])
+
+  level       Int     @default(1) // レベル (1-90)
+  ascension   Int     @default(0) // 突破段階 (0-6)
+  constellation Int   @default(0) // 命ノ星座（凸数 0-6）
+  talentNormal Int    @default(1) // 天賦：通常攻撃 (1-10)
+  talentSkill  Int    @default(1) // 天賦：元素スキル (1-10)
+  talentBurst  Int    @default(1) // 天賦：元素爆発 (1-10)
+  weaponId    String  @default("") // 装備武器のマスターID
+  weaponName  String  @default("") // 装備武器名（表示用）
+  weaponLevel Int     @default(1) // 武器レベル (1-90)
+  weaponRefinement Int @default(1) // 精錬ランク (1-5)
+  artifacts   String  @default("") // 聖遺物データ（JSON文字列。SQLiteはJson型非対応のため）
+  isCompleted Boolean @default(false) // 育成完了フラグ
+  memo        String  @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 同じユーザーが同じキャラを重複登録できないようにする
+  @@unique([userId, characterId])
+  @@index([userId])
+}
+
+/// マスターデータ同期の実行履歴（デバッグ・Cron監視用）
+model SyncLog {
+  id        Int      @id @default(autoincrement())
+  status    String // "success" / "error"
+  detail    String // 同期件数やエラーメッセージ
+  createdAt DateTime @default(now())
+}
