@@ -45,11 +45,7 @@ final dailyNoteProvider = FutureProvider<DailyNote?>((ref) async {
   if (!session.canFetchDailyNote) return null;
 
   final repo = await ref.watch(hoyolabRepositoryProvider.future);
-  try {
-    return await repo.fetchDailyNote();
-  } on Object {
-    return null;
-  }
+  return repo.fetchDailyNote();
 });
 
 final hoyolabRolesProvider = FutureProvider<List<HoyolabGameRole>>((ref) async {

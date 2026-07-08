@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -25,6 +27,8 @@ class CharacterDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
+  static const _saveDebounceMs = 800;
+
   int _level = 1;
   int _targetLevel = levelMax;
   int _talentNormal = 1;
@@ -33,17 +37,25 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   int _weaponLevel = 1;
 
   MasterCharacter? _character;
+  UserProgress? _progress;
   List<PromoteStage> _promotes = [];
   Map<String, List<TalentLevelUpgrade>> _talents = {};
   Map<String, MasterMaterial> _materials = {};
   List<MaterialBookmarkEntry> _bookmarks = [];
   bool _loading = true;
   String? _error;
+  Timer? _saveTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -57,9 +69,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       final upgrade = await charRepo.getUpgrade(widget.characterId);
       _promotes = upgrade?.promotes ?? [];
       _talents = upgrade?.talents ?? {};
-      _materials = await charRepo.getMaterialsMap();
+      _materials = await ref.read(materialsMapProvider.future);
 
-      final progress = await progressRepo.getOrCreate(
+      _progress = await progressRepo.getOrCreate(
         userId: userId,
         characterId: widget.characterId,
         progressId: const Uuid().v4(),
@@ -68,11 +80,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       final bookmarks = await bookmarkRepo.getAll();
       if (!mounted) return;
       setState(() {
-        _level = progress.level;
-        _talentNormal = progress.talentNormal;
-        _talentSkill = progress.talentSkill;
-        _talentBurst = progress.talentBurst;
-        _weaponLevel = progress.weaponLevel;
+        _level = _progress!.level;
+        _talentNormal = _progress!.talentNormal;
+        _talentSkill = _progress!.talentSkill;
+        _talentBurst = _progress!.talentBurst;
+        _weaponLevel = _progress!.weaponLevel;
         _bookmarks = bookmarks;
         _loading = false;
       });
@@ -83,6 +95,58 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _loading = false;
       });
     }
+  }
+
+  void _scheduleSave() {
+    final base = _progress;
+    if (base == null) return;
+    _saveTimer?.cancel();
+    _saveTimer = Timer(
+      const Duration(milliseconds: _saveDebounceMs),
+      () => _persistProgress(base),
+    );
+  }
+
+  Future<void> _persistProgress(UserProgress base) async {
+    final updated = base.copyWith(
+      level: _level,
+      talentNormal: _talentNormal,
+      talentSkill: _talentSkill,
+      talentBurst: _talentBurst,
+      weaponLevel: _weaponLevel,
+    );
+    _progress = updated;
+    try {
+      final repo = await ref.read(progressRepositoryProvider.future);
+      await repo.save(updated);
+    } catch (_) {
+      // 保存失敗は UI を落とさない
+    }
+  }
+
+  void _updateLevel(int v) {
+    setState(() => _level = v);
+    _scheduleSave();
+  }
+
+  void _updateTalentNormal(int v) {
+    setState(() => _talentNormal = v);
+    _scheduleSave();
+  }
+
+  void _updateTalentSkill(int v) {
+    setState(() => _talentSkill = v);
+    _scheduleSave();
+  }
+
+  void _updateTalentBurst(int v) {
+    setState(() => _talentBurst = v);
+    _scheduleSave();
+  }
+
+  void _updateWeaponLevel(int v) {
+    setState(() => _weaponLevel = v);
+    _scheduleSave();
   }
 
   String _resolveName(String id) => _materials[id]?.name ?? '素材 #$id';
@@ -141,7 +205,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           LevelMarkSlider(
             label: '現在レベル',
             value: _level,
-            onChanged: (v) => setState(() => _level = v),
+            onChanged: _updateLevel,
           ),
           const SizedBox(height: 16),
           LevelMarkSlider(
@@ -203,7 +267,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             value: _talentNormal,
             marks: talentMarks,
             max: talentLevelMax,
-            onChanged: (v) => setState(() => _talentNormal = v),
+            onChanged: _updateTalentNormal,
           ),
           const SizedBox(height: 8),
           MarkSlider(
@@ -211,7 +275,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             value: _talentSkill,
             marks: talentMarks,
             max: talentLevelMax,
-            onChanged: (v) => setState(() => _talentSkill = v),
+            onChanged: _updateTalentSkill,
           ),
           const SizedBox(height: 8),
           MarkSlider(
@@ -219,7 +283,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             value: _talentBurst,
             marks: talentMarks,
             max: talentLevelMax,
-            onChanged: (v) => setState(() => _talentBurst = v),
+            onChanged: _updateTalentBurst,
           ),
           if (talentUpgrades.isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -257,7 +321,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           LevelMarkSlider(
             label: '武器レベル',
             value: _weaponLevel,
-            onChanged: (v) => setState(() => _weaponLevel = v),
+            onChanged: _updateWeaponLevel,
           ),
         ],
       ),

@@ -1,4 +1,5 @@
 /// ドメインモデル（計算入出力）
+library;
 
 class PromoteStage {
   const PromoteStage({

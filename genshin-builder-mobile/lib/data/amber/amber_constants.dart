@@ -1,4 +1,5 @@
 /// Project Amber API 定数・マッピング（Web `project-amber.ts` 相当）
+library;
 
 const amberBaseUrl = 'https://gi.yatta.moe';
 const amberAssetUrl = '$amberBaseUrl/assets/UI';

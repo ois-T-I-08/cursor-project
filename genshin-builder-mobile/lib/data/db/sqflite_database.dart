@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../domain/models/bookmark.dart';
 import '../../domain/models/calculation_models.dart';
 import '../models/master_models.dart';
+import 'upgrade_serde.dart';
 
 /// sqflite 実装（Drift codegen 完了までの暫定 DB）
 class AppDatabase {
@@ -161,6 +162,43 @@ class AppDatabase {
 
   Future<void> close() => _db.close();
 
+  /// マスタ同期などの一括書き込み用
+  Future<void> upsertCharactersBatch(List<MasterCharacter> list) async {
+    final batch = _db.batch();
+    for (final c in list) {
+      batch.insert(
+        'characters',
+        c.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> upsertWeaponsBatch(List<MasterWeapon> list) async {
+    final batch = _db.batch();
+    for (final w in list) {
+      batch.insert(
+        'weapons',
+        w.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> upsertMaterialsBatch(List<MasterMaterial> list) async {
+    final batch = _db.batch();
+    for (final m in list) {
+      batch.insert(
+        'materials',
+        m.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
   // --- Characters ---
 
   Future<void> upsertCharacter(MasterCharacter c) async {
@@ -237,10 +275,11 @@ class AppDatabase {
       'character_upgrades',
       {
         'character_id': characterId,
-        'promotes': jsonEncode(promotes.map(_promoteToJson).toList()),
+        'promotes': jsonEncode(promotes.map(UpgradeSerde.promoteToJson).toList()),
         'talents': jsonEncode(
           talents.map(
-            (key, value) => MapEntry(key, value.map(_talentToJson).toList()),
+            (key, value) =>
+                MapEntry(key, value.map(UpgradeSerde.talentToJson).toList()),
           ),
         ),
         'synced_at': DateTime.now().millisecondsSinceEpoch,
@@ -265,13 +304,13 @@ class AppDatabase {
         jsonDecode(row['talents']! as String) as Map<String, dynamic>;
     return (
       promotes: promotesRaw
-          .map((e) => _promoteFromJson(e as Map<String, dynamic>))
+          .map((e) => UpgradeSerde.promoteFromJson(e as Map<String, dynamic>))
           .toList(),
       talents: talentsRaw.map(
         (key, value) => MapEntry(
           key,
           (value as List)
-              .map((e) => _talentFromJson(e as Map<String, dynamic>))
+              .map((e) => UpgradeSerde.talentFromJson(e as Map<String, dynamic>))
               .toList(),
         ),
       ),
@@ -287,7 +326,7 @@ class AppDatabase {
       'weapon_upgrades',
       {
         'weapon_id': weaponId,
-        'promotes': jsonEncode(promotes.map(_promoteToJson).toList()),
+        'promotes': jsonEncode(promotes.map(UpgradeSerde.promoteToJson).toList()),
         'level_up_item_ids': jsonEncode(levelUpItemIds),
         'synced_at': DateTime.now().millisecondsSinceEpoch,
       },
@@ -309,7 +348,7 @@ class AppDatabase {
         (jsonDecode(row['level_up_item_ids']! as String) as List).cast<String>();
     return (
       promotes: promotesRaw
-          .map((e) => _promoteFromJson(e as Map<String, dynamic>))
+          .map((e) => UpgradeSerde.promoteFromJson(e as Map<String, dynamic>))
           .toList(),
       levelUpItemIds: itemIds,
     );
@@ -451,34 +490,5 @@ class AppDatabase {
         characterIconUrl: row['character_icon_url'] as String?,
         characterEmoji: row['character_emoji'] as String?,
         addedAt: row['added_at']! as int,
-      );
-
-  static Map<String, dynamic> _promoteToJson(PromoteStage p) => {
-        'promoteLevel': p.promoteLevel,
-        'unlockMaxLevel': p.unlockMaxLevel,
-        'costItems': p.costItems,
-        'coinCost': p.coinCost,
-        'requiredPlayerLevel': p.requiredPlayerLevel,
-      };
-
-  static PromoteStage _promoteFromJson(Map<String, dynamic> j) => PromoteStage(
-        promoteLevel: j['promoteLevel'] as int,
-        unlockMaxLevel: j['unlockMaxLevel'] as int,
-        costItems: Map<String, int>.from(j['costItems'] as Map),
-        coinCost: j['coinCost'] as int,
-        requiredPlayerLevel: j['requiredPlayerLevel'] as int?,
-      );
-
-  static Map<String, dynamic> _talentToJson(TalentLevelUpgrade t) => {
-        'level': t.level,
-        'costItems': t.costItems,
-        'coinCost': t.coinCost,
-      };
-
-  static TalentLevelUpgrade _talentFromJson(Map<String, dynamic> j) =>
-      TalentLevelUpgrade(
-        level: j['level'] as int,
-        costItems: Map<String, int>.from(j['costItems'] as Map),
-        coinCost: j['coinCost'] as int,
       );
 }

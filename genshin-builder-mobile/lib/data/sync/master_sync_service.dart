@@ -1,7 +1,6 @@
 import '../../domain/models/calculation_models.dart';
 import '../amber/amber_api.dart';
 import '../db/app_database.dart';
-import '../models/master_models.dart';
 
 class SyncResult {
   SyncResult({
@@ -50,9 +49,7 @@ class MasterSyncService {
 
     try {
       final characters = await _amber.fetchCharacters();
-      for (final c in characters) {
-        await _db.upsertCharacter(c);
-      }
+      await _db.upsertCharactersBatch(characters);
       result.characters = characters.length;
     } catch (e) {
       result.errors.add('characters: $e');
@@ -60,9 +57,7 @@ class MasterSyncService {
 
     try {
       final weapons = await _amber.fetchWeapons();
-      for (final w in weapons) {
-        await _db.upsertWeapon(w);
-      }
+      await _db.upsertWeaponsBatch(weapons);
       result.weapons = weapons.length;
     } catch (e) {
       result.errors.add('weapons: $e');
@@ -70,9 +65,7 @@ class MasterSyncService {
 
     try {
       final materials = await _amber.fetchMaterials();
-      for (final m in materials) {
-        await _db.upsertMaterial(m);
-      }
+      await _db.upsertMaterialsBatch(materials);
       result.materials = materials.length;
     } catch (e) {
       result.errors.add('materials: $e');

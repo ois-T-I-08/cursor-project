@@ -30,7 +30,7 @@ class AmberApi {
       final raw = entry.value as Map<String, dynamic>;
       final element = raw['element'] as String?;
       return MasterCharacter(
-        id: '${entry.key}',
+        id: entry.key,
         name: raw['name'] as String? ?? entry.key,
         element: element != null ? (elementMap[element] ?? element.toLowerCase()) : 'anemo',
         weaponType: weaponTypeMap[raw['weaponType'] as String? ?? ''] ?? 'sword',
@@ -48,7 +48,7 @@ class AmberApi {
     return data.entries.map((entry) {
       final raw = entry.value as Map<String, dynamic>;
       return MasterWeapon(
-        id: '${entry.key}',
+        id: entry.key,
         name: raw['name'] as String? ?? entry.key,
         weaponType: weaponTypeMap[raw['type'] as String? ?? ''] ?? 'sword',
         rarity: (raw['rank'] as num?)?.toInt() ?? 3,
@@ -66,7 +66,7 @@ class AmberApi {
           final type = raw['type'] as String? ?? '';
           if (!materialCategories.contains(type)) return null;
           return MasterMaterial(
-            id: '${entry.key}',
+            id: entry.key,
             name: raw['name'] as String? ?? entry.key,
             category: type,
             rarity: (raw['rank'] as num?)?.toInt(),

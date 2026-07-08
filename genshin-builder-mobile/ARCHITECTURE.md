@@ -64,7 +64,7 @@ flowchart TB
 | Phase | スコープ | 完了条件 |
 |-------|----------|----------|
 | **Phase 1** | 育成 UI + 素材計算 + ブックマーク + Amber 同期 + **Drift DB** | Web と同じ数値・同じブックマーク仕様でキャラ詳細が動作 |
-| **Phase 2** | HoYoLAB 連携（**設計 + 骨組み + 段階的実装**） | WebView ログイン → Cookie 保存 → dailyNote 表示 |
+| **Phase 2** | HoYoLAB 連携（WebView ログイン・dailyNote・設定 UI） | WebView ログイン → Cookie 保存 → dailyNote 表示 |
 | Phase 3（将来） | 聖遺物スコア・Firebase 等 | 未定 |
 
 ### Phase 1 — 詳細
@@ -157,9 +157,11 @@ genshin-builder-mobile/
 
 ## 4. データ層
 
-### 4.1 Drift（Phase 1 — sqflite から移行）
+### 4.1 ランタイム DB（sqflite）と Drift 移行準備
 
-現状 scaffold は `sqflite`。**Phase 1 実装の第一歩は Drift へ置換**。
+**現状**: ランタイムは `sqflite_database.dart`（`app_database.dart` から export）。  
+**Drift**: `lib/data/db/drift/` に tables / daos 定義済み。codegen 後に切替予定。  
+共有: `lib/data/db/upgrade_serde.dart` で突破 JSON の encode/decode を一元化。
 
 | テーブル | 用途 |
 |----------|------|

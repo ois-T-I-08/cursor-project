@@ -2,6 +2,14 @@
 
 セッションごとの設計判断ログ。重要な決定のみ追記する。
 
+## 2026-07-08 — 全体最適化（構成見直し）
+
+- **進捗保存**: キャラ詳細スライダー変更を 800ms debounce で `user_progress` 永続化
+- **DB**: `upgrade_serde.dart` 共有、マスタ同期を batch upsert に変更
+- **Repository**: `progress_repository.dart` を分離、`materialsMapProvider` 追加
+- **HoYoLAB**: dailyNote エラーを `HoyolabApiException.userMessage` で表示
+- **Web**: `formatMora` / `isMaterialBookmarked` 重複除去、ARCHITECTURE ブックマーク追記
+
 ## 2026-07-08 — Phase 2 HoYoLAB 連携実装
 
 - **API**: `hoyolab_api.dart` — dailyNote / verifyLToken / getUserGameRoles + `ApiRequestQueue` 500ms

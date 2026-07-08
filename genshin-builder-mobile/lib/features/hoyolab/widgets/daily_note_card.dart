@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/hoyolab/hoyolab_exceptions.dart';
 import '../../../data/hoyolab/models/daily_note.dart';
 import '../../../providers/hoyolab_providers.dart';
 
@@ -72,7 +73,11 @@ class DailyNoteCard extends ConsumerWidget {
                       },
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Text('取得エラー: $e'),
+                      error: (e, _) => Text(
+                        e is HoyolabApiException
+                            ? e.userMessage
+                            : '取得エラーが発生しました',
+                      ),
                     ),
                   ],
                 ),
@@ -120,7 +125,7 @@ class _DailyNoteBody extends StatelessWidget {
     final duration = Duration(seconds: seconds);
     final h = duration.inHours;
     final m = duration.inMinutes.remainder(60);
-    return '${h}時間${m}分で1回復';
+    return '$h時間$m分で1回復';
   }
 
   @override

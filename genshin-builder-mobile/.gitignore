@@ -22,6 +22,12 @@ build/
 *.g.dart
 *.freezed.dart
 
+# OS / tooling
+.DS_Store
+Thumbs.db
+coverage/
+devtools_options.yaml
+
 # Env / secrets
 .env
 *.keystore

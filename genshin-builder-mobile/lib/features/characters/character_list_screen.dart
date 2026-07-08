@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/models/master_models.dart';
 import '../../providers/app_providers.dart';
 
 class CharacterListScreen extends ConsumerWidget {

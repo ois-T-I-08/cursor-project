@@ -6,6 +6,7 @@ import '../../../models/master_models.dart';
 import '../../../../domain/models/calculation_models.dart';
 import '../app_database.dart';
 import '../tables/master_tables.dart';
+import '../../upgrade_serde.dart';
 
 part 'character_dao.g.dart';
 
@@ -95,10 +96,11 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
     await into(characterUpgrades).insertOnConflictUpdate(
       CharacterUpgradesCompanion.insert(
         characterId: characterId,
-        promotes: jsonEncode(promotes.map(_promoteToJson).toList()),
+        promotes: jsonEncode(promotes.map(UpgradeSerde.promoteToJson).toList()),
         talents: jsonEncode(
           talents.map(
-            (key, value) => MapEntry(key, value.map(_talentToJson).toList()),
+            (key, value) =>
+                MapEntry(key, value.map(UpgradeSerde.talentToJson).toList()),
           ),
         ),
         syncedAt: now,
@@ -118,13 +120,13 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
     final talentsRaw = jsonDecode(row.talents) as Map<String, dynamic>;
     return (
       promotes: promotesRaw
-          .map((e) => _promoteFromJson(e as Map<String, dynamic>))
+          .map((e) => UpgradeSerde.promoteFromJson(e as Map<String, dynamic>))
           .toList(),
       talents: talentsRaw.map(
         (key, value) => MapEntry(
           key,
           (value as List)
-              .map((e) => _talentFromJson(e as Map<String, dynamic>))
+              .map((e) => UpgradeSerde.talentFromJson(e as Map<String, dynamic>))
               .toList(),
         ),
       ),
@@ -158,34 +160,5 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
         iconUrl: row.iconUrl,
         expValue: row.expValue,
         expTarget: row.expTarget,
-      );
-
-  static Map<String, dynamic> _promoteToJson(PromoteStage p) => {
-        'promoteLevel': p.promoteLevel,
-        'unlockMaxLevel': p.unlockMaxLevel,
-        'costItems': p.costItems,
-        'coinCost': p.coinCost,
-        'requiredPlayerLevel': p.requiredPlayerLevel,
-      };
-
-  static PromoteStage _promoteFromJson(Map<String, dynamic> j) => PromoteStage(
-        promoteLevel: j['promoteLevel'] as int,
-        unlockMaxLevel: j['unlockMaxLevel'] as int,
-        costItems: Map<String, int>.from(j['costItems'] as Map),
-        coinCost: j['coinCost'] as int,
-        requiredPlayerLevel: j['requiredPlayerLevel'] as int?,
-      );
-
-  static Map<String, dynamic> _talentToJson(TalentLevelUpgrade t) => {
-        'level': t.level,
-        'costItems': t.costItems,
-        'coinCost': t.coinCost,
-      };
-
-  static TalentLevelUpgrade _talentFromJson(Map<String, dynamic> j) =>
-      TalentLevelUpgrade(
-        level: j['level'] as int,
-        costItems: Map<String, int>.from(j['costItems'] as Map),
-        coinCost: j['coinCost'] as int,
       );
 }

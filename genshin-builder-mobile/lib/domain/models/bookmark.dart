@@ -1,4 +1,5 @@
 /// ブックマーク型（Web `types/bookmark.ts` 相当）
+library;
 
 const moraMaterialId = '__mora__';
 

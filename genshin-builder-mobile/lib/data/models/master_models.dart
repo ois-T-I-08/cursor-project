@@ -1,4 +1,5 @@
 /// マスターデータモデル（Prisma 相当）
+library;
 
 class MasterCharacter {
   const MasterCharacter({

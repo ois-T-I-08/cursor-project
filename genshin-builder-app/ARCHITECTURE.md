@@ -73,7 +73,26 @@
 | `character/` | 一覧・カード・詳細エディタ |
 | `character/detail/` | 育成入力 UI（Client 中心） |
 | `settings/` | 同期 UI・案内 |
+| `bookmark/` | 素材ブックマーク UI（個別・範囲・サイドバー） |
+| `home/` | ホーム（ブックマーク合算表示） |
+| `providers/` | `BookmarkProvider`（Context ラッパー） |
 | `ui/` | 汎用 UI（Slider, Accordion） |
+
+### `src/contexts/` — クライアント状態
+
+| ファイル | 責務 |
+|----------|------|
+| `MaterialBookmarkContext.tsx` | ブックマークの localStorage 永続化・合算 |
+
+### `src/lib/` — ブックマーク・素材計算（追加）
+
+| ファイル | 内容 |
+|----------|------|
+| `bookmark-storage.ts` | localStorage CRUD・materialId 合算 |
+| `bookmark-utils.ts` | sourceKey 生成・エントリ構築・`formatMora` |
+| `material-requirements.ts` | 範囲合算・次段階素材（`RequirementLine`） |
+
+**永続化の分離**: 育成進捗は cookie 匿名 ID → Prisma `UserProgress`。ブックマークは **localStorage**（`gb_material_bookmarks`）でブラウザ単位に保持。
 
 ### `src/lib/api/` — 外部 API 層
 
@@ -116,6 +135,9 @@
 | `artifact-score.ts` | 聖遺物スコア |
 | `stats.ts` | ステータス計算 |
 | `level-config.ts` | 目盛り・定数（将来 DB 化の境界） |
+| `material-requirements.ts` | 範囲・次段階の素材合算 |
+| `bookmark-storage.ts` | ブックマーク localStorage |
+| `bookmark-utils.ts` | sourceKey / エントリ生成 |
 
 ---
 

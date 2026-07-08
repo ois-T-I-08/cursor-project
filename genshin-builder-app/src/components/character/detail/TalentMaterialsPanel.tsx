@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react";
 import MaterialRowWithBookmark from "@/components/bookmark/MaterialRowWithBookmark";
 import {
   buildBookmarkEntries,
+  formatMora,
   makeItemSourceKey,
   makeItemSourceLabel,
 } from "@/lib/bookmark-utils";
@@ -17,10 +18,6 @@ import {
 import { useMaterialBookmarks } from "@/contexts/MaterialBookmarkContext";
 import type { CultivationBookmarkContext } from "@/types/bookmark";
 import { MORA_MATERIAL_ID } from "@/types/bookmark";
-
-function formatMora(value: number): string {
-  return value.toLocaleString("ja-JP");
-}
 
 function MaterialRow({
   name,

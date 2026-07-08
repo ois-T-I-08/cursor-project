@@ -9,7 +9,7 @@
 - キャラクター一覧・詳細（Lv / 天賦 / 武器スライダー + 必要素材表示）
 - 素材ブックマーク（ローカル DB、materialId 合算、キャラアイコン表示）
 - ゲームマスターデータ同期（Project Amber → ローカル SQLite）
-- HoYoLAB 連携は **Phase 2**（設計のみ → `docs/PHASE2_HOYOLAB.md`）
+- HoYoLAB 連携（WebView ログイン・樹脂/デイリー/派遣表示・secure storage）
 
 ## 関連プロジェクト
 

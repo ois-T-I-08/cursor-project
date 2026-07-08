@@ -1,4 +1,5 @@
 /// レベル・突破のマスター設定（Web `level-config.ts` 相当）
+library;
 
 const levelMarks = [1, 20, 30, 40, 50, 60, 70, 80, 90];
 

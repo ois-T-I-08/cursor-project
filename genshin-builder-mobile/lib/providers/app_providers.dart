@@ -3,8 +3,10 @@ import 'package:uuid/uuid.dart';
 
 import '../data/amber/amber_api.dart';
 import '../data/db/app_database.dart';
+import '../data/models/master_models.dart';
 import '../data/repositories/bookmark_repository.dart';
 import '../data/repositories/character_repository.dart';
+import '../data/repositories/progress_repository.dart';
 import '../data/sync/master_sync_service.dart';
 
 const localUserIdKey = 'local_user_id';
@@ -49,6 +51,12 @@ final masterSyncServiceProvider =
 final charactersProvider = FutureProvider((ref) async {
   final repo = await ref.watch(characterRepositoryProvider.future);
   return repo.getAll();
+});
+
+/// 素材マスタのキャッシュ（詳細画面の名前解決用）
+final materialsMapProvider = FutureProvider<Map<String, MasterMaterial>>((ref) async {
+  final repo = await ref.watch(characterRepositoryProvider.future);
+  return repo.getMaterialsMap();
 });
 
 final aggregatedBookmarksProvider = FutureProvider((ref) async {

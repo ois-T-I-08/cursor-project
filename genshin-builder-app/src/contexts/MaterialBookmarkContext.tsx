@@ -17,6 +17,7 @@ import {
   saveBookmarkEntries,
   toggleSingleBookmark,
   upsertBookmarkBatch,
+  isMaterialBookmarked,
 } from "@/lib/bookmark-storage";
 import type {
   AggregatedMaterialBookmark,
@@ -74,9 +75,7 @@ export function MaterialBookmarkProvider({ children }: { children: ReactNode }) 
 
   const isBookmarked = useCallback(
     (sourceKey: string, materialId: string) =>
-      entries.some(
-        (e) => e.sourceKey === sourceKey && e.materialId === materialId,
-      ),
+      isMaterialBookmarked(entries, sourceKey, materialId),
     [entries],
   );
 
