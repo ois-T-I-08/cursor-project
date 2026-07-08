@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/models/sync_status.dart';
+import '../../data/sync/master_sync_runner.dart';
 import '../../providers/app_providers.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -24,23 +25,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _syncProgress = null;
     });
     try {
-      final service = await ref.read(masterSyncServiceProvider.future);
-      final result = await service.syncMasterData(
+      final outcome = await runMasterSyncWithIconPreload(
+        ref,
+        preloadOnlyMissingIcons: true,
         onProgress: (p) {
           if (mounted) setState(() => _syncProgress = p);
         },
       );
-      ref.invalidate(charactersProvider);
-      ref.invalidate(syncStatusProvider);
-      ref.invalidate(lastSyncTimeProvider);
-      ref.invalidate(aggregatedBookmarksProvider);
-      ref.invalidate(materialsMapProvider);
+      final result = outcome.result;
+      final iconMessage = outcome.iconsLoaded > 0
+          ? ' · 新規アイコン ${outcome.iconsLoaded} 件'
+          : ' · アイコンは取得済み';
       setState(() {
         _lastMessage = result.hasErrors
             ? '一部エラー: ${result.errors.join('; ')}'
             : '同期完了 — キャラ ${result.characters} / 武器 ${result.weapons} / '
                 '素材 ${result.materials} · 突破 キャラ ${result.characterUpgrades} / '
-                '武器 ${result.weaponUpgrades}';
+                '武器 ${result.weaponUpgrades}$iconMessage';
       });
     } catch (e) {
       setState(() => _lastMessage = '同期失敗: $e');
@@ -96,19 +97,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   if (_syncing && _syncProgress != null) ...[
                     const SizedBox(height: 16),
-                    Text(
-                      _syncProgress!.phase.label +
-                          (_syncProgress!.detail != null
-                              ? ' — ${_syncProgress!.detail}'
-                              : _syncProgress!.total > 0
-                                  ? ' ${_syncProgress!.current}/${_syncProgress!.total}'
-                                  : ''),
-                    ),
+                    Text(_syncProgress!.displayLabel),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
-                      value: _syncProgress!.isIndeterminate
-                          ? null
-                          : _syncProgress!.fraction,
+                      value: _syncProgress!.displayFraction,
                     ),
                   ],
                   const SizedBox(height: 16),
