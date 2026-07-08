@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/models/bookmark.dart';
+import 'game_icon_image.dart';
 
 class MaterialListTile extends StatelessWidget {
   const MaterialListTile({
@@ -23,13 +23,11 @@ class MaterialListTile extends StatelessWidget {
     return ListTile(
       leading: line.isMora
           ? const CircleAvatar(child: Text('M'))
-          : (line.iconUrl != null && line.iconUrl!.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: line.iconUrl!,
-                  width: 40,
-                  height: 40,
-                )
-              : const Icon(Icons.inventory_2)),
+          : GameIconImage(
+              iconUrl: line.iconUrl,
+              size: 40,
+              fallback: const Icon(Icons.inventory_2),
+            ),
       title: Text(line.name),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,

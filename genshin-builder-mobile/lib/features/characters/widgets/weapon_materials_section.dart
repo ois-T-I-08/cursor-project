@@ -7,6 +7,7 @@ import '../../../domain/level_progression.dart';
 import '../../../domain/material_requirements.dart';
 import '../../../domain/models/bookmark.dart';
 import '../../../domain/models/calculation_models.dart';
+import '../../shared/game_icon_image.dart';
 import '../../shared/mark_slider.dart';
 import '../../shared/material_list_tile.dart';
 import '../../shared/max_enhanced_banner.dart';
@@ -80,6 +81,7 @@ class WeaponMaterialsSection extends StatelessWidget {
             'weapon',
             weaponRarity: weaponRarity,
             resolveName: resolveName,
+            resolveIcon: resolveIcon,
           );
 
     final rangeSourceKey =
@@ -100,13 +102,67 @@ class WeaponMaterialsSection extends StatelessWidget {
             ...weapons.map(
               (w) => DropdownMenuItem(
                 value: w.id,
-                child: Text('${w.name} (${w.rarity}★)'),
+                child: Row(
+                  children: [
+                    GameIconImage(iconUrl: w.iconUrl, size: 28),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${w.name} (${w.rarity}★)',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
+          selectedItemBuilder: (context) => weapons
+              .map(
+                (w) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    children: [
+                      GameIconImage(iconUrl: w.iconUrl, size: 24),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          w.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
           onChanged: onWeaponSelected,
         ),
         if (selected != null) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              GameIconImage(iconUrl: selected.iconUrl, size: 48),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      selected.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      '${selected.rarity}★ · Lv.$weaponLevel',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
           if (weaponLevel >= levelMax) ...[
             MaxEnhancedBanner(label: '武器レベル', level: weaponLevel),

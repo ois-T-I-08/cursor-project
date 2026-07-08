@@ -38,6 +38,7 @@ List<RequirementLine> getRangeLevelRequirements(
   int weaponRarity = 5,
   UpgradeDataCache? cache,
   String Function(String materialId)? resolveName,
+  String? Function(String materialId)? resolveIcon,
 }) {
   final from = snapToLevelMark(fromLevel);
   final to = snapToLevelMark(toLevel);
@@ -84,6 +85,7 @@ List<RequirementLine> getRangeLevelRequirements(
       materialId: entry.key,
       name: resolveName?.call(entry.key) ?? '素材 #${entry.key}',
       count: entry.value,
+      iconUrl: resolveIcon?.call(entry.key),
     ));
   }
   for (final entry in levelUpMap.entries) {
@@ -91,6 +93,7 @@ List<RequirementLine> getRangeLevelRequirements(
       materialId: entry.key,
       name: resolveName?.call(entry.key) ?? entry.value.name,
       count: entry.value.count,
+      iconUrl: resolveIcon?.call(entry.key),
     ));
   }
   if (mora > 0) {
@@ -111,6 +114,7 @@ List<RequirementLine> getRangeTalentRequirements(
   int max,
   List<TalentLevelUpgrade> upgrades, {
   String Function(String materialId)? resolveName,
+  String? Function(String materialId)? resolveIcon,
 }) {
   final from = snapTalentLevel(fromLevel, max);
   final to = snapTalentLevel(toLevel, max);
@@ -134,6 +138,7 @@ List<RequirementLine> getRangeTalentRequirements(
       materialId: entry.key,
       name: resolveName?.call(entry.key) ?? '素材 #${entry.key}',
       count: entry.value,
+      iconUrl: resolveIcon?.call(entry.key),
     ));
   }
   if (mora > 0) {

@@ -19,6 +19,25 @@ void main() {
       ),
     ];
 
+    test('includes iconUrl when resolveIcon provided', () {
+      final lines = getRangeTalentRequirements(
+        1,
+        2,
+        10,
+        const [
+          TalentLevelUpgrade(
+            level: 2,
+            costItems: {'200001': 3},
+            coinCost: 12500,
+          ),
+        ],
+        resolveIcon: (id) => id == '200001' ? 'https://example.com/icon.png' : null,
+      );
+
+      final mat = lines.firstWhere((l) => l.materialId == '200001');
+      expect(mat.iconUrl, 'https://example.com/icon.png');
+    });
+
     test('sums talent materials and mora', () {
       final lines = getRangeTalentRequirements(1, 3, 10, upgrades);
       expect(lines.length, 2);

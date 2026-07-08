@@ -13,12 +13,12 @@ import '../../domain/level_progression.dart';
 import '../../domain/material_requirements.dart';
 import '../../domain/models/bookmark.dart';
 import '../../domain/models/calculation_models.dart';
-import '../../domain/artifact_config.dart';
 import '../../domain/hoyolab_relic_sync.dart';
 import '../../domain/models/artifact_state.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/hoyolab_game_providers.dart';
 import '../hoyolab/widgets/hoyolab_character_status_card.dart';
+import '../shared/game_icon_image.dart';
 import '../shared/detail_section_accordion.dart';
 import '../shared/mark_slider.dart';
 import '../shared/material_list_tile.dart';
@@ -392,6 +392,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       _promotes,
       'character',
       resolveName: _resolveName,
+      resolveIcon: _resolveIcon,
     );
 
     final nextStage =
@@ -510,7 +511,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           const SizedBox(height: 12),
           DetailSectionAccordion(
             title: '武器',
-            summary: Text(_buildWeaponSummary()),
+            summary: _buildWeaponSummaryWidget(),
             child: WeaponMaterialsSection(
               showTitle: false,
               weapons: _weapons,
@@ -548,7 +549,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           const SizedBox(height: 12),
           DetailSectionAccordion(
             title: '聖遺物',
-            summary: Text(buildArtifactSummary(_artifacts)),
+            summary: ArtifactSummaryContent(artifacts: _artifacts),
             child: CharacterRelicsSection(
               artifacts: _artifacts,
               onChanged: _updateArtifacts,
@@ -574,15 +575,25 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     );
   }
 
-  String _buildWeaponSummary() {
+  Widget _buildWeaponSummaryWidget() {
     if (_weaponId.isEmpty && _weaponName.isEmpty) {
-      return '武器未選択';
+      return const Text('武器未選択');
     }
+    final weapon = _weapons.where((w) => w.id == _weaponId).firstOrNull;
     final name = _weaponName.isEmpty ? '武器' : _weaponName;
-    if (_weaponLevel >= levelMax) {
-      return '$name · 最大強化済み Lv.$_weaponLevel';
-    }
-    return '$name · Lv.$_weaponLevel → 目標 Lv.$_targetWeaponLevel';
+    final levelText = _weaponLevel >= levelMax
+        ? '最大強化済み Lv.$_weaponLevel'
+        : 'Lv.$_weaponLevel → 目標 Lv.$_targetWeaponLevel';
+
+    return Row(
+      children: [
+        GameIconImage(iconUrl: weapon?.iconUrl, size: 32),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text('$name · $levelText'),
+        ),
+      ],
+    );
   }
 
   String _buildTalentSummary() {

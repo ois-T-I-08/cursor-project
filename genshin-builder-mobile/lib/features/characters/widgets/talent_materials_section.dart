@@ -88,6 +88,7 @@ class TalentMaterialsSection extends StatelessWidget {
       talentLevelMax,
       upgrades,
       resolveName: resolveName,
+      resolveIcon: resolveIcon,
     );
     final rangeSourceKey =
         makeRangeSourceKey(_ctx, currentLevel, talentLevelMax);

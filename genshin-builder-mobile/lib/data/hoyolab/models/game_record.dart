@@ -101,6 +101,7 @@ class GameRecordWeapon {
     this.rarity = 3,
     this.mainStat,
     this.subStats = const [],
+    this.iconUrl,
   });
 
   final String id;
@@ -111,6 +112,7 @@ class GameRecordWeapon {
   final int rarity;
   final GameRecordProp? mainStat;
   final List<GameRecordProp> subStats;
+  final String? iconUrl;
 
   factory GameRecordWeapon.fromJson(
     Map<String, dynamic>? json, {
@@ -140,6 +142,7 @@ class GameRecordWeapon {
           ? null
           : GameRecordProp.fromJson(main, propertyMap: propertyMap),
       subStats: subs,
+      iconUrl: json['icon'] as String?,
     );
   }
 }
@@ -153,6 +156,7 @@ class GameRecordRelic {
     this.setName = '',
     this.mainStat,
     this.subStats = const [],
+    this.iconUrl,
   });
 
   final String id;
@@ -162,6 +166,7 @@ class GameRecordRelic {
   final String setName;
   final GameRecordProp? mainStat;
   final List<GameRecordProp> subStats;
+  final String? iconUrl;
 
   factory GameRecordRelic.fromJson(
     Map<String, dynamic> json, {
@@ -188,6 +193,7 @@ class GameRecordRelic {
           ? null
           : GameRecordProp.fromJson(main, propertyMap: propertyMap),
       subStats: subs,
+      iconUrl: json['icon'] as String?,
     );
   }
 }

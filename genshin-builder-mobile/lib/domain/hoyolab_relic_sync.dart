@@ -37,6 +37,8 @@ ArtifactState mergeRelicsFromHoyolab({
     var updated = piece.copyWith(
       setName: relic.setName.isNotEmpty ? relic.setName : piece.setName,
       level: relic.level > 0 ? relic.level : piece.level,
+      iconUrl: relic.iconUrl ?? piece.iconUrl,
+      name: relic.name.isNotEmpty ? relic.name : piece.name,
     );
 
     if (relic.mainStat != null) {

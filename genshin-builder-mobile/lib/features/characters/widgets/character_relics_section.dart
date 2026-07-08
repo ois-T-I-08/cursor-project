@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../domain/artifact_config.dart';
 import '../../../domain/models/artifact_state.dart';
+import '../../shared/game_icon_image.dart';
 
 /// 聖遺物セクション（API: セット・レベル / 手入力: メイン・サブステ）
 class CharacterRelicsSection extends StatelessWidget {
@@ -72,6 +73,41 @@ class CharacterRelicsSection extends StatelessWidget {
   }
 }
 
+/// アコーディオン概要: 部位アイコン + セット/レベルテキスト
+class ArtifactSummaryContent extends StatelessWidget {
+  const ArtifactSummaryContent({super.key, required this.artifacts});
+
+  final ArtifactState artifacts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: artifactSlotOrder.map((slot) {
+            final piece = artifacts[slot] ?? createEmptyArtifactPiece();
+            final slotLabel = artifactSlotLabels[slot] ?? slot.name;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: GameIconImage(
+                iconUrl: piece.iconUrl,
+                size: 36,
+                fallback: Text(
+                  slotLabel,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 6),
+        Text(buildArtifactSummary(artifacts)),
+      ],
+    );
+  }
+}
+
 class _PieceEditor extends StatelessWidget {
   const _PieceEditor({
     required this.slot,
@@ -100,11 +136,36 @@ class _PieceEditor extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(
-                  slotLabel,
-                  style: Theme.of(context).textTheme.titleSmall,
+                GameIconImage(
+                  iconUrl: piece.iconUrl,
+                  size: 44,
+                  fallback: Text(
+                    slotLabel,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        slotLabel,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      if (piece.name != null && piece.name!.isNotEmpty)
+                        Text(
+                          piece.name!,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                        ),
+                    ],
+                  ),
+                ),
                 if (piece.setName.isNotEmpty)
                   Flexible(
                     child: Text(

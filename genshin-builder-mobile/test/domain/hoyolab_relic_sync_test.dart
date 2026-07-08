@@ -55,9 +55,45 @@ void main() {
       expect(relic.mainStat?.label, '暴击率');
       expect(relic.mainStat?.value, '31.2%');
     });
+
+    test('parses icon from API', () {
+      final relic = GameRecordRelic.fromJson(
+        {
+          'id': 1,
+          'name': '冠',
+          'pos_name': '理之冠',
+          'level': 20,
+          'icon': 'https://example.com/relic.png',
+          'set': {'name': '深林の記憶'},
+        },
+      );
+
+      expect(relic.iconUrl, 'https://example.com/relic.png');
+    });
   });
 
   group('mergeRelicsFromHoyolab', () {
+    test('syncs iconUrl from API', () {
+      final local = createEmptyArtifactState();
+      final merged = mergeRelicsFromHoyolab(
+        local: local,
+        relics: const [
+          GameRecordRelic(
+            id: '1',
+            name: '花',
+            posName: '生の花',
+            level: 20,
+            setName: '深林の記憶',
+            iconUrl: 'https://example.com/flower.png',
+          ),
+        ],
+      );
+
+      expect(merged[ArtifactSlotKey.flower]!.iconUrl,
+          'https://example.com/flower.png');
+      expect(merged[ArtifactSlotKey.flower]!.name, '花');
+    });
+
     test('updates set name and level from API', () {
       final local = createEmptyArtifactState();
       final merged = mergeRelicsFromHoyolab(

@@ -30,18 +30,24 @@ class ArtifactPiece {
     this.mainStat = '',
     this.level = 0,
     this.substats = const [],
+    this.iconUrl,
+    this.name,
   });
 
   final String setName;
   final String mainStat;
   final int level;
   final List<ArtifactSubstat> substats;
+  final String? iconUrl;
+  final String? name;
 
   Map<String, dynamic> toJson() => {
         'setName': setName,
         'mainStat': mainStat,
         'level': level,
         'substats': substats.map((s) => s.toJson()).toList(),
+        if (iconUrl != null) 'iconUrl': iconUrl,
+        if (name != null) 'name': name,
       };
 
   factory ArtifactPiece.fromJson(Map<String, dynamic> json) => ArtifactPiece(
@@ -51,6 +57,8 @@ class ArtifactPiece {
         substats: (json['substats'] as List<dynamic>? ?? [])
             .map((e) => ArtifactSubstat.fromJson(e as Map<String, dynamic>))
             .toList(),
+        iconUrl: json['iconUrl'] as String?,
+        name: json['name'] as String?,
       );
 
   ArtifactPiece copyWith({
@@ -58,12 +66,16 @@ class ArtifactPiece {
     String? mainStat,
     int? level,
     List<ArtifactSubstat>? substats,
+    String? iconUrl,
+    String? name,
   }) =>
       ArtifactPiece(
         setName: setName ?? this.setName,
         mainStat: mainStat ?? this.mainStat,
         level: level ?? this.level,
         substats: substats ?? this.substats,
+        iconUrl: iconUrl ?? this.iconUrl,
+        name: name ?? this.name,
       );
 }
 
