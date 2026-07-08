@@ -17,6 +17,11 @@ class BookmarkRepository {
   Future<void> removeBySourceKey(String sourceKey) =>
       _db.removeBookmarksBySourceKey(sourceKey);
 
+  Future<void> removeByMaterialId(String materialId) =>
+      _db.removeBookmarksByMaterialId(materialId);
+
+  Future<void> clearAll() => _db.clearAllBookmarks();
+
   Future<void> replaceSourceBookmarks({
     required String sourceKey,
     required List<MaterialBookmarkEntry> entries,

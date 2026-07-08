@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../data/hoyolab/hoyolab_exceptions.dart';
 import '../../../data/hoyolab/models/daily_note.dart';
+import '../../../providers/hoyolab_home_providers.dart';
 import '../../../providers/hoyolab_providers.dart';
 
 class DailyNoteCard extends ConsumerWidget {
@@ -50,7 +51,8 @@ class DailyNoteCard extends ConsumerWidget {
                         IconButton(
                           icon: const Icon(Icons.refresh),
                           tooltip: '更新',
-                          onPressed: () => ref.invalidate(dailyNoteProvider),
+                          onPressed: () =>
+                              ref.read(dailyNoteProvider.notifier).refresh(),
                         ),
                         TextButton(
                           onPressed: () => context.go('/settings/hoyolab'),

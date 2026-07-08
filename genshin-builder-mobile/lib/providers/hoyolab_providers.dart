@@ -37,17 +37,6 @@ final hoyolabSessionProvider = FutureProvider<HoyolabSession>((ref) async {
   return repo.loadSession();
 });
 
-final dailyNoteProvider = FutureProvider<DailyNote?>((ref) async {
-  final flags = await ref.watch(featureFlagsProvider.future);
-  if (!flags.hoyolabLinkEnabled) return null;
-
-  final session = await ref.watch(hoyolabSessionProvider.future);
-  if (!session.canFetchDailyNote) return null;
-
-  final repo = await ref.watch(hoyolabRepositoryProvider.future);
-  return repo.fetchDailyNote();
-});
-
 final hoyolabRolesProvider = FutureProvider<List<HoyolabGameRole>>((ref) async {
   final session = await ref.watch(hoyolabSessionProvider.future);
   if (!session.isLinked) return [];

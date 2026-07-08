@@ -142,6 +142,11 @@ class AppDatabase {
   Future<void> removeBookmarksBySourceKey(String sourceKey) =>
       _inner.bookmarkDao.removeBookmarksBySourceKey(sourceKey);
 
+  Future<void> removeBookmarksByMaterialId(String materialId) =>
+      _inner.bookmarkDao.removeBookmarksByMaterialId(materialId);
+
+  Future<void> clearAllBookmarks() => _inner.bookmarkDao.clearAllBookmarks();
+
   Future<void> insertSyncLog(String status, String detail) =>
       _inner.progressDao.insertSyncLog(status, detail);
 

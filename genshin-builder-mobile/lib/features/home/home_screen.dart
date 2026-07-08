@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/app_providers.dart';
+import '../../widgets/deferred_loader.dart';
 import '../hoyolab/widgets/adventure_status_card.dart';
 import '../hoyolab/widgets/daily_note_card.dart';
 
@@ -13,7 +14,6 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bookmarksAsync = ref.watch(aggregatedBookmarksProvider);
     final lastSyncAsync = ref.watch(lastSyncTimeProvider);
     final numberFormat = NumberFormat('#,###');
 
@@ -62,10 +62,48 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const AdventureStatusCard(),
-          const SizedBox(height: 16),
           const DailyNoteCard(),
           const SizedBox(height: 16),
+          DeferredLoader(
+            builder: (_) => const AdventureStatusCard(),
+          ),
+          const SizedBox(height: 16),
+          DeferredLoader(
+            builder: (_) => _BookmarkSection(numberFormat: numberFormat),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookmarkSection extends ConsumerWidget {
+  const _BookmarkSection({required this.numberFormat});
+
+  final NumberFormat numberFormat;
+
+  Future<void> _removeBookmark(
+    BuildContext context,
+    WidgetRef ref,
+    String materialId,
+  ) async {
+    final repo = await ref.read(bookmarkRepositoryProvider.future);
+    await repo.removeByMaterialId(materialId);
+    ref.invalidate(aggregatedBookmarksProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ブックマークから削除しました')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bookmarksAsync = ref.watch(aggregatedBookmarksProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
           Text(
             'ブックマーク素材',
             style: Theme.of(context).textTheme.titleLarge,
@@ -115,6 +153,12 @@ class HomeScreen extends ConsumerWidget {
                               ),
                           const SizedBox(width: 8),
                           Text(numberFormat.format(b.count)),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            tooltip: '削除',
+                            onPressed: () =>
+                                _removeBookmark(context, ref, b.materialId),
+                          ),
                         ],
                       ),
                     ),
@@ -130,8 +174,7 @@ class HomeScreen extends ConsumerWidget {
               onPressed: () => context.go('/bookmarks'),
               child: const Text('すべて見る'),
             ),
-        ],
-      ),
+      ],
     );
   }
 }

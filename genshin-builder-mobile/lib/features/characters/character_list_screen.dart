@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/hoyolab/models/game_record.dart';
 import '../../domain/character_list_sort.dart';
 import '../../providers/hoyolab_game_providers.dart';
+import '../../../providers/hoyolab_game_refresh.dart';
 
 class CharacterListScreen extends ConsumerWidget {
   const CharacterListScreen({super.key});
@@ -22,11 +23,7 @@ class CharacterListScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: '所持情報を更新',
-            onPressed: () {
-              ref.invalidate(hoyolabOwnedFetchResultProvider);
-              ref.invalidate(hoyolabOwnedCharacterMapProvider);
-              ref.invalidate(sortedCharacterEntriesProvider);
-            },
+            onPressed: () => refreshHoyolabOwnedCharacters(ref),
           ),
         ],
       ),

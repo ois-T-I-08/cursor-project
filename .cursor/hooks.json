@@ -4,11 +4,21 @@
     "afterFileEdit": [
       {
         "command": "node .cursor/hooks/mark-memory-pending.mjs",
-        "matcher": "Write"
+        "matcher": "Write|StrReplace"
       },
       {
         "command": "node .cursor/hooks/mark-commit-pending.mjs",
-        "matcher": "Write"
+        "matcher": "Write|StrReplace"
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "node .cursor/hooks/mark-memory-pending.mjs",
+        "matcher": "Write|StrReplace"
+      },
+      {
+        "command": "node .cursor/hooks/mark-commit-pending.mjs",
+        "matcher": "Write|StrReplace"
       }
     ],
     "stop": [

@@ -50,6 +50,25 @@ const CODE_EXTENSIONS = new Set([
   "mdc",
 ]);
 
+function extractFilePath(input) {
+  if (input.file_path) return String(input.file_path);
+  const toolInput = input.tool_input ?? input.arguments ?? input.input ?? {};
+  if (typeof toolInput === "string") {
+    try {
+      const parsed = JSON.parse(toolInput);
+      return parsed.path ?? parsed.file_path ?? parsed.target_notebook ?? "";
+    } catch {
+      return "";
+    }
+  }
+  return (
+    toolInput.path ??
+    toolInput.file_path ??
+    toolInput.target_notebook ??
+    ""
+  );
+}
+
 async function main() {
   const raw = await readStdin();
   let input = {};
@@ -59,7 +78,7 @@ async function main() {
     noop();
   }
 
-  const filePath = String(input.file_path ?? "")
+  const filePath = String(extractFilePath(input))
     .replace(/\\/g, "/")
     .toLowerCase();
 

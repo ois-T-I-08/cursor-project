@@ -1,5 +1,4 @@
-/// マスターデータモデル（Prisma 相当）
-library;
+import '../../domain/models/artifact_state.dart';
 
 class MasterCharacter {
   const MasterCharacter({
@@ -135,6 +134,7 @@ class UserProgress {
     this.weaponName = '',
     this.weaponLevel = 1,
     this.weaponRefinement = 1,
+    this.artifactsJson = '{}',
     this.isCompleted = false,
     this.memo = '',
   });
@@ -152,8 +152,11 @@ class UserProgress {
   final String weaponName;
   final int weaponLevel;
   final int weaponRefinement;
+  final String artifactsJson;
   final bool isCompleted;
   final String memo;
+
+  ArtifactState get artifacts => parseArtifactState(artifactsJson);
 
   Map<String, Object?> toMap() => {
         'id': id,
@@ -169,6 +172,7 @@ class UserProgress {
         'weapon_name': weaponName,
         'weapon_level': weaponLevel,
         'weapon_refinement': weaponRefinement,
+        'artifacts': artifactsJson,
         'is_completed': isCompleted ? 1 : 0,
         'memo': memo,
         'updated_at': DateTime.now().millisecondsSinceEpoch,
@@ -188,33 +192,41 @@ class UserProgress {
         weaponName: map['weapon_name'] as String? ?? '',
         weaponLevel: map['weapon_level'] as int? ?? 1,
         weaponRefinement: map['weapon_refinement'] as int? ?? 1,
+        artifactsJson: map['artifacts'] as String? ?? '{}',
         isCompleted: (map['is_completed'] as int? ?? 0) == 1,
         memo: map['memo'] as String? ?? '',
       );
 
   UserProgress copyWith({
     int? level,
+    int? ascension,
+    int? constellation,
     int? talentNormal,
     int? talentSkill,
     int? talentBurst,
     int? weaponLevel,
+    int? weaponRefinement,
     String? weaponId,
     String? weaponName,
+    String? artifactsJson,
+    ArtifactState? artifacts,
   }) {
     return UserProgress(
       id: id,
       userId: userId,
       characterId: characterId,
       level: level ?? this.level,
-      ascension: ascension,
-      constellation: constellation,
+      ascension: ascension ?? this.ascension,
+      constellation: constellation ?? this.constellation,
       talentNormal: talentNormal ?? this.talentNormal,
       talentSkill: talentSkill ?? this.talentSkill,
       talentBurst: talentBurst ?? this.talentBurst,
       weaponId: weaponId ?? this.weaponId,
       weaponName: weaponName ?? this.weaponName,
       weaponLevel: weaponLevel ?? this.weaponLevel,
-      weaponRefinement: weaponRefinement,
+      weaponRefinement: weaponRefinement ?? this.weaponRefinement,
+      artifactsJson: artifactsJson ??
+          (artifacts != null ? encodeArtifactState(artifacts) : this.artifactsJson),
       isCompleted: isCompleted,
       memo: memo,
     );

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../../data/hoyolab/hoyolab_exceptions.dart';
-import '../../../providers/hoyolab_game_providers.dart';
+import '../../../providers/hoyolab_game_refresh.dart';
+import '../../../providers/hoyolab_home_providers.dart';
+import '../../../providers/hoyolab_home_providers.dart';
 
 class AdventureStatusCard extends ConsumerWidget {
   const AdventureStatusCard({super.key});
@@ -23,7 +24,7 @@ class AdventureStatusCard extends ConsumerWidget {
         final updated = status.latestUpdate;
         final updatedLabel = updated == null
             ? null
-            : _relativeTime(updated);
+            : formatRelativeUpdateTime(updated);
 
         return Card(
           elevation: 0,
@@ -55,8 +56,7 @@ class AdventureStatusCard extends ConsumerWidget {
                     IconButton(
                       icon: const Icon(Icons.refresh, size: 20),
                       tooltip: '更新',
-                      onPressed: () =>
-                          ref.invalidate(hoyolabAdventureStatusProvider),
+                      onPressed: () => refreshHoyolabAdventureStatus(ref),
                     ),
                   ],
                 ),
@@ -122,14 +122,6 @@ class AdventureStatusCard extends ConsumerWidget {
         return const SizedBox.shrink();
       },
     );
-  }
-
-  String _relativeTime(DateTime time) {
-    final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 1) return 'たった今';
-    if (diff.inHours < 1) return '${diff.inMinutes}分前';
-    if (diff.inHours < 24) return '${diff.inHours}時間前';
-    return DateFormat.Md().add_Hm().format(time);
   }
 }
 

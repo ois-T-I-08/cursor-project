@@ -34,6 +34,8 @@ class HoyolabConstants {
   static const ownedCharactersCacheTtl = Duration(minutes: 15);
   static const characterDetailCacheTtl = Duration(minutes: 10);
   static const adventureStatusCacheTtl = Duration(minutes: 30);
+  static const adventureStatusRefreshDelay = Duration(seconds: 3);
+  static const dailyNoteCacheTtl = Duration(minutes: 3);
 
   /// サイレント扱い（ユーザー向けに簡潔メッセージへ変換）
   static const knownRetcodes = {

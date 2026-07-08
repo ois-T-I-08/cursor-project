@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../../data/models/master_models.dart';
 import '../../../domain/bookmark_utils.dart';
+import '../../../domain/level_config.dart';
 import '../../../domain/level_progression.dart';
 import '../../../domain/material_requirements.dart';
 import '../../../domain/models/bookmark.dart';
 import '../../../domain/models/calculation_models.dart';
 import '../../shared/mark_slider.dart';
 import '../../shared/material_list_tile.dart';
+import '../../shared/max_enhanced_banner.dart';
 
 /// 武器レベル・突破素材（Web `WeaponSection` / `LevelMaterialsPanel` 相当）
 class WeaponMaterialsSection extends StatelessWidget {
@@ -29,6 +31,7 @@ class WeaponMaterialsSection extends StatelessWidget {
     required this.onToggleBookmark,
     required this.onToggleRangeBookmark,
     required this.onBookmarkRange,
+    this.showTitle = true,
   });
 
   final List<MasterWeapon> weapons;
@@ -49,6 +52,7 @@ class WeaponMaterialsSection extends StatelessWidget {
       onToggleRangeBookmark;
   final void Function(List<RequirementLine> lines, String sourceKey)
       onBookmarkRange;
+  final bool showTitle;
 
   bool _isBookmarked(String sourceKey, String materialId) =>
       isMaterialBookmarked(bookmarks, sourceKey, materialId);
@@ -84,8 +88,10 @@ class WeaponMaterialsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('武器', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
+        if (showTitle) ...[
+          Text('武器', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+        ],
         DropdownButton<String?>(
           isExpanded: true,
           value: selectedWeaponId.isEmpty ? null : selectedWeaponId,
@@ -102,73 +108,77 @@ class WeaponMaterialsSection extends StatelessWidget {
         ),
         if (selected != null) ...[
           const SizedBox(height: 16),
-          LevelMarkSlider(
-            label: '武器レベル',
-            value: weaponLevel,
-            onChanged: onWeaponLevelChanged,
-          ),
-          const SizedBox(height: 16),
-          LevelMarkSlider(
-            label: '目標レベル',
-            value: targetWeaponLevel,
-            onChanged: onTargetWeaponLevelChanged,
-            headerTrailing: rangeLines.isEmpty
-                ? null
-                : IconButton(
-                    icon: const Icon(Icons.bookmark_add_outlined),
-                    tooltip: '範囲をブックマーク',
-                    onPressed: () =>
-                        onBookmarkRange(rangeLines, rangeSourceKey),
-                  ),
-          ),
-          if (promotes.isEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              '突破データ未取得 — 設定でマスタ同期を実行してください',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-            ),
+          if (weaponLevel >= levelMax) ...[
+            MaxEnhancedBanner(label: '武器レベル', level: weaponLevel),
           ] else ...[
-            const Divider(height: 32),
-            Text('次の段階', style: Theme.of(context).textTheme.titleMedium),
-            if (nextStage == null)
-              const Text('最大レベルです')
-            else
-              ...nextStageToRequirementLines(
-                nextStage.materials,
-                nextStage.levelUpMaterials,
-                nextStage.mora,
-                resolveName,
-                resolveIcon: resolveIcon,
-              ).map(
-                (line) {
-                  final sourceKey = makeItemSourceKey(
-                    bookmarkContext,
-                    'next',
-                    line.materialId,
-                  );
-                  return MaterialListTile(
-                    line: line,
-                    isBookmarked: _isBookmarked(sourceKey, line.materialId),
-                    onToggleBookmark: () => onToggleBookmark(line, 'next'),
-                  );
-                },
+            LevelMarkSlider(
+              label: '武器レベル',
+              value: weaponLevel,
+              onChanged: onWeaponLevelChanged,
+            ),
+            const SizedBox(height: 16),
+            LevelMarkSlider(
+              label: '目標レベル',
+              value: targetWeaponLevel,
+              onChanged: onTargetWeaponLevelChanged,
+              headerTrailing: rangeLines.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.bookmark_add_outlined),
+                      tooltip: '範囲をブックマーク',
+                      onPressed: () =>
+                          onBookmarkRange(rangeLines, rangeSourceKey),
+                    ),
+            ),
+            if (promotes.isEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                '突破データ未取得 — 設定でマスタ同期を実行してください',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
               ),
-            const Divider(height: 24),
-            Text('目標までの合計', style: Theme.of(context).textTheme.titleMedium),
-            if (rangeLines.isEmpty)
-              const Text('目標レベルを現在より上に設定してください')
-            else
-              ...rangeLines.map(
-                (line) => MaterialListTile(
-                  line: line,
-                  isBookmarked:
-                      _isBookmarked(rangeSourceKey, line.materialId),
-                  onToggleBookmark: () =>
-                      onToggleRangeBookmark(line, rangeSourceKey),
+            ] else ...[
+              const Divider(height: 32),
+              Text('次の段階', style: Theme.of(context).textTheme.titleMedium),
+              if (nextStage == null)
+                const Text('最大レベルです')
+              else
+                ...nextStageToRequirementLines(
+                  nextStage.materials,
+                  nextStage.levelUpMaterials,
+                  nextStage.mora,
+                  resolveName,
+                  resolveIcon: resolveIcon,
+                ).map(
+                  (line) {
+                    final sourceKey = makeItemSourceKey(
+                      bookmarkContext,
+                      'next',
+                      line.materialId,
+                    );
+                    return MaterialListTile(
+                      line: line,
+                      isBookmarked: _isBookmarked(sourceKey, line.materialId),
+                      onToggleBookmark: () => onToggleBookmark(line, 'next'),
+                    );
+                  },
                 ),
-              ),
+              const Divider(height: 24),
+              Text('目標までの合計', style: Theme.of(context).textTheme.titleMedium),
+              if (rangeLines.isEmpty)
+                const Text('目標レベルを現在より上に設定してください')
+              else
+                ...rangeLines.map(
+                  (line) => MaterialListTile(
+                    line: line,
+                    isBookmarked:
+                        _isBookmarked(rangeSourceKey, line.materialId),
+                    onToggleBookmark: () =>
+                        onToggleRangeBookmark(line, rangeSourceKey),
+                  ),
+                ),
+            ],
           ],
         ],
       ],

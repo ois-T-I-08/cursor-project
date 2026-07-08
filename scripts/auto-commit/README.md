@@ -21,7 +21,7 @@ node scripts/auto-commit/index.mjs --watch 30
 
 | フック | 動作 |
 |--------|------|
-| `afterFileEdit` | コード編集時に `.cursor/.commit-pending` フラグを立てる |
+| `afterFileEdit` / `postToolUse` | `Write` / `StrReplace` 編集時に `.cursor/.commit-pending` フラグを立てる |
 | `stop` | Agent ターン完了時にフラグがあれば自動コミット |
 
 Agent セッション終了ごとに、まとめて 1 コミットされます（編集のたびに即コミットはしません）。

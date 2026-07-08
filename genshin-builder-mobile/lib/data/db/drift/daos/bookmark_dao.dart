@@ -37,6 +37,16 @@ class BookmarkDao extends DatabaseAccessor<DriftAppDatabase>
         .go();
   }
 
+  Future<void> removeBookmarksByMaterialId(String materialId) async {
+    await (delete(materialBookmarks)
+          ..where((t) => t.materialId.equals(materialId)))
+        .go();
+  }
+
+  Future<void> clearAllBookmarks() async {
+    await delete(materialBookmarks).go();
+  }
+
   MaterialBookmarkEntry _bookmarkFromRow(MaterialBookmark row) =>
       MaterialBookmarkEntry(
         id: row.id,

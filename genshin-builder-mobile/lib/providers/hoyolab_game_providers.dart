@@ -64,13 +64,3 @@ final hoyolabCharacterBuildProvider = FutureProvider.family<
   final repo = await ref.watch(hoyolabGameDataRepositoryProvider.future);
   return repo.fetchCharacterBuild(characterId);
 });
-
-final hoyolabAdventureStatusProvider =
-    FutureProvider<AdventureStatus?>((ref) async {
-  final flags = await ref.watch(featureFlagsProvider.future);
-  if (!flags.hoyolabLinkEnabled) return null;
-  final session = await ref.watch(hoyolabSessionProvider.future);
-  if (!session.isLinked) return null;
-  final repo = await ref.watch(hoyolabGameDataRepositoryProvider.future);
-  return repo.fetchAdventureStatus();
-});

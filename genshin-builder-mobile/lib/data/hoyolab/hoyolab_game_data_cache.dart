@@ -51,4 +51,10 @@ class HoyolabGameDataCache {
     _characterBuilds.clear();
     _adventure = null;
   }
+
+  void clearOwned() => _owned = null;
+
+  void clearCharacterBuild(String id) => _characterBuilds.remove(id);
+
+  void clearAdventure() => _adventure = null;
 }

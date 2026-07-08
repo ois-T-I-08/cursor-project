@@ -6,8 +6,9 @@ import '../../config/feature_flags.dart';
 import '../../data/hoyolab/hoyolab_exceptions.dart';
 import '../../data/hoyolab/models/daily_note.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/hoyolab_game_refresh.dart';
+import '../../providers/hoyolab_home_providers.dart';
 import '../../providers/hoyolab_providers.dart';
-import '../../providers/hoyolab_game_providers.dart';
 import 'hoyolab_login_screen.dart';
 import 'widgets/hoyolab_disclaimer_banner.dart';
 
@@ -28,10 +29,7 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
     ref.invalidate(dailyNoteProvider);
     ref.invalidate(hoyolabRolesProvider);
     ref.invalidate(featureFlagsProvider);
-    ref.invalidate(hoyolabOwnedFetchResultProvider);
-    ref.invalidate(hoyolabOwnedCharacterMapProvider);
-    ref.invalidate(sortedCharacterEntriesProvider);
-    ref.invalidate(hoyolabAdventureStatusProvider);
+    refreshAllHoyolabGameData(ref);
   }
 
   Future<void> _startLogin() async {
@@ -92,6 +90,11 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
 
     setState(() => _busy = true);
     try {
+      final session = await ref.read(hoyolabSessionProvider.future);
+      if (session.uid != null && session.uid!.isNotEmpty) {
+        final diskCache = await ref.read(hoyolabHomeDiskCacheProvider.future);
+        await diskCache.clearForUid(session.uid!);
+      }
       final repo = await ref.read(hoyolabRepositoryProvider.future);
       await repo.disconnect();
       await _refreshProviders();

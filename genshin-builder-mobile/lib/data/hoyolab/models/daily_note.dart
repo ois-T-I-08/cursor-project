@@ -14,6 +14,11 @@ class HoyolabExpedition {
         status: json['status'] as String? ?? '',
         remainingTime: json['remaining_time'] as String? ?? '0',
       );
+
+  Map<String, dynamic> toJson() => {
+        'status': status,
+        'remaining_time': remainingTime,
+      };
 }
 
 class DailyNote {
@@ -62,6 +67,18 @@ class DailyNote {
           .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'current_resin': currentResin,
+        'max_resin': maxResin,
+        'resin_recovery_time': resinRecoveryTime,
+        'finished_task_num': finishedTaskNum,
+        'total_task_num': totalTaskNum,
+        'current_home_coin': currentHomeCoin,
+        'max_home_coin': maxHomeCoin,
+        'expeditions':
+            expeditions.map((e) => e.toJson()).toList(growable: false),
+      };
 
   static int asInt(dynamic value, {int fallback = 0}) {
     if (value is int) return value;

@@ -27,6 +27,7 @@ class ProgressDao extends DatabaseAccessor<DriftAppDatabase>
         weaponName: Value(p.weaponName),
         weaponLevel: Value(p.weaponLevel),
         weaponRefinement: Value(p.weaponRefinement),
+        artifacts: Value(p.artifactsJson),
         isCompleted: Value(p.isCompleted),
         memo: Value(p.memo),
         updatedAt: DateTime.now().millisecondsSinceEpoch,
@@ -107,6 +108,7 @@ class ProgressDao extends DatabaseAccessor<DriftAppDatabase>
         weaponName: row.weaponName,
         weaponLevel: row.weaponLevel,
         weaponRefinement: row.weaponRefinement,
+        artifactsJson: row.artifacts,
         isCompleted: row.isCompleted,
         memo: row.memo,
       );

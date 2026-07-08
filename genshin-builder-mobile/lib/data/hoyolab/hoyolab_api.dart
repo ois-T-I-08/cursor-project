@@ -217,8 +217,10 @@ class HoyolabApi {
           final data = result.data ?? {};
           final list = data['list'] as List<dynamic>? ?? [];
           if (list.isEmpty) return null;
+          final propertyMap = parseGameRecordPropertyMap(data['property_map']);
           return HoyolabCharacterBuild.fromDetailJson(
             list.first as Map<String, dynamic>,
+            propertyMap: propertyMap,
           );
         } on HoyolabApiException catch (e) {
           lastError = e;

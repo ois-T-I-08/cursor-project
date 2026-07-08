@@ -32,7 +32,7 @@ class DriftAppDatabase extends _$DriftAppDatabase {
   static const _dbName = 'genshin_builder.db';
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -44,11 +44,29 @@ class DriftAppDatabase extends _$DriftAppDatabase {
           if (from < 2) {
             await m.createTable(appSettings);
           }
+          if (from < 4) {
+            await _addArtifactsColumnSafely(m.database);
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
+          await _addArtifactsColumnSafely(this);
         },
       );
+
+  /// `artifacts` 列が無い DB を修復（重複追加は無視）
+  static Future<void> _addArtifactsColumnSafely(GeneratedDatabase db) async {
+    try {
+      await db.customStatement(
+        "ALTER TABLE user_progress ADD COLUMN artifacts TEXT NOT NULL DEFAULT '{}'",
+      );
+    } catch (e) {
+      final message = e.toString().toLowerCase();
+      if (!message.contains('duplicate column')) {
+        rethrow;
+      }
+    }
+  }
 
   static Future<void> _createIndexes(Migrator m) async {
     await m.database.customStatement(
@@ -63,6 +81,10 @@ class DriftAppDatabase extends _$DriftAppDatabase {
 
   static Future<DriftAppDatabase> open() async {
     final file = await resolveDatabaseFile(_dbName);
-    return DriftAppDatabase(NativeDatabase.createInBackground(file));
+    final db = DriftAppDatabase(NativeDatabase.createInBackground(file));
+    // マイグレーション完了を待ってから列修復（createInBackground 対策）
+    await db.customStatement('SELECT 1');
+    await _addArtifactsColumnSafely(db);
+    return db;
   }
 }

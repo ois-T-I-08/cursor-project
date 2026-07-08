@@ -1,42 +1,93 @@
 /// HoYoLAB ゲーム記録 API モデル（Battle Chronicle）
 library;
 
+import '../../../domain/hoyolab_stat_normalize.dart';
+
+/// property_map の 1 エントリ（property_type → 表示名）
+class GameRecordPropertyInfo {
+  const GameRecordPropertyInfo({
+    required this.type,
+    required this.name,
+    this.filterName = '',
+  });
+
+  final int type;
+  final String name;
+  final String filterName;
+
+  factory GameRecordPropertyInfo.fromJson(Map<String, dynamic> json) {
+    return GameRecordPropertyInfo(
+      type: _asInt(json['property_type'] ?? json['type']),
+      name: json['name'] as String? ?? '',
+      filterName: json['filter_name'] as String? ?? '',
+    );
+  }
+}
+
+typedef GameRecordPropertyMap = Map<int, GameRecordPropertyInfo>;
+
+GameRecordPropertyMap parseGameRecordPropertyMap(dynamic raw) {
+  if (raw is! Map) return {};
+  final map = <int, GameRecordPropertyInfo>{};
+  for (final entry in raw.entries) {
+    final typeId = int.tryParse('${entry.key}');
+    final value = entry.value;
+    if (typeId == null || value is! Map) continue;
+    map[typeId] = GameRecordPropertyInfo.fromJson(
+      Map<String, dynamic>.from(value),
+    );
+  }
+  return map;
+}
+
 class GameRecordProp {
   const GameRecordProp({required this.label, required this.value});
 
   final String label;
   final String value;
 
-  static GameRecordProp? fromJson(Map<String, dynamic> json) {
-    final label = json['name'] as String? ??
-        json['property_name'] as String? ??
-        _propTypeLabel(json['prop_type'] as String?);
-    final raw = json['value'] ?? json['final'] ?? json['base'];
+  static GameRecordProp? fromJson(
+    Map<String, dynamic> json, {
+    GameRecordPropertyMap propertyMap = const {},
+  }) {
+    final label = _resolveLabel(json, propertyMap);
+    final raw = json['value'] ?? json['final'] ?? json['base'] ?? json['add'];
     if (label == null || raw == null) return null;
     return GameRecordProp(label: label, value: '$raw');
   }
 
+  static String? _resolveLabel(
+    Map<String, dynamic> json,
+    GameRecordPropertyMap propertyMap,
+  ) {
+    final info = json['info'];
+    if (info is Map<String, dynamic>) {
+      final name = info['name'] as String?;
+      if (name != null && name.isNotEmpty) return name;
+      final filter = labelFromFilterName(info['filter_name'] as String?);
+      if (filter != null) return filter;
+    }
+
+    final direct = json['name'] as String? ?? json['property_name'] as String?;
+    if (direct != null && direct.isNotEmpty) return direct;
+
+    final propType = json['property_type'] ?? json['prop_type'];
+    if (propType is num) {
+      final mapped = propertyMap[propType.toInt()];
+      if (mapped != null && mapped.name.isNotEmpty) return mapped.name;
+      final filter = labelFromFilterName(mapped?.filterName);
+      if (filter != null) return filter;
+    }
+    if (propType is String) {
+      return _propTypeLabel(propType) ?? labelFromFilterName(propType);
+    }
+
+    return null;
+  }
+
   static String? _propTypeLabel(String? type) {
-    return switch (type) {
-      'FIGHT_PROP_HP' || 'FIGHT_PROP_BASE_HP' || 'FIGHT_PROP_HP_PERCENT' =>
-        'HP',
-      'FIGHT_PROP_ATTACK' ||
-      'FIGHT_PROP_BASE_ATTACK' ||
-      'FIGHT_PROP_ATTACK_PERCENT' =>
-        '攻撃力',
-      'FIGHT_PROP_DEFENSE' ||
-      'FIGHT_PROP_BASE_DEFENSE' ||
-      'FIGHT_PROP_DEFENSE_PERCENT' =>
-        '防御力',
-      'FIGHT_PROP_ELEMENT_MASTERY' => '元素熟知',
-      'FIGHT_PROP_CRITICAL' => '会心率',
-      'FIGHT_PROP_CRITICAL_HURT' => '会心ダメージ',
-      'FIGHT_PROP_CHARGE_EFFICIENCY' => '元素チャージ効率',
-      'FIGHT_PROP_HEAL_ADD' => '与える治療効果',
-      'FIGHT_PROP_HEALED_ADD' => '受ける治療効果',
-      'FIGHT_PROP_PHYSICAL_ADD_HURT' => '物理ダメージ',
-      _ => type,
-    };
+    if (type == null || type.isEmpty) return null;
+    return labelFromFilterName(type) ?? type;
   }
 }
 
@@ -61,7 +112,10 @@ class GameRecordWeapon {
   final GameRecordProp? mainStat;
   final List<GameRecordProp> subStats;
 
-  factory GameRecordWeapon.fromJson(Map<String, dynamic>? json) {
+  factory GameRecordWeapon.fromJson(
+    Map<String, dynamic>? json, {
+    GameRecordPropertyMap propertyMap = const {},
+  }) {
     if (json == null) {
       return const GameRecordWeapon(id: '', name: '', level: 1);
     }
@@ -69,7 +123,10 @@ class GameRecordWeapon {
     final subs = <GameRecordProp>[];
     final subList = json['sub_property_list'] as List<dynamic>? ?? [];
     for (final raw in subList) {
-      final prop = GameRecordProp.fromJson(raw as Map<String, dynamic>);
+      final prop = GameRecordProp.fromJson(
+        raw as Map<String, dynamic>,
+        propertyMap: propertyMap,
+      );
       if (prop != null) subs.add(prop);
     }
     return GameRecordWeapon(
@@ -79,7 +136,9 @@ class GameRecordWeapon {
       refinement: _asInt(json['affix_level'], fallback: 1),
       promoteLevel: _asInt(json['promote_level']),
       rarity: _asInt(json['rarity'], fallback: 3),
-      mainStat: main == null ? null : GameRecordProp.fromJson(main),
+      mainStat: main == null
+          ? null
+          : GameRecordProp.fromJson(main, propertyMap: propertyMap),
       subStats: subs,
     );
   }
@@ -104,13 +163,19 @@ class GameRecordRelic {
   final GameRecordProp? mainStat;
   final List<GameRecordProp> subStats;
 
-  factory GameRecordRelic.fromJson(Map<String, dynamic> json) {
+  factory GameRecordRelic.fromJson(
+    Map<String, dynamic> json, {
+    GameRecordPropertyMap propertyMap = const {},
+  }) {
     final set = json['set'] as Map<String, dynamic>?;
     final main = json['main_property'] as Map<String, dynamic>?;
     final subs = <GameRecordProp>[];
     final subList = json['sub_property_list'] as List<dynamic>? ?? [];
     for (final raw in subList) {
-      final prop = GameRecordProp.fromJson(raw as Map<String, dynamic>);
+      final prop = GameRecordProp.fromJson(
+        raw as Map<String, dynamic>,
+        propertyMap: propertyMap,
+      );
       if (prop != null) subs.add(prop);
     }
     return GameRecordRelic(
@@ -119,7 +184,9 @@ class GameRecordRelic {
       posName: json['pos_name'] as String? ?? '',
       level: _asInt(json['level']),
       setName: set?['name'] as String? ?? '',
-      mainStat: main == null ? null : GameRecordProp.fromJson(main),
+      mainStat: main == null
+          ? null
+          : GameRecordProp.fromJson(main, propertyMap: propertyMap),
       subStats: subs,
     );
   }
@@ -218,6 +285,7 @@ class HoyolabCharacterBuild {
   factory HoyolabCharacterBuild.fromDetailJson(
     Map<String, dynamic> json, {
     HoyolabOwnedCharacter? summary,
+    GameRecordPropertyMap propertyMap = const {},
   }) {
     final base = json['base'] as Map<String, dynamic>? ?? json;
     final id = '${base['id'] ?? summary?.id ?? ''}';
@@ -230,7 +298,10 @@ class HoyolabCharacterBuild {
     ]) {
       final list = json[key] as List<dynamic>? ?? [];
       for (final raw in list) {
-        final prop = GameRecordProp.fromJson(raw as Map<String, dynamic>);
+        final prop = GameRecordProp.fromJson(
+          raw as Map<String, dynamic>,
+          propertyMap: propertyMap,
+        );
         if (prop != null) stats.add(prop);
       }
     }
@@ -247,7 +318,12 @@ class HoyolabCharacterBuild {
     final relicList =
         json['relics'] as List<dynamic>? ?? json['reliquary_list'] as List<dynamic>? ?? [];
     for (final raw in relicList) {
-      relics.add(GameRecordRelic.fromJson(raw as Map<String, dynamic>));
+      relics.add(
+        GameRecordRelic.fromJson(
+          raw as Map<String, dynamic>,
+          propertyMap: propertyMap,
+        ),
+      );
     }
 
     return HoyolabCharacterBuild(
@@ -268,6 +344,7 @@ class HoyolabCharacterBuild {
       weapon: GameRecordWeapon.fromJson(
         json['weapon'] as Map<String, dynamic>? ??
             _weaponToJson(summary?.weapon),
+        propertyMap: propertyMap,
       ),
       relics: relics.isNotEmpty ? relics : (summary?.relics ?? const []),
       fetchedAt: DateTime.now(),
@@ -328,6 +405,19 @@ class SpiralAbyssStatus {
   final DateTime? updatedAt;
 
   factory SpiralAbyssStatus.fromJson(Map<String, dynamic> json) {
+    final cachedAt = json['updated_at'] as String?;
+    if (cachedAt != null) {
+      return SpiralAbyssStatus(
+        maxFloor: json['max_floor'] as String? ?? '-',
+        totalStars: _asInt(json['total_star']),
+        isUnlocked: json['is_unlock'] as bool? ?? false,
+        scheduleId: json['schedule_id'] == null
+            ? null
+            : _asInt(json['schedule_id']),
+        updatedAt: DateTime.tryParse(cachedAt),
+      );
+    }
+
     final start = int.tryParse('${json['start_time'] ?? ''}');
     return SpiralAbyssStatus(
       maxFloor: json['max_floor'] as String? ?? '-',
@@ -339,6 +429,14 @@ class SpiralAbyssStatus {
           : DateTime.fromMillisecondsSinceEpoch(start * 1000),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'max_floor': maxFloor,
+        'total_star': totalStars,
+        'is_unlock': isUnlocked,
+        if (scheduleId != null) 'schedule_id': scheduleId,
+        if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+      };
 }
 
 class ImaginariumTheaterStatus {
@@ -403,6 +501,31 @@ class ImaginariumTheaterStatus {
       highlightAvatars: avatars,
     );
   }
+
+  factory ImaginariumTheaterStatus.fromCacheJson(Map<String, dynamic> json) =>
+      ImaginariumTheaterStatus(
+        isUnlocked: json['is_unlock'] as bool? ?? true,
+        difficultyId: _asInt(json['difficulty_id'], fallback: 1),
+        maxRoundId: _asInt(json['max_round_id']),
+        medalNum: _asInt(json['medal_num']),
+        hasData: json['has_data'] as bool? ?? false,
+        updatedAt: json['updated_at'] == null
+            ? null
+            : DateTime.tryParse(json['updated_at'] as String),
+        highlightAvatars: (json['highlight_avatars'] as List<dynamic>? ?? [])
+            .map((e) => '$e')
+            .toList(growable: false),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'is_unlock': isUnlocked,
+        'difficulty_id': difficultyId,
+        'max_round_id': maxRoundId,
+        'medal_num': medalNum,
+        'has_data': hasData,
+        if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+        'highlight_avatars': highlightAvatars,
+      };
 }
 
 class AdventureStatus {
@@ -425,6 +548,30 @@ class AdventureStatus {
     if (dates.isEmpty) return fetchedAt;
     return dates.reduce((a, b) => a.isAfter(b) ? a : b);
   }
+
+  factory AdventureStatus.fromCacheJson(Map<String, dynamic> json) =>
+      AdventureStatus(
+        spiralAbyss: json['spiral_abyss'] == null
+            ? null
+            : SpiralAbyssStatus.fromJson(
+                json['spiral_abyss'] as Map<String, dynamic>,
+              ),
+        imaginariumTheater: json['imaginarium_theater'] == null
+            ? null
+            : ImaginariumTheaterStatus.fromCacheJson(
+                json['imaginarium_theater'] as Map<String, dynamic>,
+              ),
+        fetchedAt: json['fetched_at'] == null
+            ? null
+            : DateTime.tryParse(json['fetched_at'] as String),
+      );
+
+  Map<String, dynamic> toJson() => {
+        if (spiralAbyss != null) 'spiral_abyss': spiralAbyss!.toJson(),
+        if (imaginariumTheater != null)
+          'imaginarium_theater': imaginariumTheater!.toJson(),
+        if (fetchedAt != null) 'fetched_at': fetchedAt!.toIso8601String(),
+      };
 }
 
 int _asInt(dynamic value, {int fallback = 0}) {

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../data/hoyolab/hoyolab_exceptions.dart';
 import '../../../providers/hoyolab_game_providers.dart';
+import '../../../providers/hoyolab_game_refresh.dart';
 
 class HoyolabCharacterStatusCard extends ConsumerWidget {
   const HoyolabCharacterStatusCard({
@@ -18,6 +21,10 @@ class HoyolabCharacterStatusCard extends ConsumerWidget {
     return buildAsync.when(
       data: (build) {
         if (build == null || !build.isOwned) return const SizedBox.shrink();
+        final fetchedLabel = build.fetchedAt == null
+            ? null
+            : formatRelativeUpdateTime(build.fetchedAt!);
+
         return Card(
           color: Theme.of(context).colorScheme.primaryContainer.withValues(
                 alpha: 0.35,
@@ -31,13 +38,31 @@ class HoyolabCharacterStatusCard extends ConsumerWidget {
                   children: [
                     const Icon(Icons.cloud_sync),
                     const SizedBox(width: 8),
-                    Text(
-                      'HoYoLAB 実データ',
-                      style: Theme.of(context).textTheme.titleMedium,
+                    Expanded(
+                      child: Text(
+                        'HoYoLAB 実データ',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh, size: 20),
+                      tooltip: '再取得',
+                      onPressed: () =>
+                          refreshHoyolabCharacterBuild(ref, characterId),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                if (fetchedLabel != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '取得 $fetchedLabel',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ),
                 Wrap(
                   spacing: 12,
                   runSpacing: 8,
@@ -77,43 +102,9 @@ class HoyolabCharacterStatusCard extends ConsumerWidget {
                   if (build.weapon!.mainStat != null)
                     _StatLine(
                       label: 'メイン',
-                      value: '${build.weapon!.mainStat!.label} ${build.weapon!.mainStat!.value}',
+                      value:
+                          '${build.weapon!.mainStat!.label} ${build.weapon!.mainStat!.value}',
                     ),
-                ],
-                if (build.relics.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text('聖遺物', style: Theme.of(context).textTheme.labelLarge),
-                  ...build.relics.map(
-                    (r) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _StatLine(
-                          label: r.posName.isEmpty ? r.name : r.posName,
-                          value: r.setName.isEmpty
-                              ? '+${r.level}'
-                              : '${r.setName} +${r.level}',
-                        ),
-                        if (r.mainStat != null)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 12),
-                            child: Text(
-                              'メイン: ${r.mainStat!.label} ${r.mainStat!.value}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                        ...r.subStats.take(4).map(
-                              (s) => Padding(
-                                padding: const EdgeInsets.only(left: 12),
-                                child: Text(
-                                  'サブ: ${s.label} ${s.value}',
-                                  style:
-                                      Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                            ),
-                      ],
-                    ),
-                  ),
                 ],
               ],
             ),
@@ -136,7 +127,22 @@ class HoyolabCharacterStatusCard extends ConsumerWidget {
           ),
         ),
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (e, _) {
+        if (e is HoyolabApiException) {
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('HoYoLAB ステータスを取得できません'),
+              subtitle: Text(e.userMessage),
+              trailing: TextButton(
+                onPressed: () => context.go('/settings/hoyolab'),
+                child: const Text('設定'),
+              ),
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 }

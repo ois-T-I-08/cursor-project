@@ -17,6 +17,7 @@ class UserProgressTable extends Table {
   TextColumn get weaponName => text().withDefault(const Constant(''))();
   IntColumn get weaponLevel => integer().withDefault(const Constant(1))();
   IntColumn get weaponRefinement => integer().withDefault(const Constant(1))();
+  TextColumn get artifacts => text().withDefault(const Constant('{}'))();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   TextColumn get memo => text().withDefault(const Constant(''))();
   IntColumn get updatedAt => integer()();
