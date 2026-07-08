@@ -54,7 +54,28 @@ class SyncProgress {
 
   double get fraction => total <= 0 ? 0 : (current / total).clamp(0.0, 1.0);
 
-  bool get isIndeterminate => total <= 0;
+  bool get isIndeterminate =>
+      total <= 0 && phase != SyncPhase.iconPreload;
+}
+
+extension SyncProgressDisplay on SyncProgress {
+  String get displayLabel {
+    if (phase == SyncPhase.iconPreload) {
+      if (total <= 0) {
+        if (detail == '取得済み') return 'アイコンはすべて取得済み';
+        return 'アイコン読み込みを準備中…';
+      }
+      return 'アイコン読み込み $current/$total';
+    }
+    if (detail != null) return '${phase.label} — $detail';
+    if (total > 0) return '${phase.label} $current/$total';
+    return phase.label;
+  }
+
+  double? get displayFraction {
+    if (total <= 0) return null;
+    return fraction;
+  }
 }
 
 enum SyncPhase {
@@ -63,6 +84,7 @@ enum SyncPhase {
   levelExp,
   characterUpgrades,
   weaponUpgrades,
+  iconPreload,
   finishing,
 }
 
@@ -73,6 +95,7 @@ extension SyncPhaseLabel on SyncPhase {
         SyncPhase.levelExp => 'レベルEXP表',
         SyncPhase.characterUpgrades => 'キャラ突破データ',
         SyncPhase.weaponUpgrades => '武器突破データ',
+        SyncPhase.iconPreload => 'アイコン読み込み',
         SyncPhase.finishing => '完了処理',
       };
 }

@@ -88,3 +88,12 @@ final localUserIdProvider = FutureProvider<String>((ref) async {
 
 final syncStateProvider =
     StateProvider<AsyncValue<SyncResult?>>((ref) => const AsyncValue.data(null));
+
+/// マスタ同期後に UI が参照する Provider を再読み込み
+void invalidateMasterDataProviders(WidgetRef ref) {
+  ref.invalidate(charactersProvider);
+  ref.invalidate(syncStatusProvider);
+  ref.invalidate(lastSyncTimeProvider);
+  ref.invalidate(aggregatedBookmarksProvider);
+  ref.invalidate(materialsMapProvider);
+}
