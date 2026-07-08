@@ -10,10 +10,27 @@ class AmberApi {
 
   final http.Client _client;
   static const name = 'project-amber';
+  static const _apiPrefix = '/api/v2/jp';
 
-  Future<Map<String, dynamic>> _fetchMap(String path) async {
-    final uri = Uri.parse('$amberBaseUrl$path');
-    final response = await _client.get(uri).timeout(const Duration(seconds: 30));
+  Future<Map<String, dynamic>> _fetchItems(String path) async {
+    final uri = Uri.parse('$amberBaseUrl$_apiPrefix$path');
+    final response =
+        await _client.get(uri).timeout(const Duration(seconds: 30));
+    if (response.statusCode != 200) {
+      throw Exception('Amber API error: ${response.statusCode} $path');
+    }
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    if (json['response'] != 200) {
+      throw Exception('Amber API response error: $path');
+    }
+    final data = json['data'] as Map<String, dynamic>;
+    return data['items'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> _fetchDetail(String path) async {
+    final uri = Uri.parse('$amberBaseUrl$_apiPrefix$path');
+    final response =
+        await _client.get(uri).timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) {
       throw Exception('Amber API error: ${response.statusCode} $path');
     }
@@ -25,65 +42,104 @@ class AmberApi {
   }
 
   Future<List<MasterCharacter>> fetchCharacters() async {
-    final data = await _fetchMap('/avatar');
-    return data.entries.map((entry) {
-      final raw = entry.value as Map<String, dynamic>;
-      final element = raw['element'] as String?;
-      return MasterCharacter(
-        id: entry.key,
-        name: raw['name'] as String? ?? entry.key,
-        element: element != null ? (elementMap[element] ?? element.toLowerCase()) : 'anemo',
-        weaponType: weaponTypeMap[raw['weaponType'] as String? ?? ''] ?? 'sword',
-        rarity: (raw['rank'] as num?)?.toInt() ?? 4,
-        region: regionMap[raw['region'] as String? ?? ''] ?? raw['region'] as String? ?? '',
-        iconUrl: buildIconUrl(raw['icon'] as String? ?? ''),
-        scoreType: 'atk',
+    final items = await _fetchItems('/avatar');
+    final characters = <MasterCharacter>[];
+
+    for (final raw in items.values) {
+      final avatar = raw as Map<String, dynamic>;
+      final elementKey = avatar['element'] as String?;
+      final element =
+          elementKey != null ? elementMap[elementKey] : null;
+      final name = avatar['name'] as String?;
+      if (element == null || name == null || name.isEmpty) continue;
+
+      final id = '${avatar['id']}';
+      if (id.startsWith('10000007-')) continue;
+
+      final isTraveler = id.startsWith('10000005-');
+      final displayName = isTraveler
+          ? '旅人（${elementLabelMap[element] ?? element}）'
+          : name;
+
+      characters.add(
+        MasterCharacter(
+          id: id,
+          name: displayName,
+          element: element,
+          weaponType:
+              weaponTypeMap[avatar['weaponType'] as String? ?? ''] ?? 'sword',
+          rarity: (avatar['rank'] as num?)?.toInt() == 4 ? 4 : 5,
+          region: regionMap[avatar['region'] as String? ?? ''] ??
+              avatar['region'] as String? ??
+              '',
+          iconUrl: buildIconUrl(avatar['icon'] as String? ?? ''),
+          scoreType: 'atk',
+        ),
       );
-    }).toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    }
+
+    characters.sort((a, b) => a.name.compareTo(b.name));
+    return characters;
   }
 
   Future<List<MasterWeapon>> fetchWeapons() async {
-    final data = await _fetchMap('/weapon');
-    return data.entries.map((entry) {
-      final raw = entry.value as Map<String, dynamic>;
-      return MasterWeapon(
-        id: entry.key,
-        name: raw['name'] as String? ?? entry.key,
-        weaponType: weaponTypeMap[raw['type'] as String? ?? ''] ?? 'sword',
-        rarity: (raw['rank'] as num?)?.toInt() ?? 3,
-        iconUrl: buildIconUrl(raw['icon'] as String? ?? ''),
+    final items = await _fetchItems('/weapon');
+    final weapons = <MasterWeapon>[];
+
+    for (final raw in items.values) {
+      final weapon = raw as Map<String, dynamic>;
+      final name = weapon['name'] as String?;
+      if (name == null || name.isEmpty) continue;
+
+      weapons.add(
+        MasterWeapon(
+          id: '${weapon['id']}',
+          name: name,
+          weaponType:
+              weaponTypeMap[weapon['type'] as String? ?? ''] ?? 'sword',
+          rarity: (weapon['rank'] as num?)?.toInt() ?? 3,
+          iconUrl: buildIconUrl(weapon['icon'] as String? ?? ''),
+        ),
       );
-    }).toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    }
+
+    weapons.sort((a, b) => a.name.compareTo(b.name));
+    return weapons;
   }
 
   Future<List<MasterMaterial>> fetchMaterials() async {
-    final data = await _fetchMap('/material');
-    return data.entries
-        .map((entry) {
-          final raw = entry.value as Map<String, dynamic>;
-          final type = raw['type'] as String? ?? '';
-          if (!materialCategories.contains(type)) return null;
-          return MasterMaterial(
-            id: entry.key,
-            name: raw['name'] as String? ?? entry.key,
-            category: type,
-            rarity: (raw['rank'] as num?)?.toInt(),
-            iconUrl: buildIconUrl(raw['icon'] as String? ?? ''),
-          );
-        })
-        .whereType<MasterMaterial>()
-        .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    final items = await _fetchItems('/material');
+    final materials = <MasterMaterial>[];
+
+    for (final raw in items.values) {
+      final material = raw as Map<String, dynamic>;
+      final name = material['name'] as String?;
+      final type = material['type'] as String? ?? '';
+      if (name == null || name.isEmpty || !materialCategories.contains(type)) {
+        continue;
+      }
+
+      materials.add(
+        MasterMaterial(
+          id: '${material['id']}',
+          name: name,
+          category: type,
+          rarity: (material['rank'] as num?)?.toInt(),
+          iconUrl: buildIconUrl(material['icon'] as String? ?? ''),
+        ),
+      );
+    }
+
+    materials.sort((a, b) => a.name.compareTo(b.name));
+    return materials;
   }
 
   Future<Map<String, dynamic>> fetchAvatarDetail(String id) async {
-    return _fetchMap('/avatar/$id');
+    return _fetchDetail('/avatar/$id');
   }
 
   Future<Map<String, dynamic>> fetchWeaponDetail(String id) async {
-    return _fetchMap('/weapon/$id');
+    return _fetchDetail('/weapon/$id');
   }
 
   void dispose() => _client.close();

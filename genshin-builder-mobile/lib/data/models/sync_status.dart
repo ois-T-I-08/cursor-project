@@ -1,0 +1,78 @@
+/// 設定画面の同期状態（Web `getSyncStatus` 相当）
+class SyncStatus {
+  const SyncStatus({
+    required this.characters,
+    required this.weapons,
+    required this.materials,
+    required this.characterUpgrades,
+    required this.weaponUpgrades,
+    required this.levelExpSegments,
+    this.lastSyncedAt,
+  });
+
+  final int characters;
+  final int weapons;
+  final int materials;
+  final int characterUpgrades;
+  final int weaponUpgrades;
+  final int levelExpSegments;
+  final DateTime? lastSyncedAt;
+
+  int get missingCharacterUpgrades =>
+      (characters - characterUpgrades).clamp(0, characters);
+
+  int get missingWeaponUpgrades =>
+      (weapons - weaponUpgrades).clamp(0, weapons);
+
+  bool get expTableReady => levelExpSegments >= 32;
+
+  bool get isUnsynced => characters == 0;
+
+  bool get needsInitialUpgradeSync =>
+      characters > 0 && characterUpgrades == 0;
+
+  bool get upgradeComplete =>
+      !isUnsynced &&
+      missingCharacterUpgrades == 0 &&
+      missingWeaponUpgrades == 0 &&
+      expTableReady;
+}
+
+/// 同期中の進捗（設定画面のプログレス表示用）
+class SyncProgress {
+  const SyncProgress({
+    required this.phase,
+    required this.current,
+    required this.total,
+    this.detail,
+  });
+
+  final SyncPhase phase;
+  final int current;
+  final int total;
+  final String? detail;
+
+  double get fraction => total <= 0 ? 0 : (current / total).clamp(0.0, 1.0);
+
+  bool get isIndeterminate => total <= 0;
+}
+
+enum SyncPhase {
+  master,
+  expMaterials,
+  levelExp,
+  characterUpgrades,
+  weaponUpgrades,
+  finishing,
+}
+
+extension SyncPhaseLabel on SyncPhase {
+  String get label => switch (this) {
+        SyncPhase.master => 'マスタ一覧',
+        SyncPhase.expMaterials => '経験値素材',
+        SyncPhase.levelExp => 'レベルEXP表',
+        SyncPhase.characterUpgrades => 'キャラ突破データ',
+        SyncPhase.weaponUpgrades => '武器突破データ',
+        SyncPhase.finishing => '完了処理',
+      };
+}

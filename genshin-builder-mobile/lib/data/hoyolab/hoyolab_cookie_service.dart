@@ -1,32 +1,54 @@
 import 'package:webview_flutter/webview_flutter.dart';
 
-import 'hoyolab_constants.dart';
+import '../../platform/hoyolab_cookie_channel.dart';
 
-/// WebView から HoYoLAB Cookie を取得（Android / iOS）
+/// WebView / ネイティブから HoYoLAB Cookie を取得
 class HoyolabCookieService {
   const HoyolabCookieService();
 
-  Future<String?> fetchCookieString() async {
-    final manager = WebViewCookieManager();
-    final cookies = await manager.getCookies(
-      domain: Uri.parse(HoyolabConstants.cookieUrl),
-    );
-    if (cookies.isEmpty) return null;
+  static const _cookieDomains = [
+    'https://m.hoyolab.com',
+    'https://www.hoyolab.com',
+    'https://act.hoyolab.com',
+    'https://account.hoyolab.com',
+  ];
 
-    final parts = <String>[];
-    for (final cookie in cookies) {
-      if (cookie.name.isEmpty) continue;
-      parts.add('${cookie.name}=${cookie.value}');
+  Future<String?> fetchCookieString() async {
+    final native = await HoyolabCookieChannel.fetchNativeCookie();
+    if (_hasAuthCookie(native)) return _normalize(native!);
+
+    final manager = WebViewCookieManager();
+    final merged = <String, String>{};
+
+    for (final domain in _cookieDomains) {
+      final cookies = await manager.getCookies(domain: Uri.parse(domain));
+      for (final cookie in cookies) {
+        if (cookie.name.isEmpty) continue;
+        merged[cookie.name] = cookie.value;
+      }
     }
-    if (parts.isEmpty) return null;
-    return '${parts.join('; ')};';
+
+    if (merged.isEmpty) return null;
+    final cookie = merged.entries.map((e) => '${e.key}=${e.value}').join('; ');
+    if (!_hasAuthCookie(cookie)) return null;
+    return _normalize(cookie);
   }
 
   Future<bool> hasAuthCookie() async {
     final cookie = await fetchCookieString();
-    if (cookie == null) return false;
-    return cookie.contains('ltoken=') ||
+    return cookie != null;
+  }
+
+  static bool _hasAuthCookie(String? cookie) {
+    if (cookie == null || cookie.isEmpty) return false;
+    return cookie.contains('ltoken_v2=') ||
+        cookie.contains('ltoken=') ||
         cookie.contains('ltuid_v2=') ||
         cookie.contains('account_id_v2=');
+  }
+
+  static String _normalize(String cookie) {
+    final trimmed = cookie.trim();
+    return trimmed.endsWith(';') ? trimmed : '$trimmed;';
   }
 }

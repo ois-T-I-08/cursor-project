@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/app_providers.dart';
+import '../hoyolab/widgets/adventure_status_card.dart';
 import '../hoyolab/widgets/daily_note_card.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -60,6 +61,8 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          const AdventureStatusCard(),
           const SizedBox(height: 16),
           const DailyNoteCard(),
           const SizedBox(height: 16),

@@ -168,6 +168,23 @@ class HoyolabRepository {
     return api.getDailyNote();
   }
 
+  Future<HoyolabApi?> tryApi() async {
+    if (!_flags.hoyolabLinkEnabled) return null;
+    final cookie = await _secure.getCookie();
+    if (cookie == null || cookie.isEmpty) return null;
+    final uid = await _secure.getUid();
+    final region = await _secure.getRegion();
+    if (uid == null || uid.isEmpty || region == null || region.isEmpty) {
+      return null;
+    }
+    return _apiFactory(
+      cookie: cookie,
+      region: region,
+      uid: uid,
+      appVersion: await _resolveAppVersion(),
+    );
+  }
+
   Future<void> disconnect() async {
     await _secure.deleteHoyolabSession();
   }

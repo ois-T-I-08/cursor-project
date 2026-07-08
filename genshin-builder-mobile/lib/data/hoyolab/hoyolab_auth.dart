@@ -34,6 +34,7 @@ class HoyolabAuth {
     required String cookie,
     required String appVersion,
     String? dsToken,
+    String clientType = '2',
   }) {
     return {
       'User-Agent':
@@ -42,10 +43,27 @@ class HoyolabAuth {
       'Referer': 'https://act.hoyolab.com/',
       'Accept-Encoding': 'gzip, deflate, br',
       'Cookie': cookie,
-      'x-rpc-client_type': '2',
+      'x-rpc-client_type': clientType,
       'x-rpc-app_version': appVersion,
       'x-rpc-language': HoyolabConstants.language,
       if (dsToken != null) 'DS': dsToken,
+    };
+  }
+
+  static Map<String, String> buildRecordHeaders({
+    required String cookie,
+    required String appVersion,
+    String? dsToken,
+    bool jsonBody = false,
+  }) {
+    return {
+      ...buildHeaders(
+        cookie: cookie,
+        appVersion: appVersion,
+        dsToken: dsToken,
+        clientType: HoyolabConstants.recordClientType,
+      ),
+      if (jsonBody) 'Content-Type': 'application/json',
     };
   }
 }

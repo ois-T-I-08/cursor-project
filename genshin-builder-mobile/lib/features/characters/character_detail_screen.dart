@@ -13,8 +13,10 @@ import '../../domain/models/bookmark.dart';
 import '../../domain/models/calculation_models.dart';
 import '../../domain/talent_progression.dart';
 import '../../providers/app_providers.dart';
+import '../hoyolab/widgets/hoyolab_character_status_card.dart';
 import '../shared/mark_slider.dart';
 import '../shared/material_list_tile.dart';
+import 'widgets/weapon_materials_section.dart';
 
 class CharacterDetailScreen extends ConsumerStatefulWidget {
   const CharacterDetailScreen({super.key, required this.characterId});
@@ -35,10 +37,16 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   int _talentSkill = 1;
   int _talentBurst = 1;
   int _weaponLevel = 1;
+  int _targetWeaponLevel = levelMax;
+  String _weaponId = '';
+  String _weaponName = '';
+  int _weaponRarity = 4;
 
   MasterCharacter? _character;
   UserProgress? _progress;
+  List<MasterWeapon> _weapons = [];
   List<PromoteStage> _promotes = [];
+  List<PromoteStage> _weaponPromotes = [];
   Map<String, List<TalentLevelUpgrade>> _talents = {};
   Map<String, MasterMaterial> _materials = {};
   List<MaterialBookmarkEntry> _bookmarks = [];
@@ -69,6 +77,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       final upgrade = await charRepo.getUpgrade(widget.characterId);
       _promotes = upgrade?.promotes ?? [];
       _talents = upgrade?.talents ?? {};
+      _weapons = await charRepo.getAllWeapons();
       _materials = await ref.read(materialsMapProvider.future);
 
       _progress = await progressRepo.getOrCreate(
@@ -77,6 +86,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         progressId: const Uuid().v4(),
       );
 
+      _weaponId = _progress!.weaponId;
+      _weaponName = _progress!.weaponName;
+      _weaponLevel = _progress!.weaponLevel;
+      await _loadWeaponUpgrade();
+
       final bookmarks = await bookmarkRepo.getAll();
       if (!mounted) return;
       setState(() {
@@ -84,7 +98,6 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _talentNormal = _progress!.talentNormal;
         _talentSkill = _progress!.talentSkill;
         _talentBurst = _progress!.talentBurst;
-        _weaponLevel = _progress!.weaponLevel;
         _bookmarks = bookmarks;
         _loading = false;
       });
@@ -95,6 +108,24 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _loadWeaponUpgrade() async {
+    if (_weaponId.isEmpty) {
+      _weaponPromotes = [];
+      _weaponRarity = 4;
+      return;
+    }
+    final charRepo = await ref.read(characterRepositoryProvider.future);
+    final weapon =
+        _weapons.where((w) => w.id == _weaponId).firstOrNull ??
+            await charRepo.getWeapon(_weaponId);
+    if (weapon != null) {
+      _weaponRarity = weapon.rarity;
+      _weaponName = weapon.name;
+    }
+    final weaponUpgrade = await charRepo.getWeaponUpgrade(_weaponId);
+    _weaponPromotes = weaponUpgrade?.promotes ?? [];
   }
 
   void _scheduleSave() {
@@ -114,6 +145,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       talentSkill: _talentSkill,
       talentBurst: _talentBurst,
       weaponLevel: _weaponLevel,
+      weaponId: _weaponId,
+      weaponName: _weaponName,
     );
     _progress = updated;
     try {
@@ -149,15 +182,50 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     _scheduleSave();
   }
 
+  Future<void> _onWeaponSelected(String? weaponId) async {
+    if (weaponId == null || weaponId.isEmpty) {
+      setState(() {
+        _weaponId = '';
+        _weaponName = '';
+        _weaponPromotes = [];
+        _weaponRarity = 4;
+      });
+    } else {
+      final w = _weapons.where((x) => x.id == weaponId).firstOrNull;
+      setState(() {
+        _weaponId = weaponId;
+        _weaponName = w?.name ?? '';
+        _weaponRarity = w?.rarity ?? 4;
+      });
+      await _loadWeaponUpgrade();
+      if (mounted) setState(() {});
+    }
+    _scheduleSave();
+  }
+
   String _resolveName(String id) => _materials[id]?.name ?? '素材 #$id';
 
   String? _resolveIcon(String id) => _materials[id]?.iconUrl;
 
-  CultivationBookmarkContext _bookmarkContext(MasterCharacter character) =>
+  CultivationBookmarkContext _characterBookmarkContext(
+    MasterCharacter character,
+  ) =>
       CultivationBookmarkContext(
         kind: CultivationKind.characterLevel,
         targetId: character.id,
         targetName: character.name,
+        character: BookmarkCharacterSource(
+          characterId: character.id,
+          characterName: character.name,
+          characterIconUrl: character.iconUrl,
+        ),
+      );
+
+  CultivationBookmarkContext _weaponBookmarkContext(MasterCharacter character) =>
+      CultivationBookmarkContext(
+        kind: CultivationKind.weaponLevel,
+        targetId: _weaponId.isEmpty ? character.id : _weaponId,
+        targetName: _weaponName.isEmpty ? character.name : _weaponName,
         character: BookmarkCharacterSource(
           characterId: character.id,
           characterName: character.name,
@@ -193,7 +261,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     final nextStage =
         getNextStageRequirements(_level, _promotes, 'character', 5);
     final talentUpgrades = _talents['skill_0'] ?? [];
-    final bookmarkCtx = _bookmarkContext(character);
+    final bookmarkCtx = _characterBookmarkContext(character);
+    final weaponBookmarkCtx = _weaponBookmarkContext(character);
     final rangeSourceKey =
         makeRangeSourceKey(bookmarkCtx, _level, _targetLevel);
 
@@ -202,6 +271,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          HoyolabCharacterStatusCard(characterId: widget.characterId),
+          const SizedBox(height: 16),
+          Text('キャラクター', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
           LevelMarkSlider(
             label: '現在レベル',
             value: _level,
@@ -318,10 +391,37 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             ),
           ],
           const Divider(height: 32),
-          LevelMarkSlider(
-            label: '武器レベル',
-            value: _weaponLevel,
-            onChanged: _updateWeaponLevel,
+          WeaponMaterialsSection(
+            weapons: _weapons,
+            selectedWeaponId: _weaponId,
+            weaponLevel: _weaponLevel,
+            targetWeaponLevel: _targetWeaponLevel,
+            promotes: _weaponPromotes,
+            weaponRarity: _weaponRarity,
+            bookmarkContext: weaponBookmarkCtx,
+            bookmarks: _bookmarks,
+            resolveName: _resolveName,
+            resolveIcon: _resolveIcon,
+            onWeaponSelected: _onWeaponSelected,
+            onWeaponLevelChanged: _updateWeaponLevel,
+            onTargetWeaponLevelChanged: (v) =>
+                setState(() => _targetWeaponLevel = v),
+            onToggleBookmark: (line, scope) => _toggleLineBookmark(
+              weaponBookmarkCtx,
+              line,
+              scope,
+            ),
+            onToggleRangeBookmark: (line, rangeSourceKey) =>
+                _toggleRangeLineBookmark(
+              weaponBookmarkCtx,
+              line,
+              rangeSourceKey,
+            ),
+            onBookmarkRange: (lines, sourceKey) => _bookmarkRange(
+              weaponBookmarkCtx,
+              lines,
+              sourceKey,
+            ),
           ),
         ],
       ),
@@ -334,7 +434,13 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     String sourceKey,
   ) async {
     final repo = await ref.read(bookmarkRepositoryProvider.future);
-    final sourceLabel = makeRangeSourceLabel(ctx, _level, _targetLevel);
+    final from = ctx.kind == CultivationKind.weaponLevel
+        ? _weaponLevel
+        : _level;
+    final to = ctx.kind == CultivationKind.weaponLevel
+        ? _targetWeaponLevel
+        : _targetLevel;
+    final sourceLabel = makeRangeSourceLabel(ctx, from, to);
     final iconMap = {
       for (final m in _materials.values) m.id: m.iconUrl,
     };
@@ -373,10 +479,16 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       final iconMap = {
         for (final m in _materials.values) m.id: m.iconUrl,
       };
+      final from = ctx.kind == CultivationKind.weaponLevel
+          ? _weaponLevel
+          : _level;
+      final to = ctx.kind == CultivationKind.weaponLevel
+          ? _targetWeaponLevel
+          : _targetLevel;
       final entry = buildBookmarkEntries(
         lines: [line],
         sourceKey: rangeSourceKey,
-        sourceLabel: makeRangeSourceLabel(ctx, _level, _targetLevel),
+        sourceLabel: makeRangeSourceLabel(ctx, from, to),
         character: ctx.character,
         iconUrlByMaterialId: iconMap,
       ).first;

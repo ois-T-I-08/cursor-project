@@ -13,8 +13,7 @@ dependencies:
   flutter_riverpod: ^2.6.1
   go_router: ^14.8.1
   http: ^1.3.0
-  # sqflite: Drift 移行完了後に削除
-  sqflite: ^2.4.2
+  # Drift（sqflite は削除済み — DB パスは database_path.dart）
   drift: ^2.22.1
   drift_flutter: ^0.2.4
   sqlite3_flutter_libs: ^0.5.28

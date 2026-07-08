@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +7,7 @@ import '../../data/hoyolab/hoyolab_exceptions.dart';
 import '../../data/hoyolab/models/daily_note.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/hoyolab_providers.dart';
+import '../../providers/hoyolab_game_providers.dart';
 import 'hoyolab_login_screen.dart';
 import 'widgets/hoyolab_disclaimer_banner.dart';
 
@@ -26,13 +28,17 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
     ref.invalidate(dailyNoteProvider);
     ref.invalidate(hoyolabRolesProvider);
     ref.invalidate(featureFlagsProvider);
+    ref.invalidate(hoyolabOwnedFetchResultProvider);
+    ref.invalidate(hoyolabOwnedCharacterMapProvider);
+    ref.invalidate(sortedCharacterEntriesProvider);
+    ref.invalidate(hoyolabAdventureStatusProvider);
   }
 
   Future<void> _startLogin() async {
-    final completed = await Navigator.of(context).push<bool>(
+    final cookie = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => const HoyolabLoginScreen()),
     );
-    if (completed != true || !mounted) return;
+    if (cookie == null || cookie.isEmpty || !mounted) return;
 
     setState(() {
       _busy = true;
@@ -40,17 +46,25 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
     });
     try {
       final repo = await ref.read(hoyolabRepositoryProvider.future);
-      final cookie = await repo.fetchCookieFromWebView();
-      if (cookie == null || cookie.isEmpty) {
-        throw const HoyolabApiException(-1, 'Cookie を取得できませんでした');
-      }
       await repo.completeLogin(cookie: cookie);
       await _refreshProviders();
       setState(() => _message = 'HoYoLAB 連携が完了しました');
     } on HoyolabApiException catch (e) {
       setState(() => _message = e.userMessage);
+    } on StateError catch (e) {
+      setState(() => _message = e.message);
     } catch (e) {
-      setState(() => _message = '連携に失敗しました');
+      if (kDebugMode) debugPrint('HoYoLAB login failed: $e');
+      final detail = switch (e) {
+        FormatException() => 'API 応答の解析に失敗しました',
+        TypeError() => 'API 応答の形式が不正です',
+        _ => null,
+      };
+      setState(
+        () => _message = detail == null
+            ? '連携に失敗しました。ログイン状態を確認して再試行してください。'
+            : '$detail。再ログインしてお試しください。',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }

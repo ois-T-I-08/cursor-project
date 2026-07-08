@@ -7,6 +7,7 @@ import '../data/models/master_models.dart';
 import '../data/repositories/bookmark_repository.dart';
 import '../data/repositories/character_repository.dart';
 import '../data/repositories/progress_repository.dart';
+import '../data/models/sync_status.dart';
 import '../data/sync/master_sync_service.dart';
 
 const localUserIdKey = 'local_user_id';
@@ -67,6 +68,11 @@ final aggregatedBookmarksProvider = FutureProvider((ref) async {
 final lastSyncTimeProvider = FutureProvider<DateTime?>((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return db.getLastSyncTime();
+});
+
+final syncStatusProvider = FutureProvider<SyncStatus>((ref) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  return db.getSyncStatus();
 });
 
 /// ローカル匿名ユーザー ID（Web 版と同方針 — app_settings に永続化）

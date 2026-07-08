@@ -5,9 +5,17 @@
       {
         "command": "node .cursor/hooks/mark-memory-pending.mjs",
         "matcher": "Write"
+      },
+      {
+        "command": "node .cursor/hooks/mark-commit-pending.mjs",
+        "matcher": "Write"
       }
     ],
     "stop": [
+      {
+        "command": "node .cursor/hooks/stop-auto-commit.mjs",
+        "loop_limit": 1
+      },
       {
         "command": "node .cursor/hooks/stop-memory-save.mjs",
         "loop_limit": 2

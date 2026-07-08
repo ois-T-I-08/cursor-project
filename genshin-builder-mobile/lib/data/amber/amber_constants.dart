@@ -34,6 +34,16 @@ const regionMap = <String, String>{
   'MAINACTOR': '旅人',
 };
 
+const elementLabelMap = <String, String>{
+  'pyro': '炎',
+  'hydro': '水',
+  'electro': '雷',
+  'cryo': '氷',
+  'anemo': '風',
+  'geo': '岩',
+  'dendro': '草',
+};
+
 const materialCategories = {
   'characterLevelUpMaterial',
   'characterAscensionMaterial',
@@ -51,4 +61,4 @@ const materialCategories = {
   'localSpecialtyNodKrai',
 };
 
-String buildIconUrl(String icon) => '$amberAssetUrl/$icon';
+String buildIconUrl(String icon) => '$amberAssetUrl/$icon.png';

@@ -113,6 +113,7 @@ class UpgradeDataCache {
 
 class LevelExpSegment {
   const LevelExpSegment({
+    required this.id,
     required this.targetType,
     required this.rarity,
     required this.fromLevel,
@@ -121,6 +122,7 @@ class LevelExpSegment {
     this.moraRequired = 0,
   });
 
+  final String id;
   final String targetType;
   final int rarity;
   final int fromLevel;
