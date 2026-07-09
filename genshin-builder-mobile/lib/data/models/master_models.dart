@@ -137,6 +137,7 @@ class UserProgress {
     this.artifactsJson = '{}',
     this.isCompleted = false,
     this.memo = '',
+    this.artifactScoreType = '',
   });
 
   final String id;
@@ -155,6 +156,7 @@ class UserProgress {
   final String artifactsJson;
   final bool isCompleted;
   final String memo;
+  final String artifactScoreType;
 
   ArtifactState get artifacts => parseArtifactState(artifactsJson);
 
@@ -175,6 +177,7 @@ class UserProgress {
         'artifacts': artifactsJson,
         'is_completed': isCompleted ? 1 : 0,
         'memo': memo,
+        'artifact_score_type': artifactScoreType,
         'updated_at': DateTime.now().millisecondsSinceEpoch,
       };
 
@@ -195,6 +198,7 @@ class UserProgress {
         artifactsJson: map['artifacts'] as String? ?? '{}',
         isCompleted: (map['is_completed'] as int? ?? 0) == 1,
         memo: map['memo'] as String? ?? '',
+        artifactScoreType: map['artifact_score_type'] as String? ?? '',
       );
 
   UserProgress copyWith({
@@ -208,6 +212,7 @@ class UserProgress {
     int? weaponRefinement,
     String? weaponId,
     String? weaponName,
+    String? artifactScoreType,
     String? artifactsJson,
     ArtifactState? artifacts,
   }) {
@@ -225,6 +230,7 @@ class UserProgress {
       weaponName: weaponName ?? this.weaponName,
       weaponLevel: weaponLevel ?? this.weaponLevel,
       weaponRefinement: weaponRefinement ?? this.weaponRefinement,
+      artifactScoreType: artifactScoreType ?? this.artifactScoreType,
       artifactsJson: artifactsJson ??
           (artifacts != null ? encodeArtifactState(artifacts) : this.artifactsJson),
       isCompleted: isCompleted,

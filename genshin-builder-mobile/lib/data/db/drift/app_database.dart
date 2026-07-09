@@ -32,7 +32,7 @@ class DriftAppDatabase extends _$DriftAppDatabase {
   static const _dbName = 'genshin_builder.db';
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -47,10 +47,14 @@ class DriftAppDatabase extends _$DriftAppDatabase {
           if (from < 4) {
             await _addArtifactsColumnSafely(m.database);
           }
+          if (from < 5) {
+            await _addArtifactScoreTypeColumnSafely(m.database);
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
           await _addArtifactsColumnSafely(this);
+          await _addArtifactScoreTypeColumnSafely(this);
         },
       );
 
@@ -59,6 +63,21 @@ class DriftAppDatabase extends _$DriftAppDatabase {
     try {
       await db.customStatement(
         "ALTER TABLE user_progress ADD COLUMN artifacts TEXT NOT NULL DEFAULT '{}'",
+      );
+    } catch (e) {
+      final message = e.toString().toLowerCase();
+      if (!message.contains('duplicate column')) {
+        rethrow;
+      }
+    }
+  }
+
+  static Future<void> _addArtifactScoreTypeColumnSafely(
+    GeneratedDatabase db,
+  ) async {
+    try {
+      await db.customStatement(
+        "ALTER TABLE user_progress ADD COLUMN artifact_score_type TEXT NOT NULL DEFAULT ''",
       );
     } catch (e) {
       final message = e.toString().toLowerCase();
@@ -85,6 +104,7 @@ class DriftAppDatabase extends _$DriftAppDatabase {
     // マイグレーション完了を待ってから列修復（createInBackground 対策）
     await db.customStatement('SELECT 1');
     await _addArtifactsColumnSafely(db);
+    await _addArtifactScoreTypeColumnSafely(db);
     return db;
   }
 }
