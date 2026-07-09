@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/master_models.dart';
+import '../../domain/artifact_score.dart';
 import 'amber_constants.dart';
 
 class AmberApi {
@@ -73,7 +74,12 @@ class AmberApi {
               avatar['region'] as String? ??
               '',
           iconUrl: buildIconUrl(avatar['icon'] as String? ?? ''),
-          scoreType: 'atk',
+          scoreType: artifactScoreTypeToStorage(
+            inferScoreType(
+              avatar['specialProp'] as String?,
+              displayName,
+            ),
+          ),
         ),
       );
     }
