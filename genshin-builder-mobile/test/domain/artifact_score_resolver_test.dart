@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:genshin_builder_mobile/data/artifact_score/artifact_score_type_override_registry.dart';
 import 'package:genshin_builder_mobile/data/artifact_score/artifact_score_weight.dart';
 import 'package:genshin_builder_mobile/data/artifact_score/artifact_score_weight_repository.dart';
 import 'package:genshin_builder_mobile/data/artifact_score/artifact_score_weight_source.dart';
@@ -7,6 +8,17 @@ import 'package:genshin_builder_mobile/domain/artifact_score.dart';
 import 'package:genshin_builder_mobile/domain/artifact_score_resolver.dart';
 
 void main() {
+  setUp(() {
+    ArtifactScoreTypeOverrideRegistry.instance.useOverridesForTest({
+      '胡桃': ArtifactScoreType.hp,
+      '雷電将軍': ArtifactScoreType.recharge,
+    });
+  });
+
+  tearDown(() {
+    ArtifactScoreTypeOverrideRegistry.instance.resetForTest();
+  });
+
   test('resolver prefers user override over weight profile', () async {
     final source = _FakeSource([
       ArtifactScoreWeightProfile(

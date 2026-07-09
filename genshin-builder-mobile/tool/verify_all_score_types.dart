@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:genshin_builder_mobile/data/artifact_score/artifact_score_type_override_registry.dart';
+import 'package:genshin_builder_mobile/data/artifact_score/artifact_score_weight.dart';
 import 'package:genshin_builder_mobile/data/artifact_score/artifact_score_weight_repository.dart';
-import 'package:genshin_builder_mobile/data/artifact_score/local_json_artifact_score_weight_source.dart';
+import 'package:genshin_builder_mobile/data/artifact_score/artifact_score_weight_source.dart';
 import 'package:genshin_builder_mobile/data/models/master_models.dart';
 import 'package:genshin_builder_mobile/domain/artifact_score.dart';
 import 'package:genshin_builder_mobile/domain/artifact_score_resolver.dart';
@@ -10,6 +12,14 @@ import 'package:genshin_builder_mobile/domain/artifact_score_resolver.dart';
 /// 全キャラの取得基準を Amber API と照合する。
 /// `dart run tool/verify_all_score_types.dart`
 Future<void> main() async {
+  final nameOverrides = await _loadNameOverridesFromJson();
+  ArtifactScoreTypeOverrideRegistry.instance.useOverridesForTest(nameOverrides);
+
+  final profiles = await _loadWeightProfilesFromJson();
+  final profileIds = {for (final p in profiles) p.characterId: p};
+  final repo = ArtifactScoreWeightRepository(_FileWeightSource(profiles));
+  final resolver = ArtifactScoreResolver(repo);
+
   final client = HttpClient();
   final req = await client.getUrl(
     Uri.parse('https://gi.yatta.moe/api/v2/jp/avatar'),
@@ -19,13 +29,6 @@ Future<void> main() async {
   final json = jsonDecode(body) as Map<String, dynamic>;
   final items = (json['data'] as Map)['items'] as Map<String, dynamic>;
 
-  final repo = ArtifactScoreWeightRepository(
-    LocalJsonArtifactScoreWeightSource(),
-  );
-  final profiles = await repo.loadProfiles();
-  final profileIds = {for (final p in profiles) p.characterId: p};
-
-  final resolver = ArtifactScoreResolver(repo);
   final mismatches = <String>[];
   final summary = <String, int>{};
   var total = 0;
@@ -45,7 +48,11 @@ Future<void> main() async {
         : name;
     final sp = a['specialProp'] as String?;
 
-    final inferred = inferScoreType(sp, displayName);
+    final inferred = inferScoreType(
+      sp,
+      displayName,
+      nameOverrides: nameOverrides,
+    );
     final character = MasterCharacter(
       id: id,
       name: displayName,
@@ -60,8 +67,7 @@ Future<void> main() async {
     final settings = await resolver.resolve(character: character);
     final actual = artifactScoreTypeToStorage(settings.scoreType);
 
-    // 期待値: 重みJSONがあればそちらを優先、なければ inferScoreType
-    String expected = artifactScoreTypeToStorage(inferred);
+    var expected = artifactScoreTypeToStorage(inferred);
     final profile = profileIds[id];
     if (profile != null) {
       expected = artifactScoreTypeToStorage(
@@ -96,6 +102,32 @@ Future<void> main() async {
   client.close();
 }
 
+Future<Map<String, ArtifactScoreType>> _loadNameOverridesFromJson() async {
+  final file = File('assets/config/artifact_score_type_overrides.json');
+  final decoded = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+  final overrides = decoded['overrides'] as List<dynamic>? ?? [];
+  return {
+    for (final raw in overrides)
+      if (raw is Map<String, dynamic> &&
+          raw['name'] != null &&
+          artifactScoreTypeFromString(raw['scoreType'] as String?) != null)
+        raw['name'] as String:
+            artifactScoreTypeFromString(raw['scoreType'] as String)!,
+  };
+}
+
+Future<List<ArtifactScoreWeightProfile>> _loadWeightProfilesFromJson() async {
+  final file = File('assets/config/artifact_score_weights.json');
+  if (!await file.exists()) return [];
+  final decoded = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+  final profiles = decoded['profiles'] as List<dynamic>? ?? [];
+  return [
+    for (final raw in profiles)
+      if (raw is Map<String, dynamic>)
+        ArtifactScoreWeightProfile.fromJson(raw),
+  ];
+}
+
 String _elementLabel(String elementKey) => switch (elementKey) {
       'Fire' => '炎',
       'Water' => '水',
@@ -106,3 +138,12 @@ String _elementLabel(String elementKey) => switch (elementKey) {
       'Grass' => '草',
       _ => elementKey,
     };
+
+class _FileWeightSource implements ArtifactScoreWeightSource {
+  _FileWeightSource(this._profiles);
+
+  final List<ArtifactScoreWeightProfile> _profiles;
+
+  @override
+  Future<List<ArtifactScoreWeightProfile>> loadProfiles() async => _profiles;
+}

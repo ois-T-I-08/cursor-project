@@ -2,6 +2,8 @@
 
 聖遺物スコア重み（`artifact_score_weights`）の運用メモ。
 
+新キャラのスコア基準（HP/攻撃など）の追加手順は [ARTIFACT_SCORE_CHARACTER_ONBOARDING.md](./ARTIFACT_SCORE_CHARACTER_ONBOARDING.md) を参照。
+
 ## 1. どんな時に remote を使うか
 
 - 新キャラ実装直後に、アプリ更新なしで重みを反映したい

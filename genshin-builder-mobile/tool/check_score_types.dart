@@ -1,9 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:genshin_builder_mobile/data/artifact_score/artifact_score_weight.dart';
+import 'package:genshin_builder_mobile/domain/artifact_score.dart';
+
 /// 全キャラの取得基準を検証するツール。
-/// 期待値: Web版 inferScoreType + モバイル名前マップ + 重みJSON
+/// 期待値: inferScoreType + artifact_score_type_overrides.json + 重みJSON
 void main() async {
+  final nameOverrides = await _loadNameOverridesFromJson();
+  final weightProfiles = await _loadWeightProfilesFromJson();
+
   final client = HttpClient();
   final req = await client.getUrl(
     Uri.parse('https://gi.yatta.moe/api/v2/jp/avatar'),
@@ -12,12 +18,6 @@ void main() async {
   final body = await res.transform(utf8.decoder).join();
   final json = jsonDecode(body) as Map<String, dynamic>;
   final items = (json['data'] as Map)['items'] as Map<String, dynamic>;
-
-  const weightProfiles = {
-    '10000052': 'recharge', // 雷電将軍
-    '10000046': 'hp', // 胡桃
-    '10000042': 'atk', // 刻晴
-  };
 
   final currentWrong = <String>[];
   final byType = <String, int>{};
@@ -36,8 +36,9 @@ void main() async {
         : name;
     final sp = a['specialProp'] as String?;
 
-    final expected = weightProfiles[id] ?? _infer(sp, displayName);
-    final current = _currentMobileResolve(displayName, scoreTypeDb: '');
+    final expected = weightProfiles[id] ??
+        _infer(sp, displayName, nameOverrides: nameOverrides);
+    final current = _infer(sp, displayName, nameOverrides: nameOverrides);
 
     byType[expected] = (byType[expected] ?? 0) + 1;
 
@@ -66,76 +67,42 @@ void main() async {
   client.close();
 }
 
-String _currentMobileResolve(String name, {required String scoreTypeDb}) {
-  // resolveArtifactScoreType の現行ロジック（DB空 + 名前マップのみ）
-  const nameMap = {
-    '胡桃': 'hp',
-    '鍾離': 'hp',
-    '珊瑚宮心海': 'hp',
-    '夜蘭': 'hp',
-    'ニィロウ': 'hp',
-    'ディシア': 'hp',
-    '白朮': 'hp',
-    'フリーナ': 'hp',
-    'ヌヴィレット': 'hp',
-    'シグウィン': 'hp',
-    'ムアラニ': 'hp',
-    'コロンビーナ': 'hp',
-    'ノエル': 'def',
-    '荒瀧一斗': 'def',
-    'ゴロー': 'def',
-    '雲菫': 'def',
-    '千織': 'def',
-    'シロネン': 'def',
-    'カチーナ': 'def',
-    '楓原万葉': 'em',
-    'スクロース': 'em',
-    'ナヒーダ': 'em',
-    '綺良々': 'em',
-    'ヨォーヨ': 'em',
-    'コレイ': 'em',
-    'ティナリ': 'em',
-    '久岐忍': 'em',
-    'ラウマ': 'em',
-    'アイノ': 'em',
-    '雷電将軍': 'recharge',
+Future<Map<String, String>> _loadNameOverridesFromJson() async {
+  final file = File('assets/config/artifact_score_type_overrides.json');
+  final decoded = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+  final overrides = decoded['overrides'] as List<dynamic>? ?? [];
+  return {
+    for (final raw in overrides)
+      if (raw is Map<String, dynamic> && raw['name'] != null)
+        raw['name'] as String: raw['scoreType'] as String,
   };
-  return nameMap[name] ?? 'atk';
 }
 
-String _infer(String? specialProp, String name) {
-  const nameOverrides = {
-    '胡桃': 'hp',
-    '鍾離': 'hp',
-    '珊瑚宮心海': 'hp',
-    '夜蘭': 'hp',
-    'ニィロウ': 'hp',
-    'ディシア': 'hp',
-    '白朮': 'hp',
-    'フリーナ': 'hp',
-    'ヌヴィレット': 'hp',
-    'シグウィン': 'hp',
-    'ムアラニ': 'hp',
-    'コロンビーナ': 'hp',
-    'ノエル': 'def',
-    '荒瀧一斗': 'def',
-    'ゴロー': 'def',
-    '雲菫': 'def',
-    '千織': 'def',
-    'シロネン': 'def',
-    'カチーナ': 'def',
-    '楓原万葉': 'em',
-    'スクロース': 'em',
-    'ナヒーダ': 'em',
-    '綺良々': 'em',
-    'ヨォーヨ': 'em',
-    'コレイ': 'em',
-    'ティナリ': 'em',
-    '久岐忍': 'em',
-    'ラウマ': 'em',
-    'アイノ': 'em',
-    '雷電将軍': 'recharge',
-  };
+Future<Map<String, String>> _loadWeightProfilesFromJson() async {
+  final file = File('assets/config/artifact_score_weights.json');
+  if (!await file.exists()) return {};
+  final decoded = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+  final profiles = decoded['profiles'] as List<dynamic>? ?? [];
+  final result = <String, String>{};
+  for (final raw in profiles) {
+    if (raw is! Map<String, dynamic>) continue;
+    final id = raw['characterId'] as String?;
+    final weightsJson = raw['weights'] as Map<String, dynamic>?;
+    if (id == null || weightsJson == null) continue;
+    final weights = ArtifactStatWeights.fromJson(weightsJson);
+    final type = inferArtifactScoreTypeFromWeights(weights);
+    if (type != null) {
+      result[id] = artifactScoreTypeToStorage(type);
+    }
+  }
+  return result;
+}
+
+String _infer(
+  String? specialProp,
+  String name, {
+  required Map<String, String> nameOverrides,
+}) {
   if (nameOverrides.containsKey(name)) return nameOverrides[name]!;
   return switch (specialProp) {
     'FIGHT_PROP_HP_PERCENT' => 'hp',

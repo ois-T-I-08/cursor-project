@@ -5,6 +5,14 @@ import 'package:genshin_builder_mobile/data/models/master_models.dart';
 import 'package:genshin_builder_mobile/domain/artifact_score.dart';
 import 'package:genshin_builder_mobile/domain/models/artifact_state.dart';
 
+const _sampleNameOverrides = <String, ArtifactScoreType>{
+  '鍾離': ArtifactScoreType.hp,
+  'コロンビーナ': ArtifactScoreType.hp,
+  '雷電将軍': ArtifactScoreType.recharge,
+  '楓原万葉': ArtifactScoreType.em,
+  '胡桃': ArtifactScoreType.hp,
+};
+
 void main() {
   test('piece score formula for each score type', () {
     const piece = ArtifactPiece(
@@ -33,15 +41,27 @@ void main() {
       ArtifactScoreType.recharge,
     );
     expect(
-      inferScoreType('FIGHT_PROP_ROCK_ADD_HURT', '鍾離'),
+      inferScoreType(
+        'FIGHT_PROP_ROCK_ADD_HURT',
+        '鍾離',
+        nameOverrides: _sampleNameOverrides,
+      ),
       ArtifactScoreType.hp,
     );
     expect(
-      inferScoreType('FIGHT_PROP_CRITICAL', 'コロンビーナ'),
+      inferScoreType(
+        'FIGHT_PROP_CRITICAL',
+        'コロンビーナ',
+        nameOverrides: _sampleNameOverrides,
+      ),
       ArtifactScoreType.hp,
     );
     expect(
-      inferScoreType('FIGHT_PROP_CHARGE_EFFICIENCY', '雷電将軍'),
+      inferScoreType(
+        'FIGHT_PROP_CHARGE_EFFICIENCY',
+        '雷電将軍',
+        nameOverrides: _sampleNameOverrides,
+      ),
       ArtifactScoreType.recharge,
     );
   });
@@ -69,7 +89,13 @@ void main() {
       iconUrl: '',
       scoreType: 'unknown',
     );
-    expect(resolveArtifactScoreType(byName), ArtifactScoreType.em);
+    expect(
+      resolveArtifactScoreType(
+        byName,
+        nameOverrides: _sampleNameOverrides,
+      ),
+      ArtifactScoreType.em,
+    );
 
     const genericAtk = MasterCharacter(
       id: '3',
@@ -81,7 +107,13 @@ void main() {
       iconUrl: '',
       scoreType: 'atk',
     );
-    expect(resolveArtifactScoreType(genericAtk), ArtifactScoreType.hp);
+    expect(
+      resolveArtifactScoreType(
+        genericAtk,
+        nameOverrides: _sampleNameOverrides,
+      ),
+      ArtifactScoreType.hp,
+    );
   });
 
   test('user score type storage uses user prefix', () {
