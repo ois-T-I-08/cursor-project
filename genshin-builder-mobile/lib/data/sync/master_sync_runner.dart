@@ -29,6 +29,22 @@ Future<({SyncResult result, int iconsLoaded})> runMasterSyncWithIconPreload(
     onProgress: onProgress,
   );
 
+  // 新キャラが追加された場合、重み未登録を検知してリモート再取得を試みる。
+  final weightRepo = ref.read(artifactScoreWeightRepositoryProvider);
+  final characters = await db.getAllCharacters();
+  final missingWeightIds =
+      await weightRepo.syncMissingCharacterProfiles(characters);
+  if (missingWeightIds.isNotEmpty) {
+    await db.insertSyncLog(
+      'partial',
+      'artifact score weights missing for: ${missingWeightIds.join(',')}',
+    );
+  }
+
+  // 同期結果と重みデータを基にバージョンを自動更新
+  final versioning = await ref.read(versioningServiceProvider.future);
+  await versioning.updateAndPersistVersions();
+
   invalidateMasterDataProviders(ref);
   return (result: result, iconsLoaded: iconsLoaded);
 }

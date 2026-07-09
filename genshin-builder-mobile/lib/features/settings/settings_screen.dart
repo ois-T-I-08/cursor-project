@@ -36,6 +36,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final iconMessage = outcome.iconsLoaded > 0
           ? ' · 新規アイコン ${outcome.iconsLoaded} 件'
           : ' · アイコンは取得済み';
+      if (!mounted) return;
       setState(() {
         _lastMessage = result.hasErrors
             ? '一部エラー: ${result.errors.join('; ')}'
@@ -44,8 +45,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 '武器 ${result.weaponUpgrades}$iconMessage';
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _lastMessage = '同期失敗: $e');
     } finally {
+      if (!mounted) return;
       setState(() {
         _syncing = false;
         _syncProgress = null;
@@ -56,6 +59,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final syncStatusAsync = ref.watch(syncStatusProvider);
+    final versionStatusAsync = ref.watch(versionStatusProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('設定')),
@@ -94,6 +98,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     loading: () => const Text('…'),
                     error: (e, _) => Text('$e'),
+                  ),
+                  const SizedBox(height: 8),
+                  versionStatusAsync.when(
+                    data: (v) {
+                      if (!v.hasAnyVersion) return const SizedBox.shrink();
+                      final lines = <String>[
+                        'データバージョン',
+                        '・Master: ${_shortVersion(v.masterDataVersion)}',
+                        '・Score: ${_shortVersion(v.artifactScoreWeightsVersion)}',
+                      ];
+                      if (v.updatedAt != null) {
+                        lines.add('更新: ${v.updatedAt!.toLocal()}');
+                      }
+                      return Text(
+                        lines.join('\n'),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
                   ),
                   if (_syncing && _syncProgress != null) ...[
                     const SizedBox(height: 16),
@@ -145,6 +168,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
+}
+
+String _shortVersion(String? value) {
+  if (value == null || value.isEmpty) return '-';
+  if (value.length <= 8) return value;
+  return value.substring(0, 8);
 }
 
 class _SyncStatusBanner extends StatelessWidget {

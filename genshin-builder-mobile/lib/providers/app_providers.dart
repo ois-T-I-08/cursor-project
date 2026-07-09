@@ -2,13 +2,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/amber/amber_api.dart';
+import '../data/artifact_score/artifact_score_weight_repository.dart';
+import '../data/artifact_score/composite_artifact_score_weight_source.dart';
+import '../data/artifact_score/artifact_score_weight_source.dart';
+import '../data/artifact_score/local_json_artifact_score_weight_source.dart';
+import '../data/artifact_score/remote_artifact_score_weight_source.dart';
 import '../data/db/app_database.dart';
 import '../data/models/master_models.dart';
 import '../data/repositories/bookmark_repository.dart';
 import '../data/repositories/character_repository.dart';
+import '../data/models/version_status.dart';
 import '../data/repositories/progress_repository.dart';
 import '../data/models/sync_status.dart';
 import '../data/sync/master_sync_service.dart';
+import '../data/versioning/versioning_service.dart';
 
 const localUserIdKey = 'local_user_id';
 
@@ -22,6 +29,27 @@ final amberApiProvider = Provider<AmberApi>((ref) {
   final api = AmberApi();
   ref.onDispose(api.dispose);
   return api;
+});
+
+final artifactScoreWeightSourceProvider =
+    Provider<ArtifactScoreWeightSource>((ref) {
+  const remoteUrl = String.fromEnvironment(
+    'ARTIFACT_SCORE_WEIGHTS_URL',
+    defaultValue: '',
+  );
+  final local = LocalJsonArtifactScoreWeightSource();
+  final remote = remoteUrl.isEmpty
+      ? null
+      : RemoteArtifactScoreWeightSource(url: remoteUrl);
+  return CompositeArtifactScoreWeightSource(
+    localSource: local,
+    remoteSource: remote,
+  );
+});
+
+final artifactScoreWeightRepositoryProvider =
+    Provider<ArtifactScoreWeightRepository>((ref) {
+  return ArtifactScoreWeightRepository(ref.watch(artifactScoreWeightSourceProvider));
 });
 
 final characterRepositoryProvider =
@@ -47,6 +75,12 @@ final masterSyncServiceProvider =
   final db = await ref.watch(appDatabaseProvider.future);
   final amber = ref.watch(amberApiProvider);
   return MasterSyncService(amberApi: amber, db: db);
+});
+
+final versioningServiceProvider = FutureProvider<VersioningService>((ref) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  final weights = ref.watch(artifactScoreWeightRepositoryProvider);
+  return VersioningService(db: db, weightRepository: weights);
 });
 
 final charactersProvider = FutureProvider((ref) async {
@@ -75,6 +109,11 @@ final syncStatusProvider = FutureProvider<SyncStatus>((ref) async {
   return db.getSyncStatus();
 });
 
+final versionStatusProvider = FutureProvider<VersionStatus>((ref) async {
+  final service = await ref.watch(versioningServiceProvider.future);
+  return service.readPersistedStatus();
+});
+
 /// ローカル匿名ユーザー ID（Web 版と同方針 — app_settings に永続化）
 final localUserIdProvider = FutureProvider<String>((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);
@@ -96,4 +135,5 @@ void invalidateMasterDataProviders(WidgetRef ref) {
   ref.invalidate(lastSyncTimeProvider);
   ref.invalidate(aggregatedBookmarksProvider);
   ref.invalidate(materialsMapProvider);
+  ref.invalidate(versionStatusProvider);
 }
