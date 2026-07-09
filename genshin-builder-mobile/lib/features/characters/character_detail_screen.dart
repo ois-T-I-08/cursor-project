@@ -5,12 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../data/hoyolab/models/game_record.dart';
+import '../../data/artifact_score/artifact_score_weight.dart';
 import '../../data/models/master_models.dart';
 import '../../domain/bookmark_utils.dart';
 import '../../domain/hoyolab_slider_sync.dart';
 import '../../domain/level_config.dart';
 import '../../domain/level_progression.dart';
 import '../../domain/material_requirements.dart';
+import '../../domain/artifact_score.dart';
+import '../../domain/artifact_score_resolver.dart';
 import '../../domain/models/bookmark.dart';
 import '../../domain/models/calculation_models.dart';
 import '../../domain/hoyolab_relic_sync.dart';
@@ -65,6 +68,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   Timer? _saveTimer;
   bool _hoyolabSynced = false;
   DateTime? _lastHoyolabFetchedAt;
+  ArtifactScoreType _artifactScoreType = ArtifactScoreType.atk;
+  ArtifactScoreType _resolvedArtifactScoreType = ArtifactScoreType.atk;
+  ArtifactStatWeights _artifactScoreWeights = scoreWeightsForType(
+    ArtifactScoreType.atk,
+  );
+  bool _artifactScoreTypeUserSet = false;
 
   @override
   void initState() {
@@ -102,6 +111,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       _weaponName = _progress!.weaponName;
       _weaponLevel = _progress!.weaponLevel;
       await _loadWeaponUpgrade();
+      await _loadArtifactScoreSettings();
 
       final bookmarks = await bookmarkRepo.getAll();
       if (!mounted) return;
@@ -247,6 +257,30 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     await _loadWeaponUpgrade();
   }
 
+  Future<void> _loadArtifactScoreSettings() async {
+    final character = _character;
+    if (character == null) return;
+
+    final userScoreType =
+        userArtifactScoreTypeFromStorage(_progress!.artifactScoreType);
+    _artifactScoreTypeUserSet = userScoreType != null;
+
+    final resolver = ArtifactScoreResolver(
+      ref.read(artifactScoreWeightRepositoryProvider),
+    );
+    final autoSettings = await resolver.resolve(character: character);
+    _resolvedArtifactScoreType = autoSettings.scoreType;
+
+    final settings = await resolver.resolve(
+      character: character,
+      userScoreType: userScoreType,
+      userScoreTypeIsSet: _artifactScoreTypeUserSet,
+    );
+
+    _artifactScoreType = settings.scoreType;
+    _artifactScoreWeights = settings.weights;
+  }
+
   void _scheduleSave() {
     final base = _progress;
     if (base == null) return;
@@ -305,6 +339,34 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   void _updateArtifacts(ArtifactState artifacts) {
     setState(() => _artifacts = artifacts);
     _scheduleSave();
+  }
+
+  void _updateArtifactScoreType(ArtifactScoreType type) {
+    setState(() {
+      _artifactScoreType = type;
+      _artifactScoreWeights = scoreWeightsForType(type);
+      _artifactScoreTypeUserSet = true;
+    });
+    _persistArtifactScoreType();
+    _scheduleSave();
+  }
+
+  Future<void> _persistArtifactScoreType() async {
+    final base = _progress;
+    if (base == null) return;
+
+    final updated = base.copyWith(
+      artifactScoreType: _artifactScoreTypeUserSet
+          ? artifactScoreTypeToUserStorage(_artifactScoreType)
+          : '',
+    );
+    _progress = updated;
+    try {
+      final repo = await ref.read(progressRepositoryProvider.future);
+      await repo.save(updated);
+    } catch (_) {
+      // 保存失敗は UI を落とさない
+    }
   }
 
   Future<void> _onWeaponSelected(String? weaponId) async {
@@ -405,6 +467,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     final hoyolabBuild = ref.watch(hoyolabCharacterBuildProvider(widget.characterId)).valueOrNull;
     final talentSummary = _buildTalentSummary();
     final hoyolabSummary = _buildHoyolabSummary(hoyolabBuild);
+    final artifactScoreType = _artifactScoreType;
+    final resolvedArtifactScoreType = _resolvedArtifactScoreType;
 
     return Scaffold(
       appBar: AppBar(title: Text(character.name)),
@@ -549,9 +613,20 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           const SizedBox(height: 12),
           DetailSectionAccordion(
             title: '聖遺物',
-            summary: ArtifactSummaryContent(artifacts: _artifacts),
+            summary: ArtifactSummaryContent(
+              artifacts: _artifacts,
+              scoreType: artifactScoreType,
+              resolvedScoreType: resolvedArtifactScoreType,
+              scoreTypeUserSet: _artifactScoreTypeUserSet,
+              weights: _artifactScoreWeights,
+            ),
             child: CharacterRelicsSection(
               artifacts: _artifacts,
+              scoreType: artifactScoreType,
+              resolvedScoreType: resolvedArtifactScoreType,
+              scoreTypeUserSet: _artifactScoreTypeUserSet,
+              weights: _artifactScoreWeights,
+              onScoreTypeChanged: _updateArtifactScoreType,
               onChanged: _updateArtifacts,
             ),
           ),

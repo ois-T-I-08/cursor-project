@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../data/artifact_score/artifact_score_weight.dart';
 import '../../../domain/artifact_config.dart';
+import '../../../domain/artifact_score.dart';
 import '../../../domain/models/artifact_state.dart';
 import '../../shared/game_icon_image.dart';
 
@@ -10,10 +12,20 @@ class CharacterRelicsSection extends StatelessWidget {
   const CharacterRelicsSection({
     super.key,
     required this.artifacts,
+    required this.scoreType,
+    this.resolvedScoreType,
+    this.scoreTypeUserSet = false,
+    this.weights,
+    required this.onScoreTypeChanged,
     required this.onChanged,
   });
 
   final ArtifactState artifacts;
+  final ArtifactScoreType scoreType;
+  final ArtifactScoreType? resolvedScoreType;
+  final bool scoreTypeUserSet;
+  final ArtifactStatWeights? weights;
+  final ValueChanged<ArtifactScoreType> onScoreTypeChanged;
   final ValueChanged<ArtifactState> onChanged;
 
   void _updatePiece(ArtifactSlotKey slot, ArtifactPiece piece) {
@@ -48,6 +60,50 @@ class CharacterRelicsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
+          '部位スコア: ${formatArtifactScoreTypeLabel(
+            scoreType: scoreType,
+            resolvedScoreType: resolvedScoreType,
+            scoreTypeUserSet: scoreTypeUserSet,
+          )}',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        if (weights != null)
+          Text(
+            '重み: CR ${weights!.critRate} / CD ${weights!.critDamage} / '
+            'ATK ${weights!.atkPercent} / HP ${weights!.hpPercent} / '
+            'DEF ${weights!.defPercent} / ER ${weights!.energyRecharge} / '
+            'EM ${weights!.elementalMastery}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<ArtifactScoreType>(
+          value: scoreType,
+          decoration: InputDecoration(
+            labelText: _scoreTypeFieldLabel(
+              resolvedScoreType: resolvedScoreType,
+              scoreTypeUserSet: scoreTypeUserSet,
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            isDense: true,
+          ),
+          items: ArtifactScoreType.values
+              .map(
+                (type) => DropdownMenuItem(
+                  value: type,
+                  child: Text(_scoreTypeLabel(type)),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value != null) onScoreTypeChanged(value);
+          },
+        ),
+        const SizedBox(height: 4),
+        Text(
           'セット名・レベル・メインステータスは HoYoLAB 連携時に自動反映されます。サブステは手入力できます。',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -61,6 +117,8 @@ class CharacterRelicsSection extends StatelessWidget {
             child: _PieceEditor(
               slot: slot,
               piece: piece,
+              scoreType: scoreType,
+              weights: weights,
               onMainStatChanged: (mainStat) =>
                   _updatePiece(slot, piece.copyWith(mainStat: mainStat)),
               onSubstatChanged: (index, stat, value) =>
@@ -75,9 +133,20 @@ class CharacterRelicsSection extends StatelessWidget {
 
 /// アコーディオン概要: 部位アイコン + セット/レベルテキスト
 class ArtifactSummaryContent extends StatelessWidget {
-  const ArtifactSummaryContent({super.key, required this.artifacts});
+  const ArtifactSummaryContent({
+    super.key,
+    required this.artifacts,
+    required this.scoreType,
+    this.resolvedScoreType,
+    this.scoreTypeUserSet = false,
+    this.weights,
+  });
 
   final ArtifactState artifacts;
+  final ArtifactScoreType scoreType;
+  final ArtifactScoreType? resolvedScoreType;
+  final bool scoreTypeUserSet;
+  final ArtifactStatWeights? weights;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +171,18 @@ class ArtifactSummaryContent extends StatelessWidget {
           }).toList(),
         ),
         const SizedBox(height: 6),
+        Text(
+          '合計スコア ${_formatScore(_calcTotalScore(artifacts, scoreType, weights))}'
+          '（${formatArtifactScoreTypeLabel(
+            scoreType: scoreType,
+            resolvedScoreType: resolvedScoreType,
+            scoreTypeUserSet: scoreTypeUserSet,
+          )}）',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 2),
         Text(buildArtifactSummary(artifacts)),
       ],
     );
@@ -112,12 +193,16 @@ class _PieceEditor extends StatelessWidget {
   const _PieceEditor({
     required this.slot,
     required this.piece,
+    required this.scoreType,
+    this.weights,
     required this.onMainStatChanged,
     required this.onSubstatChanged,
   });
 
   final ArtifactSlotKey slot;
   final ArtifactPiece piece;
+  final ArtifactScoreType scoreType;
+  final ArtifactStatWeights? weights;
   final ValueChanged<String> onMainStatChanged;
   final void Function(int index, String stat, double value) onSubstatChanged;
 
@@ -182,6 +267,17 @@ class _PieceEditor extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
               ],
+            ),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'スコア ${_formatScore(_calcPieceScore(piece, scoreType, weights))}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
@@ -283,6 +379,60 @@ class _PieceEditor extends StatelessWidget {
     return value.toString();
   }
 }
+
+String _scoreTypeLabel(ArtifactScoreType type) => switch (type) {
+      ArtifactScoreType.atk => '攻撃',
+      ArtifactScoreType.def => '防御',
+      ArtifactScoreType.hp => 'HP',
+      ArtifactScoreType.recharge => '元素チャージ',
+      ArtifactScoreType.em => '元素熟知',
+    };
+
+/// 手動変更時は「選択基準（取得基準）」形式で表示する。
+String formatArtifactScoreTypeLabel({
+  required ArtifactScoreType scoreType,
+  ArtifactScoreType? resolvedScoreType,
+  bool scoreTypeUserSet = false,
+}) {
+  final current = _scoreTypeLabel(scoreType);
+  if (!scoreTypeUserSet ||
+      resolvedScoreType == null ||
+      resolvedScoreType == scoreType) {
+    return current;
+  }
+  return '$current（${_scoreTypeLabel(resolvedScoreType)}）';
+}
+
+String _scoreTypeFieldLabel({
+  required ArtifactScoreType? resolvedScoreType,
+  required bool scoreTypeUserSet,
+}) {
+  if (!scoreTypeUserSet ||
+      resolvedScoreType == null) {
+    return 'スコア基準';
+  }
+  return 'スコア基準（${_scoreTypeLabel(resolvedScoreType)}）';
+}
+
+double _calcPieceScore(
+  ArtifactPiece piece,
+  ArtifactScoreType type,
+  ArtifactStatWeights? weights,
+) {
+  if (weights == null) return calcArtifactPieceScore(piece, type);
+  return calcArtifactPieceScoreWithWeights(piece, weights);
+}
+
+double _calcTotalScore(
+  ArtifactState artifacts,
+  ArtifactScoreType type,
+  ArtifactStatWeights? weights,
+) {
+  if (weights == null) return calcArtifactTotalScore(artifacts, type);
+  return calcArtifactTotalScoreWithWeights(artifacts, weights);
+}
+
+String _formatScore(double score) => score.toStringAsFixed(1);
 
 String? _matchingOption(String value, List<String> options) {
   if (value.isEmpty) return null;
