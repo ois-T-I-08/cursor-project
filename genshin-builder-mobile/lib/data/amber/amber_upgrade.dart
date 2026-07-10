@@ -1,9 +1,8 @@
-import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 
 import '../../domain/models/calculation_models.dart';
 import '../../domain/weapon_exp.dart';
+import '../amber/amber_api.dart';
 import '../amber/amber_constants.dart';
 
 const _expMaterialIds = <String, List<String>>{
@@ -25,7 +24,7 @@ class AmberUpgradeApi {
     final response =
         await _client.get(uri).timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) return null;
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final json = await decodeJsonMap(response.body);
     if (json['response'] != 200) return null;
     return json['data'] as Map<String, dynamic>?;
   }

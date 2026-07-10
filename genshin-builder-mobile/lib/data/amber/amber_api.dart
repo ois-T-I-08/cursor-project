@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:http/http.dart' as http;
 
@@ -6,6 +7,17 @@ import '../artifact_score/artifact_score_type_override_registry.dart';
 import '../models/master_models.dart';
 import '../../domain/artifact_score.dart';
 import 'amber_constants.dart';
+import 'amber_master_parsers.dart';
+
+/// 大きな JSON は isolate でデコードし、メイン isolate のブロックを避ける
+const _isolateJsonThresholdBytes = 32 * 1024;
+
+Future<Map<String, dynamic>> decodeJsonMap(String body) async {
+  if (body.length < _isolateJsonThresholdBytes) {
+    return jsonDecode(body) as Map<String, dynamic>;
+  }
+  return Isolate.run(() => jsonDecode(body) as Map<String, dynamic>);
+}
 
 class AmberApi {
   AmberApi({http.Client? client}) : _client = client ?? http.Client();
@@ -21,7 +33,7 @@ class AmberApi {
     if (response.statusCode != 200) {
       throw Exception('Amber API error: ${response.statusCode} $path');
     }
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final json = await decodeJsonMap(response.body);
     if (json['response'] != 200) {
       throw Exception('Amber API response error: $path');
     }
@@ -36,9 +48,25 @@ class AmberApi {
     if (response.statusCode != 200) {
       throw Exception('Amber API error: ${response.statusCode} $path');
     }
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final json = await decodeJsonMap(response.body);
     if (json['response'] != 200) {
       throw Exception('Amber API response error: $path');
+    }
+    return json['data'] as Map<String, dynamic>;
+  }
+
+  /// 言語非依存の static データ（成長曲線など）を取得する。
+  /// 例: `/avatarCurve`, `/weaponCurve`
+  Future<Map<String, dynamic>> fetchStaticData(String path) async {
+    final uri = Uri.parse('$amberBaseUrl/api/v2/static$path');
+    final response =
+        await _client.get(uri).timeout(const Duration(seconds: 30));
+    if (response.statusCode != 200) {
+      throw Exception('Amber API error: ${response.statusCode} static$path');
+    }
+    final json = await decodeJsonMap(response.body);
+    if (json['response'] != 200) {
+      throw Exception('Amber API response error: static$path');
     }
     return json['data'] as Map<String, dynamic>;
   }
@@ -49,110 +77,37 @@ class AmberApi {
     final nameOverrides = overrideRegistry.byName;
 
     final items = await _fetchItems('/avatar');
-    final characters = <MasterCharacter>[];
-
-    for (final raw in items.values) {
-      final avatar = raw as Map<String, dynamic>;
-      final elementKey = avatar['element'] as String?;
-      final element =
-          elementKey != null ? elementMap[elementKey] : null;
-      final name = avatar['name'] as String?;
-      if (element == null || name == null || name.isEmpty) continue;
-
-      final id = '${avatar['id']}';
-      if (id.startsWith('10000007-')) continue;
-
-      final isTraveler = id.startsWith('10000005-');
-      final displayName = isTraveler
-          ? '旅人（${elementLabelMap[element] ?? element}）'
-          : name;
-
-      characters.add(
-        MasterCharacter(
-          id: id,
-          name: displayName,
-          element: element,
-          weaponType:
-              weaponTypeMap[avatar['weaponType'] as String? ?? ''] ?? 'sword',
-          rarity: (avatar['rank'] as num?)?.toInt() == 4 ? 4 : 5,
-          region: regionMap[avatar['region'] as String? ?? ''] ??
-              avatar['region'] as String? ??
-              '',
-          iconUrl: buildIconUrl(avatar['icon'] as String? ?? ''),
-          scoreType: artifactScoreTypeToStorage(
-            inferScoreType(
-              avatar['specialProp'] as String?,
-              displayName,
-              nameOverrides: nameOverrides,
-            ),
-          ),
-        ),
-      );
-    }
-
-    characters.sort((a, b) => a.name.compareTo(b.name));
-    return characters;
+    final payload = <String, dynamic>{
+      'items': items,
+      'nameOverrides': {
+        for (final e in nameOverrides.entries)
+          e.key: artifactScoreTypeToStorage(e.value),
+      },
+    };
+    return Isolate.run(() => parseCharactersIsolatePayload(payload));
   }
 
   Future<List<MasterWeapon>> fetchWeapons() async {
     final items = await _fetchItems('/weapon');
-    final weapons = <MasterWeapon>[];
-
-    for (final raw in items.values) {
-      final weapon = raw as Map<String, dynamic>;
-      final name = weapon['name'] as String?;
-      if (name == null || name.isEmpty) continue;
-
-      weapons.add(
-        MasterWeapon(
-          id: '${weapon['id']}',
-          name: name,
-          weaponType:
-              weaponTypeMap[weapon['type'] as String? ?? ''] ?? 'sword',
-          rarity: (weapon['rank'] as num?)?.toInt() ?? 3,
-          iconUrl: buildIconUrl(weapon['icon'] as String? ?? ''),
-        ),
-      );
-    }
-
-    weapons.sort((a, b) => a.name.compareTo(b.name));
-    return weapons;
+    return Isolate.run(() => parseWeaponsFromAmberItems(items));
   }
 
   Future<List<MasterMaterial>> fetchMaterials() async {
     final items = await _fetchItems('/material');
-    final materials = <MasterMaterial>[];
-
-    for (final raw in items.values) {
-      final material = raw as Map<String, dynamic>;
-      final name = material['name'] as String?;
-      final type = material['type'] as String? ?? '';
-      if (name == null || name.isEmpty || !materialCategories.contains(type)) {
-        continue;
-      }
-
-      materials.add(
-        MasterMaterial(
-          id: '${material['id']}',
-          name: name,
-          category: type,
-          rarity: (material['rank'] as num?)?.toInt(),
-          iconUrl: buildIconUrl(material['icon'] as String? ?? ''),
-        ),
-      );
-    }
-
-    materials.sort((a, b) => a.name.compareTo(b.name));
-    return materials;
+    return Isolate.run(() => parseMaterialsFromAmberItems(items));
   }
 
-  Future<Map<String, dynamic>> fetchAvatarDetail(String id) async {
-    return _fetchDetail('/avatar/$id');
+  Future<Map<String, dynamic>> fetchAvatarDetail(String id) =>
+      _fetchDetail('/avatar/$id');
+
+  Future<Map<String, dynamic>> fetchWeaponDetail(String id) =>
+      _fetchDetail('/weapon/$id');
+
+  Future<Map<String, dynamic>> fetchReliquaryItems() async {
+    return _fetchItems('/reliquary');
   }
 
-  Future<Map<String, dynamic>> fetchWeaponDetail(String id) async {
-    return _fetchDetail('/weapon/$id');
-  }
+  void close() => _client.close();
 
-  void dispose() => _client.close();
+  void dispose() => close();
 }
