@@ -1,0 +1,38 @@
+name: Genshin Mobile CI
+
+on:
+  push:
+    paths:
+      - "genshin-builder-mobile/**"
+      - "shared/domain-golden/**"
+      - ".github/workflows/genshin-mobile-ci.yml"
+  pull_request:
+    paths:
+      - "genshin-builder-mobile/**"
+      - "shared/domain-golden/**"
+      - ".github/workflows/genshin-mobile-ci.yml"
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: genshin-builder-mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test

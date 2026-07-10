@@ -1,0 +1,51 @@
+name: Domain Golden Parity
+
+on:
+  push:
+    paths:
+      - "shared/domain-golden/**"
+      - "genshin-builder-app/src/lib/**"
+      - "genshin-builder-app/src/lib/__tests__/domain-golden.test.ts"
+      - "genshin-builder-mobile/lib/domain/**"
+      - "genshin-builder-mobile/test/domain/domain_golden_test.dart"
+      - ".github/workflows/genshin-domain-golden.yml"
+  pull_request:
+    paths:
+      - "shared/domain-golden/**"
+      - "genshin-builder-app/src/lib/**"
+      - "genshin-builder-app/src/lib/__tests__/domain-golden.test.ts"
+      - "genshin-builder-mobile/lib/domain/**"
+      - "genshin-builder-mobile/test/domain/domain_golden_test.dart"
+      - ".github/workflows/genshin-domain-golden.yml"
+
+jobs:
+  web-golden:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: genshin-builder-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: genshin-builder-app/package-lock.json
+      - run: npm ci
+      - name: Domain golden (Web)
+        run: npm test -- src/lib/__tests__/domain-golden.test.ts
+
+  mobile-golden:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: genshin-builder-mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Domain golden (Mobile)
+        run: flutter test test/domain/domain_golden_test.dart

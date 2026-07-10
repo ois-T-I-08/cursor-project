@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - "genshin-builder-app/**"
+      - "shared/domain-golden/**"
       - ".github/workflows/genshin-web-ci.yml"
   pull_request:
     paths:
       - "genshin-builder-app/**"
+      - "shared/domain-golden/**"
       - ".github/workflows/genshin-web-ci.yml"
 
 jobs:
