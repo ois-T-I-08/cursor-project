@@ -15,6 +15,12 @@ class AppDatabase {
     return AppDatabase._(inner);
   }
 
+  /// テスト用インメモリ DB
+  static Future<AppDatabase> openInMemory() async {
+    final inner = await DriftAppDatabase.openInMemory();
+    return AppDatabase._(inner);
+  }
+
   Future<void> close() => _inner.close();
 
   Future<void> upsertCharactersBatch(List<MasterCharacter> list) =>
@@ -74,6 +80,15 @@ class AppDatabase {
       })?> getCharacterUpgrade(String characterId) =>
       _inner.characterDao.getCharacterUpgrade(characterId);
 
+  Future<
+      Map<
+          String,
+          ({
+            List<PromoteStage> promotes,
+            Map<String, List<TalentLevelUpgrade>> talents,
+          })>> getAllCharacterUpgrades() =>
+      _inner.characterDao.getAllCharacterUpgrades();
+
   Future<Set<String>> getSyncedCharacterUpgradeIds() =>
       _inner.characterDao.getSyncedCharacterUpgradeIds();
 
@@ -91,6 +106,15 @@ class AppDatabase {
   Future<({List<PromoteStage> promotes, List<String> levelUpItemIds})?>
       getWeaponUpgrade(String weaponId) =>
           _inner.characterDao.getWeaponUpgrade(weaponId);
+
+  Future<
+      Map<
+          String,
+          ({
+            List<PromoteStage> promotes,
+            List<String> levelUpItemIds,
+          })>> getAllWeaponUpgrades() =>
+      _inner.characterDao.getAllWeaponUpgrades();
 
   Future<Set<String>> getSyncedWeaponUpgradeIds() =>
       _inner.characterDao.getSyncedWeaponUpgradeIds();
@@ -122,6 +146,9 @@ class AppDatabase {
 
   Future<UserProgress?> getProgress(String userId, String characterId) =>
       _inner.progressDao.getProgress(userId, characterId);
+
+  Future<List<UserProgress>> getAllProgress(String userId) =>
+      _inner.progressDao.getAllProgress(userId);
 
   Future<UserProgress> getOrCreateProgress(
     String userId,

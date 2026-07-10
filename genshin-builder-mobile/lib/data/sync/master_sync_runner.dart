@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/app_providers.dart';
+import '../../providers/daily_materials_providers.dart';
 import '../models/sync_status.dart';
 import 'icon_preload_service.dart';
 import 'master_sync_service.dart';
@@ -46,5 +47,6 @@ Future<({SyncResult result, int iconsLoaded})> runMasterSyncWithIconPreload(
   await versioning.updateAndPersistVersions();
 
   invalidateMasterDataProviders(ref);
+  invalidateDailyMaterialsProviders(ref);
   return (result: result, iconsLoaded: iconsLoaded);
 }

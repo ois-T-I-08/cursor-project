@@ -21,10 +21,28 @@ class CharacterRepository {
       })?> getUpgrade(String characterId) =>
       _db.getCharacterUpgrade(characterId);
 
+  Future<
+      Map<
+          String,
+          ({
+            List<PromoteStage> promotes,
+            Map<String, List<TalentLevelUpgrade>> talents,
+          })>> getAllUpgrades() =>
+      _db.getAllCharacterUpgrades();
+
   Future<List<MasterWeapon>> getAllWeapons() => _db.getAllWeapons();
 
   Future<({List<PromoteStage> promotes, List<String> levelUpItemIds})?>
       getWeaponUpgrade(String weaponId) => _db.getWeaponUpgrade(weaponId);
+
+  Future<
+      Map<
+          String,
+          ({
+            List<PromoteStage> promotes,
+            List<String> levelUpItemIds,
+          })>> getAllWeaponUpgrades() =>
+      _db.getAllWeaponUpgrades();
 
   Future<MasterWeapon?> getWeapon(String id) => _db.getWeapon(id);
 }

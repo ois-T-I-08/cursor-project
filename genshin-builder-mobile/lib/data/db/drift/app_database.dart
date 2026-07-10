@@ -107,4 +107,11 @@ class DriftAppDatabase extends _$DriftAppDatabase {
     await _addArtifactScoreTypeColumnSafely(db);
     return db;
   }
+
+  /// テスト用インメモリ DB
+  static Future<DriftAppDatabase> openInMemory() async {
+    final db = DriftAppDatabase(NativeDatabase.memory());
+    await db.customStatement('SELECT 1');
+    return db;
+  }
 }

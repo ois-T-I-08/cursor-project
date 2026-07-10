@@ -5,6 +5,7 @@ import 'features/bootstrap/initial_sync_screen.dart';
 import 'features/bookmarks/bookmarks_screen.dart';
 import 'features/characters/character_detail_screen.dart';
 import 'features/characters/character_list_screen.dart';
+import 'features/daily_materials/daily_materials_screen.dart';
 import 'features/hoyolab/hoyolab_settings_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/settings/settings_screen.dart';
@@ -36,6 +37,10 @@ final appRouter = GoRouter(
           ],
         ),
         GoRoute(
+          path: '/daily',
+          builder: (context, state) => const DailyMaterialsScreen(),
+        ),
+        GoRoute(
           path: '/bookmarks',
           builder: (context, state) => const BookmarksScreen(),
         ),
@@ -62,8 +67,9 @@ class AppShell extends StatelessWidget {
   int _selectedIndex(BuildContext context) {
     final loc = GoRouterState.of(context).uri.path;
     if (loc.startsWith('/characters')) return 1;
-    if (loc.startsWith('/bookmarks')) return 2;
-    if (loc.startsWith('/settings')) return 3;
+    if (loc.startsWith('/daily')) return 2;
+    if (loc.startsWith('/bookmarks')) return 3;
+    if (loc.startsWith('/settings')) return 4;
     return 0;
   }
 
@@ -80,8 +86,10 @@ class AppShell extends StatelessWidget {
             case 1:
               context.go('/characters');
             case 2:
-              context.go('/bookmarks');
+              context.go('/daily');
             case 3:
+              context.go('/bookmarks');
+            case 4:
               context.go('/settings');
           }
         },
@@ -95,6 +103,11 @@ class AppShell extends StatelessWidget {
             icon: Icon(Icons.people_outline),
             selectedIcon: Icon(Icons.people),
             label: 'キャラ',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_today_outlined),
+            selectedIcon: Icon(Icons.calendar_today),
+            label: '曜日',
           ),
           NavigationDestination(
             icon: Icon(Icons.bookmark_outline),

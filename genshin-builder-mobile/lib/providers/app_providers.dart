@@ -7,6 +7,7 @@ import '../data/artifact_score/composite_artifact_score_weight_source.dart';
 import '../data/artifact_score/artifact_score_weight_source.dart';
 import '../data/artifact_score/local_json_artifact_score_weight_source.dart';
 import '../data/artifact_score/remote_artifact_score_weight_source.dart';
+import '../data/daily_materials/daily_material_schedule_repository.dart';
 import '../data/db/app_database.dart';
 import '../data/models/master_models.dart';
 import '../data/repositories/bookmark_repository.dart';
@@ -50,6 +51,13 @@ final artifactScoreWeightSourceProvider =
 final artifactScoreWeightRepositoryProvider =
     Provider<ArtifactScoreWeightRepository>((ref) {
   return ArtifactScoreWeightRepository(ref.watch(artifactScoreWeightSourceProvider));
+});
+
+final dailyMaterialScheduleRepositoryProvider =
+    Provider<DailyMaterialScheduleRepository>((ref) {
+  return DailyMaterialScheduleRepository(
+    LocalJsonDailyMaterialScheduleSource(),
+  );
 });
 
 final characterRepositoryProvider =

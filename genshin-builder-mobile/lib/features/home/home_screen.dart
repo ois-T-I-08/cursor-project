@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/app_providers.dart';
+import '../../providers/daily_materials_providers.dart';
 import '../../widgets/deferred_loader.dart';
 import '../hoyolab/widgets/adventure_status_card.dart';
 import '../hoyolab/widgets/daily_note_card.dart';
@@ -14,6 +15,9 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 副作用のみ: watch だと Future 完了でホーム全体が再ビルドされる
+    ref.listen(dailyProgressPrefetchProvider, (_, __) {});
+
     final lastSyncAsync = ref.watch(lastSyncTimeProvider);
     final numberFormat = NumberFormat('#,###');
 
@@ -56,6 +60,12 @@ class HomeScreen extends ConsumerWidget {
                     onPressed: () => context.go('/characters'),
                     icon: const Icon(Icons.people),
                     label: const Text('キャラ一覧'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/daily'),
+                    icon: const Icon(Icons.calendar_today),
+                    label: const Text('今日の曜日素材'),
                   ),
                 ],
               ),

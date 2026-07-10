@@ -13,5 +13,8 @@ class ProgressRepository {
   }) =>
       _db.getOrCreateProgress(userId, characterId, progressId);
 
+  Future<List<UserProgress>> getAll(String userId) =>
+      _db.getAllProgress(userId);
+
   Future<void> save(UserProgress progress) => _db.upsertProgress(progress);
 }

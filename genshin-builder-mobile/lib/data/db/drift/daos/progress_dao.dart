@@ -46,6 +46,13 @@ class ProgressDao extends DatabaseAccessor<DriftAppDatabase>
     return row == null ? null : _progressFromRow(row);
   }
 
+  Future<List<UserProgress>> getAllProgress(String userId) async {
+    final rows = await (select(userProgressTable)
+          ..where((t) => t.userId.equals(userId)))
+        .get();
+    return rows.map(_progressFromRow).toList(growable: false);
+  }
+
   Future<UserProgress> getOrCreateProgress(
     String userId,
     String characterId,

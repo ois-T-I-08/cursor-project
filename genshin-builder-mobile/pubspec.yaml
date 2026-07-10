@@ -40,3 +40,4 @@ flutter:
   assets:
     - assets/config/artifact_score_weights.json
     - assets/config/artifact_score_type_overrides.json
+    - assets/config/daily_material_schedule.json

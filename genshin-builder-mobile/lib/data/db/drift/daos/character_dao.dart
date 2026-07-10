@@ -257,14 +257,35 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
     );
   }
 
-  Future<({
-    List<PromoteStage> promotes,
-    Map<String, List<TalentLevelUpgrade>> talents,
-  })?> getCharacterUpgrade(String characterId) async {
+  Future<
+      ({
+        List<PromoteStage> promotes,
+        Map<String, List<TalentLevelUpgrade>> talents,
+      })?> getCharacterUpgrade(String characterId) async {
     final row = await (select(characterUpgrades)
           ..where((t) => t.characterId.equals(characterId)))
         .getSingleOrNull();
     if (row == null) return null;
+    return _parseCharacterUpgradeRow(row);
+  }
+
+  Future<
+      Map<
+          String,
+          ({
+            List<PromoteStage> promotes,
+            Map<String, List<TalentLevelUpgrade>> talents,
+          })>> getAllCharacterUpgrades() async {
+    final rows = await select(characterUpgrades).get();
+    return {
+      for (final row in rows) row.characterId: _parseCharacterUpgradeRow(row),
+    };
+  }
+
+  ({
+    List<PromoteStage> promotes,
+    Map<String, List<TalentLevelUpgrade>> talents,
+  }) _parseCharacterUpgradeRow(CharacterUpgrade row) {
     final promotesRaw = jsonDecode(row.promotes) as List;
     final talentsRaw = jsonDecode(row.talents) as Map<String, dynamic>;
     return (
@@ -315,6 +336,24 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
           ..where((t) => t.weaponId.equals(weaponId)))
         .getSingleOrNull();
     if (row == null) return null;
+    return _parseWeaponUpgradeRow(row);
+  }
+
+  Future<
+      Map<
+          String,
+          ({
+            List<PromoteStage> promotes,
+            List<String> levelUpItemIds,
+          })>> getAllWeaponUpgrades() async {
+    final rows = await select(weaponUpgrades).get();
+    return {
+      for (final row in rows) row.weaponId: _parseWeaponUpgradeRow(row),
+    };
+  }
+
+  ({List<PromoteStage> promotes, List<String> levelUpItemIds})
+      _parseWeaponUpgradeRow(WeaponUpgrade row) {
     final promotesRaw = jsonDecode(row.promotes) as List;
     final itemIds =
         (jsonDecode(row.levelUpItemIds) as List).cast<String>();
