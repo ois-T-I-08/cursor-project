@@ -28,7 +28,16 @@ jobs:
       - name: Build Android AppBundle
         run: >
           flutter build appbundle --release
+          --obfuscate
+          --split-debug-info=build/debug-info
           --dart-define=ARTIFACT_SCORE_WEIGHTS_URL=${ARTIFACT_SCORE_WEIGHTS_URL}
+
+      - name: Upload debug info
+        uses: actions/upload-artifact@v4
+        with:
+          name: genshin-mobile-debug-info
+          path: genshin-builder-mobile/build/debug-info
+          if-no-files-found: ignore
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

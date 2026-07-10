@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../providers/app_providers.dart';
 import '../../providers/daily_materials_providers.dart';
+import '../../core/errors/user_facing_error.dart';
 import '../../widgets/deferred_loader.dart';
 import '../hoyolab/widgets/adventure_status_card.dart';
 import '../hoyolab/widgets/daily_note_card.dart';
@@ -53,7 +54,7 @@ class HomeScreen extends ConsumerWidget {
                           : '最終同期: ${DateFormat.yMd().add_Hm().format(dt)}',
                     ),
                     loading: () => const Text('読み込み中…'),
-                    error: (e, _) => Text('エラー: $e'),
+                    error: (e, _) => Text(userFacingError(e)),
                   ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
@@ -177,7 +178,7 @@ class _BookmarkSection extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('エラー: $e'),
+            error: (e, _) => Text(userFacingError(e)),
           ),
           if (bookmarksAsync.valueOrNull?.isNotEmpty == true)
             TextButton(

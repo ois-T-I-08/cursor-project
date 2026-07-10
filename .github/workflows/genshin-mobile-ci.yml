@@ -36,3 +36,17 @@ jobs:
 
       - name: Test
         run: flutter test
+
+      - name: Guard against committed secrets
+        working-directory: .
+        run: |
+          set -euo pipefail
+          hits="$(grep -RInE 'ltoken_v2=|BEGIN RSA PRIVATE KEY|BEGIN OPENSSH PRIVATE KEY' \
+            --exclude-dir=build --exclude-dir=.dart_tool --exclude-dir=.git \
+            genshin-builder-mobile || true)"
+          if [ -n "$hits" ]; then
+            echo "Potential secret material found in source:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "No obvious secret patterns found"

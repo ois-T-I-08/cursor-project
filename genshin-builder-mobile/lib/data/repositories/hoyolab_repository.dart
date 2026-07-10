@@ -88,17 +88,19 @@ class HoyolabRepository {
 
   Future<HoyolabSession> completeLogin({required String cookie}) async {
     _ensureEnabled();
-    await _secure.saveCookie(cookie);
     final api = _apiFactory(
       cookie: cookie,
       appVersion: await _resolveAppVersion(),
     );
+    // 検証成功後にのみ永続化する（無効 cookie を残さない）
     final user = await api.verifyLToken();
 
     final roles = await _fetchAllRoles(api);
     if (roles.isEmpty) {
       throw const HoyolabApiException(-1, '原神のゲームアカウントが見つかりません');
     }
+
+    await _secure.saveCookie(cookie);
 
     final existingUid = await _secure.getUid();
     final selected = existingUid == null

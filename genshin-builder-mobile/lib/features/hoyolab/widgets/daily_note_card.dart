@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../data/hoyolab/hoyolab_exceptions.dart';
 import '../../../data/hoyolab/models/daily_note.dart';
+import '../../../core/errors/user_facing_error.dart';
 import '../../../providers/hoyolab_home_providers.dart';
 import '../../../providers/hoyolab_providers.dart';
 
@@ -75,11 +75,7 @@ class DailyNoteCard extends ConsumerWidget {
                       },
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Text(
-                        e is HoyolabApiException
-                            ? e.userMessage
-                            : '取得エラーが発生しました',
-                      ),
+                      error: (e, _) => Text(userFacingError(e)),
                     ),
                   ],
                 ),
@@ -92,11 +88,11 @@ class DailyNoteCard extends ConsumerWidget {
               child: Center(child: CircularProgressIndicator()),
             ),
           ),
-          error: (e, _) => Text('セッションエラー: $e'),
+          error: (e, _) => Text(userFacingError(e, fallback: 'セッションの読み込みに失敗しました。')),
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (e, _) => Text('$e'),
+      error: (e, _) => Text(userFacingError(e)),
     );
   }
 }

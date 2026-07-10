@@ -1,8 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/feature_flags.dart';
+import '../../core/errors/user_facing_error.dart';
 import '../../data/hoyolab/hoyolab_exceptions.dart';
 import '../../data/hoyolab/models/daily_note.dart';
 import '../../providers/app_providers.dart';
@@ -50,19 +50,13 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
       setState(() => _message = 'HoYoLAB 連携が完了しました');
     } on HoyolabApiException catch (e) {
       setState(() => _message = e.userMessage);
-    } on StateError catch (e) {
-      setState(() => _message = e.message);
-    } catch (e) {
-      if (kDebugMode) debugPrint('HoYoLAB login failed: $e');
-      final detail = switch (e) {
-        FormatException() => 'API 応答の解析に失敗しました',
-        TypeError() => 'API 応答の形式が不正です',
-        _ => null,
-      };
+    } catch (e, st) {
+      logAppError(e, st, 'hoyolab.login');
       setState(
-        () => _message = detail == null
-            ? '連携に失敗しました。ログイン状態を確認して再試行してください。'
-            : '$detail。再ログインしてお試しください。',
+        () => _message = userFacingError(
+          e,
+          fallback: '連携に失敗しました。ログイン状態を確認して再試行してください。',
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -177,7 +171,7 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
               onChanged: _busy ? null : _toggleFeatureFlag,
             ),
             loading: () => const LinearProgressIndicator(),
-            error: (e, _) => Text('$e'),
+            error: (e, _) => Text(userFacingError(e)),
           ),
           const SizedBox(height: 16),
           sessionAsync.when(
@@ -250,7 +244,7 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('$e'),
+            error: (e, _) => Text(userFacingError(e)),
           ),
           if (_message != null) ...[
             const SizedBox(height: 16),

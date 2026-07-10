@@ -52,13 +52,29 @@ class HoyolabApi {
   final ApiRequestQueue _queue;
 
   static final _sharedQueue = ApiRequestQueue();
+  static const _httpTimeout = Duration(seconds: 25);
+
+  Future<http.Response> _get(
+    Uri uri, {
+    Map<String, String>? headers,
+  }) =>
+      _client.get(uri, headers: headers).timeout(_httpTimeout);
+
+  Future<http.Response> _post(
+    Uri uri, {
+    Map<String, String>? headers,
+    Object? body,
+  }) =>
+      _client
+          .post(uri, headers: headers, body: body)
+          .timeout(_httpTimeout);
 
   Future<List<HoyolabRegion>> lookupRegions() {
     return _queue.run(() async {
       final uri = Uri.parse(
         '${HoyolabConstants.getAllRegionsUrl}?game_biz=hk4e_global',
       );
-      final response = await _client.get(uri);
+      final response = await _get(uri);
       return _parseList(
         response.body,
         HoyolabRegion.fromJson,
@@ -69,7 +85,7 @@ class HoyolabApi {
   Future<HoyolabUserInfo> verifyLToken() {
     _ensureCookie();
     return _queue.run(() async {
-      final response = await _client.post(
+      final response = await _post(
         Uri.parse(HoyolabConstants.verifyLTokenUrl),
         headers: HoyolabAuth.buildHeaders(
           cookie: cookie!,
@@ -96,7 +112,7 @@ class HoyolabApi {
       final uri = Uri.parse(
         '${HoyolabConstants.getUserGameRolesUrl}?game_biz=hk4e_global&region=$region',
       );
-      final response = await _client.get(
+      final response = await _get(
         uri,
         headers: HoyolabAuth.buildHeaders(
           cookie: cookie!,
@@ -120,7 +136,7 @@ class HoyolabApi {
       final uri = Uri.parse(HoyolabConstants.dailyNoteUrl)
           .replace(queryParameters: query);
       final ds = HoyolabAuth.generateDsToken(queryParameters: query);
-      final response = await _client.get(
+      final response = await _get(
         uri,
         headers: HoyolabAuth.buildHeaders(
           cookie: cookie!,
@@ -150,7 +166,7 @@ class HoyolabApi {
       for (final base in HoyolabConstants.gameRecordBaseUrls) {
         for (final path in paths) {
           try {
-            final response = await _client.post(
+            final response = await _post(
               Uri.parse('$base$path'),
               headers: HoyolabAuth.buildRecordHeaders(
                 cookie: cookie!,
@@ -196,7 +212,7 @@ class HoyolabApi {
       HoyolabApiException? lastError;
       for (final base in HoyolabConstants.gameRecordBaseUrls) {
         try {
-          final response = await _client.post(
+          final response = await _post(
             Uri.parse('$base${HoyolabConstants.characterDetailPath}'),
             headers: HoyolabAuth.buildRecordHeaders(
               cookie: cookie!,
@@ -247,7 +263,7 @@ class HoyolabApi {
         try {
           final uri = Uri.parse('$base${HoyolabConstants.spiralAbyssPath}')
               .replace(queryParameters: query);
-          final response = await _client.get(
+          final response = await _get(
             uri,
             headers: HoyolabAuth.buildRecordHeaders(
               cookie: cookie!,
@@ -286,7 +302,7 @@ class HoyolabApi {
         try {
           final uri = Uri.parse('$base${HoyolabConstants.roleCombatPath}')
               .replace(queryParameters: query);
-          final response = await _client.get(
+          final response = await _get(
             uri,
             headers: HoyolabAuth.buildRecordHeaders(
               cookie: cookie!,
@@ -344,7 +360,7 @@ class HoyolabApi {
         try {
           final uri = Uri.parse('$base${HoyolabConstants.hardChallengePath}')
               .replace(queryParameters: query);
-          final response = await _client.get(
+          final response = await _get(
             uri,
             headers: HoyolabAuth.buildRecordHeaders(
               cookie: cookie!,

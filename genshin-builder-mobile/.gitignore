@@ -31,3 +31,5 @@ devtools_options.yaml
 # Env / secrets
 .env
 *.keystore
+*.jks
+android/key.properties
