@@ -33,3 +33,8 @@ devtools_options.yaml
 *.keystore
 *.jks
 android/key.properties
+
+# Gacha history conversion intermediates (keep convert_paimon_banners.py)
+tool/paimon_*.js
+tool/amber_*.json
+tool/_debug_*.json

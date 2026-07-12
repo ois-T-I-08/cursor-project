@@ -45,3 +45,4 @@ flutter:
     - assets/config/daily_material_schedule.json
     - assets/config/level_exp_table.json
     - assets/config/artifact_set_recommendations.json
+    - assets/config/gacha_banner_history.json

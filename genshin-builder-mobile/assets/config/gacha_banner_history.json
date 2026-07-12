@@ -1,0 +1,4172 @@
+{
+  "version": 1,
+  "description": "PU banner history seed (from paimon-moe banners.js + Amber EN IDs). Live calendar overlays current.",
+  "banners": [
+    {
+      "id": "character-1.0-0",
+      "type": "character",
+      "name": "Ballad in Goblets",
+      "version": "1.0",
+      "start": "2020-09-28T00:00:00+08:00",
+      "end": "2020-10-18T18:00:00+08:00",
+      "featured5Ids": [
+        "10000022"
+      ],
+      "featured4Ids": [
+        "10000014",
+        "10000031",
+        "10000023"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.0-1",
+      "type": "character",
+      "name": "Sparkling Steps",
+      "version": "1.0",
+      "start": "2020-10-20T18:00:00+08:00",
+      "end": "2020-11-10T16:00:00+08:00",
+      "featured5Ids": [
+        "10000029"
+      ],
+      "featured4Ids": [
+        "10000025",
+        "10000043",
+        "10000034"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.1-2",
+      "type": "character",
+      "name": "Farewell of Snezhnaya",
+      "version": "1.1",
+      "start": "2020-11-11T06:00:00+08:00",
+      "end": "2020-12-01T16:00:00+08:00",
+      "featured5Ids": [
+        "10000033"
+      ],
+      "featured4Ids": [
+        "10000027",
+        "10000024",
+        "10000039"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.1-3",
+      "type": "character",
+      "name": "Gentry of Hermitage",
+      "version": "1.1",
+      "start": "2020-12-01T18:00:00+08:00",
+      "end": "2020-12-22T15:00:00+08:00",
+      "featured5Ids": [
+        "10000030"
+      ],
+      "featured4Ids": [
+        "10000044",
+        "10000020",
+        "10000036"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.2-4",
+      "type": "character",
+      "name": "Secretum Secretorum",
+      "version": "1.2",
+      "start": "2020-12-23T06:00:00+08:00",
+      "end": "2021-01-12T16:00:00+08:00",
+      "featured5Ids": [
+        "10000038"
+      ],
+      "featured4Ids": [
+        "10000031",
+        "10000032",
+        "10000043"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.2-5",
+      "type": "character",
+      "name": "Adrift in the Harbor",
+      "version": "1.2",
+      "start": "2021-01-12T18:00:00+08:00",
+      "end": "2021-02-02T15:00:00+08:00",
+      "featured5Ids": [
+        "10000037"
+      ],
+      "featured4Ids": [
+        "10000025",
+        "10000023",
+        "10000034"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.3-6",
+      "type": "character",
+      "name": "Invitation to Mundane Life",
+      "version": "1.3",
+      "start": "2021-02-03T06:00:00+08:00",
+      "end": "2021-02-17T16:00:00+08:00",
+      "featured5Ids": [
+        "10000026"
+      ],
+      "featured4Ids": [
+        "10000039",
+        "10000044",
+        "10000024"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.3-7",
+      "type": "character",
+      "name": "Dance of Lanterns",
+      "version": "1.3",
+      "start": "2021-02-17T18:00:00+08:00",
+      "end": "2021-03-02T16:00:00+08:00",
+      "featured5Ids": [
+        "10000042"
+      ],
+      "featured4Ids": [
+        "10000014",
+        "10000032",
+        "10000027"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.3-8",
+      "type": "character",
+      "name": "Moment of Bloom",
+      "version": "1.3",
+      "start": "2021-03-02T18:00:00+08:00",
+      "end": "2021-03-16T15:00:00+08:00",
+      "featured5Ids": [
+        "10000046"
+      ],
+      "featured4Ids": [
+        "10000025",
+        "10000023",
+        "10000036"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.4-9",
+      "type": "character",
+      "name": "Ballad in Goblets",
+      "version": "1.4",
+      "start": "2021-03-17T06:00:00+08:00",
+      "end": "2021-04-06T16:00:00+08:00",
+      "featured5Ids": [
+        "10000022"
+      ],
+      "featured4Ids": [
+        "10000043",
+        "10000020",
+        "10000034"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.4-10",
+      "type": "character",
+      "name": "Farewell of Snezhnaya",
+      "version": "1.4",
+      "start": "2021-04-06T18:00:00+08:00",
+      "end": "2021-04-27T15:00:00+08:00",
+      "featured5Ids": [
+        "10000033"
+      ],
+      "featured4Ids": [
+        "10000045",
+        "10000031",
+        "10000014"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.5-11",
+      "type": "character",
+      "name": "Gentry of Hermitage",
+      "version": "1.5",
+      "start": "2021-04-28T06:00:00+08:00",
+      "end": "2021-05-18T17:59:59+08:00",
+      "featured5Ids": [
+        "10000030"
+      ],
+      "featured4Ids": [
+        "10000048",
+        "10000034",
+        "10000039"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.5-12",
+      "type": "character",
+      "name": "Born of Ocean Swell",
+      "version": "1.5",
+      "start": "2021-05-18T18:00:00+08:00",
+      "end": "2021-06-08T15:00:00+08:00",
+      "featured5Ids": [
+        "10000051"
+      ],
+      "featured4Ids": [
+        "10000025",
+        "10000024",
+        "10000044"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.6-13",
+      "type": "character",
+      "name": "Sparkling Steps",
+      "version": "1.6",
+      "start": "2021-06-09T06:00:00+08:00",
+      "end": "2021-06-29T17:59:59+08:00",
+      "featured5Ids": [
+        "10000029"
+      ],
+      "featured4Ids": [
+        "10000031",
+        "10000043",
+        "10000014"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-1.6-14",
+      "type": "character",
+      "name": "Leaves in the Wind",
+      "version": "1.6",
+      "start": "2021-06-29T18:00:00+08:00",
+      "end": "2021-07-20T14:59:59+08:00",
+      "featured5Ids": [
+        "10000047"
+      ],
+      "featured4Ids": [
+        "10000032",
+        "10000020",
+        "10000045"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.0-15",
+      "type": "character",
+      "name": "The Herons Court",
+      "version": "2.0",
+      "start": "2021-07-21T06:00:00+08:00",
+      "end": "2021-08-10T17:59:59+08:00",
+      "featured5Ids": [
+        "10000002"
+      ],
+      "featured4Ids": [
+        "10000036",
+        "10000027",
+        "10000048"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.0-16",
+      "type": "character",
+      "name": "Tapestry of Golden Flames",
+      "version": "2.0",
+      "start": "2021-08-10T18:00:00+08:00",
+      "end": "2021-08-31T14:59:59+08:00",
+      "featured5Ids": [
+        "10000049"
+      ],
+      "featured4Ids": [
+        "10000053",
+        "10000039",
+        "10000044"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.1-17",
+      "type": "character",
+      "name": "Reign of Serenity",
+      "version": "2.1",
+      "start": "2021-09-01T06:00:00+08:00",
+      "end": "2021-09-21T17:59:59+08:00",
+      "featured5Ids": [
+        "10000052"
+      ],
+      "featured4Ids": [
+        "10000023",
+        "10000043",
+        "10000056"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.1-18",
+      "type": "character",
+      "name": "Drifting Luminescence",
+      "version": "2.1",
+      "start": "2021-09-21T18:00:00+08:00",
+      "end": "2021-10-12T14:59:59+08:00",
+      "featured5Ids": [
+        "10000054"
+      ],
+      "featured4Ids": [
+        "10000045",
+        "10000024",
+        "10000025"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.2-19",
+      "type": "character",
+      "name": "Farewell of Snezhnaya",
+      "version": "2.2",
+      "start": "2021-10-13T06:00:00+08:00",
+      "end": "2021-11-02T17:59:59+08:00",
+      "featured5Ids": [
+        "10000033"
+      ],
+      "featured4Ids": [
+        "10000027",
+        "10000036",
+        "10000048"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.2-20",
+      "type": "character",
+      "name": "Moment of Bloom",
+      "version": "2.2",
+      "start": "2021-11-02T18:00:00+08:00",
+      "end": "2021-11-23T14:59:59+08:00",
+      "featured5Ids": [
+        "10000046"
+      ],
+      "featured4Ids": [
+        "10000050",
+        "10000039",
+        "10000053"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.3-21",
+      "type": "character",
+      "name": "Secretum Secretorum",
+      "version": "2.3",
+      "start": "2021-11-24T06:00:00+08:00",
+      "end": "2021-12-14T17:59:59+08:00",
+      "featured5Ids": [
+        "10000038",
+        "10000051"
+      ],
+      "featured4Ids": [
+        "10000045",
+        "10000034",
+        "10000032"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.3-22",
+      "type": "character",
+      "name": "Oni's Royale",
+      "version": "2.3",
+      "start": "2021-12-14T18:00:00+08:00",
+      "end": "2022-01-04T17:59:59+08:00",
+      "featured5Ids": [
+        "10000057"
+      ],
+      "featured4Ids": [
+        "10000055",
+        "10000023",
+        "10000014"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.4-23",
+      "type": "character",
+      "name": "The Transcendent One Returns",
+      "version": "2.4",
+      "start": "2022-01-05T06:00:00+08:00",
+      "end": "2022-01-25T17:59:59+08:00",
+      "featured5Ids": [
+        "10000063",
+        "10000026"
+      ],
+      "featured4Ids": [
+        "10000064",
+        "10000027",
+        "10000036"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.4-24",
+      "type": "character",
+      "name": "Gentry of Hermitage",
+      "version": "2.4",
+      "start": "2022-01-25T18:00:00+08:00",
+      "end": "2022-02-15T14:59:59+08:00",
+      "featured5Ids": [
+        "10000030",
+        "10000037"
+      ],
+      "featured4Ids": [
+        "10000025",
+        "10000024",
+        "10000048"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.5-25",
+      "type": "character",
+      "name": "Everbloom Violet",
+      "version": "2.5",
+      "start": "2022-02-16T06:00:00+08:00",
+      "end": "2022-03-08T17:59:59+08:00",
+      "featured5Ids": [
+        "10000058"
+      ],
+      "featured4Ids": [
+        "10000050",
+        "10000039",
+        "10000031"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.5-26",
+      "type": "character",
+      "name": "Reign of Serenity",
+      "version": "2.5",
+      "start": "2022-03-08T18:00:00+08:00",
+      "end": "2022-03-29T14:59:59+08:00",
+      "featured5Ids": [
+        "10000052",
+        "10000054"
+      ],
+      "featured4Ids": [
+        "10000032",
+        "10000044",
+        "10000056"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.6-27",
+      "type": "character",
+      "name": "Azure Excursion",
+      "version": "2.6",
+      "start": "2022-03-30T06:00:00+08:00",
+      "end": "2022-04-19T17:59:59+08:00",
+      "featured5Ids": [
+        "10000066",
+        "10000022"
+      ],
+      "featured4Ids": [
+        "10000064",
+        "10000023",
+        "10000043"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.6-28",
+      "type": "character",
+      "name": "The Herons Court",
+      "version": "2.6",
+      "start": "2022-04-19T18:00:00+08:00",
+      "end": "2022-05-31T05:59:59+08:00",
+      "featured5Ids": [
+        "10000002"
+      ],
+      "featured4Ids": [
+        "10000053",
+        "10000020",
+        "10000045"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.7-29",
+      "type": "character",
+      "name": "Discerner of Enigmas",
+      "version": "2.7",
+      "start": "2022-05-31T09:00:00+08:00",
+      "end": "2022-06-21T17:59:59+08:00",
+      "featured5Ids": [
+        "10000060",
+        "10000026"
+      ],
+      "featured4Ids": [
+        "10000014",
+        "10000034",
+        "10000048"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.7-30",
+      "type": "character",
+      "name": "Oni's Royale",
+      "version": "2.7",
+      "start": "2022-06-21T18:00:00+08:00",
+      "end": "2022-07-12T14:59:59+08:00",
+      "featured5Ids": [
+        "10000057"
+      ],
+      "featured4Ids": [
+        "10000036",
+        "10000055",
+        "10000065"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.8-31",
+      "type": "character",
+      "name": "Leaves in the Wind",
+      "version": "2.8",
+      "start": "2022-07-13T06:00:00+08:00",
+      "end": "2022-08-02T17:59:59+08:00",
+      "featured5Ids": [
+        "10000047",
+        "10000029"
+      ],
+      "featured4Ids": [
+        "10000027",
+        "10000050",
+        "10000059"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-2.8-32",
+      "type": "character",
+      "name": "Tapestry of Golden Flames",
+      "version": "2.8",
+      "start": "2022-08-02T18:00:00+08:00",
+      "end": "2022-08-23T14:59:59+08:00",
+      "featured5Ids": [
+        "10000049"
+      ],
+      "featured4Ids": [
+        "10000064",
+        "10000044",
+        "10000032"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.0-33",
+      "type": "character",
+      "name": "Viridescent Vigil",
+      "version": "3.0",
+      "start": "2022-08-24T06:00:00+08:00",
+      "end": "2022-09-09T17:59:59+08:00",
+      "featured5Ids": [
+        "10000069",
+        "10000030"
+      ],
+      "featured4Ids": [
+        "10000067",
+        "10000031",
+        "10000039"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.0-34",
+      "type": "character",
+      "name": "Adrift in the Harbor",
+      "version": "3.0",
+      "start": "2022-09-09T18:00:00+08:00",
+      "end": "2022-09-27T14:59:59+08:00",
+      "featured5Ids": [
+        "10000037",
+        "10000054"
+      ],
+      "featured4Ids": [
+        "10000025",
+        "10000043",
+        "10000068"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.1-35",
+      "type": "character",
+      "name": "Twilight Arbiter",
+      "version": "3.1",
+      "start": "2022-09-28T06:00:00+08:00",
+      "end": "2022-10-14T17:59:59+08:00",
+      "featured5Ids": [
+        "10000071",
+        "10000022"
+      ],
+      "featured4Ids": [
+        "10000053",
+        "10000072",
+        "10000065"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.1-36",
+      "type": "character",
+      "name": "Twirling Lotus",
+      "version": "3.1",
+      "start": "2022-10-14T18:00:00+08:00",
+      "end": "2022-11-01T14:59:59+08:00",
+      "featured5Ids": [
+        "10000070",
+        "10000038"
+      ],
+      "featured4Ids": [
+        "10000014",
+        "10000023",
+        "10000024"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.2-37",
+      "type": "character",
+      "name": "The Moongrass' Enlightenment",
+      "version": "3.2",
+      "start": "2022-11-02T06:00:00+08:00",
+      "end": "2022-11-18T17:59:59+08:00",
+      "featured5Ids": [
+        "10000073",
+        "10000049"
+      ],
+      "featured4Ids": [
+        "10000032",
+        "10000020",
+        "10000034"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.2-38",
+      "type": "character",
+      "name": "Everbloom Violet",
+      "version": "3.2",
+      "start": "2022-11-18T18:00:00+08:00",
+      "end": "2022-12-06T14:59:59+08:00",
+      "featured5Ids": [
+        "10000058",
+        "10000033"
+      ],
+      "featured4Ids": [
+        "10000050",
+        "10000059",
+        "10000074"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.3-39",
+      "type": "character",
+      "name": "From Ashes Reborn",
+      "version": "3.3",
+      "start": "2022-12-07T06:00:00+08:00",
+      "end": "2022-12-27T17:59:59+08:00",
+      "featured5Ids": [
+        "10000075",
+        "10000057"
+      ],
+      "featured4Ids": [
+        "10000076",
+        "10000048",
+        "10000055"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.3-40",
+      "type": "character",
+      "name": "Reign of Serenity",
+      "version": "3.3",
+      "start": "2022-12-27T18:00:00+08:00",
+      "end": "2023-01-17T14:59:59+08:00",
+      "featured5Ids": [
+        "10000052",
+        "10000066"
+      ],
+      "featured4Ids": [
+        "10000053",
+        "10000045",
+        "10000056"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.4-41",
+      "type": "character",
+      "name": "Caution in Confidence",
+      "version": "3.4",
+      "start": "2023-01-18T06:00:00+08:00",
+      "end": "2023-02-07T17:59:59+08:00",
+      "featured5Ids": [
+        "10000078",
+        "10000026"
+      ],
+      "featured4Ids": [
+        "10000044",
+        "10000064",
+        "10000077"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.4-42",
+      "type": "character",
+      "name": "Moment of Bloom",
+      "version": "3.4",
+      "start": "2023-02-07T18:00:00+08:00",
+      "end": "2023-02-28T14:59:59+08:00",
+      "featured5Ids": [
+        "10000046",
+        "10000060"
+      ],
+      "featured4Ids": [
+        "10000024",
+        "10000027",
+        "10000025"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.5-43",
+      "type": "character",
+      "name": "Auric Blaze",
+      "version": "3.5",
+      "start": "2023-03-01T06:00:00+08:00",
+      "end": "2023-03-21T17:59:59+08:00",
+      "featured5Ids": [
+        "10000079",
+        "10000071"
+      ],
+      "featured4Ids": [
+        "10000032",
+        "10000067",
+        "10000014"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.5-44",
+      "type": "character",
+      "name": "The Transcendent One Returns",
+      "version": "3.5",
+      "start": "2023-03-21T18:00:00+08:00",
+      "end": "2023-04-11T14:59:59+08:00",
+      "featured5Ids": [
+        "10000063",
+        "10000002"
+      ],
+      "featured4Ids": [
+        "10000039",
+        "10000043",
+        "10000080"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.6-45",
+      "type": "character",
+      "name": "The Moongrass' Enlightenment",
+      "version": "3.6",
+      "start": "2023-04-12T06:00:00+08:00",
+      "end": "2023-05-02T17:59:59+08:00",
+      "featured5Ids": [
+        "10000073",
+        "10000070"
+      ],
+      "featured4Ids": [
+        "10000065",
+        "10000068",
+        "10000074"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.6-46",
+      "type": "character",
+      "name": "Immaculate Pulse",
+      "version": "3.6",
+      "start": "2023-05-02T18:00:00+08:00",
+      "end": "2023-05-23T14:59:59+08:00",
+      "featured5Ids": [
+        "10000082",
+        "10000037"
+      ],
+      "featured4Ids": [
+        "10000081",
+        "10000072",
+        "10000031"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.7-47",
+      "type": "character",
+      "name": "Tapestry of Golden Flames",
+      "version": "3.7",
+      "start": "2023-05-24T06:00:00+08:00",
+      "end": "2023-06-13T17:59:59+08:00",
+      "featured5Ids": [
+        "10000049",
+        "10000058"
+      ],
+      "featured4Ids": [
+        "10000061",
+        "10000064",
+        "10000036"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.7-48",
+      "type": "character",
+      "name": "Caution in Confidence",
+      "version": "3.7",
+      "start": "2023-06-13T18:00:00+08:00",
+      "end": "2023-07-04T14:59:59+08:00",
+      "featured5Ids": [
+        "10000078",
+        "10000047"
+      ],
+      "featured4Ids": [
+        "10000077",
+        "10000059",
+        "10000023"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.8-49",
+      "type": "character",
+      "name": "Born of Ocean Swell",
+      "version": "3.8",
+      "start": "2023-07-05T06:00:00+08:00",
+      "end": "2023-07-25T17:59:59+08:00",
+      "featured5Ids": [
+        "10000051",
+        "10000029"
+      ],
+      "featured4Ids": [
+        "10000080",
+        "10000020",
+        "10000050"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-3.8-50",
+      "type": "character",
+      "name": "Drifting Luminescence",
+      "version": "3.8",
+      "start": "2023-07-25T18:00:00+08:00",
+      "end": "2023-08-15T17:59:59+08:00",
+      "featured5Ids": [
+        "10000054",
+        "10000075"
+      ],
+      "featured4Ids": [
+        "10000048",
+        "10000076",
+        "10000045"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.0-51",
+      "type": "character",
+      "name": "Conjuring Chiaroscuro",
+      "version": "4.0",
+      "start": "2023-08-16T06:00:00+08:00",
+      "end": "2023-09-05T17:59:59+08:00",
+      "featured5Ids": [
+        "10000084",
+        "10000060"
+      ],
+      "featured4Ids": [
+        "10000032",
+        "10000014",
+        "10000083"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.0-52",
+      "type": "character",
+      "name": "Gentry of Hermitage",
+      "version": "4.0",
+      "start": "2023-09-05T18:00:00+08:00",
+      "end": "2023-09-26T14:59:59+08:00",
+      "featured5Ids": [
+        "10000033",
+        "10000030"
+      ],
+      "featured4Ids": [
+        "10000085",
+        "10000053",
+        "10000034"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.1-53",
+      "type": "character",
+      "name": "Decree of the Deeps",
+      "version": "4.1",
+      "start": "2023-09-27T06:00:00+08:00",
+      "end": "2023-10-17T17:59:59+08:00",
+      "featured5Ids": [
+        "10000087",
+        "10000046"
+      ],
+      "featured4Ids": [
+        "10000031",
+        "10000025",
+        "10000039"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.1-54",
+      "type": "character",
+      "name": "Tempestuous Destiny",
+      "version": "4.1",
+      "start": "2023-10-17T18:00:00+08:00",
+      "end": "2023-11-07T14:59:59+08:00",
+      "featured5Ids": [
+        "10000086",
+        "10000022"
+      ],
+      "featured4Ids": [
+        "10000036",
+        "10000050",
+        "10000068"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.2-55",
+      "type": "character",
+      "name": "Chanson of Many Waters",
+      "version": "4.2",
+      "start": "2023-11-08T06:00:00+08:00",
+      "end": "2023-11-28T17:59:59+08:00",
+      "featured5Ids": [
+        "10000089",
+        "10000082"
+      ],
+      "featured4Ids": [
+        "10000088",
+        "10000067",
+        "10000024"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.2-56",
+      "type": "character",
+      "name": "Twilight Arbiter",
+      "version": "4.2",
+      "start": "2023-11-28T18:00:00+08:00",
+      "end": "2023-12-19T14:59:59+08:00",
+      "featured5Ids": [
+        "10000071",
+        "10000066"
+      ],
+      "featured4Ids": [
+        "10000065",
+        "10000023",
+        "10000061"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.3-57",
+      "type": "character",
+      "name": "In the Name of the Rosula",
+      "version": "4.3",
+      "start": "2023-12-20T06:00:00+08:00",
+      "end": "2024-01-09T17:59:59+08:00",
+      "featured5Ids": [
+        "10000091",
+        "10000002"
+      ],
+      "featured4Ids": [
+        "10000043",
+        "10000072",
+        "10000045"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.3-58",
+      "type": "character",
+      "name": "Reign of Serenity",
+      "version": "4.3",
+      "start": "2024-01-09T18:00:00+08:00",
+      "end": "2024-01-30T14:59:00+08:00",
+      "featured5Ids": [
+        "10000052",
+        "10000049"
+      ],
+      "featured4Ids": [
+        "10000032",
+        "10000056",
+        "10000090"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.4-59",
+      "type": "character",
+      "name": "The Crane Soars Skyward",
+      "version": "4.4",
+      "start": "2024-01-31T06:00:00+08:00",
+      "end": "2024-02-20T17:59:00+08:00",
+      "featured5Ids": [
+        "10000093",
+        "10000073"
+      ],
+      "featured4Ids": [
+        "10000092",
+        "10000076",
+        "10000034"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.4-60",
+      "type": "character",
+      "name": "Invitation to Mundane Life",
+      "version": "4.4",
+      "start": "2024-02-20T18:00:00+08:00",
+      "end": "2024-03-12T14:59:00+08:00",
+      "featured5Ids": [
+        "10000026",
+        "10000058"
+      ],
+      "featured4Ids": [
+        "10000077",
+        "10000044",
+        "10000027"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.5-61",
+      "type": "character",
+      "name": "Of Silken Clouds Woven",
+      "version": "4.5",
+      "start": "2024-03-13T06:00:00+08:00",
+      "end": "2024-04-02T17:59:00+08:00",
+      "featured5Ids": [
+        "10000094",
+        "10000057"
+      ],
+      "featured4Ids": [
+        "10000064",
+        "10000055",
+        "10000068"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.5-62",
+      "type": "character",
+      "name": "Decree of the Deeps",
+      "version": "4.5",
+      "start": "2024-04-02T18:00:00+08:00",
+      "end": "2024-04-23T14:59:00+08:00",
+      "featured5Ids": [
+        "10000087",
+        "10000047"
+      ],
+      "featured4Ids": [
+        "10000014",
+        "10000025",
+        "10000048"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.6-63",
+      "type": "character",
+      "name": "The Hearth's Ashen Shadow",
+      "version": "4.6",
+      "start": "2024-04-24T06:00:00+08:00",
+      "end": "2024-05-14T17:59:00+08:00",
+      "featured5Ids": [
+        "10000096",
+        "10000084"
+      ],
+      "featured4Ids": [
+        "10000085",
+        "10000083",
+        "10000023"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.6-64",
+      "type": "character",
+      "name": "From Ashes Reborn",
+      "version": "4.6",
+      "start": "2024-05-14T18:00:00+08:00",
+      "end": "2024-06-04T14:59:00+08:00",
+      "featured5Ids": [
+        "10000075",
+        "10000082"
+      ],
+      "featured4Ids": [
+        "10000074",
+        "10000076",
+        "10000024"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.7-65",
+      "type": "character",
+      "name": "Illuminating Lightning",
+      "version": "4.7",
+      "start": "2024-06-05T06:00:00+08:00",
+      "end": "2024-06-25T17:59:00+08:00",
+      "featured5Ids": [
+        "10000098",
+        "10000078"
+      ],
+      "featured4Ids": [
+        "10000097",
+        "10000032",
+        "10000050"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.7-66",
+      "type": "character",
+      "name": "Romaritime Meluserenity",
+      "version": "4.7",
+      "start": "2024-06-25T18:00:00+08:00",
+      "end": "2024-07-16T14:59:00+08:00",
+      "featured5Ids": [
+        "10000095",
+        "10000089"
+      ],
+      "featured4Ids": [
+        "10000034",
+        "10000092",
+        "10000045"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.8-67",
+      "type": "character",
+      "name": "In the Name of the Rosula",
+      "version": "4.8",
+      "start": "2024-07-17T06:00:00+08:00",
+      "end": "2024-08-06T17:59:00+08:00",
+      "featured5Ids": [
+        "10000091",
+        "10000070"
+      ],
+      "featured4Ids": [
+        "10000061",
+        "10000081",
+        "10000027"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-4.8-68",
+      "type": "character",
+      "name": "Ambrosial Essence",
+      "version": "4.8",
+      "start": "2024-08-06T18:00:00+08:00",
+      "end": "2024-08-27T14:59:00+08:00",
+      "featured5Ids": [
+        "10000099",
+        "10000060"
+      ],
+      "featured4Ids": [
+        "10000048",
+        "10000023",
+        "10000020"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.0-69",
+      "type": "character",
+      "name": "Sharktacular Surfari",
+      "version": "5.0",
+      "start": "2024-08-28T06:00:00+08:00",
+      "end": "2024-09-17T17:59:00+08:00",
+      "featured5Ids": [
+        "10000102",
+        "10000047"
+      ],
+      "featured4Ids": [
+        "10000100",
+        "10000044",
+        "10000032"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.0-70",
+      "type": "character",
+      "name": "Seeker of Flame-Wrought Secrets",
+      "version": "5.0",
+      "start": "2024-09-17T18:00:00+08:00",
+      "end": "2024-10-08T14:59:00+08:00",
+      "featured5Ids": [
+        "10000101",
+        "10000052"
+      ],
+      "featured4Ids": [
+        "10000050",
+        "10000056",
+        "10000090"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.1-71",
+      "type": "character",
+      "name": "Forgefire's Blessing",
+      "version": "5.1",
+      "start": "2024-10-09T06:00:00+08:00",
+      "end": "2024-10-29T17:59:00+08:00",
+      "featured5Ids": [
+        "10000103",
+        "10000094"
+      ],
+      "featured4Ids": [
+        "10000068",
+        "10000072",
+        "10000067"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.1-72",
+      "type": "character",
+      "name": "The Moongrass' Enlightenment",
+      "version": "5.1",
+      "start": "2024-10-29T18:00:00+08:00",
+      "end": "2024-11-19T14:59:00+08:00",
+      "featured5Ids": [
+        "10000073",
+        "10000046"
+      ],
+      "featured4Ids": [
+        "10000097",
+        "10000025",
+        "10000065"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.2-73",
+      "type": "character",
+      "name": "Piercing Shot's Crimson Wake",
+      "version": "5.2",
+      "start": "2024-11-20T06:00:00+08:00",
+      "end": "2024-12-10T17:59:00+08:00",
+      "featured5Ids": [
+        "10000104",
+        "10000084"
+      ],
+      "featured4Ids": [
+        "10000105",
+        "10000043",
+        "10000014"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.2-74",
+      "type": "character",
+      "name": "Decree of the Deeps",
+      "version": "5.2",
+      "start": "2024-12-10T18:00:00+08:00",
+      "end": "2024-12-31T14:59:00+08:00",
+      "featured5Ids": [
+        "10000087",
+        "10000030"
+      ],
+      "featured4Ids": [
+        "10000059",
+        "10000031",
+        "10000077"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.3-75",
+      "type": "character",
+      "name": "Ancient Flame Ablaze",
+      "version": "5.3",
+      "start": "2025-01-01T06:00:00+08:00",
+      "end": "2025-01-21T17:59:00+08:00",
+      "featured5Ids": [
+        "10000106",
+        "10000107"
+      ],
+      "featured4Ids": [
+        "10000100",
+        "10000032",
+        "10000039"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.3-76",
+      "type": "character",
+      "name": "The Hearth's Ashen Shadow",
+      "version": "5.3",
+      "start": "2025-01-21T18:00:00+08:00",
+      "end": "2025-02-11T14:59:00+08:00",
+      "featured5Ids": [
+        "10000096",
+        "10000098"
+      ],
+      "featured4Ids": [
+        "10000108",
+        "10000090",
+        "10000045"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.4-77",
+      "type": "character",
+      "name": "Dawn's Drifting Reverie",
+      "version": "5.4",
+      "start": "2025-02-12T06:00:00+08:00",
+      "end": "2025-03-04T17:59:00+08:00",
+      "featured5Ids": [
+        "10000109",
+        "10000095"
+      ],
+      "featured4Ids": [
+        "10000055",
+        "10000053",
+        "10000023"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.4-78",
+      "type": "character",
+      "name": "Tempestuous Destiny",
+      "version": "5.4",
+      "start": "2025-03-04T18:00:00+08:00",
+      "end": "2025-03-25T14:59:00+08:00",
+      "featured5Ids": [
+        "10000086",
+        "10000089"
+      ],
+      "featured4Ids": [
+        "10000088",
+        "10000036",
+        "10000080"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.5-79",
+      "type": "character",
+      "name": "Cornucopia of Contention",
+      "version": "5.5",
+      "start": "2025-03-26T06:00:00+08:00",
+      "end": "2025-04-15T17:59:00+08:00",
+      "featured5Ids": [
+        "10000111",
+        "10000093"
+      ],
+      "featured4Ids": [
+        "10000110",
+        "10000090",
+        "10000092"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.5-80",
+      "type": "character",
+      "name": "Forgefire's Blessing",
+      "version": "5.5",
+      "start": "2025-04-15T18:00:00+08:00",
+      "end": "2025-05-06T14:59:00+08:00",
+      "featured5Ids": [
+        "10000103",
+        "10000022"
+      ],
+      "featured4Ids": [
+        "10000076",
+        "10000024",
+        "10000048"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.6-81",
+      "type": "character",
+      "name": "La Chanson Cerise",
+      "version": "5.6",
+      "start": "2025-05-07T06:00:00+08:00",
+      "end": "2025-05-27T17:59:00+08:00",
+      "featured5Ids": [
+        "10000112",
+        "10000091"
+      ],
+      "featured4Ids": [
+        "10000113",
+        "10000105",
+        "10000074"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.6-82",
+      "type": "character",
+      "name": "Seeker of Flame-Wrought Secrets",
+      "version": "5.6",
+      "start": "2025-05-27T18:00:00+08:00",
+      "end": "2025-06-17T14:59:00+08:00",
+      "featured5Ids": [
+        "10000101",
+        "10000052"
+      ],
+      "featured4Ids": [
+        "10000050",
+        "10000056",
+        "10000083"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.7-83",
+      "type": "character",
+      "name": "Void Star's Advent",
+      "version": "5.7",
+      "start": "2025-06-18T06:00:00+08:00",
+      "end": "2025-07-08T17:59:00+08:00",
+      "featured5Ids": [
+        "10000114",
+        "10000063"
+      ],
+      "featured4Ids": [
+        "10000115",
+        "10000072",
+        "10000039"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.7-84",
+      "type": "character",
+      "name": "Ancient Flame Ablaze",
+      "version": "5.7",
+      "start": "2025-07-08T18:00:00+08:00",
+      "end": "2025-07-29T14:59:00+08:00",
+      "featured5Ids": [
+        "10000106",
+        "10000099"
+      ],
+      "featured4Ids": [
+        "10000110",
+        "10000077",
+        "10000023"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.8-85",
+      "type": "character",
+      "name": "Astral Actuation",
+      "version": "5.8",
+      "start": "2025-07-30T06:00:00+08:00",
+      "end": "2025-08-19T17:59:00+08:00",
+      "featured5Ids": [
+        "10000116",
+        "10000107"
+      ],
+      "featured4Ids": [
+        "10000097",
+        "10000025",
+        "10000031"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-5.8-86",
+      "type": "character",
+      "name": "Sharktacular Surfari",
+      "version": "5.8",
+      "start": "2025-08-19T18:00:00+08:00",
+      "end": "2025-09-09T14:59:00+08:00",
+      "featured5Ids": [
+        "10000102",
+        "10000104"
+      ],
+      "featured4Ids": [
+        "10000113",
+        "10000105",
+        "10000032"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.0-87",
+      "type": "character",
+      "name": "Moonsong of the Groves",
+      "version": "6.0",
+      "start": "2025-09-10T06:00:00+08:00",
+      "end": "2025-09-30T17:59:00+08:00",
+      "featured5Ids": [
+        "10000119",
+        "10000073"
+      ],
+      "featured4Ids": [
+        "10000014",
+        "10000065",
+        "10000081"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.0-88",
+      "type": "character",
+      "name": "The Lone Light Knocks at Night",
+      "version": "6.0",
+      "start": "2025-09-30T18:00:00+08:00",
+      "end": "2025-10-21T17:59:00+08:00",
+      "featured5Ids": [
+        "10000120",
+        "10000060"
+      ],
+      "featured4Ids": [
+        "10000121",
+        "10000043",
+        "10000068"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.1-89",
+      "type": "character",
+      "name": "Temptation of the Crimson Sands",
+      "version": "6.1",
+      "start": "2025-10-22T06:00:00+08:00",
+      "end": "2025-11-11T17:59:00+08:00",
+      "featured5Ids": [
+        "10000122",
+        "10000089"
+      ],
+      "featured4Ids": [
+        "10000025",
+        "10000067",
+        "10000077"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.1-90",
+      "type": "character",
+      "name": "The Hearth's Ashen Shadow",
+      "version": "6.1",
+      "start": "2025-11-11T18:00:00+08:00",
+      "end": "2025-12-02T14:59:00+08:00",
+      "featured5Ids": [
+        "10000096",
+        "10000030"
+      ],
+      "featured4Ids": [
+        "10000108",
+        "10000045",
+        "10000064"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.2-91",
+      "type": "character",
+      "name": "Rubedo, of White Stone Born",
+      "version": "6.2",
+      "start": "2025-12-03T06:00:00+08:00",
+      "end": "2025-12-23T17:59:00+08:00",
+      "featured5Ids": [
+        "10000123",
+        "10000022"
+      ],
+      "featured4Ids": [
+        "10000032",
+        "10000076",
+        "10000124"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.2-92",
+      "type": "character",
+      "name": "Cornucopia of Contention",
+      "version": "6.2",
+      "start": "2025-12-23T18:00:00+08:00",
+      "end": "2026-01-13T14:59:00+08:00",
+      "featured5Ids": [
+        "10000111",
+        "10000103"
+      ],
+      "featured4Ids": [
+        "10000110",
+        "10000090",
+        "10000092"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.3-93",
+      "type": "character",
+      "name": "Somnias a Luna",
+      "version": "6.3",
+      "start": "2026-01-14T06:00:00+08:00",
+      "end": "2026-02-03T17:59:00+08:00",
+      "featured5Ids": [
+        "10000125",
+        "10000116"
+      ],
+      "featured4Ids": [
+        "10000031",
+        "10000097",
+        "10000113"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.3-94",
+      "type": "character",
+      "name": "Harmonious Abundance",
+      "version": "6.3",
+      "start": "2026-02-03T18:00:00+08:00",
+      "end": "2026-02-24T14:59:00+08:00",
+      "featured5Ids": [
+        "10000126",
+        "10000087"
+      ],
+      "featured4Ids": [
+        "10000127",
+        "10000121",
+        "10000055"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.4-95",
+      "type": "character",
+      "name": "The Northerly Wind's Song of Triumph",
+      "version": "6.4",
+      "start": "2026-02-25T06:00:00+08:00",
+      "end": "2026-03-17T17:59:00+08:00",
+      "featured5Ids": [
+        "10000128",
+        "10000120"
+      ],
+      "featured4Ids": [
+        "10000032",
+        "10000023",
+        "10000043"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.4-96",
+      "type": "character",
+      "name": "Void Star's Advent",
+      "version": "6.4",
+      "start": "2026-03-17T18:00:00+08:00",
+      "end": "2026-04-07T14:59:00+08:00",
+      "featured5Ids": [
+        "10000114",
+        "10000112"
+      ],
+      "featured4Ids": [
+        "10000115",
+        "10000072",
+        "10000088"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.5-97",
+      "type": "character",
+      "name": "Ya-hoho! Compendium",
+      "version": "6.5",
+      "start": "2026-04-08T06:00:00+08:00",
+      "end": "2026-04-28T17:59:00+08:00",
+      "featured5Ids": [
+        "10000130",
+        "10000104"
+      ],
+      "featured4Ids": [
+        "10000127",
+        "10000121",
+        "10000034"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.5-98",
+      "type": "character",
+      "name": "Moonsong of the Groves",
+      "version": "6.5",
+      "start": "2026-04-28T18:00:00+08:00",
+      "end": "2026-05-19T14:59:00+08:00",
+      "featured5Ids": [
+        "10000119",
+        "10000122"
+      ],
+      "featured4Ids": [
+        "10000025",
+        "10000061",
+        "10000124"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.6-99",
+      "type": "character",
+      "name": "Angel's Reverie",
+      "version": "6.6",
+      "start": "2026-05-20T06:00:00+08:00",
+      "end": "2026-06-09T17:59:00+08:00",
+      "featured5Ids": [
+        "10000131",
+        "10000123"
+      ],
+      "featured4Ids": [
+        "10000132",
+        "10000031",
+        "10000020"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.6-100",
+      "type": "character",
+      "name": "Frostedge Nocturne",
+      "version": "6.6",
+      "start": "2026-06-09T18:00:00+08:00",
+      "end": "2026-06-30T14:59:00+08:00",
+      "featured5Ids": [
+        "10000129",
+        "10000106"
+      ],
+      "featured4Ids": [
+        "10000080",
+        "10000023",
+        "10000032"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "character-6.7-101",
+      "type": "character",
+      "name": "To the Looking-Glass the Mademoiselle Said",
+      "version": "6.7",
+      "start": "2026-07-01T06:00:00+08:00",
+      "end": "2026-07-21T17:59:00+08:00",
+      "featured5Ids": [
+        "10000133",
+        "10000107"
+      ],
+      "featured4Ids": [
+        "10000024",
+        "10000039",
+        "10000085"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "weapon-1.0-0",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.0",
+      "start": "2020-09-28T00:00:00+08:00",
+      "end": "2020-10-18T18:00:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11501",
+        "15502",
+        "11402",
+        "12402",
+        "14402",
+        "15402",
+        "13407"
+      ]
+    },
+    {
+      "id": "weapon-1.0-1",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.0",
+      "start": "2020-10-20T18:00:00+08:00",
+      "end": "2020-11-10T16:00:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14502",
+        "12502",
+        "11403",
+        "15403",
+        "12403",
+        "14403",
+        "13401"
+      ]
+    },
+    {
+      "id": "weapon-1.1-2",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.1",
+      "start": "2020-11-11T06:00:00+08:00",
+      "end": "2020-12-01T16:00:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15501",
+        "14504",
+        "11402",
+        "12405",
+        "14409",
+        "15405",
+        "13407"
+      ]
+    },
+    {
+      "id": "weapon-1.1-3",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.1",
+      "start": "2020-12-01T18:00:00+08:00",
+      "end": "2020-12-22T15:00:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13504",
+        "12504",
+        "11405",
+        "12402",
+        "14401",
+        "15401",
+        "13401"
+      ]
+    },
+    {
+      "id": "weapon-1.2-4",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.2",
+      "start": "2020-12-23T06:00:00+08:00",
+      "end": "2021-01-12T16:00:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11504",
+        "14501",
+        "11401",
+        "12401",
+        "13407",
+        "14403",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-1.2-5",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.2",
+      "start": "2021-01-12T18:00:00+08:00",
+      "end": "2021-02-02T15:00:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15502",
+        "12501",
+        "11403",
+        "12402",
+        "13401",
+        "14409",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-1.3-6",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.3",
+      "start": "2021-02-03T06:00:00+08:00",
+      "end": "2021-02-23T16:00:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13505",
+        "11505",
+        "11402",
+        "12403",
+        "15405",
+        "14409",
+        "13407"
+      ]
+    },
+    {
+      "id": "weapon-1.3-7",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.3",
+      "start": "2021-02-23T18:00:00+08:00",
+      "end": "2021-03-16T15:00:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12502",
+        "13501",
+        "12410",
+        "13406",
+        "11405",
+        "15403",
+        "14402"
+      ]
+    },
+    {
+      "id": "weapon-1.4-8",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.4",
+      "start": "2021-03-17T06:00:00+08:00",
+      "end": "2021-04-06T16:00:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15503",
+        "11502",
+        "11410",
+        "14410",
+        "12401",
+        "15401",
+        "13401"
+      ]
+    },
+    {
+      "id": "weapon-1.4-9",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.4",
+      "start": "2021-04-06T18:00:00+08:00",
+      "end": "2021-04-27T15:00:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15501",
+        "14502",
+        "15410",
+        "14401",
+        "13407",
+        "12403",
+        "11401"
+      ]
+    },
+    {
+      "id": "weapon-1.5-10",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.5",
+      "start": "2021-04-28T06:00:00+08:00",
+      "end": "2021-05-18T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11504",
+        "14504",
+        "12410",
+        "13406",
+        "15403",
+        "14409",
+        "11402"
+      ]
+    },
+    {
+      "id": "weapon-1.5-11",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.5",
+      "start": "2021-05-18T18:00:00+08:00",
+      "end": "2021-06-08T15:00:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12503",
+        "11501",
+        "15405",
+        "14403",
+        "13401",
+        "12405",
+        "11403"
+      ]
+    },
+    {
+      "id": "weapon-1.6-12",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.6",
+      "start": "2021-06-09T06:00:00+08:00",
+      "end": "2021-06-29T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14502",
+        "12501",
+        "15412",
+        "11405",
+        "12402",
+        "13407",
+        "14402"
+      ]
+    },
+    {
+      "id": "weapon-1.6-13",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "1.6",
+      "start": "2021-06-29T18:00:00+08:00",
+      "end": "2021-07-20T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11503",
+        "14501",
+        "11410",
+        "14410",
+        "15410",
+        "12401",
+        "13401"
+      ]
+    },
+    {
+      "id": "weapon-2.0-14",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.0",
+      "start": "2021-07-21T06:00:00+08:00",
+      "end": "2021-08-10T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11509",
+        "13502",
+        "11401",
+        "12403",
+        "13407",
+        "14401",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-2.0-15",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.0",
+      "start": "2021-08-10T18:00:00+08:00",
+      "end": "2021-08-31T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15509",
+        "11502",
+        "11403",
+        "12405",
+        "13401",
+        "14403",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-2.1-16",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.1",
+      "start": "2021-09-01T06:00:00+08:00",
+      "end": "2021-09-21T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13509",
+        "12504",
+        "11405",
+        "12402",
+        "13407",
+        "14402",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-2.1-17",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.1",
+      "start": "2021-09-21T18:00:00+08:00",
+      "end": "2021-10-12T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11505",
+        "14506",
+        "11402",
+        "12401",
+        "13401",
+        "14401",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-2.2-18",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.2",
+      "start": "2021-10-13T06:00:00+08:00",
+      "end": "2021-11-02T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15507",
+        "14504",
+        "12416",
+        "11401",
+        "13407",
+        "14409",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-2.2-19",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.2",
+      "start": "2021-11-02T18:00:00+08:00",
+      "end": "2021-11-23T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13501",
+        "15503",
+        "13416",
+        "15416",
+        "11403",
+        "12405",
+        "14402"
+      ]
+    },
+    {
+      "id": "weapon-2.3-20",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.3",
+      "start": "2021-11-24T06:00:00+08:00",
+      "end": "2021-12-14T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11503",
+        "12503",
+        "14410",
+        "15410",
+        "11405",
+        "12403",
+        "13401"
+      ]
+    },
+    {
+      "id": "weapon-2.3-21",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.3",
+      "start": "2021-12-14T18:00:00+08:00",
+      "end": "2022-01-04T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12510",
+        "15501",
+        "11410",
+        "15412",
+        "12402",
+        "13407",
+        "14403"
+      ]
+    },
+    {
+      "id": "weapon-2.4-22",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.4",
+      "start": "2022-01-05T06:00:00+08:00",
+      "end": "2022-01-25T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13507",
+        "13505",
+        "13406",
+        "11402",
+        "12401",
+        "14402",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-2.4-23",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.4",
+      "start": "2022-01-25T18:00:00+08:00",
+      "end": "2022-02-15T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15502",
+        "13504",
+        "12410",
+        "11401",
+        "13401",
+        "14401",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-2.5-24",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.5",
+      "start": "2022-02-16T06:00:00+08:00",
+      "end": "2022-03-08T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14509",
+        "11505",
+        "13416",
+        "11403",
+        "12405",
+        "14409",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-2.5-25",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.5",
+      "start": "2022-03-08T18:00:00+08:00",
+      "end": "2022-03-29T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13509",
+        "14506",
+        "12416",
+        "15416",
+        "11405",
+        "13407",
+        "14403"
+      ]
+    },
+    {
+      "id": "weapon-2.6-26",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.6",
+      "start": "2022-03-30T06:00:00+08:00",
+      "end": "2022-04-19T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11510",
+        "15503",
+        "11402",
+        "12403",
+        "13401",
+        "14402",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-2.6-27",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.6",
+      "start": "2022-04-19T18:00:00+08:00",
+      "end": "2022-05-31T05:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11509",
+        "12504",
+        "11401",
+        "12402",
+        "13407",
+        "14401",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-2.7-28",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.7",
+      "start": "2022-05-31T09:00:00+08:00",
+      "end": "2022-06-21T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15508",
+        "13505",
+        "13406",
+        "11403",
+        "12401",
+        "14409",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-2.7-29",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.7",
+      "start": "2022-06-21T18:00:00+08:00",
+      "end": "2022-07-12T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12510",
+        "14504",
+        "12410",
+        "11405",
+        "13401",
+        "14403",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-2.8-30",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.8",
+      "start": "2022-07-13T06:00:00+08:00",
+      "end": "2022-08-02T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11503",
+        "14502",
+        "11410",
+        "15412",
+        "12405",
+        "13407",
+        "14402"
+      ]
+    },
+    {
+      "id": "weapon-2.8-31",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "2.8",
+      "start": "2022-08-02T18:00:00+08:00",
+      "end": "2022-08-23T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15509",
+        "11504",
+        "14410",
+        "15410",
+        "11402",
+        "12403",
+        "13401"
+      ]
+    },
+    {
+      "id": "weapon-3.0-32",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.0",
+      "start": "2022-08-24T06:00:00+08:00",
+      "end": "2022-09-09T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15511",
+        "13504",
+        "11401",
+        "12402",
+        "13407",
+        "14401",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-3.0-33",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.0",
+      "start": "2022-09-09T18:00:00+08:00",
+      "end": "2022-09-27T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15502",
+        "14506",
+        "11403",
+        "12401",
+        "13401",
+        "14409",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-3.1-34",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.1",
+      "start": "2022-09-28T06:00:00+08:00",
+      "end": "2022-10-14T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13511",
+        "15503",
+        "12415",
+        "11405",
+        "13407",
+        "14403",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-3.1-35",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.1",
+      "start": "2022-10-14T18:00:00+08:00",
+      "end": "2022-11-01T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11511",
+        "11505",
+        "11418",
+        "14416",
+        "12405",
+        "13401",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-3.2-36",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.2",
+      "start": "2022-11-02T06:00:00+08:00",
+      "end": "2022-11-18T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14511",
+        "15509",
+        "11402",
+        "12403",
+        "13407",
+        "14402",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-3.2-37",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.2",
+      "start": "2022-11-18T18:00:00+08:00",
+      "end": "2022-12-06T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14509",
+        "15507",
+        "11401",
+        "12402",
+        "13401",
+        "14401",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-3.3-38",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.3",
+      "start": "2022-12-07T06:00:00+08:00",
+      "end": "2022-12-27T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14512",
+        "12510",
+        "13416",
+        "11403",
+        "12401",
+        "14409",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-3.3-39",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.3",
+      "start": "2022-12-27T18:00:00+08:00",
+      "end": "2023-01-17T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13509",
+        "11510",
+        "12416",
+        "15416",
+        "11405",
+        "13407",
+        "14403"
+      ]
+    },
+    {
+      "id": "weapon-3.4-40",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.4",
+      "start": "2023-01-18T06:00:00+08:00",
+      "end": "2023-02-07T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11512",
+        "13505",
+        "13406",
+        "11402",
+        "12405",
+        "14402",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-3.4-41",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.4",
+      "start": "2023-02-07T18:00:00+08:00",
+      "end": "2023-02-28T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13501",
+        "15508",
+        "12410",
+        "11401",
+        "13401",
+        "14401",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-3.5-42",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.5",
+      "start": "2023-03-01T06:00:00+08:00",
+      "end": "2023-03-21T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12511",
+        "13511",
+        "11410",
+        "15410",
+        "12403",
+        "13401",
+        "14409"
+      ]
+    },
+    {
+      "id": "weapon-3.5-43",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.5",
+      "start": "2023-03-21T18:00:00+08:00",
+      "end": "2023-04-11T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13507",
+        "11509",
+        "14410",
+        "11403",
+        "12402",
+        "13407",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-3.6-44",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.6",
+      "start": "2023-04-12T06:00:00+08:00",
+      "end": "2023-05-02T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11511",
+        "14511",
+        "11418",
+        "12401",
+        "13401",
+        "14403",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-3.6-45",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.6",
+      "start": "2023-05-02T18:00:00+08:00",
+      "end": "2023-05-23T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14505",
+        "15502",
+        "12415",
+        "14416",
+        "11405",
+        "13407",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-3.7-46",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.7",
+      "start": "2023-05-24T06:00:00+08:00",
+      "end": "2023-06-13T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15509",
+        "14509",
+        "12416",
+        "11402",
+        "13401",
+        "14402",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-3.7-47",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.7",
+      "start": "2023-06-13T18:00:00+08:00",
+      "end": "2023-07-04T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11503",
+        "11512",
+        "13416",
+        "15416",
+        "11401",
+        "12403",
+        "14401"
+      ]
+    },
+    {
+      "id": "weapon-3.8-48",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.8",
+      "start": "2023-07-05T06:00:00+08:00",
+      "end": "2023-07-25T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12503",
+        "14502",
+        "11410",
+        "15410",
+        "12405",
+        "13407",
+        "14409"
+      ]
+    },
+    {
+      "id": "weapon-3.8-49",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "3.8",
+      "start": "2023-07-25T18:00:00+08:00",
+      "end": "2023-08-15T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14506",
+        "14512",
+        "14410",
+        "11405",
+        "12402",
+        "13401",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-4.0-50",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.0",
+      "start": "2023-08-16T06:00:00+08:00",
+      "end": "2023-09-05T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15512",
+        "15508",
+        "11403",
+        "12401",
+        "13407",
+        "14403",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-4.0-51",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.0",
+      "start": "2023-09-05T18:00:00+08:00",
+      "end": "2023-09-26T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15507",
+        "13504",
+        "11402",
+        "12403",
+        "13401",
+        "14402",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-4.1-52",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.1",
+      "start": "2023-09-27T06:00:00+08:00",
+      "end": "2023-10-17T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14514",
+        "13501",
+        "11427",
+        "12427",
+        "15412",
+        "13407",
+        "14401"
+      ]
+    },
+    {
+      "id": "weapon-4.1-53",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.1",
+      "start": "2023-10-17T18:00:00+08:00",
+      "end": "2023-11-07T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14513",
+        "15503",
+        "13427",
+        "15427",
+        "11401",
+        "12405",
+        "14409"
+      ]
+    },
+    {
+      "id": "weapon-4.2-54",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.2",
+      "start": "2023-11-08T06:00:00+08:00",
+      "end": "2023-11-28T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11513",
+        "14505",
+        "11403",
+        "12402",
+        "13401",
+        "14403",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-4.2-55",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.2",
+      "start": "2023-11-28T18:00:00+08:00",
+      "end": "2023-12-19T14:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13511",
+        "11510",
+        "11405",
+        "14402",
+        "15401",
+        "12401",
+        "13407"
+      ]
+    },
+    {
+      "id": "weapon-4.3-56",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.3",
+      "start": "2023-12-20T06:00:00+08:00",
+      "end": "2024-01-09T17:59:59+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12512",
+        "11509",
+        "12416",
+        "15416",
+        "11402",
+        "13401",
+        "14401"
+      ]
+    },
+    {
+      "id": "weapon-4.3-57",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.3",
+      "start": "2024-01-09T18:00:00+08:00",
+      "end": "2024-01-30T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13509",
+        "15509",
+        "13416",
+        "11401",
+        "12405",
+        "14409",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-4.4-58",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.4",
+      "start": "2024-01-31T06:00:00+08:00",
+      "end": "2024-02-20T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14515",
+        "14511",
+        "13406",
+        "11403",
+        "12403",
+        "14403",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-4.4-59",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.4",
+      "start": "2024-02-20T18:00:00+08:00",
+      "end": "2024-03-12T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13505",
+        "14509",
+        "12410",
+        "11405",
+        "13407",
+        "14402",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-4.5-60",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.5",
+      "start": "2024-03-13T06:00:00+08:00",
+      "end": "2024-04-02T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11514",
+        "12510",
+        "11410",
+        "15410",
+        "12402",
+        "13401",
+        "14401"
+      ]
+    },
+    {
+      "id": "weapon-4.5-61",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.5",
+      "start": "2024-04-02T18:00:00+08:00",
+      "end": "2024-04-23T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14514",
+        "11503",
+        "14410",
+        "15412",
+        "11402",
+        "12401",
+        "13407"
+      ]
+    },
+    {
+      "id": "weapon-4.6-62",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.6",
+      "start": "2024-04-24T06:00:00+08:00",
+      "end": "2024-05-14T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13512",
+        "15512",
+        "11427",
+        "12427",
+        "13401",
+        "14409",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-4.6-63",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.6",
+      "start": "2024-05-14T18:00:00+08:00",
+      "end": "2024-06-04T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14512",
+        "14505",
+        "13427",
+        "15427",
+        "11401",
+        "12405",
+        "14403"
+      ]
+    },
+    {
+      "id": "weapon-4.7-64",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.7",
+      "start": "2024-06-05T06:00:00+08:00",
+      "end": "2024-06-25T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11515",
+        "11512",
+        "13406",
+        "11403",
+        "12403",
+        "14402",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-4.7-65",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.7",
+      "start": "2024-06-25T18:00:00+08:00",
+      "end": "2024-07-16T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15513",
+        "11513",
+        "12410",
+        "11405",
+        "13407",
+        "14401",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-4.8-66",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.8",
+      "start": "2024-07-17T06:00:00+08:00",
+      "end": "2024-08-06T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12512",
+        "11511",
+        "11418",
+        "12402",
+        "13401",
+        "14409",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-4.8-67",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "4.8",
+      "start": "2024-08-06T18:00:00+08:00",
+      "end": "2024-08-27T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13513",
+        "15508",
+        "12415",
+        "14416",
+        "11402",
+        "13407",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-5.0-68",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.0",
+      "start": "2024-08-28T06:00:00+08:00",
+      "end": "2024-09-17T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14516",
+        "11503",
+        "11401",
+        "12401",
+        "13401",
+        "14403",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-5.0-69",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.0",
+      "start": "2024-09-17T18:00:00+08:00",
+      "end": "2024-10-08T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12513",
+        "13509",
+        "11403",
+        "12405",
+        "13407",
+        "14402",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-5.1-70",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.1",
+      "start": "2024-10-09T06:00:00+08:00",
+      "end": "2024-10-29T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11516",
+        "11514",
+        "11430",
+        "13430",
+        "12403",
+        "14401",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-5.1-71",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.1",
+      "start": "2024-10-29T18:00:00+08:00",
+      "end": "2024-11-19T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14511",
+        "13501",
+        "12430",
+        "11405",
+        "13401",
+        "14409",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-5.2-72",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.2",
+      "start": "2024-11-20T06:00:00+08:00",
+      "end": "2024-12-10T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15514",
+        "15512",
+        "14430",
+        "15430",
+        "11402",
+        "12402",
+        "13407"
+      ]
+    },
+    {
+      "id": "weapon-5.2-73",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.2",
+      "start": "2024-12-10T18:00:00+08:00",
+      "end": "2024-12-31T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14514",
+        "13504",
+        "15412",
+        "11401",
+        "12401",
+        "13401",
+        "14403"
+      ]
+    },
+    {
+      "id": "weapon-5.3-74",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.3",
+      "start": "2025-01-01T06:00:00+08:00",
+      "end": "2025-01-21T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12514",
+        "14517",
+        "12410",
+        "11403",
+        "13407",
+        "14401",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-5.3-75",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.3",
+      "start": "2025-01-21T18:00:00+08:00",
+      "end": "2025-02-11T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13512",
+        "11515",
+        "13406",
+        "11405",
+        "12405",
+        "14402",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-5.4-76",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.4",
+      "start": "2025-02-12T06:00:00+08:00",
+      "end": "2025-03-04T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14518",
+        "15513",
+        "12416",
+        "13416",
+        "15416",
+        "11402",
+        "14409"
+      ]
+    },
+    {
+      "id": "weapon-5.4-77",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.4",
+      "start": "2025-03-04T18:00:00+08:00",
+      "end": "2025-03-25T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11513",
+        "14513",
+        "11401",
+        "12403",
+        "13401",
+        "14403",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-5.5-78",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.5",
+      "start": "2025-03-26T06:00:00+08:00",
+      "end": "2025-04-15T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14519",
+        "14515",
+        "11430",
+        "12430",
+        "13430",
+        "14430",
+        "15430"
+      ]
+    },
+    {
+      "id": "weapon-5.5-79",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.5",
+      "start": "2025-04-15T18:00:00+08:00",
+      "end": "2025-05-06T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11516",
+        "15503",
+        "11403",
+        "12402",
+        "13407",
+        "14401",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-5.6-80",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.6",
+      "start": "2025-05-07T06:00:00+08:00",
+      "end": "2025-05-27T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13514",
+        "12512",
+        "11427",
+        "12427",
+        "13427",
+        "15427",
+        "14402"
+      ]
+    },
+    {
+      "id": "weapon-5.6-81",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.6",
+      "start": "2025-05-27T18:00:00+08:00",
+      "end": "2025-06-17T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12513",
+        "13509",
+        "11405",
+        "12401",
+        "13401",
+        "14409",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-5.7-82",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.7",
+      "start": "2025-06-18T06:00:00+08:00",
+      "end": "2025-07-08T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11517",
+        "13507",
+        "11418",
+        "12415",
+        "14416",
+        "13407",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-5.7-83",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.7",
+      "start": "2025-07-08T18:00:00+08:00",
+      "end": "2025-07-29T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12514",
+        "13507",
+        "11402",
+        "12405",
+        "13401",
+        "14403",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-5.8-84",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.8",
+      "start": "2025-07-30T06:00:00+08:00",
+      "end": "2025-08-19T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13515",
+        "14517",
+        "11430",
+        "13430",
+        "12403",
+        "14401",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-5.8-85",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "5.8",
+      "start": "2025-08-19T18:00:00+08:00",
+      "end": "2025-09-09T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14516",
+        "15514",
+        "12430",
+        "14430",
+        "15430",
+        "11401",
+        "13407"
+      ]
+    },
+    {
+      "id": "weapon-6.0-86",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.0",
+      "start": "2025-09-10T06:00:00+08:00",
+      "end": "2025-09-30T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14520",
+        "14511",
+        "11402",
+        "12403",
+        "13401",
+        "14403",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-6.0-87",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.0",
+      "start": "2025-09-30T18:00:00+08:00",
+      "end": "2025-10-21T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13516",
+        "15508",
+        "11405",
+        "12401",
+        "13407",
+        "14401",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-6.1-88",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.1",
+      "start": "2025-10-22T06:00:00+08:00",
+      "end": "2025-11-11T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14521",
+        "11513",
+        "11434",
+        "13434",
+        "14434",
+        "12402",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-6.1-89",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.1",
+      "start": "2025-11-11T18:00:00+08:00",
+      "end": "2025-12-02T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13512",
+        "13504",
+        "11427",
+        "12427",
+        "15427",
+        "13401",
+        "14403"
+      ]
+    },
+    {
+      "id": "weapon-6.2-90",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.2",
+      "start": "2025-12-03T06:00:00+08:00",
+      "end": "2025-12-23T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11518",
+        "15515",
+        "11410",
+        "13427",
+        "14410",
+        "12405",
+        "15402"
+      ]
+    },
+    {
+      "id": "weapon-6.2-91",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.2",
+      "start": "2025-12-23T18:00:00+08:00",
+      "end": "2026-01-13T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14519",
+        "11516",
+        "12430",
+        "15410",
+        "11401",
+        "13407",
+        "14402"
+      ]
+    },
+    {
+      "id": "weapon-6.3-92",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.3",
+      "start": "2026-01-14T06:00:00+08:00",
+      "end": "2026-02-03T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14522",
+        "13515",
+        "13430",
+        "14430",
+        "15412",
+        "11402",
+        "12403"
+      ]
+    },
+    {
+      "id": "weapon-6.3-93",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.3",
+      "start": "2026-02-03T18:00:00+08:00",
+      "end": "2026-02-24T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11519",
+        "14514",
+        "11418",
+        "12401",
+        "13401",
+        "14409",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-6.4-94",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.4",
+      "start": "2026-02-25T06:00:00+08:00",
+      "end": "2026-03-17T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12515",
+        "13516",
+        "13434",
+        "11401",
+        "12401",
+        "14403",
+        "15403"
+      ]
+    },
+    {
+      "id": "weapon-6.4-95",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.4",
+      "start": "2026-03-17T18:00:00+08:00",
+      "end": "2026-04-07T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "11517",
+        "13514",
+        "11402",
+        "12402",
+        "13407",
+        "14401",
+        "15405"
+      ]
+    },
+    {
+      "id": "weapon-6.5-96",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.5",
+      "start": "2026-04-08T06:00:00+08:00",
+      "end": "2026-04-28T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "15516",
+        "15514",
+        "15430",
+        "11405",
+        "12403",
+        "13401",
+        "14409"
+      ]
+    },
+    {
+      "id": "weapon-6.5-97",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.5",
+      "start": "2026-04-28T18:00:00+08:00",
+      "end": "2026-05-19T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14520",
+        "14521",
+        "14434",
+        "11403",
+        "12405",
+        "13407",
+        "15401"
+      ]
+    },
+    {
+      "id": "weapon-6.6-98",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.6",
+      "start": "2026-05-20T06:00:00+08:00",
+      "end": "2026-06-09T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "14523",
+        "11518",
+        "11434",
+        "15412",
+        "12402",
+        "13401",
+        "14402"
+      ]
+    },
+    {
+      "id": "weapon-6.6-99",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.6",
+      "start": "2026-06-09T18:00:00+08:00",
+      "end": "2026-06-30T14:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "13517",
+        "12514",
+        "11410",
+        "14410",
+        "15410",
+        "12405",
+        "13407"
+      ]
+    },
+    {
+      "id": "weapon-6.7-100",
+      "type": "weapon",
+      "name": "Epitome Invocation",
+      "version": "6.7",
+      "start": "2026-07-01T06:00:00+08:00",
+      "end": "2026-07-21T17:59:00+08:00",
+      "featured5Ids": [],
+      "featured4Ids": [],
+      "featuredWeaponIds": [
+        "12516",
+        "14517",
+        "11401",
+        "12405",
+        "13401",
+        "14403",
+        "15403"
+      ]
+    },
+    {
+      "id": "chronicled-4.5-0",
+      "type": "chronicled",
+      "name": "Ode to the Dawn Breeze",
+      "version": "4.5",
+      "start": "2024-03-13T06:00:00+08:00",
+      "end": "2024-04-02T17:59:00+08:00",
+      "featured5Ids": [
+        "10000051",
+        "10000041",
+        "10000038",
+        "10000029",
+        "10000016",
+        "10000003",
+        "skyward_blade",
+        "aquila_favonia",
+        "beacon_of_the_reed_sea",
+        "song_of_broken_pines",
+        "wolfs_gravestone",
+        "skyward_pride",
+        "skyward_spine",
+        "lost_prayer_to_the_sacred_winds",
+        "skyward_atlas",
+        "hunters_path",
+        "skyward_harp"
+      ],
+      "featured4Ids": [
+        "10000080",
+        "10000045",
+        "10000043",
+        "10000039",
+        "10000034",
+        "10000032",
+        "10000031",
+        "10000021",
+        "10000020",
+        "10000015",
+        "10000014",
+        "10000006",
+        "the_alley_flash",
+        "lions_roar",
+        "sacrificial_sword",
+        "the_flute",
+        "favonius_sword",
+        "rainslasher",
+        "sacrificial_greatsword",
+        "the_bell",
+        "favonius_greatsword",
+        "favonius_lance",
+        "dragons_bane",
+        "wine_and_song",
+        "eye_of_perception",
+        "sacrificial_fragments",
+        "the_widsith",
+        "favonius_codex",
+        "mitternachts_waltz",
+        "alley_hunter",
+        "rust",
+        "sacrificial_bow",
+        "the_stringless",
+        "favonius_warbow"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "chronicled-5.3-1",
+      "type": "chronicled",
+      "name": "Remembrance of Jade and Stone",
+      "version": "5.3",
+      "start": "2025-01-21T18:00:00+08:00",
+      "end": "2025-02-11T14:59:00+08:00",
+      "featured5Ids": [
+        "10000082",
+        "10000063",
+        "10000042",
+        "10000037",
+        "10000035",
+        "10000033",
+        "10000026",
+        "primordial_jade_cutter",
+        "summit_shaper",
+        "the_unforged",
+        "calamity_queller",
+        "primordial_jade_winged_spear",
+        "jadefalls_splendor",
+        "memory_of_dust",
+        "polar_star",
+        "amos_bow"
+      ],
+      "featured4Ids": [
+        "10000092",
+        "10000077",
+        "10000064",
+        "10000048",
+        "10000044",
+        "10000036",
+        "10000027",
+        "10000025",
+        "10000024",
+        "10000023",
+        "lions_roar",
+        "sacrificial_sword",
+        "the_flute",
+        "favonius_sword",
+        "lithic_blade",
+        "rainslasher",
+        "sacrificial_greatsword",
+        "the_bell",
+        "favonius_greatsword",
+        "favonius_lance",
+        "lithic_spear",
+        "dragons_bane",
+        "eye_of_perception",
+        "sacrificial_fragments",
+        "the_widsith",
+        "favonius_codex",
+        "rust",
+        "sacrificial_bow",
+        "the_stringless",
+        "favonius_warbow"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "chronicled-5.6-2",
+      "type": "chronicled",
+      "name": "Thunder Rends the Plains on High",
+      "version": "5.6",
+      "start": "2025-05-27T18:00:00+08:00",
+      "end": "2025-06-17T14:59:00+08:00",
+      "featured5Ids": [
+        "10000002",
+        "10000066",
+        "10000049",
+        "10000094",
+        "10000058",
+        "10000057",
+        "10000054",
+        "10000047",
+        "uraku_misugiri",
+        "haran_geppaku_futsu",
+        "mistsplitter_reforged",
+        "freedom-sworn",
+        "redhorn_stonethresher",
+        "kaguras_verity",
+        "everlasting_moonglow",
+        "thundering_pulse"
+      ],
+      "featured4Ids": [
+        "10000065",
+        "10000061",
+        "10000059",
+        "10000056",
+        "10000055",
+        "10000053",
+        "10000050",
+        "lions_roar",
+        "sacrificial_sword",
+        "the_flute",
+        "favonius_sword",
+        "akuoumaru",
+        "rainslasher",
+        "sacrificial_greatsword",
+        "the_bell",
+        "favonius_greatsword",
+        "wavebreakers_fin",
+        "favonius_lance",
+        "dragons_bane",
+        "eye_of_perception",
+        "sacrificial_fragments",
+        "the_widsith",
+        "favonius_codex",
+        "mouuns_moon",
+        "rust",
+        "sacrificial_bow",
+        "the_stringless",
+        "favonius_warbow"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "chronicled-6.0-3",
+      "type": "chronicled",
+      "name": "Roving Chalice of Dewgrass",
+      "version": "6.0",
+      "start": "2025-09-10T06:00:00+08:00",
+      "end": "2025-09-30T17:59:00+08:00",
+      "featured5Ids": [
+        "10000079",
+        "10000078",
+        "10000075",
+        "10000071",
+        "10000070",
+        "10000069",
+        "light_of_foliar_incision",
+        "key_of_khaj-nisut",
+        "beacon_of_the_reed_sea",
+        "staff_of_the_scarlet_sands",
+        "tulaytullahs_remembrance",
+        "hunters_path"
+      ],
+      "featured4Ids": [
+        "10000097",
+        "10000081",
+        "10000076",
+        "10000074",
+        "10000072",
+        "10000068",
+        "10000067",
+        "xiphos_moonlight",
+        "lions_roar",
+        "sacrificial_sword",
+        "the_flute",
+        "favonius_sword",
+        "makhaira_aquamarine",
+        "rainslasher",
+        "sacrificial_greatsword",
+        "the_bell",
+        "favonius_greatsword",
+        "favonius_lance",
+        "dragons_bane",
+        "wandering_evenstar",
+        "eye_of_perception",
+        "sacrificial_fragments",
+        "the_widsith",
+        "favonius_codex",
+        "rust",
+        "sacrificial_bow",
+        "the_stringless",
+        "favonius_warbow"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "chronicled-6.0-4",
+      "type": "chronicled",
+      "name": "Ode to the Dawn Breeze",
+      "version": "6.0",
+      "start": "2026-02-25T06:00:00+08:00",
+      "end": "2026-03-17T17:59:00+08:00",
+      "featured5Ids": [
+        "10000051",
+        "10000041",
+        "10000038",
+        "10000029",
+        "10000016",
+        "10000003",
+        "skyward_blade",
+        "aquila_favonia",
+        "song_of_broken_pines",
+        "wolfs_gravestone",
+        "skyward_pride",
+        "skyward_spine",
+        "lost_prayer_to_the_sacred_winds",
+        "skyward_atlas",
+        "elegy_for_the_end",
+        "skyward_harp"
+      ],
+      "featured4Ids": [
+        "10000115",
+        "10000080",
+        "10000045",
+        "10000043",
+        "10000039",
+        "10000034",
+        "10000032",
+        "10000031",
+        "10000021",
+        "10000020",
+        "10000015",
+        "10000014",
+        "10000006",
+        "the_alley_flash",
+        "lions_roar",
+        "sacrificial_sword",
+        "the_flute",
+        "favonius_sword",
+        "rainslasher",
+        "sacrificial_greatsword",
+        "the_bell",
+        "favonius_greatsword",
+        "favonius_lance",
+        "dragons_bane",
+        "wine_and_song",
+        "eye_of_perception",
+        "sacrificial_fragments",
+        "the_widsith",
+        "favonius_codex",
+        "mitternachts_waltz",
+        "alley_hunter",
+        "rust",
+        "sacrificial_bow",
+        "the_stringless",
+        "favonius_warbow"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "chronicled-6.5-5",
+      "type": "chronicled",
+      "name": "Dewlit Tranquility",
+      "version": "6.5",
+      "start": "2026-04-28T18:00:00+08:00",
+      "end": "2026-05-19T14:59:00+08:00",
+      "featured5Ids": [
+        "10000099",
+        "10000098",
+        "10000095",
+        "10000091",
+        "10000084",
+        "absolution",
+        "verdict",
+        "lumidouce_elegy",
+        "silvershower_heartstrings",
+        "the_first_great_magic"
+      ],
+      "featured4Ids": [
+        "10000090",
+        "10000088",
+        "10000085",
+        "10000083",
+        "the_dockhands_assistant",
+        "lions_roar",
+        "sacrificial_sword",
+        "the_flute",
+        "favonius_sword",
+        "portable_power_saw",
+        "rainslasher",
+        "sacrificial_greatsword",
+        "the_bell",
+        "favonius_greatsword",
+        "prospectors_drill",
+        "favonius_lance",
+        "dragons_bane",
+        "eye_of_perception",
+        "sacrificial_fragments",
+        "the_widsith",
+        "favonius_codex",
+        "range_gauge",
+        "rust",
+        "sacrificial_bow",
+        "the_stringless",
+        "favonius_warbow"
+      ],
+      "featuredWeaponIds": []
+    },
+    {
+      "id": "chronicled-6.7-6",
+      "type": "chronicled",
+      "name": "Heavenlit Prophecy",
+      "version": "6.7",
+      "start": "2026-07-01T06:00:00+08:00",
+      "end": "2026-07-21T17:59:00+08:00",
+      "featured5Ids": [
+        "10000109",
+        "10000086",
+        "10000071",
+        "10000058",
+        "10000035",
+        "sunny_morning_sleep-in",
+        "cashflow_supervision",
+        "staff_of_the_scarlet_sands",
+        "kaguras_verity",
+        "skyward_blade"
+      ],
+      "featured4Ids": [
+        "10000121",
+        "10000021",
+        "10000014",
+        "10000024",
+        "10000032",
+        "10000072",
+        "10000088",
+        "10000090",
+        "10000036",
+        "10000067",
+        "10000115",
+        "10000039",
+        "10000068",
+        "10000076",
+        "10000031",
+        "10000085",
+        "10000092",
+        "10000055",
+        "10000110",
+        "10000113",
+        "10000127",
+        "10000124",
+        "10000100",
+        "10000015",
+        "10000081",
+        "10000061",
+        "10000056",
+        "10000065",
+        "10000108",
+        "10000074",
+        "10000006",
+        "10000083",
+        "10000080",
+        "10000027",
+        "10000034",
+        "10000105",
+        "10000132",
+        "10000020",
+        "10000045",
+        "10000053",
+        "10000097",
+        "10000059",
+        "10000043",
+        "10000050",
+        "10000023",
+        "10000025",
+        "10000044",
+        "10000048",
+        "10000077",
+        "10000064",
+        "favonius_sword",
+        "the_flute",
+        "sacrificial_sword",
+        "lions_roar",
+        "favonius_greatsword",
+        "the_bell",
+        "sacrificial_greatsword",
+        "rainslasher",
+        "dragons_bane",
+        "favonius_lance",
+        "favonius_codex",
+        "the_widsith",
+        "sacrificial_fragments",
+        "eye_of_perception",
+        "favonius_warbow",
+        "the_stringless",
+        "sacrificial_bow",
+        "rust"
+      ],
+      "featuredWeaponIds": []
+    }
+  ]
+}
