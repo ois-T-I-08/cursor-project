@@ -34,6 +34,13 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      # 計算パリティ破壊検知（仕様・期待値は変更せずゲートのみ）
+      - name: Parity gate (protected domain tests)
+        run: |
+          flutter test test/domain/domain_golden_test.dart
+          flutter test test/domain/artifact_completion_test.dart
+          flutter test test/domain/artifact_score_test.dart
+
       - name: Test
         run: flutter test
 
