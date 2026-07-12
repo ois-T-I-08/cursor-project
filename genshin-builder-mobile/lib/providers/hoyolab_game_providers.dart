@@ -8,7 +8,6 @@ import '../data/hoyolab/models/game_record.dart';
 import '../data/hoyolab/owned_characters_result.dart';
 import '../domain/character_list_sort.dart';
 import 'app_providers.dart';
-import 'character_list_sort_providers.dart';
 import 'hoyolab_providers.dart';
 
 final hoyolabGameDataCacheProvider = Provider<HoyolabGameDataCache>((ref) {
@@ -69,8 +68,11 @@ final sortedCharacterEntriesProvider =
     FutureProvider<List<CharacterListEntry>>((ref) async {
   final characters = await ref.watch(charactersProvider.future);
   final ownedMap = await ref.watch(hoyolabOwnedCharacterMapProvider.future);
-  final sortSettings = ref.watch(characterListSortSettingsProvider).valueOrNull ??
-      const CharacterListSortSettings();
+  // 聖遺物一覧と同じ地域順（保存済みソート設定は使わない）
+  const sortSettings = CharacterListSortSettings(
+    mode: CharacterListSortMode.region,
+    groupByOwnership: false,
+  );
   final sortOwned = <String, OwnedCharacterSortInfo>{
     for (final e in ownedMap.entries)
       e.key: OwnedCharacterSortInfo(

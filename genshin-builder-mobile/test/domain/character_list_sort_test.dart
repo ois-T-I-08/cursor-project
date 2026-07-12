@@ -46,6 +46,10 @@ void main() {
       final entries = buildCharacterListEntries(
         characters: characters,
         ownedMap: ownedMap,
+        settings: const CharacterListSortSettings(
+          mode: CharacterListSortMode.ownedDefault,
+          groupByOwnership: true,
+        ),
       );
 
       expect(entries.first.isOwned, isTrue);
@@ -191,7 +195,70 @@ void main() {
       );
       expect(
         CharacterListSortModeLabels.fromStorage('invalid'),
-        CharacterListSortMode.ownedDefault,
+        CharacterListSortMode.region,
+      );
+      expect(
+        CharacterListSortModeLabels.fromStorage(null),
+        CharacterListSortMode.region,
+      );
+    });
+
+    test('groups by region in artifact order', () {
+      final characters = [
+        _char(id: '1', name: '香菱', region: '璃月', rarity: 4),
+        _char(id: '2', name: 'ジン', region: 'モンド', rarity: 5),
+        _char(id: '3', name: '雷電将軍', region: '稲妻', rarity: 5),
+        _char(id: '4', name: 'バーバラ', region: 'モンド', rarity: 4),
+      ];
+
+      final entries = buildCharacterListEntries(
+        characters: characters,
+        ownedMap: const {},
+      );
+      final sections = groupCharacterEntriesByRegion(entries);
+
+      expect(sections.map((s) => s.region).toList(), ['モンド', '璃月', '稲妻']);
+      expect(sections[0].items.map((e) => e.character.name).toList(), [
+        'ジン',
+        'バーバラ',
+      ]);
+    });
+
+    test('maps skirk to natlan and sandrone to nod-krai; drops fatui section', () {
+      final characters = [
+        _char(id: '10000114', name: 'スカーク', region: 'ファデュイ', rarity: 5),
+        _char(id: '9', name: 'サンドローネ', region: 'ファデュイ', rarity: 5),
+        _char(id: '10000033', name: 'タルタリヤ', region: 'ファデュイ', rarity: 5),
+        _char(id: '2', name: 'ジン', region: 'モンド', rarity: 5),
+      ];
+
+      final sections = groupCharacterEntriesByRegion(
+        buildCharacterListEntries(
+          characters: characters,
+          ownedMap: const {},
+        ),
+      );
+
+      expect(sections.map((s) => s.region), isNot(contains('ファデュイ')));
+      expect(
+        sections.firstWhere((s) => s.region == 'ナタ').items.single.character.name,
+        'スカーク',
+      );
+      expect(
+        sections
+            .firstWhere((s) => s.region == 'ノド・クライ')
+            .items
+            .single
+            .character
+            .name,
+        'サンドローネ',
+      );
+      expect(
+        sections
+            .firstWhere((s) => s.region == 'その他')
+            .items
+            .map((e) => e.character.name),
+        contains('タルタリヤ'),
       );
     });
   });

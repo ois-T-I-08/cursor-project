@@ -37,9 +37,13 @@ List<MasterCharacter> parseCharactersFromAmberItems(
         weaponType:
             weaponTypeMap[avatar['weaponType'] as String? ?? ''] ?? 'sword',
         rarity: (avatar['rank'] as num?)?.toInt() == 4 ? 4 : 5,
-        region: regionMap[avatar['region'] as String? ?? ''] ??
-            avatar['region'] as String? ??
-            '',
+        region: normalizeCharacterRegionForDisplay(
+          regionMap[avatar['region'] as String? ?? ''] ??
+              avatar['region'] as String? ??
+              '',
+          characterId: id,
+          characterName: displayName,
+        ),
         iconUrl: buildIconUrl(avatar['icon'] as String? ?? ''),
         scoreType: artifactScoreTypeToStorage(
           inferScoreType(

@@ -1,16 +1,17 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/hoyolab/models/game_record.dart';
 import '../../core/errors/user_facing_error.dart';
 import '../../domain/character_list_sort.dart';
-import '../../providers/character_list_sort_providers.dart';
+import '../../domain/game_display.dart';
 import '../../providers/hoyolab_game_providers.dart';
-import '../../../providers/hoyolab_game_refresh.dart';
-import 'widgets/character_list_sort_sheet.dart';
+import '../../providers/hoyolab_game_refresh.dart';
+import '../shared/game_icon_image.dart';
+import '../shared/shell_menu_button.dart';
+import '../artifacts/artifact_sets_screen.dart';
 
+/// キャラ一覧（聖遺物一覧と同じ: 地域セクション + グリッド）。
 class CharacterListScreen extends ConsumerWidget {
   const CharacterListScreen({super.key});
 
@@ -18,32 +19,22 @@ class CharacterListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final entriesAsync = ref.watch(sortedCharacterEntriesProvider);
     final ownedFetchAsync = ref.watch(hoyolabOwnedFetchResultProvider);
-    final sortSettingsAsync = ref.watch(characterListSortSettingsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('キャラクター'),
         actions: [
-          if (sortSettingsAsync.valueOrNull case final settings?)
-            IconButton(
-              icon: const Icon(Icons.sort),
-              tooltip: '並び替え',
-              onPressed: () => showCharacterListSortSheet(
-                context: context,
-                settings: settings,
-                onChanged: (CharacterListSortSettings next) => ref
-                    .read(characterListSortSettingsProvider.notifier)
-                    .updateSettings(next),
-              ),
-            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: '所持情報を更新',
             onPressed: () => refreshHoyolabOwnedCharacters(ref),
           ),
+          const ShellMenuButton(),
         ],
       ),
       body: entriesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text(userFacingError(e))),
         data: (entries) {
           if (entries.isEmpty) {
             return Center(
@@ -61,195 +52,150 @@ class CharacterListScreen extends ConsumerWidget {
             );
           }
 
-          final settings =
-              sortSettingsAsync.valueOrNull ?? const CharacterListSortSettings();
-          final showSections = shouldShowOwnershipSections(settings);
-          final ownedLen = ownedEntryCount(entries);
-          final hasOwned = ownedLen > 0;
-          final hasUnowned = ownedLen < entries.length;
           final fetchMessage = ownedFetchAsync.maybeWhen(
             data: (result) => result.userMessage,
             orElse: () => null,
           );
+          // ソート設定に依存せず、常に聖遺物と同じ地域グリッド
+          final sections = groupCharacterEntriesByRegion(entries);
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (sortSettingsAsync.hasValue)
-                _SortSummaryBar(settings: settings),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _itemCount(
-                    entries,
-                    showSections: showSections,
-                    hasOwned: hasOwned,
-                    hasUnowned: hasUnowned,
-                    showBanner: fetchMessage != null,
-                  ),
-                  itemBuilder: (context, index) {
-                    if (fetchMessage != null && index == 0) {
-                      return _OwnedFetchBanner(message: fetchMessage);
-                    }
-                    final listIndex =
-                        fetchMessage != null ? index - 1 : index;
-                    final item = _resolveItem(
-                      entries,
-                      listIndex,
-                      showSections: showSections,
-                      hasOwned: hasOwned,
-                      hasUnowned: hasUnowned,
-                      ownedLen: ownedLen,
-                    );
-                    if (item is _SectionHeader) {
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final columns =
+                  artifactSetGridCrossAxisCount(constraints.maxWidth);
+              return CustomScrollView(
+                slivers: [
+                  if (fetchMessage != null)
+                    SliverToBoxAdapter(
+                      child: _OwnedFetchBanner(message: fetchMessage),
+                    ),
+                  for (final section in sections) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                         child: Text(
-                          item.title,
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          section.region,
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                      );
-                    }
-
-                    final entry = item as CharacterListEntry;
-                    final c = entry.character;
-                    final ownedLabel = _ownedSubtitle(entry);
-
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: CachedNetworkImageProvider(c.iconUrl),
                       ),
-                      title: Text(c.name),
-                      subtitle: Text(
-                        ownedLabel ?? '${c.region} · ${c.rarity}★',
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      sliver: SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: columns,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          childAspectRatio: 0.78,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => _CharacterGridTile(
+                            entry: section.items[index],
+                          ),
+                          childCount: section.items.length,
+                        ),
                       ),
-                      trailing: entry.isOwned
-                          ? Icon(
-                              Icons.check_circle,
-                              color: Theme.of(context).colorScheme.primary,
-                            )
-                          : Text(c.element),
-                      onTap: () => context.go('/characters/${c.id}'),
-                    );
-                  },
-                ),
-              ),
-            ],
+                    ),
+                  ],
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
+              );
+            },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(userFacingError(e))),
       ),
     );
   }
-
-  String? _ownedSubtitle(CharacterListEntry entry) {
-    final owned = entry.owned;
-    if (owned == null) return null;
-    final obtained = formatRelativeObtained(owned.obtainedAt);
-    if (obtained != null) {
-      return '${entry.character.rarity}★ · Lv.${owned.level} · $obtained';
-    }
-    return '${entry.character.rarity}★ · Lv.${owned.level} · 所持';
-  }
-
-  int _itemCount(
-    List<CharacterListEntry> entries, {
-    required bool showSections,
-    required bool hasOwned,
-    required bool hasUnowned,
-    bool showBanner = false,
-  }) {
-    var count = entries.length;
-    if (showBanner) count += 1;
-    if (showSections && hasOwned) count += 1;
-    if (showSections && hasUnowned) count += 1;
-    return count;
-  }
-
-  Object _resolveItem(
-    List<CharacterListEntry> entries,
-    int index, {
-    required bool showSections,
-    required bool hasOwned,
-    required bool hasUnowned,
-    required int ownedLen,
-  }) {
-    var cursor = 0;
-
-    if (showSections && hasOwned) {
-      if (index == cursor) {
-        return const _SectionHeader('所持キャラクター');
-      }
-      cursor++;
-    }
-
-    if (showSections) {
-      final ownedEntries = entries.take(ownedLen);
-      if (index < cursor + ownedLen) {
-        return ownedEntries.elementAt(index - cursor);
-      }
-      cursor += ownedLen;
-
-      if (hasUnowned) {
-        if (index == cursor) {
-          return const _SectionHeader('未所持キャラクター');
-        }
-        cursor++;
-        return entries.skip(ownedLen).elementAt(index - cursor);
-      }
-
-      return entries.last;
-    }
-
-    return entries[index];
-  }
 }
 
-class _SortSummaryBar extends StatelessWidget {
-  const _SortSummaryBar({required this.settings});
+class _CharacterGridTile extends StatelessWidget {
+  const _CharacterGridTile({required this.entry});
 
-  final CharacterListSortSettings settings;
+  final CharacterListEntry entry;
 
   @override
   Widget build(BuildContext context) {
-    final groupLabel =
-        settings.groupByOwnership ? 'グループ分けあり' : '一覧表示';
+    final theme = Theme.of(context);
+    final c = entry.character;
+    final elementLabel = elementLabelMap[c.element] ?? c.element;
+
     return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            Icon(
-              Icons.sort,
-              size: 18,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '${settings.mode.label} · $groupLabel',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+      color: theme.colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.go('/characters/${c.id}'),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final size =
+                          constraints.biggest.shortestSide.clamp(36.0, 72.0);
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          GameIconImage(
+                            iconUrl: c.iconUrl,
+                            size: size,
+                            borderRadius: 10,
+                            fallback: Text(
+                              c.name.isNotEmpty ? c.name[0] : '?',
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ),
+                          if (entry.isOwned)
+                            Positioned(
+                              right: -4,
+                              top: -4,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: theme.colorScheme.surface,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.check,
+                                  size: size * 0.28,
+                                  color: theme.colorScheme.onPrimary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 6),
+              Text(
+                c.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelMedium,
+              ),
+              Text(
+                '$elementLabel · ${c.rarity}★',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-}
-
-class _SectionHeader {
-  const _SectionHeader(this.title);
-
-  final String title;
 }
 
 class _OwnedFetchBanner extends StatelessWidget {

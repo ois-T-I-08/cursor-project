@@ -35,22 +35,30 @@ Future<void> showCharacterListSortSheet({
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('所持 / 未所持でグループ分け'),
-                    subtitle: const Text('オフにすると1つのリストで並び替え'),
-                    value: current.groupByOwnership,
-                    onChanged: (value) =>
-                        apply(current.copyWith(groupByOwnership: value)),
+                    subtitle: Text(
+                      current.mode == CharacterListSortMode.region
+                          ? '地域並びではオフ（聖遺物一覧と同じ）'
+                          : 'オフにすると1つのリストで並び替え',
+                    ),
+                    value: current.mode == CharacterListSortMode.region
+                        ? false
+                        : current.groupByOwnership,
+                    onChanged: current.mode == CharacterListSortMode.region
+                        ? null
+                        : (value) =>
+                            apply(current.copyWith(groupByOwnership: value)),
                   ),
                   const Divider(),
                   _SortSection(
                     title: '基本',
                     modes: const [
+                      CharacterListSortMode.region,
                       CharacterListSortMode.ownedDefault,
                       CharacterListSortMode.nameAsc,
                       CharacterListSortMode.nameDesc,
                       CharacterListSortMode.rarityDesc,
                       CharacterListSortMode.rarityAsc,
                       CharacterListSortMode.element,
-                      CharacterListSortMode.region,
                     ],
                     selected: current.mode,
                     onSelected: (mode) => apply(current.copyWith(mode: mode)),

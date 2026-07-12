@@ -14,12 +14,37 @@ class CharacterListSortSettingsNotifier
   @override
   Future<CharacterListSortSettings> build() async {
     final db = await ref.watch(appDatabaseProvider.future);
+    final migrated = await db.getSetting(
+      CharacterListSortSettings.storageKeyRegionDefaultMigration,
+    );
+
+    // 旧既定（所持優先）が残っている端末向け: 一度だけ地域順へ移行
+    if (migrated != '1') {
+      const next = CharacterListSortSettings(
+        mode: CharacterListSortMode.region,
+        groupByOwnership: false,
+      );
+      await db.setSetting(
+        CharacterListSortSettings.storageKeyMode,
+        next.mode.name,
+      );
+      await db.setSetting(
+        CharacterListSortSettings.storageKeyGroup,
+        'false',
+      );
+      await db.setSetting(
+        CharacterListSortSettings.storageKeyRegionDefaultMigration,
+        '1',
+      );
+      return next;
+    }
+
     final modeRaw = await db.getSetting(CharacterListSortSettings.storageKeyMode);
     final groupRaw =
         await db.getSetting(CharacterListSortSettings.storageKeyGroup);
     return CharacterListSortSettings(
       mode: CharacterListSortModeLabels.fromStorage(modeRaw),
-      groupByOwnership: groupRaw != 'false',
+      groupByOwnership: groupRaw == 'true',
     );
   }
 
@@ -33,6 +58,10 @@ class CharacterListSortSettingsNotifier
     await db.setSetting(
       CharacterListSortSettings.storageKeyGroup,
       settings.groupByOwnership.toString(),
+    );
+    await db.setSetting(
+      CharacterListSortSettings.storageKeyRegionDefaultMigration,
+      '1',
     );
   }
 

@@ -86,7 +86,7 @@ String resolveArtifactSetRegion({
   return 'その他';
 }
 
-/// 聖遺物一覧の地域セクション表示順
+/// 聖遺物一覧の地域セクション表示順（[gameRegionDisplayOrder] と同期）
 const artifactSetRegionOrder = <String>[
   'モンド',
   '璃月',

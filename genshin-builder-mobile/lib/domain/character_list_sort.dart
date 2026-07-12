@@ -1,4 +1,7 @@
+import 'game_display.dart';
 import 'models/master_models.dart';
+
+export 'game_display.dart' show gameRegionDisplayOrder, gameRegionSortIndex;
 
 /// 一覧ソート用の所持キャラ情報（HoYoLAB DTO に依存しない）
 class OwnedCharacterSortInfo {
@@ -17,13 +20,13 @@ class OwnedCharacterSortInfo {
 
 /// キャラクター一覧の並び替えモード
 enum CharacterListSortMode {
+  region,
   ownedDefault,
   nameAsc,
   nameDesc,
   rarityDesc,
   rarityAsc,
   element,
-  region,
   levelDesc,
   levelAsc,
   obtainedDesc,
@@ -34,13 +37,13 @@ enum CharacterListSortMode {
 
 extension CharacterListSortModeLabels on CharacterListSortMode {
   String get label => switch (this) {
+        CharacterListSortMode.region => '地域（聖遺物と同じ順）',
         CharacterListSortMode.ownedDefault => '所持優先（取得推定順）',
         CharacterListSortMode.nameAsc => '名前（あ→ん）',
         CharacterListSortMode.nameDesc => '名前（ん→あ）',
         CharacterListSortMode.rarityDesc => 'レアリティ（高い順）',
         CharacterListSortMode.rarityAsc => 'レアリティ（低い順）',
         CharacterListSortMode.element => '元素',
-        CharacterListSortMode.region => '地域',
         CharacterListSortMode.levelDesc => 'レベル（高い順）',
         CharacterListSortMode.levelAsc => 'レベル（低い順）',
         CharacterListSortMode.obtainedDesc => '取得推定（新しい順）',
@@ -50,18 +53,18 @@ extension CharacterListSortModeLabels on CharacterListSortMode {
       };
 
   static CharacterListSortMode fromStorage(String? raw) {
-    if (raw == null || raw.isEmpty) return CharacterListSortMode.ownedDefault;
+    if (raw == null || raw.isEmpty) return CharacterListSortMode.region;
     return CharacterListSortMode.values.firstWhere(
       (mode) => mode.name == raw,
-      orElse: () => CharacterListSortMode.ownedDefault,
+      orElse: () => CharacterListSortMode.region,
     );
   }
 }
 
 class CharacterListSortSettings {
   const CharacterListSortSettings({
-    this.mode = CharacterListSortMode.ownedDefault,
-    this.groupByOwnership = true,
+    this.mode = CharacterListSortMode.region,
+    this.groupByOwnership = false,
   });
 
   final CharacterListSortMode mode;
@@ -69,6 +72,9 @@ class CharacterListSortSettings {
 
   static const storageKeyMode = 'character_list_sort_mode';
   static const storageKeyGroup = 'character_list_group_by_ownership';
+  /// 聖遺物と同じ地域順への移行済みフラグ（未移行端末は一度だけ region へ切替）
+  static const storageKeyRegionDefaultMigration =
+      'character_list_sort_region_default_v1';
 
   CharacterListSortSettings copyWith({
     CharacterListSortMode? mode,
@@ -90,6 +96,17 @@ class CharacterListEntry {
   final MasterCharacter character;
   final bool isOwned;
   final OwnedCharacterSortInfo? owned;
+}
+
+/// 地域セクション（聖遺物一覧と同じ並び）
+class CharacterRegionSection {
+  const CharacterRegionSection({
+    required this.region,
+    required this.items,
+  });
+
+  final String region;
+  final List<CharacterListEntry> items;
 }
 
 /// マスター ID と所持マップの照合（旅人の元素 suffix 対応）
@@ -129,6 +146,13 @@ List<CharacterListEntry> buildCharacterListEntries({
       })
       .toList(growable: false);
 
+  // 地域モードは所持グループより地域セクションを優先（聖遺物一覧と同じ）
+  if (settings.mode == CharacterListSortMode.region) {
+    final sorted = [...entries]
+      ..sort((a, b) => _compareEntries(a, b, CharacterListSortMode.region));
+    return sorted;
+  }
+
   if (settings.groupByOwnership &&
       settings.mode == CharacterListSortMode.ownedDefault) {
     return _buildOwnedDefaultSplit(entries);
@@ -142,8 +166,49 @@ List<CharacterListEntry> buildCharacterListEntries({
     return [...owned, ...unowned];
   }
 
-  final sorted = [...entries]..sort((a, b) => _compareEntries(a, b, settings.mode));
+  final sorted = [...entries]
+    ..sort((a, b) => _compareEntries(a, b, settings.mode));
   return sorted;
+}
+
+/// 聖遺物一覧と同じ地域順でセクション化。
+List<CharacterRegionSection> groupCharacterEntriesByRegion(
+  List<CharacterListEntry> entries, {
+  List<String> regionOrder = gameRegionDisplayOrder,
+}) {
+  final byRegion = <String, List<CharacterListEntry>>{};
+  for (final e in entries) {
+    final region = normalizeCharacterRegionForDisplay(
+      e.character.region,
+      characterId: e.character.id,
+      characterName: e.character.name,
+    );
+    byRegion.putIfAbsent(region, () => []).add(e);
+  }
+  for (final list in byRegion.values) {
+    list.sort((a, b) {
+      final byRarity = b.character.rarity.compareTo(a.character.rarity);
+      if (byRarity != 0) return byRarity;
+      return a.character.name.compareTo(b.character.name);
+    });
+  }
+
+  final sections = <CharacterRegionSection>[];
+  final seen = <String>{};
+  for (final region in regionOrder) {
+    final items = byRegion[region];
+    if (items == null || items.isEmpty) continue;
+    sections.add(CharacterRegionSection(region: region, items: items));
+    seen.add(region);
+  }
+  final extras = byRegion.keys.where((k) => !seen.contains(k)).toList()
+    ..sort();
+  for (final region in extras) {
+    final items = byRegion[region];
+    if (items == null || items.isEmpty) continue;
+    sections.add(CharacterRegionSection(region: region, items: items));
+  }
+  return sections;
 }
 
 List<CharacterListEntry> _buildOwnedDefaultSplit(
@@ -179,10 +244,25 @@ int _compareEntries(
     case CharacterListSortMode.element:
       return _compareElement(a, b);
     case CharacterListSortMode.region:
-      final regionCmp = a.character.region.compareTo(b.character.region);
-      return regionCmp != 0
-          ? regionCmp
-          : a.character.name.compareTo(b.character.name);
+      final regionCmp = gameRegionSortIndex(
+        normalizeCharacterRegionForDisplay(
+          a.character.region,
+          characterId: a.character.id,
+          characterName: a.character.name,
+        ),
+      ).compareTo(
+        gameRegionSortIndex(
+          normalizeCharacterRegionForDisplay(
+            b.character.region,
+            characterId: b.character.id,
+            characterName: b.character.name,
+          ),
+        ),
+      );
+      if (regionCmp != 0) return regionCmp;
+      final rarityCmp = b.character.rarity.compareTo(a.character.rarity);
+      if (rarityCmp != 0) return rarityCmp;
+      return a.character.name.compareTo(b.character.name);
     case CharacterListSortMode.levelDesc:
       return _compareOwnedIntDesc(
         a,
@@ -302,6 +382,10 @@ int ownedEntryCount(List<CharacterListEntry> entries) =>
     entries.where((entry) => entry.isOwned).length;
 
 bool shouldShowOwnershipSections(CharacterListSortSettings settings) {
+  if (settings.mode == CharacterListSortMode.region) return false;
   if (!settings.groupByOwnership) return false;
   return true;
 }
+
+bool shouldShowRegionSections(CharacterListSortSettings settings) =>
+    settings.mode == CharacterListSortMode.region;
