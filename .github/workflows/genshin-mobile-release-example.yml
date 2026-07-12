@@ -1,5 +1,7 @@
 name: Genshin Mobile Release (Example)
 
+# Signed release AAB only. Do not attach pull_request — signing secrets must not
+# run on untrusted PR workflows. Regular mobile CI does not use these secrets.
 on:
   workflow_dispatch:
 
@@ -10,9 +12,11 @@ jobs:
       run:
         working-directory: genshin-builder-mobile
     env:
-      # GitHub Repository Secrets に設定:
-      # ARTIFACT_SCORE_WEIGHTS_URL=https://your-domain/path/artifact_score_weights.json
       ARTIFACT_SCORE_WEIGHTS_URL: ${{ secrets.ARTIFACT_SCORE_WEIGHTS_URL }}
+      ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+      ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+      ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+      ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,6 +25,49 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+
+      - name: Require upload signing secrets
+        working-directory: .
+        run: |
+          set -euo pipefail
+          missing=0
+          if [ -z "${ANDROID_UPLOAD_KEYSTORE_BASE64:-}" ]; then
+            echo "Missing required GitHub Secret: ANDROID_UPLOAD_KEYSTORE_BASE64"
+            missing=1
+          fi
+          if [ -z "${ANDROID_UPLOAD_STORE_PASSWORD:-}" ]; then
+            echo "Missing required GitHub Secret: ANDROID_UPLOAD_STORE_PASSWORD"
+            missing=1
+          fi
+          if [ -z "${ANDROID_UPLOAD_KEY_ALIAS:-}" ]; then
+            echo "Missing required GitHub Secret: ANDROID_UPLOAD_KEY_ALIAS"
+            missing=1
+          fi
+          if [ -z "${ANDROID_UPLOAD_KEY_PASSWORD:-}" ]; then
+            echo "Missing required GitHub Secret: ANDROID_UPLOAD_KEY_PASSWORD"
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            echo "Configure upload keystore secrets before running this workflow."
+            exit 1
+          fi
+
+      - name: Restore keystore and key.properties
+        working-directory: genshin-builder-mobile/android
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$ANDROID_UPLOAD_KEYSTORE_BASE64" | base64 --decode > upload-keystore.jks
+          if [ ! -s upload-keystore.jks ]; then
+            echo "Decoded keystore is empty or invalid."
+            exit 1
+          fi
+          {
+            printf 'storePassword=%s\n' "$ANDROID_UPLOAD_STORE_PASSWORD"
+            printf 'keyPassword=%s\n' "$ANDROID_UPLOAD_KEY_PASSWORD"
+            printf 'keyAlias=%s\n' "$ANDROID_UPLOAD_KEY_ALIAS"
+            printf 'storeFile=upload-keystore.jks\n'
+          } > key.properties
 
       - name: Flutter Pub Get
         run: flutter pub get
@@ -33,6 +80,7 @@ jobs:
           --dart-define=ARTIFACT_SCORE_WEIGHTS_URL=${ARTIFACT_SCORE_WEIGHTS_URL}
 
       - name: Upload debug info
+        if: ${{ success() }}
         uses: actions/upload-artifact@v4
         with:
           name: genshin-mobile-debug-info
@@ -40,7 +88,16 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload Artifact
+        if: ${{ success() }}
         uses: actions/upload-artifact@v4
         with:
           name: genshin-mobile-aab
           path: genshin-builder-mobile/build/app/outputs/bundle/release/*.aab
+
+      - name: Remove signing material
+        if: ${{ always() }}
+        working-directory: genshin-builder-mobile/android
+        run: |
+          set -euo pipefail
+          rm -f key.properties upload-keystore.jks
+          echo "Removed temporary signing files (if present)."

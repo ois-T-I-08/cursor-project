@@ -1,4 +1,13 @@
+# Android upload keystore (DO NOT COMMIT real values)
+#
+# Copy to android/key.properties and fill in locally.
+# Required for: flutter build appbundle --release / assembleRelease / bundleRelease
+# NOT required for: flutter run / flutter build apk --debug
+#
+# gitignore: android/key.properties, *.jks, *.keystore
+
 storePassword=<store-password>
 keyPassword=<key-password>
 keyAlias=<key-alias>
-storeFile=<path-to-upload-keystore.jks>
+# Path relative to the android/ directory (or absolute)
+storeFile=upload-keystore.jks
