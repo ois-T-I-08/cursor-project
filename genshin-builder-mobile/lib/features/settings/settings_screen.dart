@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/models/sync_status.dart';
 import '../../core/errors/user_facing_error.dart';
+import '../../data/sync/background_master_repair.dart';
 import '../../data/sync/master_sync_runner.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/background_master_repair_provider.dart';
 import '../shared/shell_menu_button.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -21,35 +23,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   SyncProgress? _syncProgress;
 
   Future<void> _sync({bool fullUpgrade = false}) async {
+    final repair = ref.read(backgroundMasterRepairProvider);
+    if (repair.isBusy) {
+      setState(() {
+        _lastMessage = 'バックグラウンドで同期中です。完了後に再試行してください。';
+      });
+      return;
+    }
+
     setState(() {
       _syncing = true;
       _lastMessage = null;
       _syncProgress = null;
     });
     try {
-      final outcome = await runMasterSyncWithIconPreload(
-        ref,
-        preloadOnlyMissingIcons: !fullUpgrade,
-        fullUpgrade: fullUpgrade,
-        onProgress: (p) {
-          if (mounted) setState(() => _syncProgress = p);
-        },
-      );
-      final result = outcome.result;
-      final iconMessage = outcome.iconsLoaded > 0
-          ? ' · 新規アイコン ${outcome.iconsLoaded} 件'
-          : ' · アイコンは取得済み';
-      final modeLabel = fullUpgrade ? '完全再同期完了' : '同期完了';
-      if (!mounted) return;
-      setState(() {
-        _lastMessage = result.hasErrors
-            ? userFacingSyncErrors(result.errors)
-            : '$modeLabel — キャラ ${result.characters} / 武器 ${result.weapons} / '
-                '素材 ${result.materials} · 突破 キャラ ${result.characterUpgrades} / '
-                '武器 ${result.weaponUpgrades}$iconMessage';
+      final start = await repair.runManualExclusive(() async {
+        final outcome = await runMasterSyncWithIconPreload(
+          ref,
+          preloadOnlyMissingIcons: !fullUpgrade,
+          fullUpgrade: fullUpgrade,
+          onProgress: (p) {
+            if (mounted) setState(() => _syncProgress = p);
+          },
+        );
+        final result = outcome.result;
+        final iconMessage = outcome.iconsLoaded > 0
+            ? ' · 新規アイコン ${outcome.iconsLoaded} 件'
+            : ' · アイコンは取得済み';
+        final modeLabel = fullUpgrade ? '完全再同期完了' : '同期完了';
+        if (!mounted) return;
+        setState(() {
+          _lastMessage = result.hasErrors
+              ? userFacingSyncErrors(result.errors)
+              : '$modeLabel — キャラ ${result.characters} / 武器 ${result.weapons} / '
+                  '素材 ${result.materials} · 突破 キャラ ${result.characterUpgrades} / '
+                  '武器 ${result.weaponUpgrades}$iconMessage';
+        });
+        if (result.hasErrors) {
+          logAppError(result.errors.join('; '), null, 'settings.sync');
+        }
       });
-      if (result.hasErrors) {
-        logAppError(result.errors.join('; '), null, 'settings.sync');
+      if (!mounted) return;
+      if (start == ManualSyncStart.busy) {
+        setState(() {
+          _lastMessage = 'バックグラウンドで同期中です。完了後に再試行してください。';
+        });
       }
     } catch (e, st) {
       logAppError(e, st, 'settings.sync');

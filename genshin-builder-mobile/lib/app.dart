@@ -1,25 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'providers/hoyolab_home_providers.dart';
 import 'router.dart';
 
-class GenshinBuilderApp extends ConsumerStatefulWidget {
+class GenshinBuilderApp extends ConsumerWidget {
   const GenshinBuilderApp({super.key});
 
   @override
-  ConsumerState<GenshinBuilderApp> createState() => _GenshinBuilderAppState();
-}
-
-class _GenshinBuilderAppState extends ConsumerState<GenshinBuilderApp> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => prefetchHoyolabHomeData(ref));
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       title: 'Genshin Builder',
       debugShowCheckedModeBanner: false,

@@ -4,14 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/errors/user_facing_error.dart';
 import '../../data/models/sync_status.dart';
-import '../../data/sync/master_content_probe.dart';
 import '../../data/sync/master_sync_runner.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/background_master_repair_provider.dart';
 
-/// 起動時のマスタ同期・アイコン事前読み込み
+/// 起動時ブートストラップ
 ///
-/// - ローカル未同期 / 突破不足 → 自動同期
-/// - それ以外 → Amber 一覧件数をプローブし、新コンテンツがあれば自動同期
+/// - キャラ 0 件のみブロッキング同期（アイコン等は Home 後）
+/// - ローカルありなら即ホーム（probe は BackgroundMasterRepair）
 class InitialSyncScreen extends ConsumerStatefulWidget {
   const InitialSyncScreen({super.key});
 
@@ -21,6 +21,7 @@ class InitialSyncScreen extends ConsumerStatefulWidget {
 
 class _InitialSyncScreenState extends ConsumerState<InitialSyncScreen> {
   bool _running = false;
+  bool _navigatedHome = false;
   String? _error;
   String? _subtitle;
   SyncProgress? _syncProgress;
@@ -31,51 +32,31 @@ class _InitialSyncScreenState extends ConsumerState<InitialSyncScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
   }
 
+  Future<void> _goHome() async {
+    if (!mounted || _navigatedHome) return;
+    _navigatedHome = true;
+    context.go('/');
+  }
+
   Future<void> _bootstrap() async {
-    if (_running) return;
+    if (_running || _navigatedHome) return;
 
     final status = await ref.read(syncStatusProvider.future);
-    if (status.shouldAutoSyncOnLaunch) {
-      setState(() {
-        _subtitle = status.isUnsynced
-            ? 'キャラ・武器・素材のマスタデータを取得し、アイコンを読み込んでいます。'
-            : '不足している突破データを取得しています。';
-      });
-      await _runSync();
+    if (!mounted) return;
+
+    if (!status.requiresBlockingBootstrap) {
+      await _goHome();
       return;
     }
 
-    // ローカルは揃っているが、リモートに新キャラ等が増えていないか確認
     setState(() {
-      _subtitle = 'ゲームデータの更新を確認しています…';
-      _running = true;
+      _subtitle = 'キャラ・武器・素材のマスタデータを取得しています。';
     });
-
-    try {
-      final db = await ref.read(appDatabaseProvider.future);
-      final amber = ref.read(amberApiProvider);
-      final probe = await MasterContentProbe(amberApi: amber, db: db).check();
-
-      if (!mounted) return;
-
-      if (probe.shouldSync) {
-        setState(() {
-          _running = false;
-          _subtitle =
-              '新しいゲームデータを検出しました（${probe.reasonSummary}）。同期します…';
-        });
-        await _runSync();
-        return;
-      }
-    } catch (e, st) {
-      logAppError(e, st, 'initialSync.probe');
-      // プローブ失敗時はホームへ（手動同期に委ねる）
-    }
-
-    if (mounted) context.go('/');
+    await _runBlockingSync();
   }
 
-  Future<void> _runSync() async {
+  Future<void> _runBlockingSync() async {
+    if (_navigatedHome) return;
     setState(() {
       _running = true;
       _error = null;
@@ -83,14 +64,12 @@ class _InitialSyncScreenState extends ConsumerState<InitialSyncScreen> {
     });
 
     try {
-      final outcome = await runMasterSyncWithIconPreload(
+      final result = await runMasterDataSync(
         ref,
-        preloadOnlyMissingIcons: true,
         onProgress: (p) {
           if (mounted) setState(() => _syncProgress = p);
         },
       );
-      final result = outcome.result;
 
       if (!mounted) return;
 
@@ -106,7 +85,11 @@ class _InitialSyncScreenState extends ConsumerState<InitialSyncScreen> {
         return;
       }
 
-      context.go('/');
+      // 成功時のみ — スキップ/失敗では呼ばない
+      ref
+          .read(backgroundMasterRepairProvider)
+          .markMasterSyncCompletedDuringBootstrap();
+      await _goHome();
     } catch (e, st) {
       logAppError(e, st, 'initialSync');
       if (mounted) {
@@ -151,7 +134,7 @@ class _InitialSyncScreenState extends ConsumerState<InitialSyncScreen> {
               const SizedBox(height: 12),
               Text(
                 _subtitle ??
-                    'キャラ・武器・素材のマスタデータを取得し、アイコンを読み込んでいます。'
+                    'キャラ・武器・素材のマスタデータを取得しています。'
                         '初回のみ数分かかることがあります。',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
@@ -183,11 +166,16 @@ class _InitialSyncScreenState extends ConsumerState<InitialSyncScreen> {
                 ),
                 const SizedBox(height: 16),
                 FilledButton(
-                  onPressed: _running ? null : _runSync,
+                  onPressed: _running ? null : _runBlockingSync,
                   child: const Text('再試行'),
                 ),
                 TextButton(
-                  onPressed: _running ? null : () => context.go('/'),
+                  onPressed: _running
+                      ? null
+                      : () {
+                          // スキップは同期済み扱いにしない
+                          _goHome();
+                        },
                   child: const Text('スキップして続行'),
                 ),
               ],

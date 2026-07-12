@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,7 +7,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../providers/app_providers.dart';
+import '../../providers/background_master_repair_provider.dart';
 import '../../providers/daily_materials_providers.dart';
+import '../../providers/hoyolab_home_providers.dart';
 import '../../core/errors/user_facing_error.dart';
 import '../../widgets/deferred_loader.dart';
 import '../hoyolab/widgets/adventure_status_card.dart';
@@ -13,11 +17,28 @@ import '../hoyolab/widgets/daily_note_card.dart';
 import '../shared/shell_menu_button.dart';
 import 'widgets/home_events_card.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final repair = ref.read(backgroundMasterRepairProvider);
+      // 描画を await しない
+      unawaited(repair.ensureStartedAfterHome());
+      repair.ensureHoyolabPrefetch(() => prefetchHoyolabHomeData(ref));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // 副作用のみ: watch だと Future 完了でホーム全体が再ビルドされる
     ref.listen(dailyProgressPrefetchProvider, (_, __) {});
 

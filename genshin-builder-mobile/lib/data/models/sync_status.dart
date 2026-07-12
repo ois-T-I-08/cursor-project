@@ -35,9 +35,21 @@ class SyncStatus {
   bool get hasMissingUpgrades =>
       missingCharacterUpgrades > 0 || missingWeaponUpgrades > 0;
 
-  /// 起動時に自動同期すべきか（初回 or 突破不足）
+  /// ホーム描画前にマスタ同期を await する必要があるか（キャラ 0 件のみ）
+  bool get requiresBlockingBootstrap => characters == 0;
+
+  /// ホーム表示後にバックグラウンド修復してよい状態か
+  bool get needsBackgroundRepair =>
+      needsInitialUpgradeSync ||
+      hasMissingUpgrades ||
+      !expTableReady ||
+      (characters > 0 && weapons == 0) ||
+      (characters > 0 && materials == 0);
+
+  /// 互換: 「何か同期した方がよい」広い判定。
+  /// InitialSyncScreen の起動ゲートには使わない（[requiresBlockingBootstrap] を使う）。
   bool get shouldAutoSyncOnLaunch =>
-      isUnsynced || needsInitialUpgradeSync || hasMissingUpgrades;
+      requiresBlockingBootstrap || needsBackgroundRepair;
 
   bool get upgradeComplete =>
       !isUnsynced &&

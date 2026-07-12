@@ -2,6 +2,59 @@
 
 セッションごとの設計判断ログ。重要な決定のみ追記する。
 
+## 2026-07-12 — [P1-6] 起動パスの段階化（ローカルファースト）
+
+- 目的: 既存ローカルがあるときネットワークを待たずホーム表示。同期必要 ≠ 起動ブロック
+- 判定: `requiresBlockingBootstrap` = `characters == 0` のみ。`needsBackgroundRepair` に突破欠落・EXP・武器/素材0 など
+- Home 後: `BackgroundMasterRepair`（`_inFlight` + `_startedAfterHome` + bootstrap mark + probe token）。同一プロセス冪等
+- 初回同期成功時は `markMasterSyncCompletedDuringBootstrap` で同一起動の probe/再 MasterSync を省略（icons/weights/HoYoLAB のみ）
+- 手動同期は BG 中 `ManualSyncStart.busy`（合流して成功扱いにしない）
+- Amber probe: ホーム後・並列・15s timeout・遅延結果不採用
+- 変更: `sync_status` / `initial_sync_screen` / `master_sync_runner` / `background_master_repair` / probe・Amber 件数並列 / `app.dart` / home / settings / provider / テスト
+- 検証: P1-6 + 保護3 + 全 test 成功、対象 analyze 問題なし、debug APK 成功。domain 内容差分なし
+- **実機未確認:** コールド/オフライン時間、低速回線、初回同期、Home first frame、BG probe/repair、アイコン後載せ、HoYoLAB prefetch
+- ロールバック: 上記ファイル差し戻し（domain/schema/Cookie 未変更）
+
+## 2026-07-12 — [P1-3] HoYoLAB Cookie / MethodChannel 硬化
+
+- 目的: WebView ログイン直後 Cookie を優先し、正規化→API 検証→SecureStorage までを UseCase 1 回で完結。UI には成功/失敗のみ返す
+- データフロー: WebViewCookieManager → Native `fetchCookie`（欠落キーのみ補完、同一キーは WebView 優先）→ Normalizer（完全一致 `ltoken_v2`|`ltoken`）→ `CompleteHoyolabWebLoginUseCase` → 既存 `HoyolabRepository.completeLogin`（verify→roles→save 順維持）→ `Navigator.pop(true)` / Settings は `true` 時のみ Provider refresh
+- MethodChannel 契約: `genshin_builder_mobile/hoyolab_cookie` / `fetchCookie`。あり=`success(string)`、なし=`success(null)`、内部例外=`COOKIE_MANAGER_ERROR`。Flutter 結果型 `ok|absent|managerError|pluginMissing`（WebView があれば継続）
+- 変更ファイル: `MainActivity.kt`、`hoyolab_cookie_channel.dart`、`hoyolab_cookie_service.dart`、`hoyolab_cookie_normalizer.dart`、`native_cookie_fetch_result.dart`、`CompleteHoyolabWebLoginUseCase`、login/settings 画面、`hoyolab_providers.dart`、関連テスト
+- 検証: Cookie 系 + 全 `flutter test` 成功、P1-3 対象 `flutter analyze` 問題なし、`flutter build apk --debug` 成功。`lib/domain/**` / Drift / MethodChannel 名・保護ゴールデンは内容差分なし
+- **実機未確認:** WebView ログイン、CookieManager 取得、MainActivity MethodChannel、SecureStorage 実保存、連携解除
+- ロールバック: 上記変更ファイルを差し戻し（Repository / domain / SecureStorage キーは未変更のため影響範囲は Cookie 収集〜UI 結果のみ）
+
+## 2026-07-12 — [P1-2] applicationId + release signing fail-closed
+
+- 目的: `com.example.*` 解消、release の debug 署名フォールバック廃止、CI/ローカルで安全な署名付き AAB
+- 決定事項: ID=`io.github.oisti08.genshinbuilder`（namespace/MainActivity 一致）。署名検証は release タスク時のみ。Secrets は `workflow_dispatch` の release 例のみ。AAB 署名確認は jarsigner
+- 状態: **実装完了 / 公開前 Release Verification 保留**（正規 keystore・実機・Secrets が無い環境では検証未完了）
+- 変更ファイル: `android/app/build.gradle.kts`、MainActivity 移動、`key.properties.example`、`genshin-mobile-release-example.yml`、`docs/ANDROID_RELEASE.md`
+- **公開前保留事項（チェックリスト）:**
+  - [ ] 正規アップロード用 keystore を作成・バックアップする
+  - [ ] `android/key.properties` をローカルで設定する
+  - [ ] 署名付き AAB を生成する
+  - [ ] jarsigner で AAB 署名を確認する
+  - [ ] applicationId を確認する（`io.github.oisti08.genshinbuilder`）
+  - [ ] 実機で起動と HoYoLAB MethodChannel を確認する
+  - [ ] GitHub Secrets を設定して release workflow を確認する
+  - [ ] Play Console 登録前に applicationId を最終確認する
+
+## 2026-07-12 — [P1-5] 聖遺物セット / Akasha 負荷制限
+
+- 目的: セット一覧オープン時の Akasha API 過剰リクエストを防止（計算・表示ロジックは維持）
+- 変更内容: sample を所持+聖遺物進捗のみ、`kArtifactAkashaSampleLimit=32`、一覧 concurrency 6→4。pages/pageSize・詳細1キャラ Provider・domain は非変更
+- 変更ファイル: `lib/providers/artifact_sets_page_providers.dart`、`test/data/akasha/akasha_artifact_set_usage_test.dart`
+- 未完了 / 次回: `artifactSetOverviewsProvider` の invalidate 分離、Akasha 非ブロッキング後載せ、HoYoLAB detail 負荷、武器 Akasha は別 Task
+
+## 2026-07-12 — [P1-1] パリティゲート固定
+
+- 目的: 計算仕様を変えず、破壊検知ゲートだけを強化する
+- 決定事項: mobile CI で全件 test の前に `domain_golden` / `artifact_completion` / `artifact_score` を名前付き必須実行。`genshin-domain-golden.yml` と cases.json / domain ロジックは触らない
+- 変更ファイル: `.github/workflows/genshin-mobile-ci.yml`、`shared/domain-golden/README.md`、`AGENTS.md`
+- 未完了 / 次回: GitHub で本 job を required check にする運用。P1-5（Akasha 負荷）など Phase1 続き
+
 ## 2026-07-12 — ホームに開催中イベント
 
 - ennead calendar の `events[]` をホーム「開催中のイベント」カードで表示（DailyNote の下）
@@ -153,7 +206,7 @@
 - **認証**: DS 署名（`hoyolab_auth.dart`）、Cookie は `flutter_secure_storage` のみ
 - **UI**: WebView ログイン、設定（連携/解除/UID選択）、ホーム `DailyNoteCard`
 - **機能フラグ**: `app_settings.hoyolab_link_enabled`（Remote Config 相当）
-- **Cookie 取得**: `webview_flutter` の `WebViewCookieManager`（Pigeon は未使用）
+- **Cookie 取得**: WebView 優先 + Native MethodChannel 補完（P1-3 で硬化。Pigeon は未使用）
 
 ## 2026-07-08 — Phase 1 着手（bookmark_utils + Drift 土台）
 

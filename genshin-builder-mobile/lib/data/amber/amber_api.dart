@@ -97,12 +97,17 @@ class AmberApi {
     return Isolate.run(() => parseMaterialsFromAmberItems(items));
   }
 
-  /// 一覧件数のみ（プローブ用。突破詳細は取得しない）
+  /// 一覧件数のみ（プローブ用。突破詳細は取得しない）。3 エンドポイント並列。
   Future<({int characters, int weapons, int materials})>
       fetchMasterListCounts() async {
-    final avatars = await _fetchItems('/avatar');
-    final weapons = await _fetchItems('/weapon');
-    final materials = await _fetchItems('/material');
+    final results = await Future.wait([
+      _fetchItems('/avatar'),
+      _fetchItems('/weapon'),
+      _fetchItems('/material'),
+    ]);
+    final avatars = results[0];
+    final weapons = results[1];
+    final materials = results[2];
     return (
       characters: countSyncableCharactersFromAmberItems(avatars),
       weapons: weapons.length,

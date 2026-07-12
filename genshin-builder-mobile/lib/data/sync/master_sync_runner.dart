@@ -6,11 +6,10 @@ import '../models/sync_status.dart';
 import 'icon_preload_service.dart';
 import 'master_sync_service.dart';
 
-/// マスタ同期のあとアイコンをディスクキャッシュへ事前取得
-Future<({SyncResult result, int iconsLoaded})> runMasterSyncWithIconPreload(
+/// マスタ同期本体 + versioning + 必須 invalidate（アイコン・weights は含まない）
+Future<SyncResult> runMasterDataSync(
   WidgetRef ref, {
   void Function(SyncProgress progress)? onProgress,
-  bool preloadOnlyMissingIcons = false,
   bool fullUpgrade = false,
 }) async {
   final db = await ref.read(appDatabaseProvider.future);
@@ -22,6 +21,21 @@ Future<({SyncResult result, int iconsLoaded})> runMasterSyncWithIconPreload(
   );
   final result = await service.syncMasterData(onProgress: onProgress);
 
+  final versioning = await ref.read(versioningServiceProvider.future);
+  await versioning.updateAndPersistVersions();
+
+  invalidateMasterDataProviders(ref);
+  invalidateDailyMaterialsProviders(ref);
+  return result;
+}
+
+/// アイコンをディスクキャッシュへ事前取得（失敗は呼び出し側で無視してよい）
+Future<int> preloadMasterIconsForRef(
+  WidgetRef ref, {
+  void Function(SyncProgress progress)? onProgress,
+  bool onlyMissing = true,
+}) async {
+  final db = await ref.read(appDatabaseProvider.future);
   onProgress?.call(
     const SyncProgress(
       phase: SyncPhase.iconPreload,
@@ -30,13 +44,15 @@ Future<({SyncResult result, int iconsLoaded})> runMasterSyncWithIconPreload(
       detail: '準備中',
     ),
   );
-
-  final iconsLoaded = await IconPreloadService(db).preloadMasterIcons(
-    onlyMissing: preloadOnlyMissingIcons,
+  return IconPreloadService(db).preloadMasterIcons(
+    onlyMissing: onlyMissing,
     onProgress: onProgress,
   );
+}
 
-  // 新キャラが追加された場合、重み未登録を検知してリモート再取得を試みる。
+/// Remote score weights の欠落補完（失敗してもマスタ同期成功を覆さない）
+Future<void> syncMissingScoreWeightsForRef(WidgetRef ref) async {
+  final db = await ref.read(appDatabaseProvider.future);
   final weightRepo = ref.read(artifactScoreWeightRepositoryProvider);
   final characters = await db.getAllCharacters();
   final missingWeightIds =
@@ -47,12 +63,37 @@ Future<({SyncResult result, int iconsLoaded})> runMasterSyncWithIconPreload(
       'artifact score weights missing for: ${missingWeightIds.join(',')}',
     );
   }
+}
 
-  // 同期結果と重みデータを基にバージョンを自動更新
-  final versioning = await ref.read(versioningServiceProvider.future);
-  await versioning.updateAndPersistVersions();
+/// 設定画面用: マスタ同期のあとアイコン（と weights）まで await
+Future<({SyncResult result, int iconsLoaded})> runMasterSyncWithIconPreload(
+  WidgetRef ref, {
+  void Function(SyncProgress progress)? onProgress,
+  bool preloadOnlyMissingIcons = false,
+  bool fullUpgrade = false,
+}) async {
+  final result = await runMasterDataSync(
+    ref,
+    onProgress: onProgress,
+    fullUpgrade: fullUpgrade,
+  );
 
-  invalidateMasterDataProviders(ref);
-  invalidateDailyMaterialsProviders(ref);
+  var iconsLoaded = 0;
+  try {
+    iconsLoaded = await preloadMasterIconsForRef(
+      ref,
+      onProgress: onProgress,
+      onlyMissing: preloadOnlyMissingIcons,
+    );
+  } catch (_) {
+    // アイコン失敗はマスタ同期成功を失敗扱いにしない
+  }
+
+  try {
+    await syncMissingScoreWeightsForRef(ref);
+  } catch (_) {
+    // weights 失敗もマスタ成功を覆さない
+  }
+
   return (result: result, iconsLoaded: iconsLoaded);
 }

@@ -37,7 +37,7 @@ void main() {
   });
 
   group('SyncStatus.shouldAutoSyncOnLaunch', () {
-    test('true when unsynced or missing upgrades', () {
+    test('true when unsynced or missing upgrades (compat wide gate)', () {
       expect(
         const SyncStatus(
           characters: 0,
@@ -71,6 +71,20 @@ void main() {
         ).shouldAutoSyncOnLaunch,
         isFalse,
       );
+    });
+
+    test('requiresBlockingBootstrap is narrower than shouldAutoSyncOnLaunch',
+        () {
+      const missingUpgrades = SyncStatus(
+        characters: 10,
+        weapons: 5,
+        materials: 100,
+        characterUpgrades: 8,
+        weaponUpgrades: 5,
+        levelExpSegments: 32,
+      );
+      expect(missingUpgrades.shouldAutoSyncOnLaunch, isTrue);
+      expect(missingUpgrades.requiresBlockingBootstrap, isFalse);
     });
   });
 
