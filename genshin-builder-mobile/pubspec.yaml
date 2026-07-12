@@ -29,6 +29,8 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   webview_flutter: ^4.10.0
   crypto: ^3.0.6
+  flutter_local_notifications: 19.5.0
+  timezone: 0.10.1
 
 dev_dependencies:
   flutter_test:

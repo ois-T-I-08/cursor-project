@@ -6,8 +6,11 @@ import '../../data/models/sync_status.dart';
 import '../../core/errors/user_facing_error.dart';
 import '../../data/sync/background_master_repair.dart';
 import '../../data/sync/master_sync_runner.dart';
+import '../../platform/app_notification_settings_channel.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/background_master_repair_provider.dart';
+import '../../providers/hoyolab_home_providers.dart';
+import '../../providers/hoyolab_reminder_providers.dart';
 import '../shared/shell_menu_button.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -21,6 +24,119 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _syncing = false;
   String? _lastMessage;
   SyncProgress? _syncProgress;
+  bool _reminderBusy = false;
+  bool? _osNotificationsEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshOsPermission();
+  }
+
+  Future<void> _refreshOsPermission() async {
+    try {
+      final scheduler = ref.read(notificationSchedulerProvider);
+      final enabled = await scheduler.areNotificationsEnabled();
+      if (mounted) setState(() => _osNotificationsEnabled = enabled);
+    } catch (_) {
+      if (mounted) setState(() => _osNotificationsEnabled = false);
+    }
+  }
+
+  Future<void> _setResinReminder(bool enabled) async {
+    if (_reminderBusy) return;
+    setState(() => _reminderBusy = true);
+    try {
+      final store = await ref.read(reminderSettingsStoreProvider.future);
+      final scheduler = ref.read(notificationSchedulerProvider);
+      final coordinator =
+          await ref.read(notificationScheduleCoordinatorProvider.future);
+
+      if (enabled) {
+        final granted = await scheduler.requestPermission();
+        await _refreshOsPermission();
+        await store.setResinEnabled(true);
+        if (!granted) {
+          if (mounted) {
+            setState(
+              () => _lastMessage =
+                  '樹脂通知をONにしましたが、端末側で通知が許可されていません。',
+            );
+          }
+          return;
+        }
+        // Fresh DailyNote only — do not reconcile from stale cache alone.
+        try {
+          await ref.read(dailyNoteProvider.notifier).refresh();
+        } catch (_) {
+          if (mounted) {
+            setState(
+              () => _lastMessage =
+                  '樹脂通知をONにしました。次回のリアルタイムメモ取得後に予約します。',
+            );
+          }
+        }
+      } else {
+        await store.setResinEnabled(false);
+        await coordinator.onPreferencesChangedCancelIfDisabled();
+      }
+      ref.invalidate(reminderSettingsStoreProvider);
+    } catch (e, st) {
+      logAppError(e, st, 'settings.reminder.resin');
+      if (mounted) {
+        setState(() => _lastMessage = '通知設定の更新に失敗しました。');
+      }
+    } finally {
+      if (mounted) setState(() => _reminderBusy = false);
+    }
+  }
+
+  Future<void> _setExpeditionReminder(bool enabled) async {
+    if (_reminderBusy) return;
+    setState(() => _reminderBusy = true);
+    try {
+      final store = await ref.read(reminderSettingsStoreProvider.future);
+      final scheduler = ref.read(notificationSchedulerProvider);
+      final coordinator =
+          await ref.read(notificationScheduleCoordinatorProvider.future);
+
+      if (enabled) {
+        final granted = await scheduler.requestPermission();
+        await _refreshOsPermission();
+        await store.setExpeditionEnabled(true);
+        if (!granted) {
+          if (mounted) {
+            setState(
+              () => _lastMessage =
+                  '探索派遣通知をONにしましたが、端末側で通知が許可されていません。',
+            );
+          }
+          return;
+        }
+        try {
+          await ref.read(dailyNoteProvider.notifier).refresh();
+        } catch (_) {
+          if (mounted) {
+            setState(
+              () => _lastMessage =
+                  '探索派遣通知をONにしました。次回のリアルタイムメモ取得後に予約します。',
+            );
+          }
+        }
+      } else {
+        await store.setExpeditionEnabled(false);
+        await coordinator.onPreferencesChangedCancelIfDisabled();
+      }
+      ref.invalidate(reminderSettingsStoreProvider);
+    } catch (e, st) {
+      logAppError(e, st, 'settings.reminder.expedition');
+      if (mounted) {
+        setState(() => _lastMessage = '通知設定の更新に失敗しました。');
+      }
+    } finally {
+      if (mounted) setState(() => _reminderBusy = false);
+    }
+  }
 
   Future<void> _sync({bool fullUpgrade = false}) async {
     final repair = ref.read(backgroundMasterRepairProvider);
@@ -111,6 +227,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final syncStatusAsync = ref.watch(syncStatusProvider);
     final versionStatusAsync = ref.watch(versionStatusProvider);
+    final reminderStoreAsync = ref.watch(reminderSettingsStoreProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -215,6 +332,77 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               subtitle: const Text('樹脂・デイリー・派遣の表示'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.go('/settings/hoyolab'),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: reminderStoreAsync.when(
+                data: (store) => FutureBuilder(
+                  future: store.readPreferences(),
+                  builder: (context, snap) {
+                    final prefs = snap.data;
+                    final resinOn = prefs?.resinEnabled ?? false;
+                    final expeditionOn = prefs?.expeditionEnabled ?? false;
+                    final osDenied = _osNotificationsEnabled == false;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ListTile(
+                          title: Text(
+                            'ローカル通知',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          subtitle: const Text(
+                            '端末内の予約通知です。既定はOFFです。',
+                          ),
+                        ),
+                        SwitchListTile(
+                          title: const Text('樹脂190到達'),
+                          subtitle: const Text('天然樹脂が190以上になったとき'),
+                          value: resinOn,
+                          onChanged: _reminderBusy
+                              ? null
+                              : (v) => _setResinReminder(v),
+                        ),
+                        SwitchListTile(
+                          title: const Text('探索派遣すべて完了'),
+                          subtitle: const Text('派遣が5件とも完了したとき'),
+                          value: expeditionOn,
+                          onChanged: _reminderBusy
+                              ? null
+                              : (v) => _setExpeditionReminder(v),
+                        ),
+                        if (osDenied && (resinOn || expeditionOn)) ...[
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            child: Text('端末側で通知が許可されていません'),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                await AppNotificationSettingsChannel.open();
+                                await _refreshOsPermission();
+                              },
+                              icon: const Icon(Icons.settings),
+                              label: const Text('端末の通知設定を開く'),
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: LinearProgressIndicator(),
+                ),
+                error: (_, __) => const ListTile(
+                  title: Text('通知設定を読み込めませんでした'),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 16),

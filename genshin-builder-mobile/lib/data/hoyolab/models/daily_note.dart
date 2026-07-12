@@ -2,22 +2,58 @@ class HoyolabExpedition {
   const HoyolabExpedition({
     required this.status,
     required this.remainingTime,
+    this.hasRemainingTimeFromApi = false,
   });
 
   final String status;
   final String remainingTime;
 
+  /// `remaining_time` が API 由来で非負整数として確定している場合のみ true。
+  final bool hasRemainingTimeFromApi;
+
   bool get isFinished => status.toLowerCase() == 'finished';
 
+  bool get isOngoing => status.toLowerCase() == 'ongoing';
+
+  /// API 由来で有効な残り秒。欠落・不正時は null。
+  int? get remainingSecondsFromApi {
+    if (!hasRemainingTimeFromApi) return null;
+    return DailyNote.tryParseNonNegativeInt(remainingTime);
+  }
+
   factory HoyolabExpedition.fromJson(Map<String, dynamic> json) =>
-      HoyolabExpedition(
-        status: json['status'] as String? ?? '',
-        remainingTime: json['remaining_time'] as String? ?? '0',
-      );
+      HoyolabExpedition.fromJsonSource(json, fromApi: true);
+
+  /// [fromApi]: true なら presence フラグ欠落時にキー有無から推定。
+  /// false（disk cache）ならフラグ欠落は false（旧 cache は予約しない）。
+  factory HoyolabExpedition.fromJsonSource(
+    Map<String, dynamic> json, {
+    required bool fromApi,
+  }) {
+    final raw = json['remaining_time'];
+    final parsed = DailyNote.tryParseNonNegativeInt(raw);
+    final inferred = json.containsKey('remaining_time') && parsed != null;
+
+    final bool hasFromApi;
+    if (json.containsKey('has_remaining_time_from_api')) {
+      hasFromApi = json['has_remaining_time_from_api'] == true;
+    } else if (fromApi) {
+      hasFromApi = inferred;
+    } else {
+      hasFromApi = false;
+    }
+
+    return HoyolabExpedition(
+      status: json['status'] as String? ?? '',
+      remainingTime: raw?.toString() ?? '0',
+      hasRemainingTimeFromApi: hasFromApi,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'status': status,
         'remaining_time': remainingTime,
+        'has_remaining_time_from_api': hasRemainingTimeFromApi,
       };
 }
 
@@ -31,6 +67,7 @@ class DailyNote {
     required this.currentHomeCoin,
     required this.maxHomeCoin,
     required this.expeditions,
+    this.hasMaxResinFromApi = false,
   });
 
   final int currentResin;
@@ -42,6 +79,9 @@ class DailyNote {
   final int maxHomeCoin;
   final List<HoyolabExpedition> expeditions;
 
+  /// `max_resin` が API 由来で有効整数として確定している場合のみ true。
+  final bool hasMaxResinFromApi;
+
   int get remainingResin => maxResin - currentResin;
 
   bool get dailyTasksComplete => finishedTaskNum >= totalTaskNum;
@@ -52,18 +92,42 @@ class DailyNote {
   int get finishedExpeditions =>
       expeditions.where((e) => e.isFinished).length;
 
-  factory DailyNote.fromJson(Map<String, dynamic> json) {
+  factory DailyNote.fromJson(Map<String, dynamic> json) =>
+      DailyNote.fromJsonSource(json, fromApi: true);
+
+  factory DailyNote.fromJsonSource(
+    Map<String, dynamic> json, {
+    required bool fromApi,
+  }) {
     final expeditionsRaw = json['expeditions'] as List<dynamic>? ?? [];
+    final maxRaw = json['max_resin'];
+    final maxParsed = tryParseInt(maxRaw);
+
+    final bool hasMax;
+    if (json.containsKey('has_max_resin_from_api')) {
+      hasMax = json['has_max_resin_from_api'] == true;
+    } else if (fromApi) {
+      hasMax = json.containsKey('max_resin') && maxParsed != null;
+    } else {
+      hasMax = false;
+    }
+
     return DailyNote(
       currentResin: DailyNote.asInt(json['current_resin']),
-      maxResin: DailyNote.asInt(json['max_resin'], fallback: 160),
+      maxResin: maxParsed ?? 160,
+      hasMaxResinFromApi: hasMax,
       resinRecoveryTime: json['resin_recovery_time'] as String? ?? '0',
       finishedTaskNum: DailyNote.asInt(json['finished_task_num']),
       totalTaskNum: DailyNote.asInt(json['total_task_num'], fallback: 4),
       currentHomeCoin: DailyNote.asInt(json['current_home_coin']),
       maxHomeCoin: DailyNote.asInt(json['max_home_coin'], fallback: 2400),
       expeditions: expeditionsRaw
-          .map((e) => HoyolabExpedition.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => HoyolabExpedition.fromJsonSource(
+              e as Map<String, dynamic>,
+              fromApi: fromApi,
+            ),
+          )
           .toList(),
     );
   }
@@ -71,6 +135,7 @@ class DailyNote {
   Map<String, dynamic> toJson() => {
         'current_resin': currentResin,
         'max_resin': maxResin,
+        'has_max_resin_from_api': hasMaxResinFromApi,
         'resin_recovery_time': resinRecoveryTime,
         'finished_task_num': finishedTaskNum,
         'total_task_num': totalTaskNum,
@@ -85,6 +150,19 @@ class DailyNote {
     if (value is num) return value.toInt();
     if (value is String) return int.tryParse(value) ?? fallback;
     return fallback;
+  }
+
+  static int? tryParseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  static int? tryParseNonNegativeInt(dynamic value) {
+    final parsed = tryParseInt(value);
+    if (parsed == null || parsed < 0) return null;
+    return parsed;
   }
 }
 

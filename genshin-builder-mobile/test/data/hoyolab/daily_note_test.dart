@@ -23,6 +23,8 @@ void main() {
       expect(note.dailyTasksComplete, isFalse);
       expect(note.finishedExpeditions, 1);
       expect(note.activeExpeditions, 1);
+      expect(note.hasMaxResinFromApi, isTrue);
+      expect(note.expeditions.first.hasRemainingTimeFromApi, isTrue);
     });
   });
 }

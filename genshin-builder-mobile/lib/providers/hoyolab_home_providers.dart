@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../application/hoyolab_reminders/notification_schedule_coordinator.dart';
 import '../data/hoyolab/hoyolab_constants.dart';
 import '../data/hoyolab/hoyolab_home_disk_cache.dart';
 import '../data/hoyolab/models/daily_note.dart';
@@ -9,6 +10,7 @@ import '../data/hoyolab/models/game_record.dart';
 import 'app_providers.dart';
 import 'hoyolab_game_providers.dart';
 import 'hoyolab_providers.dart';
+import 'hoyolab_reminder_providers.dart';
 
 final hoyolabHomeDiskCacheProvider =
     FutureProvider<HoyolabHomeDiskCache>((ref) async {
@@ -61,8 +63,19 @@ class DailyNoteNotifier extends AsyncNotifier<DailyNote?> {
   Future<DailyNote?> _fetchAndSave(String uid) async {
     final repo = await ref.read(hoyolabRepositoryProvider.future);
     final note = await repo.fetchDailyNote();
+    // One fetchedAt for cache + notification reconcile (Fresh API only).
+    final fetchedAt = DateTime.now();
     final diskCache = await ref.read(hoyolabHomeDiskCacheProvider.future);
-    await diskCache.saveDailyNote(uid, note);
+    await diskCache.saveDailyNote(uid, note, fetchedAt: fetchedAt);
+    try {
+      final coordinator =
+          await ref.read(notificationScheduleCoordinatorProvider.future);
+      coordinator.reconcileUnawaited(
+        ReminderReconcileSnapshot(note: note, fetchedAt: fetchedAt),
+      );
+    } catch (_) {
+      // Notification side effects must not fail DailyNote success.
+    }
     return note;
   }
 }

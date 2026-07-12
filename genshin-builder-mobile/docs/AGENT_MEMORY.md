@@ -2,6 +2,23 @@
 
 セッションごとの設計判断ログ。重要な決定のみ追記する。
 
+## 2026-07-12 — [P1-8B] 樹脂190 / 探索派遣5完了ローカル通知
+
+- 状態: **実装完了・Android実機確認保留**
+- 範囲: 樹脂190（予約+即時）/ 探索派遣5完了 / 設定・権限・チャネル / タップ→Home / Fresh DailyNote reconcile / 解除・切替 cancel-reset
+- 非範囲: 23時デイリー、WorkManager、background isolate、flutter_timezone、Exact Alarm、FGS、P1-8A 変更
+- 依存: `flutter_local_notifications 19.5.0` + `timezone 0.10.1` のみ。schedule は `TZDateTime.from(notifyAt.toUtc(), UTC)` + `AndroidScheduleMode.inexactAllowWhileIdle`
+- Android: desugaring + multiDex + desugar_jdk_libs 2.1.4。Java17/AGP 据え置き。Manifest に POST_NOTIFICATIONS / BOOT_COMPLETED / VIBRATE + ScheduledNotificationReceiver/BootReceiver。Exact Alarm 権限なし
+- 初期化: `NotificationBootstrap.ensureInitialized` single-flight。`main` で unawaited（権限要求なし・runApp 非ブロック）。Scheduler 各操作は ensureInitialized await
+- Hook: `DailyNoteNotifier._fetchAndSave` のみ。同一 `fetchedAt` で cache 保存→Coordinator。cache 表示だけでは reconcile しない。API失敗は既存予約維持、成功だが invalid はカテゴリ cancel
+- Coordinator: serial queue + sequence + account/settings generation。plugin 成功後のみメタ保存
+- 設定: 既定 OFF。ON 時のみ権限要求。`effectiveEnabled = pref && OS`。OS 拒否でも希望設定は維持。端末設定導線（MethodChannel）
+- 起動時 cache 再登録なし（plugin Boot receiver に委ねる）
+- 変更: application/hoyolab_reminders/*、providers、settings/hoyolab settings、main、daily_note presence、disk cache fetchedAt、Android Gradle/Manifest/MainActivity、関連テスト、本メモ
+- 検証: P1-8B 関連 + 保護3 + 全 test 308 成功、対象 analyze 問題なし、全体 analyze は既存 info/warning のみ（error なし）、debug APK 成功。Exact Alarm / WorkManager / flutter_timezone なし。domain 内容差分なし
+- **実機未確認:** 権限ダイアログ、Doze/OEM 遅延、再起動後の予約復元、樹脂/派遣フロー、解除・切替、terminated タップ→Home、通知後の P1-8A Back
+- ロールバック: P1-8B 追加ファイル削除 + 上記変更ファイル差し戻し（pubspec / Android 設定含む）
+
 ## 2026-07-12 — [P1-8A] Android システム Back（Home で終了しない）
 
 - 状態: **実装完了・Android実機確認保留**

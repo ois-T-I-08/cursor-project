@@ -47,12 +47,18 @@ class HoyolabHomeDiskCache {
   Future<HoyolabCachedEntry<DailyNote>?> readDailyNote(String uid) =>
       _read(
         key: dailyNoteKey(uid),
-        parse: DailyNote.fromJson,
+        parse: (json) => DailyNote.fromJsonSource(json, fromApi: false),
       );
 
-  Future<void> saveDailyNote(String uid, DailyNote note) => _write(
+  Future<void> saveDailyNote(
+    String uid,
+    DailyNote note, {
+    DateTime? fetchedAt,
+  }) =>
+      _write(
         key: dailyNoteKey(uid),
         payload: note.toJson(),
+        fetchedAt: fetchedAt,
       );
 
   Future<HoyolabCachedEntry<AdventureStatus>?> readAdventure(String uid) =>
@@ -99,9 +105,10 @@ class HoyolabHomeDiskCache {
   Future<void> _write({
     required String key,
     required Map<String, dynamic> payload,
+    DateTime? fetchedAt,
   }) async {
     final encoded = jsonEncode({
-      'fetched_at': DateTime.now().toIso8601String(),
+      'fetched_at': (fetchedAt ?? DateTime.now()).toIso8601String(),
       'payload': payload,
     });
     await _store.setSetting(key, encoded);

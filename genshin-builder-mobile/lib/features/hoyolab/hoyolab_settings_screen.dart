@@ -9,6 +9,7 @@ import '../../providers/hoyolab_game_refresh.dart';
 import '../../providers/hoyolab_home_providers.dart';
 import '../../providers/hoyolab_game_providers.dart';
 import '../../providers/hoyolab_providers.dart';
+import '../../providers/hoyolab_reminder_providers.dart';
 import 'hoyolab_login_screen.dart';
 import 'widgets/hoyolab_disclaimer_banner.dart';
 
@@ -90,6 +91,13 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
       }
       final repo = await ref.read(hoyolabRepositoryProvider.future);
       await repo.disconnect();
+      try {
+        final coordinator =
+            await ref.read(notificationScheduleCoordinatorProvider.future);
+        await coordinator.cancelAllAndResetAccount();
+      } catch (_) {
+        // Cookie 削除は成功済み。通知側失敗はログのみ。
+      }
       await _refreshProviders();
       setState(() => _message = '連携を解除しました');
     } finally {
@@ -128,6 +136,13 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
     try {
       final repo = await ref.read(hoyolabRepositoryProvider.future);
       await repo.selectRole(selected);
+      try {
+        final coordinator =
+            await ref.read(notificationScheduleCoordinatorProvider.future);
+        await coordinator.cancelAllAndResetAccount();
+      } catch (_) {
+        // ロール切替は成功済み。通知側失敗はログのみ。
+      }
       await _refreshProviders();
       setState(() => _message = '${selected.nickname} を選択しました');
     } finally {
