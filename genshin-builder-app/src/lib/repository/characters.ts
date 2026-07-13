@@ -65,13 +65,19 @@ export async function getAllCharacters(): Promise<Character[]> {
   return DUMMY_CHARACTERS;
 }
 
-/** IDからキャラクターを1体取得する（見つからなければ null） */
+/** IDからキャラクターを1体取得する（見つからなければ null）。
+ *  DB接続エラーは再スローし、呼び出し側でエラーバウンダリに任せる。
+ */
 export async function getCharacter(id: string): Promise<Character | null> {
   try {
     const row = await prisma.character.findUnique({ where: { id } });
     if (row) return toCharacter(row);
   } catch (error) {
+    if (error instanceof Error && error.message.includes("Can't reach database")) {
+      throw error;
+    }
     console.error("キャラクターのDB取得に失敗しました:", error);
+    throw error;
   }
   return DUMMY_CHARACTERS.find((c) => c.id === id) ?? null;
 }

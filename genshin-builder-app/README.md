@@ -14,10 +14,30 @@
 
 ```bash
 npm install
-cp .env.example .env      # DATABASE_URL を設定（開発はSQLite）
-npx prisma migrate dev    # DB作成・マイグレーション
+cp .env.example .env.local
+npx prisma generate
+npx prisma migrate dev    # DB作成・マイグレーション（初回のみ）
 npm run dev
 ```
+
+### Windows PowerShell の場合
+
+```powershell
+npm install
+Copy-Item .env.example .env.local
+npx prisma generate
+npx prisma migrate dev
+npm run dev
+```
+
+### 環境変数
+
+| 変数 | 必須 | 説明 |
+|------|------|------|
+| `DATABASE_URL` | はい | Prisma の接続先（開発: `file:./dev.db`） |
+| `SYNC_API_SECRET` | 本番のみ | `/api/sync` の Bearer 認証トークン。設定画面の手動同期は Server Action 経由のため不要 |
+
+`DATABASE_URL` が未設定の状態で起動すると、Prisma Client の初期化時にエラーが表示されます。
 
 http://localhost:3000 を開き、「設定」→「ゲームデータを同期」でマスターデータを取り込んでください。
 
