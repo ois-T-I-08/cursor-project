@@ -54,9 +54,13 @@ String normalizeCharacterRegionForDisplay(
 
   // ID 優先（同期後も安定）
   const idOverrides = <String, String>{
-    // スカーク
+    // スカーク → ナタ
     '10000114': 'ナタ',
-    // サンドローネ（Amber 更新で ID が確定したら追記）
+    // タルタリヤ → 璃月
+    '10000033': '璃月',
+    // アルレッキーノ → フォンテーヌ
+    '10000096': 'フォンテーヌ',
+    // サンドローネ（ID 確定済み）
   };
   final byId = idOverrides[id];
   if (byId != null) return byId;
@@ -68,6 +72,21 @@ String normalizeCharacterRegionForDisplay(
   if (name == 'サンドローネ' ||
       name.toLowerCase() == 'sandrone' ||
       name.contains('サンドローネ')) {
+    return 'ノド・クライ';
+  }
+  // 未登録 ID のニコ（ニコ・リヤン）→ ノド・クライ
+  if (name.contains('ニコ') ||
+      name.toLowerCase() == 'nico' ||
+      name.toLowerCase() == 'nico·liyue' ||
+      name.toLowerCase() == 'nico liyue') {
+    return 'ノド・クライ';
+  }
+  // 未登録 ID の兹白（しはく）→ ノド・クライ
+  if (name.contains('兹白') ||
+      name.contains('茲白') ||
+      name == 'しはく' ||
+      name.toLowerCase() == 'shihaku' ||
+      name.toLowerCase() == 'zihai') {
     return 'ノド・クライ';
   }
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:genshin_builder_mobile/data/models/master_models.dart';
+import 'package:genshin_builder_mobile/domain/models/master_models.dart';
 import 'package:genshin_builder_mobile/domain/character_list_sort.dart';
 
 MasterCharacter _char({
@@ -253,13 +253,82 @@ void main() {
             .name,
         'サンドローネ',
       );
+      // タルタリヤは ID オーバーライドで璃月に移動
       expect(
         sections
-            .firstWhere((s) => s.region == 'その他')
+            .firstWhere((s) => s.region == '璃月')
             .items
             .map((e) => e.character.name),
         contains('タルタリヤ'),
       );
+    });
+
+    test('traveler pinned before mondstadt section, all element variants shown', () {
+      final characters = [
+        _char(
+          id: '10000005-anemo',
+          name: '旅人（風）',
+          region: 'モンド',
+          rarity: 5,
+        ),
+        _char(
+          id: '10000005-geo',
+          name: '旅人（岩）',
+          region: 'モンド',
+          rarity: 5,
+        ),
+        _char(id: '2', name: 'ジン', region: 'モンド', rarity: 5),
+        _char(id: '3', name: '香菱', region: '璃月', rarity: 4),
+      ];
+
+      final sections = groupCharacterEntriesByRegion(
+        buildCharacterListEntries(
+          characters: characters,
+          ownedMap: const {},
+        ),
+      );
+
+      // 先頭セクションが旅人
+      expect(sections.first.region, '旅人');
+      // 旅人セクションは元素ごとに全件表示
+      expect(sections.first.items.length, 2);
+      expect(
+        sections.first.items.map((e) => e.character.name),
+        containsAll(['旅人（風）', '旅人（岩）']),
+      );
+      // 2番目がモンド（旅人を含まない）
+      expect(sections[1].region, 'モンド');
+      expect(
+        sections[1].items.map((e) => e.character.name),
+        contains('ジン'),
+      );
+      expect(
+        sections[1].items.map((e) => e.character.name),
+        isNot(contains('旅人')),
+      );
+    });
+
+    test('traveler from other region still pinned before mondstadt', () {
+      final characters = [
+        _char(
+          id: '10000005-anemo',
+          name: '旅人（風）',
+          region: 'メイン大陸',
+          rarity: 5,
+        ),
+        _char(id: '2', name: 'ジン', region: 'モンド', rarity: 5),
+      ];
+
+      final sections = groupCharacterEntriesByRegion(
+        buildCharacterListEntries(
+          characters: characters,
+          ownedMap: const {},
+        ),
+      );
+
+      expect(sections.first.region, '旅人');
+      expect(sections.first.items.single.character.name, '旅人（風）');
+      expect(sections[1].region, 'モンド');
     });
   });
 }

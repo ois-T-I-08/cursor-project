@@ -19,6 +19,44 @@
 - **実機未確認:** 権限ダイアログ、Doze/OEM 遅延、再起動後の予約復元、樹脂/派遣フロー、解除・切替、terminated タップ→Home、通知後の P1-8A Back
 - ロールバック: P1-8B 追加ファイル削除 + 上記変更ファイル差し戻し（pubspec / Android 設定含む）
 
+## 2026-07-13 — 元素色ボーダー（キャラ一覧アイコン）
+
+- 状態: **実装完了・analyze / 全テスト通過**
+- 範囲: キャラクター一覧の各アイコンに元素色（2.5px）の円角ボーダーを追加
+- 変更:
+  - **新規** `lib/application/element_colors.dart`: `ElementColorX` on `String` 拡張 → `'pyro'.elementColor` で `Color` 取得。未知の値はグレー（`0xFF9E9E9E`）。内部で `elementColorMap` を参照
+  - **変更** `lib/domain/game_display.dart`: 変更なし（既存 `elementColorMap` をそのまま利用）
+  - **変更** `lib/features/shared/game_icon_image.dart`: オプションパラメータ `borderColor` / `borderWidth` を追加。設定時は `DecoratedBox(position: foreground)` で枠を上書き描画。形状（`borderRadius`）は元のアイコンと一致。`borderWidth` のデフォルトは 2.5
+  - **変更** `lib/features/characters/character_list_screen.dart`: `_CharacterGridTile` で `GameIconImage` に `borderColor: c.element.elementColor` を追加
+- 元素色: 既存 `elementColorMap`（`game_display.dart`）の色をそのまま使用（プロジェクト内で唯一の元素色定義）。色を追加していない
+- デザイン:
+  - `DecoratedBox(position: DecorationPosition.foreground)` でボーダーを前景として描画。画像が読み込めない場合（プレースホルダー・エラー時）も枠は表示される
+  - 選択中・お気に入り（`isOwned`）のチェックバッジとは `Stack` 内で `Positioned` 指定のため重ならない。元素色ボーダーは常に表示
+  - `borderWidth: 2.5`（2〜3px相当）。グローは未実装（必要なら `boxShadow` で追加可能だが現時点では不要と判断）
+  - アイコンサイズ・縦横比は不変
+- 保守性: 元素色の定義は `game_display.dart` の一箇所のみ。`GameIconImage` の `borderColor` は本実装以外でも再利用可能。`ElementColorX` はキャラ詳細画面などでも `'pyro'.elementColor` で利用可能
+- 検証: `flutter analyze` 4 変更ファイル 0 issue・全体 analyze は既存 info/warning のみ・全 test 通過
+
+## 2026-07-13 — 地域セクションオーバーライド（キャラ一覧）
+
+- 状態: **実装完了・analyze / 全テスト通過**
+- 範囲: キャラクター一覧の地域別セクションにキャラ固有のオーバーライドを追加
+- 変更:
+  - **変更** `lib/domain/game_display.dart`: `normalizeCharacterRegionForDisplay` の `idOverrides` に以下を追加
+    - `'10000096'`（アルレッキーノ）→ `'フォンテーヌ'`
+    - `'10000033'`（タルタリヤ）→ `'璃月'`
+    - 未登録 ID 向け名前ベース：ニコ → ノド・クライ、兹白/しはく → ノド・クライ
+  - **変更** `lib/domain/character_list_sort.dart`: `groupCharacterEntriesByRegion` で以下を実装
+    - 旅人（base ID `10000005` / `10000007`）を「旅人」セクションとして先頭（モンドの直前）にピン留め
+    - 旅人は元素ごとに全バリアントを表示（重複除去なし）
+- 使用したキャラクターID:
+  - `10000096`（アルレッキーノ）
+  - `10000033`（タルタリヤ）
+  - `10000005-*` / `10000007-*`（旅人・ベースID）
+- 旅人の重複防止: `groupCharacterEntriesByRegion` 内で、`id.split('-').first` でベース ID を取得し `10000005` / `10000007` に一致するエントリを「旅人」セクションへ集約。元素ごとに全バリアントを表示（重複除去なし）
+- 非破壊: 既存の `normalizeCharacterRegionForDisplay` の旅人→その他処理は維持。ピン留めはグループ化処理で上書き
+- 検証: `flutter analyze` 変更ファイル 0 issue・全体 analyze は既存 info/warning のみ・全 test 通過
+
 ## 2026-07-12 — [P1-8A] Android システム Back（Home で終了しない）
 
 - 状態: **実装完了・Android実機確認保留**

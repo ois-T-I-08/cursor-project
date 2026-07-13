@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../application/element_colors.dart';
 import '../../core/errors/user_facing_error.dart';
 import '../../domain/character_list_sort.dart';
 import '../../domain/game_display.dart';
@@ -124,7 +125,7 @@ class _CharacterGridTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.go('/characters/${c.id}'),
+        onTap: () => context.push('/characters/${c.id}'),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
           child: Column(
@@ -142,6 +143,7 @@ class _CharacterGridTile extends StatelessWidget {
                             iconUrl: c.iconUrl,
                             size: size,
                             borderRadius: 10,
+                            borderColor: c.element.elementColor,
                             fallback: Text(
                               c.name.isNotEmpty ? c.name[0] : '?',
                               style: theme.textTheme.titleMedium,

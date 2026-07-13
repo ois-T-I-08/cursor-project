@@ -177,7 +177,14 @@ List<CharacterRegionSection> groupCharacterEntriesByRegion(
   List<String> regionOrder = gameRegionDisplayOrder,
 }) {
   final byRegion = <String, List<CharacterListEntry>>{};
+  final travelerEntries = <CharacterListEntry>[];
   for (final e in entries) {
+    // 旅人（ID 10000005-* / 10000007-*）は専用セクションへ
+    final baseId = e.character.id.split('-').first;
+    if (baseId == '10000005' || baseId == '10000007') {
+      travelerEntries.add(e);
+      continue;
+    }
     final region = normalizeCharacterRegionForDisplay(
       e.character.region,
       characterId: e.character.id,
@@ -194,6 +201,13 @@ List<CharacterRegionSection> groupCharacterEntriesByRegion(
   }
 
   final sections = <CharacterRegionSection>[];
+  // 旅人セクションを先頭（モンドの直前）に追加
+  if (travelerEntries.isNotEmpty) {
+    sections.add(CharacterRegionSection(
+      region: '旅人',
+      items: travelerEntries,
+    ));
+  }
   final seen = <String>{};
   for (final region in regionOrder) {
     final items = byRegion[region];

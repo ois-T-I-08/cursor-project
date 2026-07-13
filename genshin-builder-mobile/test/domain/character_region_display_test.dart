@@ -24,9 +24,23 @@ void main() {
       );
     });
 
+    test('tartaglia goes to liyue by id override', () {
+      expect(
+        normalizeCharacterRegionForDisplay(
+          'ファデュイ',
+          characterId: '10000033',
+          characterName: 'タルタリヤ',
+        ),
+        '璃月',
+      );
+    });
+
     test('other fatui go to other', () {
       expect(
-        normalizeCharacterRegionForDisplay('ファデュイ', characterName: 'タルタリヤ'),
+        normalizeCharacterRegionForDisplay(
+          'ファデュイ',
+          characterName: '隊長',
+        ),
         'その他',
       );
     });
@@ -35,6 +49,39 @@ void main() {
       expect(
         normalizeCharacterRegionForDisplay('旅人', characterId: '10000005-anemo'),
         'その他',
+      );
+    });
+
+    test('arlecchino goes to fontaine by id override', () {
+      expect(
+        normalizeCharacterRegionForDisplay(
+          'ファデュイ',
+          characterId: '10000096',
+          characterName: 'Arlecchino',
+        ),
+        'フォンテーヌ',
+      );
+    });
+
+    test('nico goes to nod-krai by name', () {
+      expect(
+        normalizeCharacterRegionForDisplay('', characterName: 'ニコ'),
+        'ノド・クライ',
+      );
+      expect(
+        normalizeCharacterRegionForDisplay('', characterName: 'Nico'),
+        'ノド・クライ',
+      );
+    });
+
+    test('shihaku goes to nod-krai by name', () {
+      expect(
+        normalizeCharacterRegionForDisplay('', characterName: '兹白'),
+        'ノド・クライ',
+      );
+      expect(
+        normalizeCharacterRegionForDisplay('', characterName: 'しはく'),
+        'ノド・クライ',
       );
     });
 
