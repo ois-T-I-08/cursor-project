@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'domain/team/main_tab.dart';
 import 'features/artifacts/artifact_sets_screen.dart';
 import 'features/bootstrap/initial_sync_screen.dart';
 import 'features/bookmarks/bookmarks_screen.dart';
@@ -8,61 +9,102 @@ import 'features/characters/character_detail_screen.dart';
 import 'features/characters/character_list_screen.dart';
 import 'features/daily_materials/daily_materials_screen.dart';
 import 'features/gacha/gacha_screen.dart';
-import 'features/hoyolab/hoyolab_settings_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/hoyolab/hoyolab_settings_screen.dart';
 import 'features/settings/settings_screen.dart';
+import 'features/teams/team_builder_screen.dart';
 import 'navigation/android_system_back.dart';
 
+// ---------------------------------------------------------------------------
+// Navigator Keys (all distinct instances)
+// ---------------------------------------------------------------------------
+
+/// Root Navigator for /bootstrap etc.
+final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+
+/// Home branch Navigator.
+final _homeNavKey = GlobalKey<NavigatorState>(debugLabel: 'homeBranch');
+
+/// Characters branch Navigator.
+final _charactersNavKey = GlobalKey<NavigatorState>(debugLabel: 'charactersBranch');
+
+/// Teams branch Navigator.
+final _teamsNavKey = GlobalKey<NavigatorState>(debugLabel: 'teamsBranch');
+
+/// Daily branch Navigator.
+final _dailyNavKey = GlobalKey<NavigatorState>(debugLabel: 'dailyBranch');
+
+/// Materials branch Navigator.
+final _materialsNavKey = GlobalKey<NavigatorState>(debugLabel: 'materialsBranch');
+
+// ---------------------------------------------------------------------------
+// GoRouter
+// ---------------------------------------------------------------------------
+
 final appRouter = GoRouter(
+  navigatorKey: _rootNavigatorKey,
   initialLocation: '/bootstrap',
   routes: [
     GoRoute(
       path: '/bootstrap',
       builder: (context, state) => const InitialSyncScreen(),
     ),
-    ShellRoute(
-      builder: (context, state, child) => AppShell(child: child),
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const HomeScreen(),
-        ),
-        GoRoute(
-          path: '/characters',
-          builder: (context, state) => const CharacterListScreen(),
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) =>
+          AppShell(navigationShell: navigationShell),
+      branches: [
+        // 0: Home
+        StatefulShellBranch(
+          navigatorKey: _homeNavKey,
           routes: [
+            GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+            GoRoute(path: '/artifacts', builder: (context, state) => const ArtifactSetsScreen()),
+            GoRoute(path: '/gacha', builder: (context, state) => const GachaScreen()),
             GoRoute(
-              path: ':id',
-              builder: (context, state) => CharacterDetailScreen(
-                characterId: state.pathParameters['id']!,
-              ),
+              path: '/settings',
+              builder: (context, state) => const SettingsScreen(),
+              routes: [
+                GoRoute(path: 'hoyolab', builder: (context, state) => const HoyolabSettingsScreen()),
+              ],
             ),
           ],
         ),
-        GoRoute(
-          path: '/daily',
-          builder: (context, state) => const DailyMaterialsScreen(),
-        ),
-        GoRoute(
-          path: '/artifacts',
-          builder: (context, state) => const ArtifactSetsScreen(),
-        ),
-        GoRoute(
-          path: '/bookmarks',
-          builder: (context, state) => const BookmarksScreen(),
-        ),
-        GoRoute(
-          path: '/gacha',
-          builder: (context, state) => const GachaScreen(),
-        ),
-        GoRoute(
-          path: '/settings',
-          builder: (context, state) => const SettingsScreen(),
+        // 1: Characters
+        StatefulShellBranch(
+          navigatorKey: _charactersNavKey,
           routes: [
             GoRoute(
-              path: 'hoyolab',
-              builder: (context, state) => const HoyolabSettingsScreen(),
+              path: '/characters',
+              builder: (context, state) => const CharacterListScreen(),
+              routes: [
+                GoRoute(
+                  path: ':id',
+                  builder: (context, state) =>
+                      CharacterDetailScreen(characterId: state.pathParameters['id']!),
+                ),
+              ],
             ),
+          ],
+        ),
+        // 2: Teams
+        StatefulShellBranch(
+          navigatorKey: _teamsNavKey,
+          routes: [
+            GoRoute(path: '/teams', builder: (context, state) => const TeamBuilderScreen()),
+          ],
+        ),
+        // 3: Daily
+        StatefulShellBranch(
+          navigatorKey: _dailyNavKey,
+          routes: [
+            GoRoute(path: '/daily', builder: (context, state) => const DailyMaterialsScreen()),
+          ],
+        ),
+        // 4: Bookmarks
+        StatefulShellBranch(
+          navigatorKey: _materialsNavKey,
+          routes: [
+            GoRoute(path: '/bookmarks', builder: (context, state) => const BookmarksScreen()),
           ],
         ),
       ],
@@ -70,75 +112,175 @@ final appRouter = GoRouter(
   ],
 );
 
+/// Branch NavigatorKey array (index order).
+final _branchNavKeys = [
+  _homeNavKey,
+  _charactersNavKey,
+  _teamsNavKey,
+  _dailyNavKey,
+  _materialsNavKey,
+];
+
+// ---------------------------------------------------------------------------
+// DrawerDestination
+// ---------------------------------------------------------------------------
+
+class _DrawerDestination {
+  const _DrawerDestination._({
+    required this.label,
+    required this.icon,
+    this.branchIndex,
+    this.path,
+  });
+
+  /// Main tab switch (uses goBranch).
+  const _DrawerDestination.branch({
+    required String label,
+    required IconData icon,
+    required int branchIndex,
+  }) : this._(
+          label: label,
+          icon: icon,
+          branchIndex: branchIndex,
+          path: null,
+        );
+
+  /// Same-branch route navigation (uses router.go).
+  const _DrawerDestination.route({
+    required String label,
+    required IconData icon,
+    required String path,
+    required int branchIndex,
+  }) : this._(
+          label: label,
+          icon: icon,
+          branchIndex: branchIndex,
+          path: path,
+        );
+
+  final String label;
+  final IconData icon;
+  final int? branchIndex;
+  final String? path;
+
+  /// Whether this is a main tab switch (no same-branch route navigation needed).
+  bool get isMainTabSwitch => path == null;
+}
+
+// ---------------------------------------------------------------------------
+// NavItem (bottom nav)
+// ---------------------------------------------------------------------------
+
 class _NavItem {
   const _NavItem({
-    required this.path,
+    required this.tab,
     required this.label,
     required this.icon,
     required this.selectedIcon,
   });
 
-  final String path;
+  final MainTab tab;
   final String label;
   final IconData icon;
   final IconData selectedIcon;
+
+  int get branchIndex => tab.index;
 }
 
-const _navItems = <_NavItem>[
-  _NavItem(
-    path: '/',
-    label: 'ホーム',
+final _bottomNavItems = <_NavItem>[
+  const _NavItem(
+    tab: MainTab.home,
+    label: '\u30db\u30fc\u30e0',
     icon: Icons.home_outlined,
     selectedIcon: Icons.home,
   ),
-  _NavItem(
-    path: '/characters',
-    label: 'キャラ',
+  const _NavItem(
+    tab: MainTab.characters,
+    label: '\u30ad\u30e3\u30e9',
     icon: Icons.people_outline,
     selectedIcon: Icons.people,
   ),
-  _NavItem(
-    path: '/daily',
-    label: '曜日',
+  const _NavItem(
+    tab: MainTab.teams,
+    label: '\u7de8\u6210',
+    icon: Icons.groups_outlined,
+    selectedIcon: Icons.groups,
+  ),
+  const _NavItem(
+    tab: MainTab.daily,
+    label: '\u66dc\u65e5',
     icon: Icons.calendar_today_outlined,
     selectedIcon: Icons.calendar_today,
   ),
-  _NavItem(
-    path: '/artifacts',
-    label: '聖遺物',
-    icon: Icons.diamond_outlined,
-    selectedIcon: Icons.diamond,
-  ),
-  _NavItem(
-    path: '/bookmarks',
-    label: '素材',
-    icon: Icons.bookmark_outline,
-    selectedIcon: Icons.bookmark,
-  ),
-  _NavItem(
-    path: '/gacha',
-    label: 'ガチャ',
-    icon: Icons.casino_outlined,
-    selectedIcon: Icons.casino,
-  ),
-  _NavItem(
-    path: '/settings',
-    label: '設定',
-    icon: Icons.settings_outlined,
-    selectedIcon: Icons.settings,
+  const _NavItem(
+    tab: MainTab.materials,
+    label: '\u7d20\u6750',
+    icon: Icons.inventory_2_outlined,
+    selectedIcon: Icons.inventory_2,
   ),
 ];
 
-/// Shell の Scaffold にアクセスして endDrawer を開く。
+final _drawerDestinations = <_DrawerDestination>[
+  _DrawerDestination.branch(label: '\u30db\u30fc\u30e0', icon: Icons.home_outlined, branchIndex: MainTab.home.index),
+  _DrawerDestination.branch(label: '\u30ad\u30e3\u30e9', icon: Icons.people_outlined, branchIndex: MainTab.characters.index),
+  _DrawerDestination.branch(label: '\u7de8\u6210', icon: Icons.groups_outlined, branchIndex: MainTab.teams.index),
+  _DrawerDestination.branch(label: '\u66dc\u65e5', icon: Icons.calendar_today_outlined, branchIndex: MainTab.daily.index),
+  _DrawerDestination.route(label: '\u8056\u907a\u7269', icon: Icons.diamond_outlined, path: '/artifacts', branchIndex: MainTab.home.index),
+  _DrawerDestination.branch(label: '\u7d20\u6750', icon: Icons.bookmark_outline, branchIndex: MainTab.materials.index),
+  _DrawerDestination.route(label: '\u30ac\u30c1\u30e3', icon: Icons.casino_outlined, path: '/gacha', branchIndex: MainTab.home.index),
+  _DrawerDestination.route(label: '\u8a2d\u5b9a', icon: Icons.settings_outlined, path: '/settings', branchIndex: MainTab.home.index),
+];
+
+/// Compute the selected index in the drawer (first matching destination).
+int _drawerSelectedIndex(String currentPath) {
+  for (var i = 0; i < _drawerDestinations.length; i++) {
+    final d = _drawerDestinations[i];
+    if (d.path != null && currentPath.startsWith(d.path!)) return i;
+    if (d.isMainTabSwitch) {
+      if ((d.branchIndex == MainTab.home.index && currentPath == '/') ||
+          (d.branchIndex == MainTab.characters.index && currentPath.startsWith('/characters')) ||
+          (d.branchIndex == MainTab.teams.index && currentPath.startsWith('/teams')) ||
+          (d.branchIndex == MainTab.daily.index && currentPath.startsWith('/daily')) ||
+          (d.branchIndex == MainTab.materials.index && currentPath.startsWith('/bookmarks'))) {
+        return i;
+      }
+    }
+  }
+  return 0;
+}
+
+// ---------------------------------------------------------------------------
+// AppShellScope
+// ---------------------------------------------------------------------------
+
+/// Exposes shell-level operations to descendant widgets.
 class AppShellScope extends InheritedWidget {
   const AppShellScope({
     super.key,
+    required this.switchMainTab,
+    required this.currentTabIndex,
     required this.scaffoldKey,
     required super.child,
   });
 
+  /// Switch to the main tab at [index] (use [MainTab.index]).
+  /// Same-tab re-taps are a no-op.
+  final void Function(int index) switchMainTab;
+
+  /// Currently selected tab index.
+  final int currentTabIndex;
+
+  /// Scaffold key for opening the end drawer.
   final GlobalKey<ScaffoldState> scaffoldKey;
 
+  /// Convenience accessor. Throws if scope is missing.
+  static AppShellScope of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<AppShellScope>();
+    assert(scope != null, 'AppShellScope.of() called with no AppShellScope in context');
+    return scope!;
+  }
+
+  /// Open the end drawer (backward-compatible static method).
   static AppShellScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<AppShellScope>();
 
@@ -147,14 +289,22 @@ class AppShellScope extends InheritedWidget {
   }
 
   @override
-  bool updateShouldNotify(AppShellScope oldWidget) =>
-      scaffoldKey != oldWidget.scaffoldKey;
+  bool updateShouldNotify(AppShellScope oldWidget) {
+    return currentTabIndex != oldWidget.currentTabIndex ||
+        switchMainTab != oldWidget.switchMainTab ||
+        scaffoldKey != oldWidget.scaffoldKey;
+  }
 }
 
-class AppShell extends StatefulWidget {
-  const AppShell({super.key, required this.child});
+// ---------------------------------------------------------------------------
+// AppShell
+// ---------------------------------------------------------------------------
 
-  final Widget child;
+class AppShell extends StatefulWidget {
+  const AppShell({super.key, required this.navigationShell});
+
+  /// StatefulNavigationShell provided by StatefulShellRoute.indexedStack.
+  final StatefulNavigationShell navigationShell;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -162,149 +312,164 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
-  bool _endDrawerOpen = false;
-  bool _handlingSystemBack = false;
+  bool _isEndDrawerOpen = false;
+  VoidCallback? _pendingDrawerNavigation;
 
-  int _selectedIndex(String path) {
-    if (path.startsWith('/characters')) return 1;
-    if (path.startsWith('/daily')) return 2;
-    if (path.startsWith('/artifacts')) return 3;
-    if (path.startsWith('/bookmarks')) return 4;
-    if (path.startsWith('/gacha')) return 5;
-    if (path.startsWith('/settings')) return 6;
-    return 0;
+  /// Check whether the current branch navigator can pop.
+  bool get _branchCanPop {
+    final key = _branchNavKeys[widget.navigationShell.currentIndex];
+    return key.currentState?.canPop() ?? false;
   }
 
-  void _go(BuildContext context, int index) {
-    Navigator.of(context).maybePop();
-    context.go(_navItems[index].path);
-  }
+  /// Common footer tab switching logic.
+  /// Home always resets to the initial route `/`.
+  /// Other tabs preserve their existing navigation history.
+  void _switchToTab(int index) {
+    // Cancel any pending drawer-triggered navigation.
+    _pendingDrawerNavigation = null;
 
-  bool _isEndDrawerOpen() =>
-      _endDrawerOpen ||
-      (_scaffoldKey.currentState?.isEndDrawerOpen ?? false);
-
-  Future<bool> _onAndroidBackButton() async {
-    if (_handlingSystemBack || !mounted) return true;
-    if (!isAndroidSystemBackHandlingEnabled) return false;
-
-    if (_isEndDrawerOpen()) {
+    // Close the drawer immediately if it is open.
+    if (_isEndDrawerOpen) {
       _scaffoldKey.currentState?.closeEndDrawer();
-      return true;
     }
 
-    final path = GoRouterState.of(context).uri.path;
-
-    // トップレベル上の Dialog / Sheet は Navigator に任せる
-    if (!isShellNestedLocation(path) &&
-        Navigator.of(context, rootNavigator: true).canPop()) {
-      return false;
-    }
-
-    // ネスト詳細は GoRouter / Navigator の通常 pop
-    if (isShellNestedLocation(path)) {
-      return false;
-    }
-
-    if (isShellHomePath(path)) {
-      return true;
-    }
-
-    _handlingSystemBack = true;
-    try {
-      context.go('/');
-    } finally {
-      _handlingSystemBack = false;
-    }
-    return true;
-  }
-
-  void _onSystemBackInvoked(bool didPop, Object? result) {
-    // Predictive Back / PopScope 経路。didPop 時は二重処理しない。
-    if (didPop || _handlingSystemBack || !mounted) return;
-    if (!isAndroidSystemBackHandlingEnabled) return;
-
-    final drawerOpen = _isEndDrawerOpen();
-    if (androidSystemBackShouldCloseDrawer(
-      didPop: didPop,
-      isEndDrawerOpen: drawerOpen,
-    )) {
-      _scaffoldKey.currentState?.closeEndDrawer();
+    if (index == MainTab.home.index) {
+      // Home tab always goes to root, regardless of current branch state.
+      widget.navigationShell.goBranch(MainTab.home.index, initialLocation: true);
       return;
     }
 
-    final path = GoRouterState.of(context).uri.path;
-    if (!androidSystemBackShouldGoHome(
-      locationPath: path,
-      isEndDrawerOpen: drawerOpen,
-    )) {
-      return;
-    }
+    // Same-tab retap is a no-op (preserves detail screens, scroll, etc.).
+    if (index == widget.navigationShell.currentIndex) return;
 
-    _handlingSystemBack = true;
-    try {
-      context.go('/');
-    } finally {
-      _handlingSystemBack = false;
+    widget.navigationShell.goBranch(index);
+  }
+
+  /// Tap handler for bottom navigation bar.
+  void _onBottomNavTapped(int index) {
+    _switchToTab(index);
+  }
+
+  /// Schedule a navigation action to execute after the drawer closes.
+  void _afterDrawerCloses(VoidCallback action) {
+    _pendingDrawerNavigation = action;
+    _scaffoldKey.currentState?.closeEndDrawer();
+  }
+
+  /// Tap handler for drawer destinations.
+  void _onDrawerDestinationSelected(int index) {
+    final destination = _drawerDestinations[index];
+    final shell = widget.navigationShell;
+
+    if (destination.isMainTabSwitch) {
+      if (destination.branchIndex == MainTab.home.index) {
+        // Home drawer item: always go to root.
+        shell.goBranch(MainTab.home.index, initialLocation: true);
+      } else if (destination.branchIndex != shell.currentIndex) {
+        // Non-Home branches: preserve history.
+        shell.goBranch(destination.branchIndex!);
+      }
+      _scaffoldKey.currentState?.closeEndDrawer();
+    } else {
+      // Same-branch direct navigation: switch branch first, then navigate
+      // to the specific route after drawer is confirmed closed.
+      if (destination.branchIndex != shell.currentIndex) {
+        shell.goBranch(destination.branchIndex!);
+      }
+      _afterDrawerCloses(() {
+        if (mounted) {
+          GoRouter.of(context).go(destination.path!);
+        }
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final path = GoRouterState.of(context).uri.path;
-    final selected = _selectedIndex(path);
+    final shell = widget.navigationShell;
+    final currentPath = GoRouterState.of(context).uri.path;
     final theme = Theme.of(context);
 
-    Widget body = widget.child;
+    // Compute PopScope conditions with state-tracked drawer.
+    final canPop = !_isEndDrawerOpen && (_branchCanPop || shell.currentIndex == MainTab.home.index);
+
+    Widget body = shell;
+
     if (isAndroidSystemBackHandlingEnabled) {
-      // BackButtonListener: GoRouter より先に Drawer / Home 消費を処理できる
-      // PopScope: Predictive Back の canPop 提示用
-      body = BackButtonListener(
-        onBackButtonPressed: _onAndroidBackButton,
-        child: Builder(
-          builder: (bodyContext) {
-            final drawerOpen = Scaffold.of(bodyContext).isEndDrawerOpen ||
-                _endDrawerOpen;
-            return PopScope(
-              canPop: androidSystemBackCanPop(
-                locationPath: path,
-                isEndDrawerOpen: drawerOpen,
-              ),
-              onPopInvokedWithResult: _onSystemBackInvoked,
-              child: widget.child,
-            );
-          },
-        ),
+      body = PopScope(
+        canPop: canPop,
+        onPopInvokedWithResult: (bool didPop, Object? result) {
+          if (didPop) return;
+
+          // 1. Drawer is open - close it only (no pop, no branch switch).
+          if (_isEndDrawerOpen) {
+            _scaffoldKey.currentState?.closeEndDrawer();
+            return;
+          }
+
+          // 2. Non-home tab with no history - switch to home.
+          if (shell.currentIndex != MainTab.home.index) {
+            shell.goBranch(MainTab.home.index);
+            return;
+          }
+
+          // 3. Home tab root - delegate to system.
+        },
+        child: shell,
       );
     }
 
-    return AppShellScope(
-      scaffoldKey: _scaffoldKey,
-      child: Scaffold(
-        key: _scaffoldKey,
-        endDrawerEnableOpenDragGesture: true,
-        onEndDrawerChanged: (isOpen) {
-          if (_endDrawerOpen == isOpen) return;
-          setState(() => _endDrawerOpen = isOpen);
-        },
-        endDrawer: NavigationDrawer(
-          selectedIndex: selected,
-          onDestinationSelected: (i) => _go(context, i),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(28, 16, 16, 8),
-              child: Text('メニュー', style: theme.textTheme.titleSmall),
+    final scaffold = Scaffold(
+      key: _scaffoldKey,
+      endDrawerEnableOpenDragGesture: true,
+      onEndDrawerChanged: (isOpen) {
+        if (_isEndDrawerOpen == isOpen) return;
+        setState(() => _isEndDrawerOpen = isOpen);
+
+        if (!isOpen) {
+          final action = _pendingDrawerNavigation;
+          _pendingDrawerNavigation = null;
+          action?.call();
+        }
+      },
+      endDrawer: NavigationDrawer(
+        selectedIndex: _drawerSelectedIndex(currentPath),
+        onDestinationSelected: _onDrawerDestinationSelected,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 16, 16, 8),
+            child: Text('\u30e1\u30cb\u30e5\u30fc', style: theme.textTheme.titleSmall),
+          ),
+          for (final dest in _drawerDestinations)
+            NavigationDrawerDestination(
+              icon: Icon(dest.icon),
+              selectedIcon: Icon(dest.icon),
+              label: Text(dest.label),
             ),
-            for (final item in _navItems)
-              NavigationDrawerDestination(
+        ],
+      ),
+      body: body,
+      bottomNavigationBar: SafeArea(
+        child: NavigationBar(
+          selectedIndex: shell.currentIndex,
+          onDestinationSelected: _onBottomNavTapped,
+          destinations: [
+            for (final item in _bottomNavItems)
+              NavigationDestination(
                 icon: Icon(item.icon),
                 selectedIcon: Icon(item.selectedIcon),
-                label: Text(item.label),
+                label: item.label,
               ),
           ],
         ),
-        body: body,
       ),
+    );
+
+    return AppShellScope(
+      switchMainTab: _switchToTab,
+      currentTabIndex: shell.currentIndex,
+      scaffoldKey: _scaffoldKey,
+      child: scaffold,
     );
   }
 }

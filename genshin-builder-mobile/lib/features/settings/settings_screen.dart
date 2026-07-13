@@ -331,7 +331,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               title: const Text('HoYoLAB 連携'),
               subtitle: const Text('樹脂・デイリー・派遣の表示'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.go('/settings/hoyolab'),
+              onTap: () => context.push('/settings/hoyolab'),
             ),
           ),
           const SizedBox(height: 16),

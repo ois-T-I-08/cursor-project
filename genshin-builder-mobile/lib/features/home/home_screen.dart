@@ -10,6 +10,8 @@ import '../../providers/app_providers.dart';
 import '../../providers/background_master_repair_provider.dart';
 import '../../providers/daily_materials_providers.dart';
 import '../../providers/hoyolab_home_providers.dart';
+import '../../domain/team/main_tab.dart';
+import '../../router.dart';
 import '../../core/errors/user_facing_error.dart';
 import '../../widgets/deferred_loader.dart';
 import '../hoyolab/widgets/adventure_status_card.dart';
@@ -51,7 +53,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),
-            onPressed: () => context.go('/settings'),
+            onPressed: () => context.push('/settings'),
             tooltip: 'データ同期',
           ),
           const ShellMenuButton(),
@@ -82,19 +84,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: () => context.go('/characters'),
+                    onPressed: () =>
+                        AppShellScope.of(context).switchMainTab(MainTab.characters.index),
                     icon: const Icon(Icons.people),
                     label: const Text('キャラ一覧'),
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
-                    onPressed: () => context.go('/daily'),
+                    onPressed: () =>
+                        AppShellScope.of(context).switchMainTab(MainTab.daily.index),
                     icon: const Icon(Icons.calendar_today),
                     label: const Text('今日の曜日素材'),
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
-                    onPressed: () => context.go('/gacha'),
+                    onPressed: () => context.push('/gacha'),
                     icon: const Icon(Icons.casino_outlined),
                     label: const Text('ガチャ（PUバナー）'),
                   ),
@@ -214,7 +218,8 @@ class _BookmarkSection extends ConsumerWidget {
           ),
           if (bookmarksAsync.valueOrNull?.isNotEmpty == true)
             TextButton(
-              onPressed: () => context.go('/bookmarks'),
+              onPressed: () =>
+                  AppShellScope.of(context).switchMainTab(MainTab.materials.index),
               child: const Text('すべて見る'),
             ),
       ],
