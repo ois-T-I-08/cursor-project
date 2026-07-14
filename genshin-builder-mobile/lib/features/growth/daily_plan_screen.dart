@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../domain/planning/growth_route_request.dart';
 import '../../../providers/growth_providers.dart';
 import '../../../domain/recommendation/recommendation.dart';
 
@@ -17,7 +19,7 @@ class DailyPlanScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('\u4eca\u65e5\u3084\u308b\u3053\u3068')),
       body: planAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc')),
+        error: (e, _) => const Center(child: Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc')),
         data: (plan) {
           if (plan.items.isEmpty) {
             return Center(
@@ -28,18 +30,43 @@ class DailyPlanScreen extends ConsumerWidget {
               ),
             );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: plan.items.length,
-            itemBuilder: (ctx, i) => Card(
-              child: ListTile(
-                title: Text(plan.items[i].title),
-                subtitle: Text('\u512a\u5148\u5ea6: ${plan.items[i].priority}'),
-                trailing: plan.items[i].confidence == RecommendationConfidence.high
-                    ? const Icon(Icons.check_circle, color: Colors.green)
-                    : const Icon(Icons.info_outline),
+          return Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: plan.items.length + 1,
+                  itemBuilder: (ctx, i) {
+                    if (i == plan.items.length) {
+                      // Navigation link to growth route
+                      final goalIds = plan.items.map((item) => item.id).toList();
+                      final req = GrowthRouteRequest(
+                        goalIds: goalIds,
+                        startDate: DateTime.now(),
+                        startWeekday: DateTime.now().weekday,
+                      );
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push('/growth-route', extra: req),
+                          icon: const Icon(Icons.route),
+                          label: const Text('\u80b2\u6210\u30eb\u30fc\u30c8\u3092\u4f5c\u6210'),
+                        ),
+                      );
+                    }
+                    return Card(
+                      child: ListTile(
+                        title: Text(plan.items[i].title),
+                        subtitle: Text('\u512a\u5148\u5ea6: ${plan.items[i].priority}'),
+                        trailing: plan.items[i].confidence == RecommendationConfidence.high
+                            ? const Icon(Icons.check_circle, color: Colors.green)
+                            : const Icon(Icons.info_outline),
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
+            ],
           );
         },
       ),

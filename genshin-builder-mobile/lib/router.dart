@@ -16,6 +16,8 @@ import 'features/teams/team_builder_screen.dart';
 import 'features/growth/daily_plan_screen.dart';
 import 'features/growth/growth_timeline_screen.dart';
 import 'features/growth/account_health_screen.dart';
+import 'features/growth/growth_route_screen.dart';
+import 'features/growth/team_growth_priority_screen.dart';
 import 'navigation/android_system_back.dart';
 
 // ---------------------------------------------------------------------------
@@ -66,6 +68,8 @@ final appRouter = GoRouter(
             GoRoute(path: '/daily-plan', builder: (context, state) => const DailyPlanScreen()),
             GoRoute(path: '/growth-timeline', builder: (context, state) => const GrowthTimelineScreen()),
             GoRoute(path: '/account-health', builder: (context, state) => const AccountHealthScreen()),
+            GoRoute(path: '/growth-route', builder: (context, state) => const GrowthRouteScreen()),
+            GoRoute(path: '/team-priority', builder: (context, state) => const TeamGrowthPriorityScreen()),
             GoRoute(
               path: '/settings',
               builder: (context, state) => const SettingsScreen(),
