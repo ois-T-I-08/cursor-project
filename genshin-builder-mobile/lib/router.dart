@@ -13,6 +13,9 @@ import 'features/home/home_screen.dart';
 import 'features/hoyolab/hoyolab_settings_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/teams/team_builder_screen.dart';
+import 'features/growth/daily_plan_screen.dart';
+import 'features/growth/growth_timeline_screen.dart';
+import 'features/growth/account_health_screen.dart';
 import 'navigation/android_system_back.dart';
 
 // ---------------------------------------------------------------------------
@@ -60,6 +63,9 @@ final appRouter = GoRouter(
             GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
             GoRoute(path: '/artifacts', builder: (context, state) => const ArtifactSetsScreen()),
             GoRoute(path: '/gacha', builder: (context, state) => const GachaScreen()),
+            GoRoute(path: '/daily-plan', builder: (context, state) => const DailyPlanScreen()),
+            GoRoute(path: '/growth-timeline', builder: (context, state) => const GrowthTimelineScreen()),
+            GoRoute(path: '/account-health', builder: (context, state) => const AccountHealthScreen()),
             GoRoute(
               path: '/settings',
               builder: (context, state) => const SettingsScreen(),

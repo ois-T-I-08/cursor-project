@@ -10,10 +10,15 @@ import '../../providers/app_providers.dart';
 import '../../providers/background_master_repair_provider.dart';
 import '../../providers/daily_materials_providers.dart';
 import '../../providers/hoyolab_home_providers.dart';
+import '../../providers/hoyolab_providers.dart';
+import '../../providers/growth_providers.dart';
+import '../../providers/hoyolab_home_providers.dart';
 import '../../domain/team/main_tab.dart';
 import '../../router.dart';
 import '../../core/errors/user_facing_error.dart';
 import '../../widgets/deferred_loader.dart';
+import '../../providers/growth_providers.dart';
+import '../../domain/recommendation/recommendation.dart';
 import '../hoyolab/widgets/adventure_status_card.dart';
 import '../hoyolab/widgets/daily_note_card.dart';
 import '../shared/shell_menu_button.dart';
@@ -106,6 +111,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          const _GrowthCards(),
           const SizedBox(height: 16),
           const DailyNoteCard(),
           const SizedBox(height: 16),
@@ -247,5 +254,135 @@ class _MaterialIcon extends StatelessWidget {
       );
     }
     return const Icon(Icons.inventory_2);
+  }
+}
+
+class _GrowthCards extends ConsumerWidget {
+  const _GrowthCards();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final flagsAsync = ref.watch(featureFlagsProvider);
+    return flagsAsync.when(
+      data: (flags) => Column(
+        children: [
+          if (flags.enableDailyPlan) const _DailyPlanHomeCard(),
+          if (flags.enableDailyPlan) const SizedBox(height: 16),
+          if (flags.enableAccountHealth) const _HealthHomeCard(),
+          if (flags.enableAccountHealth) const SizedBox(height: 16),
+          if (flags.enableGrowthTimeline)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.timeline),
+                title: const Text('\u6210\u9577\u5c65\u6b74'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/growth-timeline'),
+              ),
+            ),
+          if (flags.enableGrowthTimeline) const SizedBox(height: 16),
+        ],
+      ),
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _DailyPlanHomeCard extends ConsumerWidget {
+  const _DailyPlanHomeCard();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final planAsync = ref.watch(dailyPlanProvider);
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('\u4eca\u65e5\u3084\u308b\u3053\u3068', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            planAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc'),
+              data: (plan) {
+                if (plan.topItems.isEmpty) {
+                  return Text('\u80b2\u6210\u76ee\u6a19\u3092\u8a2d\u5b9a\u3059\u308b\u3068\u3001\u4eca\u65e5\u304a\u3059\u3059\u3081\u306e\u80b2\u6210\u9805\u76ee\u304c\u8868\u793a\u3055\u308c\u307e\u3059\u3002',
+                      style: theme.textTheme.bodySmall);
+                }
+                return Column(
+                  children: [
+                    ...plan.topItems.map((item) => ListTile(
+                          dense: true,
+                          title: Text(item.title, style: theme.textTheme.bodyMedium),
+                          subtitle: item.reasons.isNotEmpty
+                              ? Text(item.reasons.first, maxLines: 1, overflow: TextOverflow.ellipsis)
+                              : null,
+                        )),
+                    TextButton(
+                      onPressed: () => context.push('/daily-plan'),
+                      child: const Text('\u3059\u3079\u3066\u898b\u308b'),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HealthHomeCard extends ConsumerWidget {
+  const _HealthHomeCard();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reportAsync = ref.watch(accountHealthReportProvider);
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('\u30a2\u30ab\u30a6\u30f3\u30c8\u5065\u5eb7\u8a3a\u65ad', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            reportAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc'),
+              data: (report) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (report.isEvaluable)
+                    Row(
+                      children: [
+                        Text('${report.totalScore!.toStringAsFixed(0)}\u70b9', style: theme.textTheme.headlineSmall),
+                        const SizedBox(width: 8),
+                        Text('\u8a55\u4fa1\u53ef\u80fd: ${report.evaluatedCategoryCount}\u30ab\u30c6\u30b4\u30ea'),
+                      ],
+                    )
+                  else
+                    Text('\u73fe\u5728\u306e\u30c7\u30fc\u30bf\u3067\u306f\u80b2\u6210\u72b6\u6cc1\u3092\u8a55\u4fa1\u3067\u304d\u307e\u305b\u3093\u3002',
+                        style: theme.textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  if (report.strengths.isNotEmpty)
+                    Text('\u5f37\u307f: ${report.strengths.first}', style: theme.textTheme.labelMedium),
+                  if (report.improvementCandidates.isNotEmpty)
+                    Text('\u6539\u5584\u5019\u88dc: ${report.improvementCandidates.first}', style: theme.textTheme.labelMedium),
+                  const SizedBox(height: 4),
+                  Text('\u30c7\u30fc\u30bf\u30ab\u30d0\u30ec\u30c3\u30b8: ${report.dataCoverage}', style: theme.textTheme.labelSmall),
+                  Text('\u672c\u8a3a\u65ad\u306f\u30a2\u30d7\u30ea\u72ec\u81ea\u306e\u80b2\u6210\u6307\u6a19\u3067\u3059', style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  TextButton(
+                    onPressed: () => context.push('/account-health'),
+                    child: const Text('\u8a73\u7d30\u3092\u898b\u308b'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

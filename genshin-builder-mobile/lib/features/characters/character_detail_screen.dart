@@ -12,6 +12,10 @@ import '../../domain/models/master_models.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/character_detail_providers.dart';
 import '../../providers/hoyolab_game_providers.dart';
+import '../../providers/growth_providers.dart';
+import '../../providers/hoyolab_providers.dart' show featureFlagsProvider;
+import '../../domain/recommendation/recommendation.dart';
+import '../../domain/planning/investment_diagnosis.dart';
 import '../shared/shell_menu_button.dart';
 import 'character_detail_state.dart';
 import 'widgets/character_detail_bookmark_actions.dart';
@@ -268,6 +272,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
             constellation: detail.constellation,
             onConstellationChanged: notifier.updateConstellation,
           ),
+          _DiagnosisCard(characterId: widget.characterId),
           Material(
             color: Theme.of(context).colorScheme.surface,
             child: TabBar(
@@ -343,5 +348,103 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
         ],
       ),
     );
+  }
+}
+
+class _DiagnosisCard extends ConsumerWidget {
+  const _DiagnosisCard({required this.characterId});
+  final String characterId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final flagsAsync = ref.watch(featureFlagsProvider);
+    return flagsAsync.maybeWhen(
+      data: (flags) => flags.enableInvestmentDiagnosis
+          ? _DiagnosisContent(characterId: characterId)
+          : const SizedBox.shrink(),
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _DiagnosisContent extends ConsumerWidget {
+  const _DiagnosisContent({required this.characterId});
+  final String characterId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final diagAsync = ref.watch(characterDiagnosisProvider(characterId));
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: diagAsync.when(
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
+        data: (diag) {
+          if (diag.topFindings.isEmpty) return const SizedBox.shrink();
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('\u80b2\u6210\u8a3a\u65ad', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 6),
+                  ...diag.topFindings.map((f) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              f.severity == DiagnosisSeverity.warning
+                                  ? Icons.warning_amber
+                                  : Icons.info_outline,
+                              size: 18,
+                              color: f.severity == DiagnosisSeverity.warning
+                                  ? Colors.orange
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(f.title, style: theme.textTheme.bodyMedium),
+                                  if (f.explanation.isNotEmpty)
+                                    Text(f.explanation, style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    )),
+                                  if (f.recommendation != null && f.recommendation!.isNotEmpty)
+                                    Text(f.recommendation!,
+                                        style: theme.textTheme.labelSmall?.copyWith(
+                                          color: theme.colorScheme.primary,
+                                        )),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
+                  Text(
+                    '\u4fe1\u983c\u5ea6: ${_confidenceLabel(diag.topFindings.firstOrNull?.confidence ?? RecommendationConfidence.unknown)}',
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _confidenceLabel(RecommendationConfidence c) {
+    switch (c) {
+      case RecommendationConfidence.high: return '\u9ad8';
+      case RecommendationConfidence.medium: return '\u4e2d';
+      case RecommendationConfidence.low: return '\u4f4e';
+      case RecommendationConfidence.unknown: return '\u4e0d\u660e';
+    }
   }
 }
