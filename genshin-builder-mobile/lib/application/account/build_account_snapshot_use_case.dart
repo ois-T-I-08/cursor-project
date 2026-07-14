@@ -36,10 +36,8 @@ class BuildAccountSnapshotUseCase {
     final progressMap = {for (final p in progressList) p.characterId: p};
     final sources = <String>['characterRepository', 'progressRepository', 'growthGoalRepository',
                           'materialInventoryRepository', 'teamRepository'];
-    bool hasHoyolab = false;
 
     if (supplement != null && supplement!.status == SnapshotSupplementStatus.linked) {
-      hasHoyolab = true;
       sources.add('hoyolabCache');
     }
 

@@ -11,7 +11,6 @@ import '../domain/account/snapshot_supplement.dart';
 import '../domain/history/growth_event.dart';
 import '../domain/planning/daily_plan.dart';
 import '../domain/planning/investment_diagnosis.dart';
-import '../data/db/app_database_facade.dart';
 import '../data/repositories/drift_growth_goal_repository.dart';
 import '../data/repositories/drift_material_inventory_repository.dart';
 import '../data/repositories/drift_team_repository.dart';
@@ -108,7 +107,6 @@ final accountHealthReportProvider =
 
 // ── Provider invalidate helpers ────────────────────────────────────
 
-/// Invalidate all growth-related providers after a progress mutation.
 void invalidateAfterProgressChange(Ref ref, {String? characterId}) {
   ref.invalidate(accountSnapshotProvider);
   ref.invalidate(dailyPlanProvider);
@@ -116,7 +114,6 @@ void invalidateAfterProgressChange(Ref ref, {String? characterId}) {
   ref.invalidate(accountHealthReportProvider);
 }
 
-/// Invalidate after growth goal change.
 void invalidateAfterGoalChange(Ref ref, {String? characterId}) {
   ref.invalidate(accountSnapshotProvider);
   ref.invalidate(dailyPlanProvider);
@@ -124,13 +121,11 @@ void invalidateAfterGoalChange(Ref ref, {String? characterId}) {
   ref.invalidate(accountHealthReportProvider);
 }
 
-/// Invalidate after material inventory change.
 void invalidateAfterInventoryChange(Ref ref) {
   ref.invalidate(accountSnapshotProvider);
   ref.invalidate(dailyPlanProvider);
 }
 
-/// Invalidate after saved team change.
 void invalidateAfterTeamChange(Ref ref) {
   ref.invalidate(accountSnapshotProvider);
   ref.invalidate(accountHealthReportProvider);

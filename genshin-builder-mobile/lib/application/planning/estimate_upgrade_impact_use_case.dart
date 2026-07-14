@@ -32,7 +32,9 @@ class EstimateUpgradeImpactUseCase {
         final diff = (option.toValue ?? 1) - (option.fromValue ?? 1);
         if (diff >= 40) {
           impactScore = 0.35;
-          reasons.add('Large level gap ($diff levels) has significant base stat impact');
+          reasons.add(
+            'Large level gap ($diff levels) has significant base stat impact',
+          );
         } else if (diff >= 20) {
           impactScore = 0.20;
           reasons.add('Moderate level gap ($diff levels)');
@@ -48,8 +50,12 @@ class EstimateUpgradeImpactUseCase {
 
       case 'ascension':
         impactScore = 0.30;
-        reasons.add('Ascension unlocks higher level cap and grants bonus stats');
-        reasons.add('Ascension passives may significantly boost character performance');
+        reasons.add(
+          'Ascension unlocks higher level cap and grants bonus stats',
+        );
+        reasons.add(
+          'Ascension passives may significantly boost character performance',
+        );
         areas.addAll(['baseStats', 'survivability', 'specialStat']);
         break;
 
@@ -91,7 +97,8 @@ class EstimateUpgradeImpactUseCase {
       impactBand: band,
       affectedAreas: areas,
       reasons: reasons,
-      confidence: RecommendationConfidence.low, // Phase 3B: no roles, no combat sim
+      confidence:
+          RecommendationConfidence.low, // Phase 3B: no roles, no combat sim
       calculationMode: CalculationMode.relativeImpactOnly,
       excludedFactors: _excludedFactors,
       ruleVersion: ruleVersion,

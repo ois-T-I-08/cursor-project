@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/growth_providers.dart';
-import '../../../domain/account/account_health_report.dart';
 
 /// Account health report screen.
 class AccountHealthScreen extends ConsumerWidget {
@@ -17,7 +16,7 @@ class AccountHealthScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('\u30a2\u30ab\u30a6\u30f3\u30c8\u5065\u5eb7\u8a3a\u65ad')),
       body: reportAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc')),
+        error: (e, _) => const Center(child: Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc')),
         data: (report) {
           return ListView(
             padding: const EdgeInsets.all(16),

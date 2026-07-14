@@ -7,7 +7,7 @@ import 'package:genshin_builder_mobile/domain/account/account_health_report.dart
 void main() {
   group('Team JSON safety', () {
     test('valid team passes validate', () {
-      final team = Team(
+      const team = Team(
         id: 't1', name: 'Test',
         members: [
           TeamMemberSlot(characterId: '10000002', position: 0),
@@ -18,7 +18,7 @@ void main() {
     });
 
     test('duplicate character rejected', () {
-      final team = Team(
+      const team = Team(
         id: 't1', name: 'Test',
         members: [
           TeamMemberSlot(characterId: '10000002', position: 0),
@@ -37,7 +37,7 @@ void main() {
     });
 
     test('v1 JSON encodes members correctly', () {
-      final team = Team(
+      const team = Team(
         id: 't1', name: 'Test',
         members: [
           TeamMemberSlot(characterId: '10000002', position: 0),
@@ -95,18 +95,8 @@ void main() {
     });
 
     test('missing required field rejected', () {
-      final json = {
-        'version': 1,
-        'members': [
-          {'buildId': null, 'position': 0}, // missing characterId
-        ],
-      };
-      final encoded = jsonEncode(json);
-      final decoded = jsonDecode(encoded) as Map<String, dynamic>;
-      final membersList = decoded['members'] as List;
-      final first = membersList[0] as Map;
       // characterId is missing → should be caught by validate
-      final team = Team(
+      const team = Team(
         id: 't1', name: 'Test',
         members: [TeamMemberSlot(characterId: '', position: 0)],
       );

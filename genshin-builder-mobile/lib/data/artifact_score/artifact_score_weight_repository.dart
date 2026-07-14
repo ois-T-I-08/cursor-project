@@ -33,7 +33,7 @@ class ArtifactScoreWeightRepository {
 
     if (missing.isNotEmpty && _source is RefreshableArtifactScoreWeightSource) {
       profiles =
-          await (_source as RefreshableArtifactScoreWeightSource).refreshProfiles();
+          await _source.refreshProfiles();
       profileIds = profiles.map((e) => e.characterId).toSet();
       missing = characters
           .where((c) => !profileIds.contains(c.id))

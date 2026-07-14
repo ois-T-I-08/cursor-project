@@ -24,20 +24,35 @@ class GenerateUpgradeOptionsUseCase {
 
     // Level
     if (goal.targetLevel != null && goal.targetLevel! > character.level) {
-      options.add(_makeOption(
-        goal: goal, character: character, type: 'level',
-        fromVal: character.level, toVal: goal.targetLevel!,
-        hasInv: hasInv, sources: sources, now: now,
-        promotes: promotes,
-      ));
+      options.add(
+        _makeOption(
+          goal: goal,
+          character: character,
+          type: 'level',
+          fromVal: character.level,
+          toVal: goal.targetLevel!,
+          hasInv: hasInv,
+          sources: sources,
+          now: now,
+          promotes: promotes,
+        ),
+      );
     }
     // Ascension
-    if (goal.targetAscension != null && goal.targetAscension! > character.ascension) {
-      options.add(_makeOption(
-        goal: goal, character: character, type: 'ascension',
-        fromVal: character.ascension, toVal: goal.targetAscension!,
-        hasInv: hasInv, sources: sources, now: now,
-      ));
+    if (goal.targetAscension != null &&
+        goal.targetAscension! > character.ascension) {
+      options.add(
+        _makeOption(
+          goal: goal,
+          character: character,
+          type: 'ascension',
+          fromVal: character.ascension,
+          toVal: goal.targetAscension!,
+          hasInv: hasInv,
+          sources: sources,
+          now: now,
+        ),
+      );
     }
     // Talents
     for (final tc in [
@@ -46,20 +61,35 @@ class GenerateUpgradeOptionsUseCase {
       ('talentBurst', character.talentBurst, goal.targetTalentBurst),
     ]) {
       if (tc.$3 != null && tc.$3! > tc.$2) {
-        options.add(_makeOption(
-          goal: goal, character: character, type: tc.$1,
-          fromVal: tc.$2, toVal: tc.$3!,
-          hasInv: hasInv, sources: sources, now: now,
-        ));
+        options.add(
+          _makeOption(
+            goal: goal,
+            character: character,
+            type: tc.$1,
+            fromVal: tc.$2,
+            toVal: tc.$3!,
+            hasInv: hasInv,
+            sources: sources,
+            now: now,
+          ),
+        );
       }
     }
     // Weapon
-    if (goal.targetWeaponLevel != null && goal.targetWeaponLevel! > character.weaponLevel) {
-      options.add(_makeOption(
-        goal: goal, character: character, type: 'weapon',
-        fromVal: character.weaponLevel, toVal: goal.targetWeaponLevel!,
-        hasInv: hasInv, sources: sources, now: now,
-      ));
+    if (goal.targetWeaponLevel != null &&
+        goal.targetWeaponLevel! > character.weaponLevel) {
+      options.add(
+        _makeOption(
+          goal: goal,
+          character: character,
+          type: 'weapon',
+          fromVal: character.weaponLevel,
+          toVal: goal.targetWeaponLevel!,
+          hasInv: hasInv,
+          sources: sources,
+          now: now,
+        ),
+      );
     }
     return options;
   }
@@ -123,8 +153,10 @@ class GenerateUpgradeOptionsUseCase {
       remainingMaterials: remaining,
       inventoryStatus: invStatus,
       priority: goal.priority,
-      confidence: hasInv ? RecommendationConfidence.high : RecommendationConfidence.low,
-      completeness: hasInv ? DataCompleteness.partial : DataCompleteness.minimal,
+      confidence:
+          hasInv ? RecommendationConfidence.high : RecommendationConfidence.low,
+      completeness:
+          hasInv ? DataCompleteness.partial : DataCompleteness.minimal,
       missingData: missing,
       usedDataSources: sources,
       calculationMode: calcMode,

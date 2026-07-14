@@ -12,13 +12,10 @@ import '../../providers/daily_materials_providers.dart';
 import '../../providers/hoyolab_home_providers.dart';
 import '../../providers/hoyolab_providers.dart';
 import '../../providers/growth_providers.dart';
-import '../../providers/hoyolab_home_providers.dart';
 import '../../domain/team/main_tab.dart';
 import '../../router.dart';
 import '../../core/errors/user_facing_error.dart';
 import '../../widgets/deferred_loader.dart';
-import '../../providers/growth_providers.dart';
-import '../../domain/recommendation/recommendation.dart';
 import '../hoyolab/widgets/adventure_status_card.dart';
 import '../hoyolab/widgets/daily_note_card.dart';
 import '../shared/shell_menu_button.dart';
@@ -304,7 +301,7 @@ class _DailyPlanHomeCard extends ConsumerWidget {
             const SizedBox(height: 8),
             planAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc'),
+              error: (e, _) => const Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc'),
               data: (plan) {
                 if (plan.topItems.isEmpty) {
                   return Text('\u80b2\u6210\u76ee\u6a19\u3092\u8a2d\u5b9a\u3059\u308b\u3068\u3001\u4eca\u65e5\u304a\u3059\u3059\u3081\u306e\u80b2\u6210\u9805\u76ee\u304c\u8868\u793a\u3055\u308c\u307e\u3059\u3002',
@@ -350,7 +347,7 @@ class _HealthHomeCard extends ConsumerWidget {
             const SizedBox(height: 8),
             reportAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc'),
+              error: (e, _) => const Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc'),
               data: (report) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

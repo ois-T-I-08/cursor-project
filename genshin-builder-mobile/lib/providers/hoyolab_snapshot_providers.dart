@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/db/app_database_facade.dart';
-import '../data/db/drift/daos/progress_dao.dart' show AppDatabaseSettingsStore;
 import '../data/hoyolab/hoyolab_home_disk_cache.dart';
 import '../data/hoyolab/models/daily_note.dart';
 import '../domain/account/snapshot_supplement.dart';

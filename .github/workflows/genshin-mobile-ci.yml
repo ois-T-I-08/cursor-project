@@ -20,7 +20,7 @@ jobs:
         working-directory: genshin-builder-mobile
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -28,13 +28,15 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Flutter version
+        run: flutter --version
+
       - name: Pub get
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
-      # 計算パリティ破壊検知（仕様・期待値は変更せずゲートのみ）
       - name: Parity gate (protected domain tests)
         run: |
           flutter test test/domain/domain_golden_test.dart

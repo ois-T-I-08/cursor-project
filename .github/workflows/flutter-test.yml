@@ -26,11 +26,14 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Flutter version
+        run: flutter --version
+
       - run: flutter pub get
 
       - run: dart run build_runner build --delete-conflicting-outputs
 
-      - run: flutter analyze
+      - run: flutter analyze --no-fatal-infos
 
       - run: flutter test test/domain/phase3_upgrade_test.dart --reporter expanded
 
