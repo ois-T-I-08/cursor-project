@@ -18,7 +18,9 @@ enum DataCompleteness {
 }
 
 enum MissingData {
+  masterUpgradeData,
   materialInventory,
+  currentResin,
   unequippedWeapons,
   currentAbyssEnemies,
   currentTheaterRules,
