@@ -22,12 +22,10 @@ import type { CultivationBookmarkContext } from "@/types/bookmark";
 import { MORA_MATERIAL_ID } from "@/types/bookmark";
 
 function MaterialRow({
-  materialId,
   name,
   iconUrl,
   count,
 }: {
-  materialId: string;
   name: string;
   iconUrl: string | null;
   count: number;
@@ -182,7 +180,6 @@ export default function LevelMaterialsPanel({
               ) : (
                 <MaterialRow
                   key={materialId}
-                  materialId={materialId}
                   name={name}
                   iconUrl={iconUrl}
                   count={count}
@@ -214,7 +211,6 @@ export default function LevelMaterialsPanel({
               ) : (
                 <MaterialRow
                   key={`levelup-${materialId}`}
-                  materialId={materialId}
                   name={displayName}
                   iconUrl={iconUrl}
                   count={count}
@@ -294,7 +290,6 @@ export default function LevelMaterialsPanel({
                     return (
                       <MaterialRow
                         key={materialId}
-                        materialId={materialId}
                         name={mat?.name ?? `素材 #${materialId}`}
                         iconUrl={mat?.iconUrl ?? null}
                         count={count}

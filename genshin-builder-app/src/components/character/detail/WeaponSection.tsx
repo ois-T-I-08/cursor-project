@@ -28,7 +28,6 @@ const inputClass =
  * 詳細: 武器変更・レベル(10刻み)/精錬変更・レベル別ステータス・武器効果
  */
 export default function WeaponSection({
-  characterId,
   characterName,
   bookmarkCharacter,
   progress,
@@ -39,7 +38,6 @@ export default function WeaponSection({
   onWeaponChange,
   onChange,
 }: {
-  characterId: string;
   characterName: string;
   bookmarkCharacter: BookmarkCharacterSource;
   progress: ProgressPayload;
