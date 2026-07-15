@@ -3,6 +3,7 @@ import '../../domain/models/calculation_models.dart';
 import '../models/master_models.dart';
 import '../models/sync_status.dart';
 import 'drift/app_database.dart' hide LevelExpSegment;
+import 'drift/daos/daily_plan_dao.dart';
 import 'drift/daos/growth_dao.dart';
 
 /// Drift DAO への委譲ファサード（旧 sqflite [AppDatabase] と同一 API）
@@ -21,6 +22,9 @@ class AppDatabase {
     final inner = await DriftAppDatabase.openInMemory();
     return AppDatabase._(inner);
   }
+
+  /// Wrap an already-opened Drift DB (background worker / tests).
+  factory AppDatabase.fromDrift(DriftAppDatabase inner) => AppDatabase._(inner);
 
   Future<void> close() => _inner.close();
 
@@ -212,6 +216,8 @@ class AppDatabase {
   // ═══ Growth / Planning DAO access ══════════════════════════════
 
   GrowthDao get growthDao => _inner.growthDao;
+
+  DailyPlanDao get dailyPlanDao => _inner.dailyPlanDao;
 
   /// Expose the raw DriftAppDatabase for transaction boundaries.
   Future<T> transaction<T>(Future<T> Function() action) =>

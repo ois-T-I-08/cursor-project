@@ -136,12 +136,14 @@ void main() {
     await retried.close();
 
     raw = sqlite.sqlite3.open(file.path);
-    expect(raw.userVersion, 8);
+    expect(raw.userVersion, 9);
     for (final table in [
       'growth_goals',
       'user_material_inventory',
       'saved_teams',
       'growth_events',
+      'daily_plan_completions',
+      'daily_plan_eval_history',
     ]) {
       expect(
         raw.select('SELECT name FROM sqlite_master WHERE name = ?', [table]),
@@ -163,7 +165,7 @@ void main() {
     var raw = sqlite.sqlite3.open(file.path);
     raw.execute('CREATE TABLE future_marker (value TEXT NOT NULL)');
     raw.execute("INSERT INTO future_marker VALUES ('future-data')");
-    raw.userVersion = 9;
+    raw.userVersion = 10;
     raw.dispose();
 
     await expectLater(
@@ -178,7 +180,7 @@ void main() {
     );
 
     raw = sqlite.sqlite3.open(file.path);
-    expect(raw.userVersion, 9);
+    expect(raw.userVersion, 10);
     expect(
       raw
           .select("SELECT value FROM app_settings WHERE key = 'sentinel'")
@@ -363,6 +365,14 @@ Future<void> _createAndSeedV7(File file) async {
     ),
   ]);
   await db.close();
+
+  // createAll on a Version7 subclass also creates newer tables from the shared
+  // Drift schema; drop them so onUpgrade from < 9 can create them cleanly.
+  final raw = sqlite.sqlite3.open(file.path);
+  raw.execute('DROP TABLE IF EXISTS daily_plan_completions');
+  raw.execute('DROP TABLE IF EXISTS daily_plan_eval_history');
+  raw.userVersion = 7;
+  raw.dispose();
 }
 
 Future<void> _verifyMigratedData(DriftAppDatabase db) async {
@@ -370,7 +380,7 @@ Future<void> _verifyMigratedData(DriftAppDatabase db) async {
     (await db.customSelect('PRAGMA user_version').getSingle()).read<int>(
       'user_version',
     ),
-    8,
+    9,
   );
   expect(await db.progressDao.getSetting('local_user_id'), _localUuid);
 
@@ -408,6 +418,21 @@ Future<void> _verifyMigratedData(DriftAppDatabase db) async {
   expect(events, hasLength(1));
   expect(events.single.characterId, '10000002');
   expect(events.single.eventId, 'event-legacy');
+
+  for (final table in [
+    'daily_plan_completions',
+    'daily_plan_eval_history',
+  ]) {
+    expect(
+      await db
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            variables: [Variable<String>(table)],
+          )
+          .get(),
+      hasLength(1),
+    );
+  }
 }
 
 void _createMinimalV6(File file) {

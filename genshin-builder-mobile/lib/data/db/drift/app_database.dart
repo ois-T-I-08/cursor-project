@@ -13,8 +13,10 @@ import '../database_open_exception.dart';
 import '../database_path.dart';
 import 'daos/bookmark_dao.dart';
 import 'daos/character_dao.dart';
+import 'daos/daily_plan_dao.dart';
 import 'daos/growth_dao.dart';
 import 'daos/progress_dao.dart';
+import 'tables/daily_plan_tables.dart';
 import 'tables/growth_tables.dart';
 import 'tables/master_tables.dart';
 import 'tables/user_tables.dart';
@@ -62,8 +64,10 @@ typedef DatabaseMigrationFaultHook =
     UserMaterialInventory,
     SavedTeams,
     GrowthEvents,
+    DailyPlanCompletions,
+    DailyPlanEvalHistory,
   ],
-  daos: [CharacterDao, BookmarkDao, ProgressDao, GrowthDao],
+  daos: [CharacterDao, BookmarkDao, ProgressDao, GrowthDao, DailyPlanDao],
 )
 class DriftAppDatabase extends _$DriftAppDatabase {
   DriftAppDatabase(
@@ -80,7 +84,7 @@ class DriftAppDatabase extends _$DriftAppDatabase {
   final Duration _busyTimeout;
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -124,6 +128,11 @@ class DriftAppDatabase extends _$DriftAppDatabase {
           }
           if (from < 8) {
             await _migrateLegacyLocalUserIds(m.database);
+          }
+          if (from < 9) {
+            // P1-8C: create completion / eval tables only; preserve all v8 data.
+            await m.createTable(dailyPlanCompletions);
+            await m.createTable(dailyPlanEvalHistory);
           }
           await _migrationCheckpoint(DatabaseMigrationPoint.beforeCommit);
         });
