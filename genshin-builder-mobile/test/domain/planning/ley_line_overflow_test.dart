@@ -514,10 +514,10 @@ void main() {
             'startAt': '2026-07-08T00:00:00Z',
             'endAt': '2026-07-01T00:00:00Z',
           },
-          defaults: LeyLineOverflowDefaults(
+          defaults: const LeyLineOverflowDefaults(
             displayName: '地脈の奔流',
             dailyBonusLimit: 3,
-            nameMatchers: const ['地脈の奔流'],
+            nameMatchers: ['地脈の奔流'],
           ),
         ),
         isNull,
@@ -525,7 +525,7 @@ void main() {
     });
 
     for (final n in [1, 2, 3, 4, 9]) {
-      test('通常換算${n}回（残り3）', () {
+      test('通常換算$n回（残り3）', () {
         final b = applyLeyLineOverflowBonus(
           normalEquivalentRuns: n,
           resinPerRun: 20,

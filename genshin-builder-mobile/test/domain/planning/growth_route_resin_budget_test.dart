@@ -39,7 +39,7 @@ void main() {
   group('OptimizeGrowthRouteUseCase resin display budget', () {
     test('does not enforce budget by default even when set', () {
       final options = [
-        UpgradeOption(
+        const UpgradeOption(
           optionId: 'o1',
           characterId: 'c1',
           optionType: 'level',
@@ -49,7 +49,7 @@ void main() {
           estimatedResinCost: 200,
           calculationMode: CalculationMode.exactMasterData,
         ),
-        UpgradeOption(
+        const UpgradeOption(
           optionId: 'o2',
           characterId: 'c1',
           optionType: 'level',
@@ -75,7 +75,7 @@ void main() {
 
     test('enforceDailyResinBudget still limits when true', () {
       final options = [
-        UpgradeOption(
+        const UpgradeOption(
           optionId: 'o1',
           characterId: 'c1',
           optionType: 'level',
@@ -83,7 +83,7 @@ void main() {
           estimatedResinCost: 200,
           calculationMode: CalculationMode.exactMasterData,
         ),
-        UpgradeOption(
+        const UpgradeOption(
           optionId: 'o2',
           characterId: 'c1',
           optionType: 'level',
