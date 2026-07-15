@@ -132,3 +132,11 @@ model SyncLog {
   detail    String // 同期件数やエラーメッセージ
   createdAt DateTime @default(now())
 }
+
+/// マスタ同期の分散リースロック（複数インスタンス間の排他）
+model SyncLease {
+  lockKey     String   @id
+  ownerToken  String
+  acquiredAt  DateTime
+  expiresAt   DateTime
+}

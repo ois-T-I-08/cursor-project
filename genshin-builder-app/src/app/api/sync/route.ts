@@ -7,9 +7,10 @@
  * 設定画面の手動同期は Server Action（syncMasterDataAction）を使用すること。
  * Authorization: Bearer <SYNC_API_SECRET> が必要（本番必須）。
  *
- * 多重実行防止: 同一プロセス内で同期実行中は 409 Conflict を返す。
- *   Vercel のサーバーレス環境ではインスタンス間の排他は保証されないが、
- *   同一インスタンス内での競合は防止される。
+ * 多重実行防止:
+ * - 同一プロセス内: in-memory 排他
+ * - 複数インスタンス: DB リース（SyncLease）で排他
+ *   PostgreSQL 本番でも lease テーブル方式で動作する。
  */
 
 import { NextResponse } from "next/server";

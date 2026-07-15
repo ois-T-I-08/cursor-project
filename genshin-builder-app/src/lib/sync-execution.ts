@@ -1,3 +1,12 @@
+import { randomUUID } from "node:crypto";
+
+import { prisma } from "@/lib/db";
+import {
+  acquireSyncLease,
+  MASTER_SYNC_LOCK_KEY,
+  releaseSyncLease,
+  SyncLeaseUnavailableError,
+} from "@/lib/sync-distributed-lock";
 import { syncMasterData, type SyncResult } from "@/lib/sync";
 
 export class SyncAlreadyRunningError extends Error {
@@ -10,7 +19,7 @@ export class SyncAlreadyRunningError extends Error {
 let activeSync: Promise<SyncResult> | null = null;
 type SyncRunner = (options: { fullUpgrade: boolean }) => Promise<SyncResult>;
 
-/** Shares one in-process lock across the API route and Server Action. */
+/** Shares process-local and DB-backed leases across instances. */
 export async function runSyncExclusive(
   fullUpgrade: boolean,
   runner: SyncRunner = syncMasterData,
@@ -19,15 +28,42 @@ export async function runSyncExclusive(
     throw new SyncAlreadyRunningError();
   }
 
-  const current = runner({ fullUpgrade });
+  let resolveCurrent!: (result: SyncResult) => void;
+  let rejectCurrent!: (error: unknown) => void;
+  const current = new Promise<SyncResult>((resolve, reject) => {
+    resolveCurrent = resolve;
+    rejectCurrent = reject;
+  });
   activeSync = current;
-  try {
-    return await current;
-  } finally {
-    if (activeSync === current) {
-      activeSync = null;
+
+  const ownerToken = randomUUID();
+  void (async () => {
+    try {
+      await acquireSyncLease(
+        MASTER_SYNC_LOCK_KEY,
+        ownerToken,
+        undefined,
+        Date.now(),
+        prisma,
+      );
+      resolveCurrent(await runner({ fullUpgrade }));
+    } catch (error) {
+      if (error instanceof SyncLeaseUnavailableError) {
+        rejectCurrent(new SyncAlreadyRunningError());
+      } else {
+        rejectCurrent(error);
+      }
+    } finally {
+      await releaseSyncLease(MASTER_SYNC_LOCK_KEY, ownerToken, prisma).catch(
+        () => false,
+      );
+      if (activeSync === current) {
+        activeSync = null;
+      }
     }
-  }
+  })();
+
+  return current;
 }
 
 export function resetSyncExecutionForTest(): void {

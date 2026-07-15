@@ -1,4 +1,23 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const acquireSyncLease = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(undefined),
+);
+const releaseSyncLease = vi.hoisted(() => vi.fn().mockResolvedValue(true));
+
+vi.mock("@/lib/sync-distributed-lock", () => ({
+  MASTER_SYNC_LOCK_KEY: "master-sync",
+  DEFAULT_SYNC_LEASE_MS: 300_000,
+  SyncLeaseUnavailableError: class SyncLeaseUnavailableError extends Error {
+    constructor() {
+      super("Distributed sync lease is already held");
+      this.name = "SyncLeaseUnavailableError";
+    }
+  },
+  acquireSyncLease,
+  releaseSyncLease,
+  tryAcquireSyncLease: vi.fn(),
+}));
 
 import {
   resetSyncExecutionForTest,
@@ -8,7 +27,13 @@ import {
 import type { SyncResult } from "@/lib/sync";
 
 describe("runSyncExclusive", () => {
-  beforeEach(() => resetSyncExecutionForTest());
+  beforeEach(() => {
+    resetSyncExecutionForTest();
+    acquireSyncLease.mockClear();
+    releaseSyncLease.mockClear();
+    acquireSyncLease.mockResolvedValue(undefined);
+    releaseSyncLease.mockResolvedValue(true);
+  });
 
   it("rejects a concurrent request and allows the next request after success",
       async () => {
@@ -33,9 +58,11 @@ describe("runSyncExclusive", () => {
       runSyncExclusive(false, async () => result()),
     ).resolves.toEqual(result());
     expect(runs).toBe(1);
+    expect(acquireSyncLease).toHaveBeenCalled();
+    expect(releaseSyncLease).toHaveBeenCalled();
   });
 
-  it("always releases the lock after failure", async () => {
+  it("always releases the distributed lease after failure", async () => {
     await expect(
       runSyncExclusive(false, async () => {
         throw new Error("DB failure");
@@ -45,6 +72,7 @@ describe("runSyncExclusive", () => {
     await expect(
       runSyncExclusive(false, async () => result()),
     ).resolves.toEqual(result());
+    expect(releaseSyncLease.mock.calls.length).toBeGreaterThanOrEqual(1);
   });
 });
 
