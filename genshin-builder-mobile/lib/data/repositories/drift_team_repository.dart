@@ -37,7 +37,7 @@ class DriftTeamRepository implements TeamRepository {
   }
 
   @override
-  Future<void> save(Team team) async {
+  Future<void> save(String userId, Team team) async {
     // Validate team constraints before saving
     final error = Team.validate(team);
     if (error != null) throw ArgumentError(error);
@@ -52,7 +52,7 @@ class DriftTeamRepository implements TeamRepository {
     });
     await _db.growthDao.teamSave(
       id: team.id,
-      userId: 'local',
+      userId: userId,
       name: team.name,
       membersJson: membersJson,
       notes: team.notes,
@@ -64,7 +64,7 @@ class DriftTeamRepository implements TeamRepository {
 
   Team _toTeam(dynamic row) {
     final raw = row.membersJson as String;
-    if (raw.isEmpty) throw FormatException('Empty members JSON');
+    if (raw.isEmpty) throw const FormatException('Empty members JSON');
 
     dynamic parsed;
     try {
@@ -84,9 +84,9 @@ class DriftTeamRepository implements TeamRepository {
     }
 
     final members = membersList.map((m) {
-      if (m is! Map) throw FormatException('Member entry is not a Map');
+      if (m is! Map) throw const FormatException('Member entry is not a Map');
       final cid = m['characterId'];
-      if (cid is! String || cid.isEmpty) throw FormatException('Missing characterId');
+      if (cid is! String || cid.isEmpty) throw const FormatException('Missing characterId');
       return TeamMemberSlot(
         characterId: cid,
         buildId: m['buildId'] as String?,

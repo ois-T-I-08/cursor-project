@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../domain/planning/growth_route_request.dart';
+import '../../../application/planning/build_growth_route_request.dart';
 import '../../../providers/growth_providers.dart';
 import '../../../domain/recommendation/recommendation.dart';
 
@@ -35,12 +35,7 @@ class DailyPlanScreen extends ConsumerWidget {
           }
 
           // Build GrowthRouteRequest once, not per item.
-          final goalIds = plan.items.map((item) => item.id).toList();
-          final routeReq = GrowthRouteRequest(
-            goalIds: goalIds,
-            startDate: today,
-            startWeekday: today.weekday,
-          );
+          final routeReq = buildGrowthRouteRequest(plan, today);
 
           return Column(
             children: [

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../domain/bookmark_utils.dart';
 import '../../core/errors/user_facing_error.dart';
@@ -16,6 +17,7 @@ import '../../providers/growth_providers.dart';
 import '../../providers/hoyolab_providers.dart' show featureFlagsProvider;
 import '../../domain/recommendation/recommendation.dart';
 import '../../domain/planning/investment_diagnosis.dart';
+import '../../domain/planning/growth_goal.dart';
 import '../shared/shell_menu_button.dart';
 import 'character_detail_state.dart';
 import 'widgets/character_detail_bookmark_actions.dart';
@@ -273,6 +275,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
             onConstellationChanged: notifier.updateConstellation,
           ),
           _DiagnosisCard(characterId: widget.characterId),
+          _GrowthGoalButton(
+            characterId: widget.characterId,
+            detail: detail,
+          ),
           Material(
             color: Theme.of(context).colorScheme.surface,
             child: TabBar(
@@ -346,6 +352,94 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _GrowthGoalButton extends ConsumerStatefulWidget {
+  const _GrowthGoalButton({
+    required this.characterId,
+    required this.detail,
+  });
+
+  final String characterId;
+  final CharacterDetailState detail;
+
+  @override
+  ConsumerState<_GrowthGoalButton> createState() => _GrowthGoalButtonState();
+}
+
+class _GrowthGoalButtonState extends ConsumerState<_GrowthGoalButton> {
+  bool _saving = false;
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final detail = widget.detail;
+    final targetLevel =
+        detail.targetLevel > detail.level ? detail.targetLevel : null;
+    final hasWeaponTarget = detail.weaponId.isNotEmpty &&
+        detail.targetWeaponLevel > detail.weaponLevel;
+    if (targetLevel == null && !hasWeaponTarget) return;
+
+    setState(() => _saving = true);
+    try {
+      final userId = await ref.read(localUserIdProvider.future);
+      final snapshot = await ref.read(accountSnapshotProvider.future);
+      final existing = snapshot.activeGoals
+          .where((goal) => goal.characterId == widget.characterId)
+          .firstOrNull;
+      final now = DateTime.now();
+      final goal = GrowthGoal(
+        id: existing?.id ?? const Uuid().v4(),
+        userId: userId,
+        characterId: widget.characterId,
+        targetLevel: targetLevel,
+        targetWeaponId: hasWeaponTarget ? detail.weaponId : null,
+        targetWeaponLevel:
+            hasWeaponTarget ? detail.targetWeaponLevel : null,
+        priority: existing?.priority ?? 0,
+        status: GrowthGoalStatus.active,
+        memo: existing?.memo,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      );
+      final repository = await ref.read(growthGoalRepoProvider.future);
+      await repository.save(goal);
+      ref.invalidate(accountSnapshotProvider);
+      ref.invalidate(dailyPlanProvider);
+      ref.invalidate(characterDiagnosisProvider(widget.characterId));
+      ref.invalidate(accountHealthReportProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('育成目標を保存しました')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('育成目標を保存できませんでした')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final flags = ref.watch(featureFlagsProvider);
+    final enabledByFlag = flags.value?.enableGrowthGoals ?? false;
+    if (!enabledByFlag) return const SizedBox.shrink();
+
+    final detail = widget.detail;
+    final enabled = detail.targetLevel > detail.level ||
+        (detail.weaponId.isNotEmpty &&
+            detail.targetWeaponLevel > detail.weaponLevel);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: OutlinedButton.icon(
+        onPressed: enabled && !_saving ? _save : null,
+        icon: const Icon(Icons.flag_outlined),
+        label: Text(_saving ? '保存中...' : '現在の目標レベルを育成目標に保存'),
       ),
     );
   }

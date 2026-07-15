@@ -31,26 +31,10 @@ class GenerateDailyPlanUseCase {
     final missingData = <MissingData>[];
 
     if (!hasInventory) missingData.add(MissingData.materialInventory);
-    if (resin == null) missingData.add(MissingData.materialInventory);
+    if (resin == null) missingData.add(MissingData.currentResin);
 
-    // 1. Weekday-limited materials from active goals
-    for (final goal in goals.where((g) => g.status == GrowthGoalStatus.active)) {
-      if (goal.hasAnyTarget) {
-        items.add(DailyPlanItem(
-          id: 'wd_${goal.id}',
-          type: DailyPlanItemType.weekdayMaterial,
-          title: _goalSummary(goal),
-          characterIds: [goal.characterId],
-          priority: 100,
-          relatedGoalId: goal.id,
-          reasons: ['Today\'s weekday-limited materials for growth goal'],
-          confidence: RecommendationConfidence.medium,
-          missingData: missingData,
-        ));
-      }
-    }
-
-    // 2. High-priority goals
+    // 1. High-priority goals. Weekday-specific tasks are produced by the
+    // dedicated daily-material planner, not guessed here.
     for (final goal in goals.where((g) => g.priority > 0).take(2)) {
       items.add(DailyPlanItem(
         id: 'pri_${goal.id}',
@@ -66,7 +50,7 @@ class GenerateDailyPlanUseCase {
       ));
     }
 
-    // 3. Near-completion goals
+    // 2. General goals
     for (final goal in goals.where((g) => g.priority <= 0).take(2)) {
       items.add(DailyPlanItem(
         id: 'gen_${goal.id}',
@@ -81,7 +65,6 @@ class GenerateDailyPlanUseCase {
       ));
     }
 
-    // 4. General materials from goals
     items.sort((a, b) => b.priority.compareTo(a.priority));
 
     return DailyPlan(
