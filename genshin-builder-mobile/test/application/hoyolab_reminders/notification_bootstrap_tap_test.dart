@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:genshin_builder_mobile/application/daily_plan_notifications/daily_plan_notification_ids.dart';
 import 'package:genshin_builder_mobile/application/hoyolab_reminders/notification_bootstrap.dart';
 import 'package:genshin_builder_mobile/application/hoyolab_reminders/notification_tap_router.dart';
 import 'package:genshin_builder_mobile/application/hoyolab_reminders/reminder_models.dart';
@@ -68,6 +69,20 @@ void main() {
     expect(
       NotificationTapRouter.debugPendingPayload,
       ReminderNotificationIds.expeditionPayload,
+    );
+  });
+
+  test('daily plan incomplete payload is allowed', () {
+    NotificationTapRouter.debugReset();
+    NotificationTapRouter.onResponse(
+      const NotificationResponse(
+        notificationResponseType: NotificationResponseType.selectedNotification,
+        payload: DailyPlanNotificationIds.incompletePayload,
+      ),
+    );
+    expect(
+      NotificationTapRouter.debugPendingPayload,
+      DailyPlanNotificationIds.incompletePayload,
     );
   });
 }
