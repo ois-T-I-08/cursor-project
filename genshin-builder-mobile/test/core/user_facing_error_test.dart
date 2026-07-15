@@ -13,10 +13,7 @@ void main() {
     });
 
     test('maps TimeoutException', () {
-      expect(
-        userFacingError(TimeoutException('slow')),
-        contains('タイムアウト'),
-      );
+      expect(userFacingError(TimeoutException('slow')), contains('タイムアウト'));
     });
 
     test('passes through non-empty String', () {

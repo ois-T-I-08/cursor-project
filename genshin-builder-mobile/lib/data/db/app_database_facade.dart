@@ -67,28 +67,31 @@ class AppDatabase {
     required String characterId,
     required List<PromoteStage> promotes,
     required Map<String, List<TalentLevelUpgrade>> talents,
-  }) =>
-      _inner.characterDao.upsertCharacterUpgrade(
-        characterId: characterId,
-        promotes: promotes,
-        talents: talents,
-      );
+  }) => _inner.characterDao.upsertCharacterUpgrade(
+    characterId: characterId,
+    promotes: promotes,
+    talents: talents,
+  );
 
   Future<
-      ({
-        List<PromoteStage> promotes,
-        Map<String, List<TalentLevelUpgrade>> talents,
-      })?> getCharacterUpgrade(String characterId) =>
+    ({
+      List<PromoteStage> promotes,
+      Map<String, List<TalentLevelUpgrade>> talents,
+    })?
+  >
+  getCharacterUpgrade(String characterId) =>
       _inner.characterDao.getCharacterUpgrade(characterId);
 
   Future<
-      Map<
-          String,
-          ({
-            List<PromoteStage> promotes,
-            Map<String, List<TalentLevelUpgrade>> talents,
-          })>> getAllCharacterUpgrades() =>
-      _inner.characterDao.getAllCharacterUpgrades();
+    Map<
+      String,
+      ({
+        List<PromoteStage> promotes,
+        Map<String, List<TalentLevelUpgrade>> talents,
+      })
+    >
+  >
+  getAllCharacterUpgrades() => _inner.characterDao.getAllCharacterUpgrades();
 
   Future<Set<String>> getSyncedCharacterUpgradeIds() =>
       _inner.characterDao.getSyncedCharacterUpgradeIds();
@@ -100,25 +103,20 @@ class AppDatabase {
     required String weaponId,
     required List<PromoteStage> promotes,
     required List<String> levelUpItemIds,
-  }) =>
-      _inner.characterDao.upsertWeaponUpgrade(
-        weaponId: weaponId,
-        promotes: promotes,
-        levelUpItemIds: levelUpItemIds,
-      );
+  }) => _inner.characterDao.upsertWeaponUpgrade(
+    weaponId: weaponId,
+    promotes: promotes,
+    levelUpItemIds: levelUpItemIds,
+  );
 
   Future<({List<PromoteStage> promotes, List<String> levelUpItemIds})?>
-      getWeaponUpgrade(String weaponId) =>
-          _inner.characterDao.getWeaponUpgrade(weaponId);
+  getWeaponUpgrade(String weaponId) =>
+      _inner.characterDao.getWeaponUpgrade(weaponId);
 
   Future<
-      Map<
-          String,
-          ({
-            List<PromoteStage> promotes,
-            List<String> levelUpItemIds,
-          })>> getAllWeaponUpgrades() =>
-      _inner.characterDao.getAllWeaponUpgrades();
+    Map<String, ({List<PromoteStage> promotes, List<String> levelUpItemIds})>
+  >
+  getAllWeaponUpgrades() => _inner.characterDao.getAllWeaponUpgrades();
 
   Future<Set<String>> getSyncedWeaponUpgradeIds() =>
       _inner.characterDao.getSyncedWeaponUpgradeIds();
@@ -132,12 +130,11 @@ class AppDatabase {
     required String materialId,
     required int expValue,
     required String expTarget,
-  }) =>
-      _inner.characterDao.updateMaterialExp(
-        materialId: materialId,
-        expValue: expValue,
-        expTarget: expTarget,
-      );
+  }) => _inner.characterDao.updateMaterialExp(
+    materialId: materialId,
+    expValue: expValue,
+    expTarget: expTarget,
+  );
 
   Future<int> countLevelExpSegments() =>
       _inner.characterDao.countLevelExpSegments();
@@ -164,8 +161,7 @@ class AppDatabase {
     String userId,
     String characterId,
     String progressId,
-  ) =>
-      _inner.progressDao.getOrCreateProgress(userId, characterId, progressId);
+  ) => _inner.progressDao.getOrCreateProgress(userId, characterId, progressId);
 
   Future<List<MaterialBookmarkEntry>> getAllBookmarks() =>
       _inner.bookmarkDao.getAllBookmarks();

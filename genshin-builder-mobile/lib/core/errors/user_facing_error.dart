@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/config/config_load_log.dart';
 import '../../data/config/remote_json_fetch.dart';
+import '../../data/db/database_open_exception.dart';
 import '../../data/hoyolab/hoyolab_exceptions.dart';
 
 /// ユーザー向けに安全なエラー文言へ変換する。
@@ -26,6 +27,19 @@ String userFacingError(
   }
   if (error is FormatException) {
     return 'データの形式が不正です。再同期するか、しばらくしてから再試行してください。';
+  }
+  if (error is DatabaseOpenException) {
+    return switch (error.kind) {
+      DatabaseFailureKind.downgrade =>
+        'このデータは新しいアプリ版で作成されています。新しいバージョンへ戻してください。',
+      DatabaseFailureKind.locked => 'データベースは使用中です。少し待ってから再試行してください。',
+      DatabaseFailureKind.readOnly ||
+      DatabaseFailureKind.diskFull => '端末の保存領域を確認してから再試行してください。',
+      DatabaseFailureKind.corrupt => 'データベースを読み取れませんでした。初期化せず、サポートへお問い合わせください。',
+      DatabaseFailureKind.migration ||
+      DatabaseFailureKind.io ||
+      DatabaseFailureKind.unknown => 'データベースを開けませんでした。データは初期化せず保持されています。',
+    };
   }
   return fallback;
 }

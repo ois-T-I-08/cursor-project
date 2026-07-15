@@ -11,13 +11,41 @@ Future<File> resolveDatabaseFile(String fileName) async {
   for (final legacy in await _legacyDatabaseCandidates(fileName)) {
     if (await legacy.exists()) {
       await primary.parent.create(recursive: true);
-      await legacy.copy(primary.path);
-      return primary;
+      return copyDatabaseFileAtomically(legacy, primary);
     }
   }
 
   await primary.parent.create(recursive: true);
   return primary;
+}
+
+/// Copies a legacy DB without ever exposing a partially-written destination.
+///
+/// The source is retained. Only the temporary copy is removed on failure.
+Future<File> copyDatabaseFileAtomically(File source, File destination) async {
+  if (await destination.exists()) return destination;
+  await destination.parent.create(recursive: true);
+
+  final temporary = File(
+    '${destination.path}.copying-$pid-${DateTime.now().microsecondsSinceEpoch}',
+  );
+  try {
+    final copied = await source.copy(temporary.path);
+    if (await copied.length() != await source.length()) {
+      throw const FileSystemException('Database copy verification failed');
+    }
+
+    if (await destination.exists()) {
+      await temporary.delete();
+      return destination;
+    }
+    return await temporary.rename(destination.path);
+  } catch (_) {
+    if (await temporary.exists()) {
+      await temporary.delete();
+    }
+    rethrow;
+  }
 }
 
 Future<File> _primaryDatabaseFile(String fileName) async {
