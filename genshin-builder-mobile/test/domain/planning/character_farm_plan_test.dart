@@ -10,23 +10,23 @@ ResinFarmCostTable _table() => ResinFarmCostTable.fromJson({
         'naturalResinPerDay': 180,
         'condensedResinValue': 40,
         'synthesisRatio': 3,
-        'weekdayLabels': ['?', '?', '?', '?', '?', '?', '?'],
+        'weekdayLabels': ['月', '火', '水', '木', '金', '土', '日'],
       },
       'kinds': {
         'talentDomain': {
           'resinPerRun': 20,
           'assumedDropsPerRun': 2.2,
-          'contentLabel': '????',
+          'contentLabel': '熟知秘境',
         },
         'weaponDomain': {
           'resinPerRun': 20,
           'assumedDropsPerRun': 2.2,
-          'contentLabel': '????',
+          'contentLabel': '煉武秘境',
         },
         'artifactDomain': {
           'resinPerRun': 20,
           'assumedDropsPerRun': 1,
-          'contentLabel': '?????',
+          'contentLabel': '聖遺物秘境',
         },
         'weeklyBoss': {
           'resinPerRun': 30,
@@ -34,24 +34,24 @@ ResinFarmCostTable _table() => ResinFarmCostTable.fromJson({
           'assumedDropsPerRunMin': 1,
           'assumedDropsPerRunMax': 2,
           'challengesPerWeek': 3,
-          'contentLabel': '???',
+          'contentLabel': '週ボス',
         },
         'worldBoss': {
           'resinPerRun': 40,
           'assumedDropsPerRun': 2,
           'assumedDropsPerRunMin': 1.5,
           'assumedDropsPerRunMax': 2.5,
-          'contentLabel': '???????',
+          'contentLabel': 'フィールドボス',
         },
         'leyLineExp': {
           'resinPerRun': 20,
           'assumedHeroWitEquivalentPerRun': 2.5,
-          'contentLabel': '?????????',
+          'contentLabel': '地脈の花（経験値）',
         },
         'leyLineMora': {
           'resinPerRun': 20,
           'assumedMoraPerRun': 60000,
-          'contentLabel': '????',
+          'contentLabel': 'モラ地脈',
         },
       },
       'zeroResinCategories': [
@@ -62,11 +62,11 @@ ResinFarmCostTable _table() => ResinFarmCostTable.fromJson({
 
 DailyMaterialSeries _prosperity() => const DailyMaterialSeries(
       id: 'prosperity',
-      name: '??',
-      region: '??',
+      name: '繁栄',
+      region: '璃月',
       kind: DailyMaterialKind.talentBook,
       days: [1, 4],
-      materialIds: ['104311', '104312', '104313'], // ????????
+      materialIds: ['104311', '104312', '104313'], // 教え・導き・哲学
     );
 
 Map<String, DailyMaterialSeries> _index(DailyMaterialSeries s) => {
@@ -79,8 +79,8 @@ void main() {
   final table = _table();
 
   group('buildCharacterFarmPlan', () {
-    test('????????????????EXP???', () {
-      // ??? 180? = 180 * 20000 exp / 20000 = 180 hero equiv
+    test('経験値本の地脈周回数（切り上げ・EXP換算）', () {
+      // 大英雄 180冊 = 180 * 20000 exp / 20000 = 180 hero equiv
       // ceil(180 / 2.5) = 72 runs * 20 = 1440
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
@@ -101,8 +101,8 @@ void main() {
       expect(exp.materials.single.shortage, 180);
     });
 
-    test('????????????EXP???', () {
-      // ??? 10 * 1000 + ??? 2 * 5000 = 20000 = 1 hero
+    test('経験値本の混合レアを共通EXPへ換算', () {
+      // 流浪者 10 * 1000 + 冒険家 2 * 5000 = 20000 = 1 hero
       // ceil(1 / 2.5) = 1 run
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
@@ -122,7 +122,7 @@ void main() {
       expect(exp.resinTotal, 20);
     });
 
-    test('????????', () {
+    test('モラ地脈の周回数', () {
       // ceil(720000/60000)=12 * 20 = 240
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
@@ -142,10 +142,10 @@ void main() {
       expect(mora.resinTotal, 240);
     });
 
-    test('?????????????', () {
+    test('天賦秘境の周回数と開放曜日', () {
       final series = _prosperity();
       // Need 14 philosophy (weight 9) = 126 base units
-      // dropsInBase = 2.2 * 9 = 19.8 ? ceil(126/19.8)=7 ? 140 resin
+      // dropsInBase = 2.2 * 9 = 19.8 → ceil(126/19.8)=7 → 140 resin
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
         options: [
@@ -164,13 +164,13 @@ void main() {
           plan.sections.singleWhere((s) => s.kind == ResinFarmKind.talentDomain);
       expect(talent.runsExpected, 7);
       expect(talent.resinTotal, 140);
-      expect(talent.openWeekdayLabels, containsAll(['?', '?', '?']));
+      expect(talent.openWeekdayLabels, containsAll(['月', '木', '日']));
     });
 
-    test('???????????', () {
+    test('素材合成を考慮した計算', () {
       final series = _prosperity();
-      // ?? 3 + ?? 1 = 3*1 + 1*3 = 6 base; need ?? 1 = 9
-      // owned: ?? 3 ? ownedUnits 3; neededUnits 9; shortageUnits 6
+      // 教え 3 + 導き 1 = 3*1 + 1*3 = 6 base; need 哲学 1 = 9
+      // owned: 教え 3 → ownedUnits 3; neededUnits 9; shortageUnits 6
       // ceil(6 / 19.8) = 1
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
@@ -194,7 +194,7 @@ void main() {
       expect(talent.resinTotal, 20);
     });
 
-    test('???????', () {
+    test('所持数差し引き', () {
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
         options: [
@@ -220,7 +220,7 @@ void main() {
       expect(exp.resinTotal, 240);
     });
 
-    test('??0??????0????????', () {
+    test('不足0の場合は樹脂0でセクションなし', () {
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
         options: [
@@ -242,7 +242,7 @@ void main() {
       expect(plan.condensedResinCount, 0);
     });
 
-    test('??????????', () {
+    test('端数切り上げ（モラ）', () {
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
         options: [
@@ -261,7 +261,7 @@ void main() {
       expect(mora.resinTotal, 40);
     });
 
-    test('?????????????', () {
+    test('ボスドロップ幅は推定モード', () {
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
         options: [
@@ -276,13 +276,13 @@ void main() {
         materialCategories: {
           'boss_mat': 'characterLevelUpMaterial',
         },
-        materialNames: {'boss_mat': '????'},
+        materialNames: {'boss_mat': 'ボス素材'},
         nowUtc: _now,
       );
       final boss =
           plan.sections.singleWhere((s) => s.kind == ResinFarmKind.worldBoss);
       expect(boss.estimateMode, FarmEstimateMode.range);
-      // expected: ceil(16/2)=8; min drops 2.5 ? ceil(16/2.5)=7; max runs ceil(16/1.5)=11
+      // expected: ceil(16/2)=8; min drops 2.5 → ceil(16/2.5)=7; max runs ceil(16/1.5)=11
       expect(boss.runsExpected, 8);
       expect(boss.runsMin, 7);
       expect(boss.runsMax, 11);
@@ -291,7 +291,7 @@ void main() {
       expect(boss.resinMax, 440);
     });
 
-    test('??????????????', () {
+    test('週ボスの推定（週数・樹脂幅）', () {
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
         options: [
@@ -306,14 +306,14 @@ void main() {
         materialIndex: {
           'weekly_mat': const DailyMaterialSeries(
             id: 'weekly',
-            name: '???',
+            name: '週ボス',
             region: '',
             kind: DailyMaterialKind.weeklyBoss,
-            days: const [],
+            days: [],
             materialIds: ['weekly_mat'],
           ),
         },
-        materialNames: {'weekly_mat': '?????'},
+        materialNames: {'weekly_mat': '週ボス素材'},
         nowUtc: _now,
       );
       final weekly =
@@ -325,12 +325,12 @@ void main() {
       expect(weekly.runsExpected, 4);
       expect(weekly.resinMin, 60);
       expect(weekly.resinMax, 120);
-      // challengesPerWeek=3 ? weeks ceil(2/3)=1 .. ceil(4/3)=2
+      // challengesPerWeek=3 → weeks ceil(2/3)=1 .. ceil(4/3)=2
       expect(weekly.weeksMin, 1);
       expect(weekly.weeksMax, 2);
     });
 
-    test('??????????????', () {
+    test('樹脂不要素材は合計へ含めない', () {
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
         options: [
@@ -349,11 +349,11 @@ void main() {
         materialCategories: {
           'qingxin': 'localSpecialtyLiyue',
         },
-        materialNames: {'qingxin': '??'},
+        materialNames: {'qingxin': '清心'},
         nowUtc: _now,
       );
       expect(plan.zeroResinMaterials, hasLength(1));
-      expect(plan.zeroResinMaterials.single.name, '??');
+      expect(plan.zeroResinMaterials.single.name, '清心');
       expect(plan.zeroResinMaterials.single.shortage, 42);
       final resinKinds = plan.sections.map((s) => s.kind).toSet();
       expect(resinKinds, isNot(contains(ResinFarmKind.zeroResin)));
@@ -365,7 +365,7 @@ void main() {
       );
     });
 
-    test('???????????????', () {
+    test('複数キャラ集約時の所持重複防止', () {
       final opts = [
         const UpgradeOption(
           optionId: 'a',
@@ -396,7 +396,7 @@ void main() {
       expect(line.shortage, 25);
     });
 
-    test('??????????????????', () {
+    test('樹脂合計と自然回復・濃縮換算の整合性', () {
       final plan = buildCharacterFarmPlan(
         characterId: 'c1',
         options: [
