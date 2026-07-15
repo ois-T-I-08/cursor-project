@@ -11,6 +11,7 @@ enum DiagnosisType {
   talentOverallLow,
   goalExceeded,
   artifactCompletionUnset,
+  artifactCompletionLow,
   inventoryIncomplete,
 }
 

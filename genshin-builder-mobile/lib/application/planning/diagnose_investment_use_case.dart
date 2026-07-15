@@ -102,6 +102,7 @@ class DiagnoseCharacterInvestmentUseCase {
       ));
     }
 
+    // Artifact completion — same metric as character detail 聖遺物完成度
     if (char.isOwned && !char.artifactCompletionAvailable) {
       findings.add(DiagnosisFinding(
         type: DiagnosisType.artifactCompletionUnset,
@@ -111,6 +112,23 @@ class DiagnoseCharacterInvestmentUseCase {
         characterId: characterId,
         recommendation: 'キャラ詳細の聖遺物項目で装備を登録しましょう。',
         confidence: RecommendationConfidence.medium,
+      ));
+    } else if (char.artifactCompletionAvailable &&
+        char.artifactCompletion < 0.8) {
+      final pct = (char.artifactCompletion * 100).round();
+      findings.add(DiagnosisFinding(
+        type: DiagnosisType.artifactCompletionLow,
+        severity: char.artifactCompletion < 0.5
+            ? DiagnosisSeverity.warning
+            : DiagnosisSeverity.info,
+        title: '聖遺物完成度 $pct%',
+        explanation: 'キャラ詳細と同じ完成度指標で 80% 未満です'
+            '（部位の装備・レベル・メイン／サブステ・スコア寄与の平均）。',
+        characterId: characterId,
+        currentValue: '$pct',
+        targetValue: '80',
+        recommendation: '未装備部位の補完や強化で完成度を上げましょう。',
+        confidence: RecommendationConfidence.high,
       ));
     }
 
