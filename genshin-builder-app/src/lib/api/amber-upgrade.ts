@@ -337,25 +337,30 @@ export function buildLevelExpSegments(): LevelExpSegmentData[] {
   return segments;
 }
 
-/** 並列数を制限して配列を処理 */
+/** 並列数を制限して配列を処理（欠損結果は invalidData として拒否） */
 export async function mapWithConcurrency<T, R>(
   items: T[],
   concurrency: number,
-  fn: (item: T) => Promise<R | null>,
+  fn: (item: T) => Promise<R>,
 ): Promise<R[]> {
-  const results: R[] = [];
+  if (items.length === 0) return [];
+
+  const results: R[] = new Array(items.length);
   let index = 0;
 
   async function worker() {
-    while (index < items.length) {
+    while (true) {
       const i = index++;
-      const result = await fn(items[i]);
-      if (result != null) results.push(result);
+      if (i >= items.length) return;
+      results[i] = await fn(items[i]);
     }
   }
 
   await Promise.all(
     Array.from({ length: Math.min(concurrency, items.length) }, worker),
   );
+  if (results.some((value) => value === undefined)) {
+    throw new UpstreamFetchError("invalidData");
+  }
   return results;
 }
