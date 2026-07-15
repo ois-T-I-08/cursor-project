@@ -3,7 +3,6 @@ import 'package:genshin_builder_mobile/application/planning/build_growth_route_r
 import 'package:genshin_builder_mobile/application/planning/optimize_growth_route_use_case.dart';
 import 'package:genshin_builder_mobile/domain/planning/daily_plan.dart';
 import 'package:genshin_builder_mobile/domain/planning/upgrade_option.dart';
-import 'package:genshin_builder_mobile/domain/recommendation/recommendation.dart';
 
 void main() {
   group('buildGrowthRouteRequest', () {
