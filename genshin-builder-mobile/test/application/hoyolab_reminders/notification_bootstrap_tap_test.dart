@@ -15,9 +15,8 @@ void main() {
   test('bootstrap ensureInitialized is single-flight safe', () async {
     final a = NotificationBootstrap.ensureInitialized();
     final b = NotificationBootstrap.ensureInitialized();
+    expect(identical(a, b), isTrue);
     await Future.wait([a, b]);
-    // Completes without throwing to callers of ensureInitialized().
-    expect(true, isTrue);
   });
 
   test('schedule mode constant is inexactAllowWhileIdle', () {

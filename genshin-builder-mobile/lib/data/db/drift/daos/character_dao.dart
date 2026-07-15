@@ -231,30 +231,44 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
             Map<String, List<TalentLevelUpgrade>> talents,
           })>> getAllCharacterUpgrades() async {
     final rows = await select(characterUpgrades).get();
-    return {
-      for (final row in rows) row.characterId: _parseCharacterUpgradeRow(row),
-    };
+    final result = <String, ({
+      List<PromoteStage> promotes,
+      Map<String, List<TalentLevelUpgrade>> talents,
+    })>{};
+    for (final row in rows) {
+      final parsed = _parseCharacterUpgradeRow(row);
+      if (parsed != null) result[row.characterId] = parsed;
+    }
+    return result;
   }
 
   ({
     List<PromoteStage> promotes,
     Map<String, List<TalentLevelUpgrade>> talents,
-  }) _parseCharacterUpgradeRow(CharacterUpgrade row) {
-    final promotesRaw = jsonDecode(row.promotes) as List;
-    final talentsRaw = jsonDecode(row.talents) as Map<String, dynamic>;
-    return (
-      promotes: promotesRaw
-          .map((e) => UpgradeSerde.promoteFromJson(e as Map<String, dynamic>))
-          .toList(),
-      talents: talentsRaw.map(
-        (key, value) => MapEntry(
-          key,
-          (value as List)
-              .map((e) => UpgradeSerde.talentFromJson(e as Map<String, dynamic>))
-              .toList(),
+  })? _parseCharacterUpgradeRow(CharacterUpgrade row) {
+    try {
+      final promotesRaw = jsonDecode(row.promotes) as List;
+      final talentsRaw = jsonDecode(row.talents) as Map<String, dynamic>;
+      return (
+        promotes: promotesRaw
+            .map((e) => UpgradeSerde.promoteFromJson(e as Map<String, dynamic>))
+            .toList(),
+        talents: talentsRaw.map(
+          (key, value) => MapEntry(
+            key,
+            (value as List)
+                .map((e) => UpgradeSerde.talentFromJson(
+                      e as Map<String, dynamic>,
+                    ))
+                .toList(),
+          ),
         ),
-      ),
-    );
+      );
+    } on FormatException {
+      return null;
+    } on TypeError {
+      return null;
+    }
   }
 
   /// 同期済みキャラ upgrade の ID 一覧（差分同期用）
@@ -326,22 +340,34 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
             List<String> levelUpItemIds,
           })>> getAllWeaponUpgrades() async {
     final rows = await select(weaponUpgrades).get();
-    return {
-      for (final row in rows) row.weaponId: _parseWeaponUpgradeRow(row),
-    };
+    final result = <String, ({
+      List<PromoteStage> promotes,
+      List<String> levelUpItemIds,
+    })>{};
+    for (final row in rows) {
+      final parsed = _parseWeaponUpgradeRow(row);
+      if (parsed != null) result[row.weaponId] = parsed;
+    }
+    return result;
   }
 
-  ({List<PromoteStage> promotes, List<String> levelUpItemIds})
+  ({List<PromoteStage> promotes, List<String> levelUpItemIds})?
       _parseWeaponUpgradeRow(WeaponUpgrade row) {
-    final promotesRaw = jsonDecode(row.promotes) as List;
-    final itemIds =
-        (jsonDecode(row.levelUpItemIds) as List).cast<String>();
-    return (
-      promotes: promotesRaw
-          .map((e) => UpgradeSerde.promoteFromJson(e as Map<String, dynamic>))
-          .toList(),
-      levelUpItemIds: itemIds,
-    );
+    try {
+      final promotesRaw = jsonDecode(row.promotes) as List;
+      final itemIds =
+          (jsonDecode(row.levelUpItemIds) as List).cast<String>();
+      return (
+        promotes: promotesRaw
+            .map((e) => UpgradeSerde.promoteFromJson(e as Map<String, dynamic>))
+            .toList(),
+        levelUpItemIds: itemIds,
+      );
+    } on FormatException {
+      return null;
+    } on TypeError {
+      return null;
+    }
   }
 
   /// 同期済み武器 upgrade の ID 一覧（差分同期用）

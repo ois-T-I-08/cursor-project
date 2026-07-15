@@ -13,26 +13,7 @@ class ProgressDao extends DatabaseAccessor<DriftAppDatabase>
 
   Future<void> upsertProgress(UserProgress p) async {
     await into(userProgressTable).insertOnConflictUpdate(
-      UserProgressTableCompanion.insert(
-        id: p.id,
-        userId: p.userId,
-        characterId: p.characterId,
-        level: Value(p.level),
-        ascension: Value(p.ascension),
-        constellation: Value(p.constellation),
-        talentNormal: Value(p.talentNormal),
-        talentSkill: Value(p.talentSkill),
-        talentBurst: Value(p.talentBurst),
-        weaponId: Value(p.weaponId),
-        weaponName: Value(p.weaponName),
-        weaponLevel: Value(p.weaponLevel),
-        weaponRefinement: Value(p.weaponRefinement),
-        artifacts: Value(p.artifactsJson),
-        artifactScoreType: Value(p.artifactScoreType),
-        isCompleted: Value(p.artifactCompleted),
-        memo: Value(p.memo),
-        updatedAt: DateTime.now().millisecondsSinceEpoch,
-      ),
+      _progressCompanion(p),
     );
   }
 
@@ -57,17 +38,47 @@ class ProgressDao extends DatabaseAccessor<DriftAppDatabase>
     String userId,
     String characterId,
     String progressId,
-  ) async {
-    final existing = await getProgress(userId, characterId);
-    if (existing != null) return existing;
-    final created = UserProgress(
-      id: progressId,
-      userId: userId,
-      characterId: characterId,
-    );
-    await upsertProgress(created);
-    return created;
-  }
+  ) =>
+      transaction(() async {
+        final existing = await getProgress(userId, characterId);
+        if (existing != null) return existing;
+        final created = UserProgress(
+          id: progressId,
+          userId: userId,
+          characterId: characterId,
+        );
+        await into(userProgressTable).insert(
+          _progressCompanion(created),
+          mode: InsertMode.insertOrIgnore,
+        );
+        final persisted = await getProgress(userId, characterId);
+        if (persisted == null) {
+          throw StateError('Failed to create user progress');
+        }
+        return persisted;
+      });
+
+  UserProgressTableCompanion _progressCompanion(UserProgress p) =>
+      UserProgressTableCompanion.insert(
+        id: p.id,
+        userId: p.userId,
+        characterId: p.characterId,
+        level: Value(p.level),
+        ascension: Value(p.ascension),
+        constellation: Value(p.constellation),
+        talentNormal: Value(p.talentNormal),
+        talentSkill: Value(p.talentSkill),
+        talentBurst: Value(p.talentBurst),
+        weaponId: Value(p.weaponId),
+        weaponName: Value(p.weaponName),
+        weaponLevel: Value(p.weaponLevel),
+        weaponRefinement: Value(p.weaponRefinement),
+        artifacts: Value(p.artifactsJson),
+        artifactScoreType: Value(p.artifactScoreType),
+        isCompleted: Value(p.artifactCompleted),
+        memo: Value(p.memo),
+        updatedAt: DateTime.now().millisecondsSinceEpoch,
+      );
 
   Future<String?> getSetting(String key) async {
     final row = await (select(appSettings)

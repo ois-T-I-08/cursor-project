@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:genshin_builder_mobile/config/feature_flags.dart';
 import 'package:genshin_builder_mobile/domain/recommendation/recommendation.dart';
 
 void main() {
@@ -15,8 +16,12 @@ void main() {
       expect(labels.length, 3);
     });
 
-    testWidgets('Feature Flags guard compile-time verified', (tester) async {
-      expect(true, isTrue);
+    test('diagnosis feature flag has a stable enabled default and key', () {
+      expect(FeatureFlags.defaultInvestmentDiagnosisEnabled, isTrue);
+      expect(
+        FeatureFlags.investmentDiagnosisEnabledKey,
+        'investment_diagnosis_enabled',
+      );
     });
   });
 }

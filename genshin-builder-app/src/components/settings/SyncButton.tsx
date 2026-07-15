@@ -13,6 +13,7 @@ type SyncState =
 
 export default function SyncButton({ status }: { status: SyncStatus }) {
   const [state, setState] = useState<SyncState>({ status: "idle" });
+  const [secret, setSecret] = useState("");
   const router = useRouter();
 
   const suggestFullSync =
@@ -23,7 +24,10 @@ export default function SyncButton({ status }: { status: SyncStatus }) {
   async function handleSync(fullUpgrade: boolean) {
     setState({ status: "loading", mode: fullUpgrade ? "full" : "incremental" });
     try {
-      const data = await syncMasterDataAction(fullUpgrade);
+      const data = await syncMasterDataAction(
+        fullUpgrade,
+        secret.trim() || undefined,
+      );
 
       if (!data.ok) {
         const detail =
@@ -54,6 +58,19 @@ export default function SyncButton({ status }: { status: SyncStatus }) {
 
   return (
     <div className="space-y-3">
+      <label className="block max-w-md space-y-1">
+        <span className="text-xs text-gray-400">
+          同期用シークレット（本番環境）
+        </span>
+        <input
+          type="password"
+          value={secret}
+          onChange={(event) => setSecret(event.target.value)}
+          disabled={loading}
+          autoComplete="current-password"
+          className="w-full rounded-lg border border-white/20 bg-black/20 px-3 py-2 text-sm text-white"
+        />
+      </label>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

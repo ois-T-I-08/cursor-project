@@ -47,4 +47,22 @@ void main() {
     );
     expect(second.id, first.id);
   });
+
+  test('concurrent getOrCreate keeps one stable row', () async {
+    final results = await Future.wait([
+      repo.getOrCreate(
+        userId: 'user-1',
+        characterId: '10000003',
+        progressId: 'concurrent-a',
+      ),
+      repo.getOrCreate(
+        userId: 'user-1',
+        characterId: '10000003',
+        progressId: 'concurrent-b',
+      ),
+    ]);
+
+    expect(results[0].id, results[1].id);
+    expect(await repo.getAll('user-1'), hasLength(1));
+  });
 }

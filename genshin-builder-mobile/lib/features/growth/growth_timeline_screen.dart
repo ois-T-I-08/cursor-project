@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/growth_providers.dart';
+import '../../../providers/app_providers.dart';
 import '../../../domain/history/growth_event.dart';
 
 /// Growth timeline screen.
@@ -13,6 +14,8 @@ class GrowthTimelineScreen extends ConsumerStatefulWidget {
 
 class _GrowthTimelineScreenState extends ConsumerState<GrowthTimelineScreen> {
   final _scrollCtrl = ScrollController();
+  bool _loadingMore = false;
+  bool _hasMore = true;
 
   @override
   void initState() {
@@ -27,20 +30,33 @@ class _GrowthTimelineScreenState extends ConsumerState<GrowthTimelineScreen> {
   }
 
   Future<void> _loadMore() async {
-    final repo = await ref.read(growthEventRepoProvider.future);
-    GrowthEventCursor? cursor;
-    if (_allEvents.isNotEmpty) {
-      final last = _allEvents.last;
-      cursor = GrowthEventCursor(observedAt: last.observedAt, eventId: last.eventId);
-    }
-    final more = await repo.getByUser('local', limit: 50, cursor: cursor);
-    if (mounted && more.isNotEmpty) {
+    if (_loadingMore || !_hasMore) return;
+    _loadingMore = true;
+    try {
+      final repo = await ref.read(growthEventRepoProvider.future);
+      final userId = await ref.read(localUserIdProvider.future);
+      final initial = ref.read(growthTimelineProvider).value ?? const [];
+      final current = _allEvents.isEmpty ? initial : _allEvents;
+      GrowthEventCursor? cursor;
+      if (current.isNotEmpty) {
+        final last = current.last;
+        cursor = GrowthEventCursor(
+          observedAt: last.observedAt,
+          eventId: last.eventId,
+        );
+      }
+      final more = await repo.getByUser(userId, limit: 50, cursor: cursor);
+      if (!mounted) return;
       setState(() {
+        if (_allEvents.isEmpty) _allEvents.addAll(initial);
         final ids = {for (final e in _allEvents) e.eventId};
         for (final e in more) {
           if (ids.add(e.eventId)) _allEvents.add(e);
         }
+        _hasMore = more.length == 50;
       });
+    } finally {
+      _loadingMore = false;
     }
   }
 
@@ -80,7 +96,7 @@ class _GrowthTimelineScreenState extends ConsumerState<GrowthTimelineScreen> {
       appBar: AppBar(title: const Text('\u6210\u9577\u30bf\u30a4\u30e0\u30e9\u30a4\u30f3')),
       body: timelineAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc')),
+        error: (e, _) => const Center(child: Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc')),
         data: (events) {
           if (events.isEmpty) {
             return Center(
@@ -97,7 +113,7 @@ class _GrowthTimelineScreenState extends ConsumerState<GrowthTimelineScreen> {
           return ListView.builder(
             controller: _scrollCtrl,
             padding: const EdgeInsets.all(16),
-            itemCount: grouped.length + 1,
+            itemCount: grouped.length + (_hasMore ? 1 : 0),
             itemBuilder: (ctx, i) {
               if (i >= grouped.length) {
                 return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()));

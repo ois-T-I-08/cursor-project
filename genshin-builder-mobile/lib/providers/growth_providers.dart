@@ -24,6 +24,7 @@ import '../data/repositories/drift_growth_goal_repository.dart';
 import '../data/repositories/drift_material_inventory_repository.dart';
 import '../data/repositories/drift_team_repository.dart';
 import '../data/repositories/drift_growth_event_repository.dart';
+import '../data/repositories/progress_mutation_repository.dart';
 import 'app_providers.dart';
 import 'hoyolab_providers.dart' show featureFlagsProvider;
 import 'hoyolab_snapshot_providers.dart' show buildSnapshotSupplement;
@@ -44,6 +45,10 @@ final growthEventRepoProvider = FutureProvider((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return DriftGrowthEventRepository(db);
 });
+final progressMutationRepoProvider = FutureProvider((ref) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  return DriftProgressMutationRepository(db);
+});
 
 // ── HoYoLAB supplement builder (cache-only, no network) ──────────
 
@@ -59,11 +64,12 @@ final accountSnapshotProvider = FutureProvider<AccountSnapshot>((ref) async {
   final invRepo = await ref.watch(materialInventoryRepoProvider.future);
   final teamRepo = await ref.watch(teamRepoProvider.future);
   final supplement = await _buildSupplement(ref);
+  final userId = await ref.watch(localUserIdProvider.future);
 
   final useCase = BuildAccountSnapshotUseCase(
     characterRepo: charRepo, progressRepo: progressRepo,
     goalRepo: goalRepo, inventoryRepo: invRepo, teamRepo: teamRepo,
-    userId: 'local', supplement: supplement,
+    userId: userId, supplement: supplement,
   );
   return useCase();
 });
@@ -99,7 +105,8 @@ final growthTimelineProvider = FutureProvider<List<GrowthEvent>>((ref) async {
   final flags = await ref.watch(featureFlagsProvider.future);
   if (!flags.enableGrowthTimeline) return [];
   final repo = await ref.watch(growthEventRepoProvider.future);
-  return repo.getByUser('local', limit: 50);
+  final userId = await ref.watch(localUserIdProvider.future);
+  return repo.getByUser(userId, limit: 50);
 });
 
 // ── Health Report ─────────────────────────────────────────────────
@@ -153,9 +160,25 @@ final upgradeOptionsProvider =
       .where((c) => c.characterId == goal.characterId)
       .firstOrNull;
   if (char == null) return [];
+  final characterRepo =
+      await ref.watch(characterRepositoryProvider.future);
+  final characterUpgrade = await characterRepo.getUpgrade(goal.characterId);
+  final weaponId = goal.targetWeaponId ?? char.equippedWeaponId;
+  final weapon = weaponId == null
+      ? null
+      : await characterRepo.getWeapon(weaponId);
+  final weaponUpgrade = weaponId == null
+      ? null
+      : await characterRepo.getWeaponUpgrade(weaponId);
   return const GenerateUpgradeOptionsUseCase()(
     goal: goal, character: char,
     materialInventory: snapshot.materialInventory,
+    promotes: characterUpgrade?.promotes,
+    talents: characterUpgrade?.talents,
+    weaponPromotes: weaponUpgrade?.promotes,
+    weaponLevelUpItemIds: weaponUpgrade?.levelUpItemIds,
+    weaponRarity: weapon?.rarity ?? 5,
+    generatedAt: DateTime.now(),
   );
 });
 

@@ -21,7 +21,8 @@ export const WEAPON_LEVEL_OPTIONS = [1, 20, 30, 40, 50, 60, 70, 80, 90] as const
  * 天賦レベルの上限を返す。
  * 将来、命ノ星座で+3（最大Lv.13）に対応する場合は constellation を参照する。
  */
-export function getTalentLevelMax(_constellation = 0): number {
+export function getTalentLevelMax(constellation = 0): number {
   // TODO: 特定凸で +3 する場合はここで constellation を判定
+  void constellation;
   return TALENT_LEVEL_MAX;
 }

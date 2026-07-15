@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../application/element_colors.dart';
 import '../../domain/game_display.dart';
 import '../../domain/models/master_models.dart';
+import '../../domain/team/team_models.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/growth_providers.dart';
 import '../../core/errors/user_facing_error.dart';
 import '../shared/game_icon_image.dart';
 
@@ -72,6 +75,7 @@ class TeamBuilderScreen extends ConsumerStatefulWidget {
 }
 
 class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
+  final String _teamId = const Uuid().v4();
   final List<TeamBuilderSlot> _slots = [
     const TeamBuilderSlot(),
     const TeamBuilderSlot(),
@@ -184,10 +188,33 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
 
   // ── Future hint ────────────────────────────────────────────────────────
 
+  Future<void> _openTeamPriority(BuildContext context) async {
+    if (_selectedCount == 0) return;
+    final team = Team(
+      id: _teamId,
+      name: _teamNameController.text.trim().isEmpty
+          ? '\u7121\u984c\u306e\u7de8\u6210'
+          : _teamNameController.text.trim(),
+      members: [
+        for (var i = 0; i < _slots.length; i++)
+          if (!_slots[i].isEmpty)
+            TeamMemberSlot(characterId: _slots[i].characterId!, position: i),
+      ],
+    );
+    final userId = await ref.read(localUserIdProvider.future);
+    final repository = await ref.read(teamRepoProvider.future);
+    await repository.save(userId, team);
+    ref.invalidate(accountSnapshotProvider);
+    ref.invalidate(accountHealthReportProvider);
+    if (!context.mounted) return;
+    await context.push('/team-priority', extra: team.id);
+  }
+
   Widget _buildTeamPriorityButton(BuildContext context) {
     return OutlinedButton.icon(
-      onPressed: () =>
-          context.push('/team-priority', extra: 'team_${DateTime.now().millisecondsSinceEpoch}'),
+      onPressed: _selectedCount == 0
+          ? null
+          : () => _openTeamPriority(context),
       icon: const Icon(Icons.sort),
       label: const Text('\u3053\u306e\u7de8\u6210\u306e\u80b2\u6210\u512a\u5148\u5ea6\u3092\u898b\u308b'),
     );

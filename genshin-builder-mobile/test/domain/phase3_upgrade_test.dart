@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:genshin_builder_mobile/domain/planning/upgrade_option.dart';
 import 'package:genshin_builder_mobile/domain/planning/growth_goal.dart';
 import 'package:genshin_builder_mobile/domain/account/account_snapshot.dart';
+import 'package:genshin_builder_mobile/domain/models/calculation_models.dart';
 import 'package:genshin_builder_mobile/domain/recommendation/recommendation.dart';
 import 'package:genshin_builder_mobile/application/planning/generate_upgrade_options_use_case.dart';
 import 'package:genshin_builder_mobile/application/planning/estimate_upgrade_impact_use_case.dart';
@@ -61,6 +62,7 @@ void main() {
     test('generates options for each target', () {
       final options = const GenerateUpgradeOptionsUseCase()(
         goal: goal, character: character, materialInventory: {},
+        generatedAt: DateTime(2026),
       );
       expect(options.length, 2); // level + talentBurst
     });
@@ -68,6 +70,7 @@ void main() {
     test('options have correct types', () {
       final options = const GenerateUpgradeOptionsUseCase()(
         goal: goal, character: character, materialInventory: {},
+        generatedAt: DateTime(2026),
       );
       final types = options.map((o) => o.optionType).toSet();
       expect(types, contains('level'));
@@ -77,6 +80,7 @@ void main() {
     test('option fromValue/toValue set correctly', () {
       final options = const GenerateUpgradeOptionsUseCase()(
         goal: goal, character: character, materialInventory: {},
+        generatedAt: DateTime(2026),
       );
       final levelOpt = options.firstWhere((o) => o.optionType == 'level');
       expect(levelOpt.fromValue, 1);
@@ -86,6 +90,7 @@ void main() {
     test('option without inventory shows notSet', () {
       final options = const GenerateUpgradeOptionsUseCase()(
         goal: goal, character: character, materialInventory: {},
+        generatedAt: DateTime(2026),
       );
       final opt = options.first;
       expect(opt.inventoryStatus, InventoryStatus.notSet);
@@ -96,8 +101,52 @@ void main() {
     test('stepCount is positive', () {
       final options = const GenerateUpgradeOptionsUseCase()(
         goal: goal, character: character, materialInventory: {},
+        generatedAt: DateTime(2026),
       );
       expect(options.every((o) => (o.stepCount) > 0), isTrue);
+    });
+
+    test('uses master costs and real inventory quantities', () {
+      const costGoal = GrowthGoal(
+        id: 'cost-goal',
+        userId: 'user',
+        characterId: '10000002',
+        targetLevel: 40,
+        targetTalentBurst: 2,
+      );
+      const promote = PromoteStage(
+        promoteLevel: 1,
+        unlockMaxLevel: 40,
+        costItems: {'ascension-mat': 3},
+        coinCost: 20000,
+      );
+      const talent = TalentLevelUpgrade(
+        level: 2,
+        costItems: {'talent-mat': 4},
+        coinCost: 12500,
+      );
+
+      final options = const GenerateUpgradeOptionsUseCase()(
+        goal: costGoal,
+        character: character,
+        materialInventory: {
+          'ascension-mat': 1,
+          'talent-mat': 4,
+        },
+        promotes: [promote],
+        talents: {'talentBurst': [talent]},
+        generatedAt: DateTime(2026),
+      );
+      final level = options.firstWhere((o) => o.optionType == 'level');
+      final burst =
+          options.firstWhere((o) => o.optionType == 'talentBurst');
+
+      expect(level.materialsCost['ascension-mat'], 3);
+      expect(level.remainingMaterials['ascension-mat'], 2);
+      expect(level.expItemCost, isNotEmpty);
+      expect(burst.materialsCost['talent-mat'], 4);
+      expect(burst.remainingMaterials['talent-mat'], 0);
+      expect(burst.moraCost, 12500);
     });
 
     test('no targets produces empty list', () {
@@ -107,6 +156,7 @@ void main() {
       );
       final options = const GenerateUpgradeOptionsUseCase()(
         goal: noTargetGoal, character: character, materialInventory: {},
+        generatedAt: DateTime(2026),
       );
       expect(options, isEmpty);
     });

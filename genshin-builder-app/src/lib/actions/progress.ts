@@ -38,6 +38,7 @@ async function ensureUserId(): Promise<string> {
   cookieStore.set(USER_ID_COOKIE, userId, {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     maxAge: USER_ID_COOKIE_MAX_AGE,
     path: "/",
   });

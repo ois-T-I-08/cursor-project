@@ -17,6 +17,7 @@ import '../domain/models/master_models.dart';
 import 'app_providers.dart';
 import 'artifact_sets_page_providers.dart';
 import 'hoyolab_game_providers.dart';
+import 'growth_providers.dart';
 
 final characterDetailProvider = AutoDisposeNotifierProvider.family<
     CharacterDetailNotifier, CharacterDetailState, String>(
@@ -184,12 +185,18 @@ class CharacterDetailNotifier
     if (_disposed) return;
     try {
       final repo = await ref.read(progressRepositoryProvider.future);
-      final updated = await SaveCharacterProgressUseCase(progress: repo).call(
+      final mutation = await ref.read(progressMutationRepoProvider.future);
+      final updated = await SaveCharacterProgressUseCase(
+        progress: repo,
+        mutation: mutation,
+      ).call(
         base: base,
         state: state,
       );
       if (_disposed) return;
       state = state.copyWith(progress: updated);
+      invalidateAfterProgressChange(ref, characterId: characterId);
+      ref.invalidate(growthTimelineProvider);
     } catch (_) {
       // 保存失敗は UI を落とさない
     }
@@ -268,6 +275,7 @@ class CharacterDetailNotifier
     try {
       final repo = await ref.read(progressRepositoryProvider.future);
       await repo.save(updated);
+      invalidateAfterProgressChange(ref, characterId: characterId);
     } catch (_) {
       // 保存失敗は UI を落とさない
     }

@@ -305,7 +305,6 @@ export default function DetailEditor({
 
       {/* 2. 武器 */}
       <WeaponSection
-        characterId={character.id}
         characterName={character.name}
         bookmarkCharacter={bookmarkCharacter}
         progress={progress}

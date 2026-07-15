@@ -2,13 +2,6 @@ name: Flutter Tests
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "genshin-builder-mobile/**"
-      - ".github/workflows/flutter-test.yml"
-  pull_request:
-    paths:
-      - "genshin-builder-mobile/**"
 
 jobs:
   test:

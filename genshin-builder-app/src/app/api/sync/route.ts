@@ -13,13 +13,13 @@
  */
 
 import { NextResponse } from "next/server";
-import { syncMasterData } from "@/lib/sync";
 import { verifySyncApiSecret } from "@/lib/sync-auth";
+import {
+  runSyncExclusive,
+  SyncAlreadyRunningError,
+} from "@/lib/sync-execution";
 
 export const maxDuration = 300;
-
-/** 同期の多重実行を防止するための簡易ロック */
-let syncing = false;
 
 export async function POST(request: Request) {
   // ---- 認証 ----
@@ -30,43 +30,53 @@ export async function POST(request: Request) {
     );
   }
 
-  // ---- 多重実行防止 ----
-  if (syncing) {
-    return NextResponse.json(
-      { ok: false, message: "同期は既に実行中です。完了後に再度お試しください。" },
-      { status: 409 },
-    );
-  }
-
   // ---- 入力検証 ----
   let fullUpgrade = false;
-  try {
-    const body = (await request.json()) as Record<string, unknown>;
-    if (body.fullUpgrade !== undefined) {
-      if (typeof body.fullUpgrade !== "boolean") {
-        return NextResponse.json(
-          { ok: false, message: "fullUpgrade は真偽値で指定してください。" },
-          { status: 400 },
-        );
-      }
-      fullUpgrade = body.fullUpgrade;
+  const rawBody = await request.text();
+  if (rawBody.trim()) {
+    let body: unknown;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json(
+        { ok: false, message: "JSON形式のリクエストを指定してください。" },
+        { status: 400 },
+      );
     }
-  } catch {
-    // body なしは差分同期
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      return NextResponse.json(
+        { ok: false, message: "リクエスト形式が不正です。" },
+        { status: 400 },
+      );
+    }
+    const fullUpgradeValue = (body as Record<string, unknown>).fullUpgrade;
+    if (
+      fullUpgradeValue !== undefined &&
+      typeof fullUpgradeValue !== "boolean"
+    ) {
+      return NextResponse.json(
+        { ok: false, message: "fullUpgrade は真偽値で指定してください。" },
+        { status: 400 },
+      );
+    }
+    fullUpgrade = fullUpgradeValue ?? false;
   }
 
   // ---- 実行 ----
-  syncing = true;
   try {
-    const result = await syncMasterData({ fullUpgrade });
+    const result = await runSyncExclusive(fullUpgrade);
     return NextResponse.json({ ok: result.errors.length === 0, ...result });
   } catch (error) {
+    if (error instanceof SyncAlreadyRunningError) {
+      return NextResponse.json(
+        { ok: false, message: "同期は既に実行中です。完了後に再度お試しください。" },
+        { status: 409 },
+      );
+    }
     console.error("マスターデータ同期に失敗しました:", error);
     return NextResponse.json(
       { ok: false, message: "同期に失敗しました。時間をおいて再度お試しください。" },
       { status: 500 },
     );
-  } finally {
-    syncing = false;
   }
 }

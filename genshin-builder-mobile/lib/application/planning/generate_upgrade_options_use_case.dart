@@ -1,9 +1,11 @@
 import '../../domain/account/account_snapshot.dart';
 import '../../domain/models/calculation_models.dart';
+import '../../domain/models/bookmark.dart';
 import '../../domain/planning/growth_goal.dart';
 import '../../domain/planning/upgrade_option.dart';
 import '../../domain/recommendation/recommendation.dart';
-import '../../domain/level_progression.dart';
+import '../../domain/level_config.dart';
+import '../../domain/material_requirements.dart';
 
 /// Generates UpgradeOptions from GrowthGoals + AccountSnapshot.
 class GenerateUpgradeOptionsUseCase {
@@ -14,13 +16,17 @@ class GenerateUpgradeOptionsUseCase {
     required CharacterSnapshot character,
     required Map<String, int> materialInventory,
     List<PromoteStage>? promotes,
-    DateTime? generatedAt,
+    Map<String, List<TalentLevelUpgrade>>? talents,
+    List<PromoteStage>? weaponPromotes,
+    List<String>? weaponLevelUpItemIds,
+    int weaponRarity = 5,
+    required DateTime generatedAt,
   }) {
     final options = <UpgradeOption>[];
     final hasInv = materialInventory.isNotEmpty;
     final sources = <String>['masterData', 'userProgress'];
     if (hasInv) sources.add('materialInventory');
-    final now = generatedAt ?? DateTime.now();
+    final now = generatedAt;
 
     // Level
     if (goal.targetLevel != null && goal.targetLevel! > character.level) {
@@ -35,6 +41,9 @@ class GenerateUpgradeOptionsUseCase {
           sources: sources,
           now: now,
           promotes: promotes,
+          expMaterialIds:
+              expBooks.map((item) => item.id).toSet(),
+          materialInventory: materialInventory,
         ),
       );
     }
@@ -51,6 +60,8 @@ class GenerateUpgradeOptionsUseCase {
           hasInv: hasInv,
           sources: sources,
           now: now,
+          promotes: promotes,
+          materialInventory: materialInventory,
         ),
       );
     }
@@ -71,6 +82,8 @@ class GenerateUpgradeOptionsUseCase {
             hasInv: hasInv,
             sources: sources,
             now: now,
+            talentUpgrades: talents?[tc.$1],
+            materialInventory: materialInventory,
           ),
         );
       }
@@ -88,6 +101,10 @@ class GenerateUpgradeOptionsUseCase {
           hasInv: hasInv,
           sources: sources,
           now: now,
+          weaponPromotes: weaponPromotes,
+          expMaterialIds: weaponLevelUpItemIds?.toSet(),
+          weaponRarity: weaponRarity,
+          materialInventory: materialInventory,
         ),
       );
     }
@@ -104,6 +121,11 @@ class GenerateUpgradeOptionsUseCase {
     required List<String> sources,
     required DateTime now,
     List<PromoteStage>? promotes,
+    List<TalentLevelUpgrade>? talentUpgrades,
+    List<PromoteStage>? weaponPromotes,
+    Set<String>? expMaterialIds,
+    int weaponRarity = 5,
+    required Map<String, int> materialInventory,
   }) {
     final materials = <String, int>{};
     var mora = 0;
@@ -113,30 +135,86 @@ class GenerateUpgradeOptionsUseCase {
     final missing = <MissingData>[];
 
     if (type == 'level' && promotes != null && promotes.isNotEmpty) {
-      final next = getNextStageRequirements(fromVal, promotes, 'character', 0);
-      if (next != null) {
-        for (final mc in next.materials) {
-          materials[mc.materialId] = (materials[mc.materialId] ?? 0) + mc.count;
+      _mergeLines(
+        getRangeLevelRequirements(fromVal, toVal, promotes, 'character'),
+        materials,
+        expItems,
+        expMaterialIds,
+        (value) => mora += value,
+      );
+    } else if (type == 'ascension' &&
+        promotes != null &&
+        promotes.isNotEmpty) {
+      for (final stage in promotes) {
+        if (stage.promoteLevel <= fromVal || stage.promoteLevel > toVal) {
+          continue;
         }
-        mora += next.mora;
-        for (final lu in next.levelUpMaterials) {
-          expItems[lu.materialId] = (expItems[lu.materialId] ?? 0) + lu.count;
+        for (final entry in stage.costItems.entries) {
+          materials[entry.key] =
+              (materials[entry.key] ?? 0) + entry.value;
         }
+        mora += stage.coinCost;
       }
+    } else if (type.startsWith('talent') &&
+        talentUpgrades != null &&
+        talentUpgrades.isNotEmpty) {
+      _mergeLines(
+        getRangeTalentRequirements(
+          fromVal,
+          toVal,
+          talentLevelMax,
+          talentUpgrades,
+        ),
+        materials,
+        expItems,
+        null,
+        (value) => mora += value,
+      );
+    } else if (type == 'weapon' &&
+        weaponPromotes != null &&
+        weaponPromotes.isNotEmpty) {
+      _mergeLines(
+        getRangeLevelRequirements(
+          fromVal,
+          toVal,
+          weaponPromotes,
+          'weapon',
+          weaponRarity: weaponRarity,
+        ),
+        materials,
+        expItems,
+        expMaterialIds,
+        (value) => mora += value,
+      );
+    } else {
+      calcMode = CalculationMode.unavailable;
+      missing.add(MissingData.masterUpgradeData);
     }
 
     if (!hasInv) {
       missing.add(MissingData.materialInventory);
-      calcMode = CalculationMode.estimatedInventoryMissing;
+      if (calcMode != CalculationMode.unavailable) {
+        calcMode = CalculationMode.estimatedInventoryMissing;
+      }
     } else {
       invStatus = InventoryStatus.ownedInsufficient;
     }
 
     final remaining = <String, int>{};
+    final owned = <String, int>{};
     if (hasInv) {
-      for (final entry in materials.entries) {
-        remaining[entry.key] = entry.value; // no inventory per-material yet
+      for (final entry in [
+        ...materials.entries,
+        ...expItems.entries,
+      ]) {
+        final quantity = materialInventory[entry.key] ?? 0;
+        owned[entry.key] = quantity;
+        remaining[entry.key] =
+            (entry.value - quantity).clamp(0, entry.value).toInt();
       }
+      invStatus = remaining.values.any((value) => value > 0)
+          ? InventoryStatus.ownedInsufficient
+          : InventoryStatus.ownedSufficient;
     }
 
     return UpgradeOption(
@@ -150,17 +228,46 @@ class GenerateUpgradeOptionsUseCase {
       materialsCost: materials,
       moraCost: mora,
       expItemCost: expItems,
+      ownedMaterials: owned,
       remainingMaterials: remaining,
       inventoryStatus: invStatus,
       priority: goal.priority,
       confidence:
-          hasInv ? RecommendationConfidence.high : RecommendationConfidence.low,
+          calcMode == CalculationMode.unavailable
+              ? RecommendationConfidence.unknown
+              : hasInv
+                  ? RecommendationConfidence.high
+                  : RecommendationConfidence.low,
       completeness:
-          hasInv ? DataCompleteness.partial : DataCompleteness.minimal,
+          calcMode == CalculationMode.unavailable
+              ? DataCompleteness.unavailable
+              : hasInv
+                  ? DataCompleteness.partial
+                  : DataCompleteness.minimal,
       missingData: missing,
       usedDataSources: sources,
       calculationMode: calcMode,
       generatedAt: now,
     );
+  }
+
+  void _mergeLines(
+    List<RequirementLine> lines,
+    Map<String, int> materials,
+    Map<String, int> expItems,
+    Set<String>? expMaterialIds,
+    void Function(int mora) addMora,
+  ) {
+    for (final line in lines) {
+      if (line.isMora) {
+        addMora(line.count);
+      } else if (expMaterialIds?.contains(line.materialId) ?? false) {
+        expItems[line.materialId] =
+            (expItems[line.materialId] ?? 0) + line.count;
+      } else {
+        materials[line.materialId] =
+            (materials[line.materialId] ?? 0) + line.count;
+      }
+    }
   }
 }

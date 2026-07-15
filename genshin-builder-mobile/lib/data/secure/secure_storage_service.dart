@@ -14,6 +14,7 @@ class SecureStorageService {
             );
 
   final FlutterSecureStorage _storage;
+  Future<String>? _dbKeyCreation;
 
   static final _random = Random.secure();
 
@@ -67,6 +68,21 @@ class SecureStorageService {
   /// SQLCipher 用の DB 鍵を取得（無ければ生成して保存）。
   /// 鍵そのものはログに出さないこと。
   Future<String> getOrCreateDbKey() async {
+    final pending = _dbKeyCreation;
+    if (pending != null) return pending;
+
+    final operation = _readOrCreateDbKey();
+    _dbKeyCreation = operation;
+    try {
+      return await operation;
+    } finally {
+      if (identical(_dbKeyCreation, operation)) {
+        _dbKeyCreation = null;
+      }
+    }
+  }
+
+  Future<String> _readOrCreateDbKey() async {
     final existing = await read(SecureStorageKeys.dbEncryptionKey);
     if (existing != null && existing.isNotEmpty) return existing;
 

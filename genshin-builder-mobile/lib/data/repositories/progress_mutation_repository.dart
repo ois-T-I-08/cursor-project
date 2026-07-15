@@ -3,6 +3,8 @@ import 'package:uuid/uuid.dart';
 import '../../domain/models/master_models.dart';
 import '../../domain/history/growth_event.dart';
 import '../../domain/account/account_snapshot.dart';
+import '../../domain/repositories/progress_mutation_repository.dart'
+    as domain;
 import '../db/app_database_facade.dart';
 import '../db/drift/daos/growth_dao.dart' show EventParams;
 import '../../application/history/detect_growth_events_use_case.dart';
@@ -10,18 +12,20 @@ import '../../application/history/detect_growth_events_use_case.dart';
 const _uuid = Uuid();
 
 /// Coordinates UserProgress save and GrowthEvent generation in a single DB transaction.
-class ProgressMutationRepository {
-  ProgressMutationRepository(this._db);
+class DriftProgressMutationRepository
+    implements domain.ProgressMutationRepository {
+  DriftProgressMutationRepository(this._db);
   final AppDatabase _db;
 
   /// Save progress and optionally generate growth events.
   /// [before] is the previous progress snapshot (null = baseline/no events).
   /// Returns the list of events generated (empty if none).
+  @override
   Future<List<GrowthEvent>> saveWithEvents({
     required UserProgress progress,
     required String userId,
-    CharacterSnapshot? before,
-    String actionSource = 'localManual',
+    UserProgress? before,
+    String source = 'localManual',
   }) async {
     final events = <GrowthEvent>[];
     final now = DateTime.now();
@@ -31,10 +35,10 @@ class ProgressMutationRepository {
 
     if (before != null) {
       final detected = const DetectGrowthEventsUseCase()(
-        before: [before],
+        before: [_toSnapshot(before, isOwned: true)],
         after: [after],
         userId: userId,
-        source: actionSource,
+        source: source,
         isInitialSync: false,
         observedAt: now,
       );

@@ -1,4 +1,5 @@
 import '../../domain/models/master_models.dart';
+import '../../domain/repositories/progress_mutation_repository.dart';
 import '../../domain/repositories/progress_repository.dart';
 import 'character_detail_state.dart';
 
@@ -6,9 +7,12 @@ import 'character_detail_state.dart';
 class SaveCharacterProgressUseCase {
   const SaveCharacterProgressUseCase({
     required ProgressRepository progress,
-  }) : _progress = progress;
+    ProgressMutationRepository? mutation,
+  })  : _progress = progress,
+        _mutation = mutation;
 
   final ProgressRepository _progress;
+  final ProgressMutationRepository? _mutation;
 
   Future<UserProgress> call({
     required UserProgress base,
@@ -26,7 +30,16 @@ class SaveCharacterProgressUseCase {
       artifacts: state.artifacts,
       artifactCompleted: state.artifactCompleted,
     );
-    await _progress.save(updated);
+    final mutation = _mutation;
+    if (mutation != null) {
+      await mutation.saveWithEvents(
+        progress: updated,
+        before: base,
+        userId: base.userId,
+      );
+    } else {
+      await _progress.save(updated);
+    }
     return updated;
   }
 }

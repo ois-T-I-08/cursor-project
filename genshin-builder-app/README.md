@@ -35,7 +35,7 @@ npm run dev
 | 変数 | 必須 | 説明 |
 |------|------|------|
 | `DATABASE_URL` | はい | Prisma の接続先（開発: `file:./dev.db`） |
-| `SYNC_API_SECRET` | 本番のみ | `/api/sync` の Bearer 認証トークン。設定画面の手動同期は Server Action 経由のため不要 |
+| `SYNC_API_SECRET` | 本番のみ | `/api/sync` と設定画面の手動同期で共用する認証トークン。手動同期時は画面へ同じ値を入力 |
 
 `DATABASE_URL` が未設定の状態で起動すると、Prisma Client の初期化時にエラーが表示されます。
 
