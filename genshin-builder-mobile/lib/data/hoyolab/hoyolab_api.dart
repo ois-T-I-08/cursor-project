@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'hoyolab_auth.dart';
 import 'hoyolab_constants.dart';
 import 'hoyolab_exceptions.dart';
+import 'hoyolab_http_guard.dart';
 import 'models/daily_note.dart';
 import 'models/game_record.dart';
 
@@ -24,12 +25,11 @@ class HoyolabApiResult<T> {
   factory HoyolabApiResult.fromJson(
     Map<String, dynamic> json,
     T Function(Object? obj) fromJsonT,
-  ) =>
-      HoyolabApiResult(
-        retcode: json['retcode'] as int? ?? -1,
-        message: json['message'] as String? ?? '',
-        data: json['data'] == null ? null : fromJsonT(json['data']),
-      );
+  ) => HoyolabApiResult(
+    retcode: json['retcode'] as int? ?? -1,
+    message: json['message'] as String? ?? '',
+    data: json['data'] == null ? null : fromJsonT(json['data']),
+  );
 }
 
 /// HoYoLAB API クライアント（genshin_material 参考・自前実装）
@@ -41,8 +41,8 @@ class HoyolabApi {
     this.appVersion = HoyolabConstants.defaultAppVersion,
     http.Client? client,
     ApiRequestQueue? queue,
-  })  : _client = client ?? http.Client(),
-        _queue = queue ?? _sharedQueue;
+  }) : _client = client ?? http.Client(),
+       _queue = queue ?? _sharedQueue;
 
   final String? cookie;
   final String? region;
@@ -54,20 +54,14 @@ class HoyolabApi {
   static final _sharedQueue = ApiRequestQueue();
   static const _httpTimeout = Duration(seconds: 25);
 
-  Future<http.Response> _get(
-    Uri uri, {
-    Map<String, String>? headers,
-  }) =>
+  Future<http.Response> _get(Uri uri, {Map<String, String>? headers}) =>
       _client.get(uri, headers: headers).timeout(_httpTimeout);
 
   Future<http.Response> _post(
     Uri uri, {
     Map<String, String>? headers,
     Object? body,
-  }) =>
-      _client
-          .post(uri, headers: headers, body: body)
-          .timeout(_httpTimeout);
+  }) => _client.post(uri, headers: headers, body: body).timeout(_httpTimeout);
 
   Future<List<HoyolabRegion>> lookupRegions() {
     return _queue.run(() async {
@@ -75,10 +69,7 @@ class HoyolabApi {
         '${HoyolabConstants.getAllRegionsUrl}?game_biz=hk4e_global',
       );
       final response = await _get(uri);
-      return _parseList(
-        response.body,
-        HoyolabRegion.fromJson,
-      );
+      return _parseListResponse(response, HoyolabRegion.fromJson);
     });
   }
 
@@ -92,17 +83,14 @@ class HoyolabApi {
           appVersion: appVersion,
         ),
       );
-      return _parse(
-        response.body,
-        (obj) {
-          final data = obj as Map<String, dynamic>;
-          final userInfo = data['user_info'] as Map<String, dynamic>?;
-          if (userInfo != null) {
-            return HoyolabUserInfo.fromJson(userInfo);
-          }
-          return HoyolabUserInfo.fromJson(data);
-        },
-      );
+      return _parseResponse(response, (obj) {
+        final data = obj as Map<String, dynamic>;
+        final userInfo = data['user_info'] as Map<String, dynamic>?;
+        if (userInfo != null) {
+          return HoyolabUserInfo.fromJson(userInfo);
+        }
+        return HoyolabUserInfo.fromJson(data);
+      });
     });
   }
 
@@ -119,8 +107,8 @@ class HoyolabApi {
           appVersion: appVersion,
         ),
       );
-      return _parseList(
-        response.body,
+      return _parseListResponse(
+        response,
         (json) => HoyolabGameRole.fromJson(json, region: region),
       );
     });
@@ -128,13 +116,11 @@ class HoyolabApi {
 
   Future<DailyNote> getDailyNote() {
     _ensureDailyNoteParams();
-    final query = {
-      'role_id': uid!,
-      'server': region!,
-    };
+    final query = {'role_id': uid!, 'server': region!};
     return _queue.run(() async {
-      final uri = Uri.parse(HoyolabConstants.dailyNoteUrl)
-          .replace(queryParameters: query);
+      final uri = Uri.parse(
+        HoyolabConstants.dailyNoteUrl,
+      ).replace(queryParameters: query);
       final ds = HoyolabAuth.generateDsToken(queryParameters: query);
       final response = await _get(
         uri,
@@ -144,8 +130,8 @@ class HoyolabApi {
           dsToken: ds,
         ),
       );
-      return _parse(
-        response.body,
+      return _parseResponse(
+        response,
         (obj) => DailyNote.fromJson(obj! as Map<String, dynamic>),
       );
     });
@@ -177,7 +163,7 @@ class HoyolabApi {
               ),
               body: body,
             );
-            final json = jsonDecode(response.body) as Map<String, dynamic>;
+            final json = HoyolabHttpGuard.decodeJsonObject(response);
             final result = HoyolabApiResult<Map<String, dynamic>>.fromJson(
               json,
               (obj) => obj! as Map<String, dynamic>,
@@ -188,17 +174,20 @@ class HoyolabApi {
             final owned = _parseOwnedCharacterList(result.data ?? {});
             if (owned.isEmpty) continue;
 
-            final relicCount =
-                owned.fold<int>(0, (n, c) => n + c.relics.length);
+            final relicCount = owned.fold<int>(
+              0,
+              (n, c) => n + c.relics.length,
+            );
             // /character/list は聖遺物無しのことがある → レガシーを優先試行
-            if (relicCount == 0 &&
-                path == HoyolabConstants.characterListPath) {
+            if (relicCount == 0 && path == HoyolabConstants.characterListPath) {
               fallbackWithoutRelics ??= owned;
               continue;
             }
             return owned;
           } on HoyolabApiException catch (e) {
             lastError = e;
+          } on HoyolabHttpException {
+            continue;
           }
         }
       }
@@ -247,9 +236,7 @@ class HoyolabApi {
   ) async {
     final bodyMap = {
       ..._recordBody(),
-      'character_ids': [
-        for (final id in characterIds) _parseCharacterId(id),
-      ],
+      'character_ids': [for (final id in characterIds) _parseCharacterId(id)],
     };
     final body = jsonEncode(bodyMap);
     final ds = HoyolabAuth.generateDsToken(body: body);
@@ -267,7 +254,7 @@ class HoyolabApi {
           ),
           body: body,
         );
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final json = HoyolabHttpGuard.decodeJsonObject(response);
         final result = HoyolabApiResult<Map<String, dynamic>>.fromJson(
           json,
           (obj) => obj! as Map<String, dynamic>,
@@ -287,6 +274,8 @@ class HoyolabApi {
         ];
       } on HoyolabApiException catch (e) {
         lastError = e;
+      } on HoyolabHttpException {
+        continue;
       }
     }
 
@@ -307,8 +296,9 @@ class HoyolabApi {
       HoyolabApiException? lastError;
       for (final base in HoyolabConstants.gameRecordBaseUrls) {
         try {
-          final uri = Uri.parse('$base${HoyolabConstants.spiralAbyssPath}')
-              .replace(queryParameters: query);
+          final uri = Uri.parse(
+            '$base${HoyolabConstants.spiralAbyssPath}',
+          ).replace(queryParameters: query);
           final response = await _get(
             uri,
             headers: HoyolabAuth.buildRecordHeaders(
@@ -317,12 +307,16 @@ class HoyolabApi {
               dsToken: ds,
             ),
           );
-          return _parse(
-            response.body,
+          return _parseResponse(
+            response,
             (obj) => SpiralAbyssStatus.fromJson(obj! as Map<String, dynamic>),
           );
         } on HoyolabApiException catch (e) {
           lastError = e;
+        } on HoyolabHttpException {
+          continue;
+        } on HoyolabHttpException {
+          continue;
         }
       }
 
@@ -346,8 +340,9 @@ class HoyolabApi {
       HoyolabApiException? lastError;
       for (final base in HoyolabConstants.gameRecordBaseUrls) {
         try {
-          final uri = Uri.parse('$base${HoyolabConstants.roleCombatPath}')
-              .replace(queryParameters: query);
+          final uri = Uri.parse(
+            '$base${HoyolabConstants.roleCombatPath}',
+          ).replace(queryParameters: query);
           final response = await _get(
             uri,
             headers: HoyolabAuth.buildRecordHeaders(
@@ -356,7 +351,7 @@ class HoyolabApi {
               dsToken: ds,
             ),
           );
-          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final json = HoyolabHttpGuard.decodeJsonObject(response);
           final result = HoyolabApiResult<Map<String, dynamic>>.fromJson(
             json,
             (obj) => obj! as Map<String, dynamic>,
@@ -381,6 +376,8 @@ class HoyolabApi {
           );
         } on HoyolabApiException catch (e) {
           lastError = e;
+        } on HoyolabHttpException {
+          continue;
         }
       }
 
@@ -404,8 +401,9 @@ class HoyolabApi {
       HoyolabApiException? lastError;
       for (final base in HoyolabConstants.gameRecordBaseUrls) {
         try {
-          final uri = Uri.parse('$base${HoyolabConstants.hardChallengePath}')
-              .replace(queryParameters: query);
+          final uri = Uri.parse(
+            '$base${HoyolabConstants.hardChallengePath}',
+          ).replace(queryParameters: query);
           final response = await _get(
             uri,
             headers: HoyolabAuth.buildRecordHeaders(
@@ -414,7 +412,7 @@ class HoyolabApi {
               dsToken: ds,
             ),
           );
-          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final json = HoyolabHttpGuard.decodeJsonObject(response);
           final result = HoyolabApiResult<Map<String, dynamic>>.fromJson(
             json,
             (obj) => obj! as Map<String, dynamic>,
@@ -448,6 +446,8 @@ class HoyolabApi {
           );
         } on HoyolabApiException catch (e) {
           lastError = e;
+        } on HoyolabHttpException {
+          continue;
         }
       }
 
@@ -483,8 +483,24 @@ class HoyolabApi {
     );
   }
 
-  T _parse<T>(String body, T Function(Object? obj) fromJsonT) {
-    final json = jsonDecode(body) as Map<String, dynamic>;
+  T _parseResponse<T>(
+    http.Response response,
+    T Function(Object? obj) fromJsonT,
+  ) {
+    return _parseMap(HoyolabHttpGuard.decodeJsonObject(response), fromJsonT);
+  }
+
+  List<T> _parseListResponse<T>(
+    http.Response response,
+    T Function(Map<String, dynamic> json) fromJsonItem,
+  ) {
+    return _parseListMap(
+      HoyolabHttpGuard.decodeJsonObject(response),
+      fromJsonItem,
+    );
+  }
+
+  T _parseMap<T>(Map<String, dynamic> json, T Function(Object? obj) fromJsonT) {
     final result = HoyolabApiResult<T>.fromJson(json, fromJsonT);
     if (result.hasError) {
       throw HoyolabApiException(result.retcode, result.message);
@@ -495,21 +511,15 @@ class HoyolabApi {
     return result.data as T;
   }
 
-  List<T> _parseList<T>(
-    String body,
+  List<T> _parseListMap<T>(
+    Map<String, dynamic> json,
     T Function(Map<String, dynamic> json) fromJsonItem,
   ) {
-    final json = jsonDecode(body) as Map<String, dynamic>;
-    final result = HoyolabApiResult<List<T>>.fromJson(
-      json,
-      (obj) {
-        final data = obj as Map<String, dynamic>;
-        final list = data['list'] as List<dynamic>? ?? [];
-        return list
-            .map((e) => fromJsonItem(e as Map<String, dynamic>))
-            .toList();
-      },
-    );
+    final result = HoyolabApiResult<List<T>>.fromJson(json, (obj) {
+      final data = obj as Map<String, dynamic>;
+      final list = data['list'] as List<dynamic>? ?? [];
+      return list.map((e) => fromJsonItem(e as Map<String, dynamic>)).toList();
+    });
     if (result.hasError) {
       throw HoyolabApiException(result.retcode, result.message);
     }
@@ -535,21 +545,21 @@ class HoyolabApi {
   void _ensureRecordParams() => _ensureDailyNoteParams();
 
   Map<String, Object> _recordBody() => {
-        'role_id': int.tryParse(uid!) ?? 0,
-        'server': region!,
-      };
+    'role_id': int.tryParse(uid!) ?? 0,
+    'server': region!,
+  };
 
   List<HoyolabOwnedCharacter> _parseOwnedCharacterList(
     Map<String, dynamic> data,
   ) {
-    final list = data['list'] as List<dynamic>? ??
+    final list =
+        data['list'] as List<dynamic>? ??
         data['avatars'] as List<dynamic>? ??
         [];
     return list
         .map(
-          (e) => HoyolabOwnedCharacter.fromSummaryJson(
-            e as Map<String, dynamic>,
-          ),
+          (e) =>
+              HoyolabOwnedCharacter.fromSummaryJson(e as Map<String, dynamic>),
         )
         .toList();
   }
