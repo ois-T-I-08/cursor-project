@@ -13,59 +13,70 @@
  */
 
 import { NextResponse } from "next/server";
-import { verifySyncApiSecret } from "@/lib/sync-auth";
+import { authorizeSyncRequest } from "@/lib/sync-auth";
 import {
   runSyncExclusive,
   SyncAlreadyRunningError,
 } from "@/lib/sync-execution";
+import {
+  parseSyncRequest,
+  SyncRequestError,
+} from "@/lib/sync-request";
+import {
+  allowSyncRequest,
+  syncRateLimitKey,
+} from "@/lib/sync-rate-limit";
 
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
   // ---- 認証 ----
-  if (!verifySyncApiSecret(request)) {
+  const authorization = authorizeSyncRequest(request);
+  if (authorization !== "authorized") {
     return NextResponse.json(
       { ok: false, message: "認証に失敗しました。" },
-      { status: 401 },
+      { status: authorization === "forbidden" ? 403 : 401 },
+    );
+  }
+  if (!allowSyncRequest(syncRateLimitKey(request))) {
+    return NextResponse.json(
+      { ok: false, message: "同期要求が多すぎます。時間をおいて再試行してください。" },
+      { status: 429 },
     );
   }
 
   // ---- 入力検証 ----
-  let fullUpgrade = false;
-  const rawBody = await request.text();
-  if (rawBody.trim()) {
-    let body: unknown;
-    try {
-      body = JSON.parse(rawBody);
-    } catch {
+  let fullUpgrade: boolean;
+  try {
+    ({ fullUpgrade } = await parseSyncRequest(request));
+  } catch (error) {
+    if (error instanceof SyncRequestError) {
       return NextResponse.json(
-        { ok: false, message: "JSON形式のリクエストを指定してください。" },
-        { status: 400 },
+        {
+          ok: false,
+          message:
+            error.status === 413
+              ? "リクエストが大きすぎます。"
+              : "リクエスト形式が不正です。",
+        },
+        { status: error.status },
       );
     }
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      return NextResponse.json(
-        { ok: false, message: "リクエスト形式が不正です。" },
-        { status: 400 },
-      );
-    }
-    const fullUpgradeValue = (body as Record<string, unknown>).fullUpgrade;
-    if (
-      fullUpgradeValue !== undefined &&
-      typeof fullUpgradeValue !== "boolean"
-    ) {
-      return NextResponse.json(
-        { ok: false, message: "fullUpgrade は真偽値で指定してください。" },
-        { status: 400 },
-      );
-    }
-    fullUpgrade = fullUpgradeValue ?? false;
+    throw error;
   }
 
   // ---- 実行 ----
   try {
     const result = await runSyncExclusive(fullUpgrade);
-    return NextResponse.json({ ok: result.errors.length === 0, ...result });
+    const { errors, ...safeResult } = result;
+    return NextResponse.json(
+      {
+        ok: errors.length === 0,
+        ...safeResult,
+        errorCount: errors.length,
+      },
+      { status: errors.length === 0 ? 200 : 502 },
+    );
   } catch (error) {
     if (error instanceof SyncAlreadyRunningError) {
       return NextResponse.json(
@@ -73,7 +84,7 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
-    console.error("マスターデータ同期に失敗しました:", error);
+    console.error("マスターデータ同期に失敗しました。");
     return NextResponse.json(
       { ok: false, message: "同期に失敗しました。時間をおいて再度お試しください。" },
       { status: 500 },

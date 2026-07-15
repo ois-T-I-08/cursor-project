@@ -9,28 +9,51 @@ import { timingSafeEqual } from "node:crypto";
 
 /** POST /api/sync のリクエストが認可されているか */
 export function verifySyncApiSecret(request: Request): boolean {
+  return authorizeSyncRequest(request) === "authorized";
+}
+
+export type SyncAuthorization =
+  | "authorized"
+  | "missing"
+  | "forbidden"
+  | "unavailable";
+
+export function authorizeSyncRequest(request: Request): SyncAuthorization {
   const auth = request.headers.get("authorization");
-  const token = auth?.startsWith("Bearer ") ? auth.slice(7) : undefined;
-  return verifySyncSecret(token);
+  if (
+    auth === null ||
+    !auth.startsWith("Bearer ") ||
+    auth.includes(",") ||
+    auth.length <= "Bearer ".length
+  ) {
+    return "missing";
+  }
+
+  const token = auth.slice("Bearer ".length);
+  if (token.trim() !== token || /\s/.test(token)) {
+    return "missing";
+  }
+  return authorizeSyncSecret(token);
 }
 
 /** Server Action callers must provide the same secret as the Cron API. */
 export function verifySyncActionSecret(token: string | undefined): boolean {
-  return verifySyncSecret(token);
+  return authorizeSyncSecret(token) === "authorized";
 }
 
-function verifySyncSecret(token: string | undefined): boolean {
+function authorizeSyncSecret(token: string | undefined): SyncAuthorization {
   const secret = process.env.SYNC_API_SECRET;
 
   if (!secret) {
-    // Fail closed in production. Local development remains convenient.
-    return process.env.NODE_ENV !== "production";
+    return process.env.NODE_ENV === "production"
+      ? "unavailable"
+      : "authorized";
   }
 
-  if (!token) return false;
+  if (!token) return "missing";
   const expected = Buffer.from(secret);
   const actual = Buffer.from(token);
-  return (
+  const matches =
     expected.length === actual.length && timingSafeEqual(expected, actual)
-  );
+  return matches ? "authorized" : "forbidden";
 }

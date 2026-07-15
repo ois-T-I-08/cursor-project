@@ -12,6 +12,9 @@ import {
   fetchWeaponUpgradeFromApi,
   mapWithConcurrency,
 } from "@/lib/api/amber-upgrade";
+import {
+  UpstreamFetchError,
+} from "@/lib/api/safe-json-fetch";
 import { prisma } from "@/lib/db";
 
 const EXP_MATERIAL_COUNT = 6;
@@ -73,21 +76,23 @@ export async function syncUpgradeData(
       const levelUpMaterials = await fetchLevelUpMaterialsFromApi(() =>
         trackApiCall(apiCounter),
       );
-      for (const mat of levelUpMaterials) {
-        await prisma.material.updateMany({
-          where: { id: mat.materialId },
-          data: {
-            expValue: mat.exp,
-            expTarget: mat.targetType,
-          },
-        });
-      }
+      await prisma.$transaction(
+        levelUpMaterials.map((material) =>
+          prisma.material.updateMany({
+            where: { id: material.materialId },
+            data: {
+              expValue: material.exp,
+              expTarget: material.targetType,
+            },
+          }),
+        ),
+      );
       result.expMaterials = levelUpMaterials.length;
     } else {
       result.expMaterials = existingExpMaterials;
     }
   } catch (error) {
-    result.errors.push(`expMaterials: ${String(error)}`);
+    result.errors.push(upgradeErrorCode("expMaterials", error));
   }
 
   // 2. 目盛り間EXP（API なし・定数）— 未登録時のみ書き込み
@@ -95,22 +100,24 @@ export async function syncUpgradeData(
     const existingSegments = await prisma.levelExpSegment.count();
     if (fullUpgrade || existingSegments < LEVEL_EXP_SEGMENT_COUNT) {
       const segments = buildLevelExpSegments();
-      for (const seg of segments) {
-        await prisma.levelExpSegment.upsert({
-          where: { id: seg.id },
-          create: seg,
-          update: {
-            expRequired: seg.expRequired,
-            moraRequired: seg.moraRequired,
-          },
-        });
-      }
+      await prisma.$transaction(
+        segments.map((segment) =>
+          prisma.levelExpSegment.upsert({
+            where: { id: segment.id },
+            create: segment,
+            update: {
+              expRequired: segment.expRequired,
+              moraRequired: segment.moraRequired,
+            },
+          }),
+        ),
+      );
       result.levelExpSegments = segments.length;
     } else {
       result.levelExpSegments = existingSegments;
     }
   } catch (error) {
-    result.errors.push(`levelExpSegments: ${String(error)}`);
+    result.errors.push(upgradeErrorCode("levelExpSegments", error));
   }
 
   // 3. キャラクター突破・天賦
@@ -136,33 +143,39 @@ export async function syncUpgradeData(
         return fetchCharacterUpgradeFromApi(characterId);
       },
     );
-
-    for (const upgrade of upgrades) {
-      await prisma.characterUpgrade.upsert({
-        where: { characterId: upgrade.characterId },
-        create: {
-          characterId: upgrade.characterId,
-          promotes: JSON.stringify(upgrade.promotes),
-          talents: JSON.stringify(upgrade.talents),
-        },
-        update: {
-          promotes: JSON.stringify(upgrade.promotes),
-          talents: JSON.stringify(upgrade.talents),
-        },
-      });
+    if (upgrades.length !== targetIds.length) {
+      throw new UpstreamFetchError("invalidData");
     }
 
     const syncedIds = upgrades.map((u) => u.characterId);
-
-    if (fullUpgrade && syncedIds.length > 0) {
-      await prisma.characterUpgrade.deleteMany({
-        where: { characterId: { notIn: syncedIds } },
-      });
-    }
+    await prisma.$transaction(
+      async (tx) => {
+        for (const upgrade of upgrades) {
+          await tx.characterUpgrade.upsert({
+            where: { characterId: upgrade.characterId },
+            create: {
+              characterId: upgrade.characterId,
+              promotes: JSON.stringify(upgrade.promotes),
+              talents: JSON.stringify(upgrade.talents),
+            },
+            update: {
+              promotes: JSON.stringify(upgrade.promotes),
+              talents: JSON.stringify(upgrade.talents),
+            },
+          });
+        }
+        if (fullUpgrade && syncedIds.length > 0) {
+          await tx.characterUpgrade.deleteMany({
+            where: { characterId: { notIn: syncedIds } },
+          });
+        }
+      },
+      { timeout: 30_000 },
+    );
 
     result.characterUpgrades = await prisma.characterUpgrade.count();
   } catch (error) {
-    result.errors.push(`characterUpgrades: ${String(error)}`);
+    result.errors.push(upgradeErrorCode("characterUpgrades", error));
   }
 
   // 4. 武器突破
@@ -188,35 +201,47 @@ export async function syncUpgradeData(
         return fetchWeaponUpgradeFromApi(weaponId);
       },
     );
-
-    for (const upgrade of upgrades) {
-      await prisma.weaponUpgrade.upsert({
-        where: { weaponId: upgrade.weaponId },
-        create: {
-          weaponId: upgrade.weaponId,
-          promotes: JSON.stringify(upgrade.promotes),
-          levelUpItemIds: JSON.stringify(upgrade.levelUpItemIds),
-        },
-        update: {
-          promotes: JSON.stringify(upgrade.promotes),
-          levelUpItemIds: JSON.stringify(upgrade.levelUpItemIds),
-        },
-      });
+    if (upgrades.length !== targetIds.length) {
+      throw new UpstreamFetchError("invalidData");
     }
 
     const syncedWeaponIds = upgrades.map((u) => u.weaponId);
-
-    if (fullUpgrade && syncedWeaponIds.length > 0) {
-      await prisma.weaponUpgrade.deleteMany({
-        where: { weaponId: { notIn: syncedWeaponIds } },
-      });
-    }
+    await prisma.$transaction(
+      async (tx) => {
+        for (const upgrade of upgrades) {
+          await tx.weaponUpgrade.upsert({
+            where: { weaponId: upgrade.weaponId },
+            create: {
+              weaponId: upgrade.weaponId,
+              promotes: JSON.stringify(upgrade.promotes),
+              levelUpItemIds: JSON.stringify(upgrade.levelUpItemIds),
+            },
+            update: {
+              promotes: JSON.stringify(upgrade.promotes),
+              levelUpItemIds: JSON.stringify(upgrade.levelUpItemIds),
+            },
+          });
+        }
+        if (fullUpgrade && syncedWeaponIds.length > 0) {
+          await tx.weaponUpgrade.deleteMany({
+            where: { weaponId: { notIn: syncedWeaponIds } },
+          });
+        }
+      },
+      { timeout: 30_000 },
+    );
 
     result.weaponUpgrades = await prisma.weaponUpgrade.count();
   } catch (error) {
-    result.errors.push(`weaponUpgrades: ${String(error)}`);
+    result.errors.push(upgradeErrorCode("weaponUpgrades", error));
   }
 
   result.apiCalls = apiCounter.count;
   return result;
+}
+
+function upgradeErrorCode(phase: string, error: unknown): string {
+  const code =
+    error instanceof UpstreamFetchError ? error.code : "unavailable";
+  return `${phase}:${code}`;
 }

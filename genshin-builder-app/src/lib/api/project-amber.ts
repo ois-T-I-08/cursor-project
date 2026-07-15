@@ -14,6 +14,10 @@ import type {
   MasterWeapon,
 } from "./types";
 import { inferScoreType } from "@/lib/artifact-score";
+import {
+  fetchJsonObject,
+  UpstreamFetchError,
+} from "./safe-json-fetch";
 
 const BASE_URL = "https://gi.yatta.moe";
 const ASSET_URL = `${BASE_URL}/assets/UI`;
@@ -80,12 +84,6 @@ const MATERIAL_CATEGORIES = new Set([
   "localSpecialtyNodKrai",
 ]);
 
-/** APIの共通レスポンス形式 */
-interface AmberResponse<T> {
-  response: number;
-  data: T;
-}
-
 /** /avatar のレスポンス1件分（必要な項目のみ定義） */
 interface AmberAvatar {
   id: number | string;
@@ -118,16 +116,42 @@ interface AmberMaterial {
 
 /** タイムアウト付きでJSONを取得する共通ヘルパー */
 async function fetchItems<T>(path: string): Promise<Record<string, T>> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    // マスターデータは頻繁に変わらないため、Next.js のキャッシュを1時間有効にする
-    next: { revalidate: 3600 },
-    signal: AbortSignal.timeout(30_000),
+  const json = await fetchJsonObject(`${BASE_URL}${path}`, {
+    timeoutMs: 30_000,
+    maxBytes: 8 * 1024 * 1024,
+    retries: 2,
+    revalidateSeconds: 3600,
   });
-  if (!res.ok) {
-    throw new Error(`API request failed: ${path} (${res.status})`);
+  const data = json.data;
+  if (
+    json.response !== 200 ||
+    !isRecord(data) ||
+    !isRecord(data.items) ||
+    Object.keys(data.items).length === 0
+  ) {
+    throw new UpstreamFetchError("invalidData");
   }
-  const json = (await res.json()) as AmberResponse<{ items: Record<string, T> }>;
-  return json.data.items;
+  return data.items as Record<string, T>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function requireUniqueId(
+  ids: Set<string>,
+  id: unknown,
+): string {
+  if (
+    (typeof id !== "string" && typeof id !== "number") ||
+    String(id).trim() === "" ||
+    ids.has(String(id))
+  ) {
+    throw new UpstreamFetchError("invalidData");
+  }
+  const normalized = String(id);
+  ids.add(normalized);
+  return normalized;
 }
 
 /** アイコン名から画像URLを組み立てる */
@@ -141,13 +165,25 @@ export const projectAmberProvider: GameDataProvider = {
   async fetchCharacters(): Promise<MasterCharacter[]> {
     const items = await fetchItems<AmberAvatar>("/api/v2/jp/avatar");
     const characters: MasterCharacter[] = [];
+    const ids = new Set<string>();
 
     for (const avatar of Object.values(items)) {
+      if (
+        !isRecord(avatar) ||
+        typeof avatar.name !== "string" ||
+        avatar.name.trim() === "" ||
+        (avatar.rank !== 4 && avatar.rank !== 5) ||
+        (avatar.element !== null && typeof avatar.element !== "string") ||
+        typeof avatar.weaponType !== "string" ||
+        typeof avatar.region !== "string" ||
+        typeof avatar.icon !== "string"
+      ) {
+        throw new UpstreamFetchError("invalidData");
+      }
+      const id = requireUniqueId(ids, avatar.id);
       // element が null のデータ（未実装のドール等）は除外
       const element = avatar.element ? ELEMENT_MAP[avatar.element] : undefined;
       if (!element || !avatar.name) continue;
-
-      const id = String(avatar.id);
 
       // 旅人は男女×元素で重複するため、男主人公（10000005）側だけを
       // 「旅人（風）」のような名前で登録する
@@ -169,34 +205,73 @@ export const projectAmberProvider: GameDataProvider = {
       });
     }
 
+    if (characters.length === 0) {
+      throw new UpstreamFetchError("invalidData");
+    }
     return characters;
   },
 
   async fetchWeapons(): Promise<MasterWeapon[]> {
     const items = await fetchItems<AmberWeapon>("/api/v2/jp/weapon");
-
-    return Object.values(items)
-      .filter((w) => w.name)
-      .map((w) => ({
-        id: String(w.id),
-        name: w.name,
-        weaponType: WEAPON_TYPE_MAP[w.type] ?? "sword",
-        rarity: w.rank,
-        iconUrl: iconUrl(w.icon),
-      }));
+    const ids = new Set<string>();
+    const weapons = Object.values(items).map((weapon) => {
+      if (
+        !isRecord(weapon) ||
+        typeof weapon.name !== "string" ||
+        weapon.name.trim() === "" ||
+        !Number.isInteger(weapon.rank) ||
+        weapon.rank < 1 ||
+        weapon.rank > 5 ||
+        typeof weapon.type !== "string" ||
+        typeof weapon.icon !== "string"
+      ) {
+        throw new UpstreamFetchError("invalidData");
+      }
+      return {
+        id: requireUniqueId(ids, weapon.id),
+        name: weapon.name,
+        weaponType: WEAPON_TYPE_MAP[weapon.type] ?? "sword",
+        rarity: weapon.rank,
+        iconUrl: iconUrl(weapon.icon),
+      };
+    });
+    if (weapons.length === 0) {
+      throw new UpstreamFetchError("invalidData");
+    }
+    return weapons;
   },
 
   async fetchMaterials(): Promise<MasterMaterial[]> {
     const items = await fetchItems<AmberMaterial>("/api/v2/jp/material");
-
-    return Object.values(items)
-      .filter((m) => m.name && MATERIAL_CATEGORIES.has(m.type))
-      .map((m) => ({
-        id: String(m.id),
-        name: m.name,
-        category: m.type,
-        rarity: m.rank ?? null,
-        iconUrl: iconUrl(m.icon),
-      }));
+    const ids = new Set<string>();
+    const materials: MasterMaterial[] = [];
+    for (const material of Object.values(items)) {
+      if (
+        !isRecord(material) ||
+        typeof material.name !== "string" ||
+        material.name.trim() === "" ||
+        typeof material.type !== "string" ||
+        (material.rank !== null &&
+          (!Number.isInteger(material.rank) ||
+            material.rank < 1 ||
+            material.rank > 5)) ||
+        typeof material.icon !== "string"
+      ) {
+        throw new UpstreamFetchError("invalidData");
+      }
+      const id = requireUniqueId(ids, material.id);
+      if (!MATERIAL_CATEGORIES.has(material.type)) continue;
+      materials.push({
+        id,
+        name: material.name,
+        category: material.type,
+        rarity: material.rank,
+        iconUrl: iconUrl(material.icon),
+      });
+    }
+    if (materials.length === 0) {
+      throw new UpstreamFetchError("invalidData");
+    }
+    return materials;
   },
 };

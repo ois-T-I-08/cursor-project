@@ -40,7 +40,7 @@ export async function syncMasterDataAction(
     if (error instanceof SyncAlreadyRunningError) {
       return failedResult("同期は既に実行中です。完了後に再度お試しください。");
     }
-    console.error("マスターデータ同期に失敗しました:", error);
+    console.error("マスターデータ同期に失敗しました。");
     return failedResult("同期に失敗しました。時間をおいて再度お試しください。");
   }
 }

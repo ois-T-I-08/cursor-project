@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  authorizeSyncRequest,
   verifySyncActionSecret,
   verifySyncApiSecret,
 } from "@/lib/sync-auth";
@@ -35,5 +36,17 @@ describe("sync authentication", () => {
         }),
       ),
     ).toBe(true);
+  });
+
+  it.each([
+    "Bearer expected-secret ",
+    "Bearer  expected-secret",
+    "Bearer expected-secret, Bearer expected-secret",
+  ])("rejects whitespace or duplicate authorization values", (value) => {
+    vi.stubEnv("SYNC_API_SECRET", "expected-secret");
+    const request = {
+      headers: { get: () => value },
+    } as unknown as Request;
+    expect(authorizeSyncRequest(request)).toBe("missing");
   });
 });

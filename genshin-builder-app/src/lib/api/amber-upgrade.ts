@@ -12,6 +12,10 @@ import type {
   TalentUpgradeData,
   WeaponUpgradeData,
 } from "./upgrade-types";
+import {
+  fetchJsonObject,
+  UpstreamFetchError,
+} from "./safe-json-fetch";
 
 const BASE_URL = "https://gi.yatta.moe";
 const REVALIDATE_SEC = 60 * 60 * 24;
@@ -20,11 +24,6 @@ const EXP_MATERIAL_IDS = {
   character: ["104001", "104002", "104003"],
   weapon: ["104011", "104012", "104013"],
 } as const;
-
-interface AmberResponse<T> {
-  response: number;
-  data: T;
-}
 
 interface ApiTalentPromote {
   level?: number;
@@ -62,29 +61,51 @@ interface ApiMaterialDetail {
   type: string;
 }
 
-async function fetchJson<T>(path: string): Promise<T | null> {
-  try {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      next: { revalidate: REVALIDATE_SEC },
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!res.ok) return null;
-    const json = (await res.json()) as AmberResponse<T>;
-    return json.data;
-  } catch (error) {
-    console.error(`API取得失敗: ${path}`, error);
-    return null;
+async function fetchJson<T>(path: string): Promise<T> {
+  const json = await fetchJsonObject(`${BASE_URL}${path}`, {
+    timeoutMs: 20_000,
+    maxBytes: 2 * 1024 * 1024,
+    retries: 2,
+    revalidateSeconds: REVALIDATE_SEC,
+  });
+  if (
+    json.response !== 200 ||
+    typeof json.data !== "object" ||
+    json.data === null ||
+    Array.isArray(json.data)
+  ) {
+    throw new UpstreamFetchError("invalidData");
   }
+  return json.data as T;
 }
 
 function parsePromotes(promotes: ApiPromote[] | undefined): PromoteStageData[] {
-  return (promotes ?? []).map((p) => ({
-    promoteLevel: p.promoteLevel ?? 0,
-    unlockMaxLevel: p.unlockMaxLevel ?? 90,
-    costItems: p.costItems ?? {},
-    coinCost: p.coinCost ?? 0,
-    requiredPlayerLevel: p.requiredPlayerLevel,
-  }));
+  return (promotes ?? []).map((promote) => {
+    const promoteLevel = promote.promoteLevel ?? 0;
+    const unlockMaxLevel = promote.unlockMaxLevel ?? 90;
+    const coinCost = promote.coinCost ?? 0;
+    const costs = promote.costItems ?? {};
+    if (
+      promoteLevel < 0 ||
+      unlockMaxLevel < 1 ||
+      coinCost < 0 ||
+      Object.entries(costs).some(
+        ([id, count]) =>
+          id.trim() === "" ||
+          !Number.isInteger(count) ||
+          count < 0,
+      )
+    ) {
+      throw new UpstreamFetchError("invalidData");
+    }
+    return {
+      promoteLevel,
+      unlockMaxLevel,
+      costItems: costs,
+      coinCost,
+      requiredPlayerLevel: promote.requiredPlayerLevel,
+    };
+  });
 }
 
 function parseTalentUpgrades(
@@ -94,19 +115,40 @@ function parseTalentUpgrades(
   return Object.values(promote)
     .filter((p) => p.level != null)
     .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
-    .map((p) => ({
-      level: p.level!,
-      costItems: p.costItems ?? {},
-      coinCost: p.coinCost ?? 0,
-    }));
+    .map((promote) => {
+      const level = promote.level!;
+      const coinCost = promote.coinCost ?? 0;
+      const costs = promote.costItems ?? {};
+      if (
+        level < 1 ||
+        coinCost < 0 ||
+        Object.entries(costs).some(
+          ([id, count]) =>
+            id.trim() === "" ||
+            !Number.isInteger(count) ||
+            count < 0,
+        )
+      ) {
+        throw new UpstreamFetchError("invalidData");
+      }
+      return { level, costItems: costs, coinCost };
+    });
 }
 
 /** キャラクターの突破・天賦強化データを取得 */
 export async function fetchCharacterUpgradeFromApi(
   characterId: string,
-): Promise<CharacterUpgradeData | null> {
+): Promise<CharacterUpgradeData> {
   const data = await fetchJson<ApiAvatarDetail>(`/api/v2/jp/avatar/${characterId}`);
-  if (!data) return null;
+  if (
+    !data.talent ||
+    typeof data.talent !== "object" ||
+    !data.upgrade ||
+    typeof data.upgrade !== "object" ||
+    !Array.isArray(data.upgrade.promote)
+  ) {
+    throw new UpstreamFetchError("invalidData");
+  }
 
   const entries = Object.keys(data.talent)
     .sort((a, b) => Number(a) - Number(b))
@@ -127,9 +169,13 @@ export async function fetchCharacterUpgradeFromApi(
     }))
     .filter((t) => t.upgrades.length > 0);
 
+  const promotes = parsePromotes(data.upgrade.promote);
+  if (promotes.length === 0) {
+    throw new UpstreamFetchError("invalidData");
+  }
   return {
     characterId,
-    promotes: parsePromotes(data.upgrade?.promote),
+    promotes,
     talents,
   };
 }
@@ -137,17 +183,27 @@ export async function fetchCharacterUpgradeFromApi(
 /** 武器の突破・レベルアップ素材IDを取得 */
 export async function fetchWeaponUpgradeFromApi(
   weaponId: string,
-): Promise<WeaponUpgradeData | null> {
+): Promise<WeaponUpgradeData> {
   const data = await fetchJson<ApiWeaponDetail>(`/api/v2/jp/weapon/${weaponId}`);
-  if (!data) return null;
+  if (
+    !data.upgrade ||
+    typeof data.upgrade !== "object" ||
+    !Array.isArray(data.upgrade.promote)
+  ) {
+    throw new UpstreamFetchError("invalidData");
+  }
 
   const levelUpItemIds = EXP_MATERIAL_IDS.weapon.filter(
     (id) => data.items?.[id] != null,
   );
 
+  const promotes = parsePromotes(data.upgrade.promote);
+  if (promotes.length === 0) {
+    throw new UpstreamFetchError("invalidData");
+  }
   return {
     weaponId,
-    promotes: parsePromotes(data.upgrade?.promote),
+    promotes,
     levelUpItemIds:
       levelUpItemIds.length > 0 ? [...levelUpItemIds] : [...EXP_MATERIAL_IDS.weapon],
   };
@@ -171,9 +227,18 @@ export async function fetchLevelUpMaterialsFromApi(
       const detail = await fetchJson<ApiMaterialDetail>(
         `/api/v2/jp/material/${id}`,
       );
-      if (!detail) continue;
+      if (
+        typeof detail.name !== "string" ||
+        detail.name.trim() === "" ||
+        typeof detail.description !== "string" ||
+        typeof detail.type !== "string"
+      ) {
+        throw new UpstreamFetchError("invalidData");
+      }
       const exp = parseExpFromDescription(detail.description);
-      if (exp == null) continue;
+      if (exp == null || exp <= 0) {
+        throw new UpstreamFetchError("invalidData");
+      }
       result.push({
         materialId: id,
         name: detail.name,
@@ -183,6 +248,9 @@ export async function fetchLevelUpMaterialsFromApi(
     }
   }
 
+  if (result.length !== 6) {
+    throw new UpstreamFetchError("invalidData");
+  }
   return result;
 }
 

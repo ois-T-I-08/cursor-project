@@ -8,16 +8,18 @@ export class SyncAlreadyRunningError extends Error {
 }
 
 let activeSync: Promise<SyncResult> | null = null;
+type SyncRunner = (options: { fullUpgrade: boolean }) => Promise<SyncResult>;
 
 /** Shares one in-process lock across the API route and Server Action. */
 export async function runSyncExclusive(
   fullUpgrade: boolean,
+  runner: SyncRunner = syncMasterData,
 ): Promise<SyncResult> {
   if (activeSync) {
     throw new SyncAlreadyRunningError();
   }
 
-  const current = syncMasterData({ fullUpgrade });
+  const current = runner({ fullUpgrade });
   activeSync = current;
   try {
     return await current;
@@ -26,4 +28,8 @@ export async function runSyncExclusive(
       activeSync = null;
     }
   }
+}
+
+export function resetSyncExecutionForTest(): void {
+  activeSync = null;
 }

@@ -10,6 +10,7 @@
 
 import { gameDataProvider } from "@/lib/api";
 import { prisma } from "@/lib/db";
+import { UpstreamFetchError } from "@/lib/api/safe-json-fetch";
 import { syncUpgradeData, type UpgradeSyncOptions } from "@/lib/sync-upgrade";
 import {
   forEachBatch,
@@ -61,93 +62,115 @@ export async function syncMasterData(
   ]);
 
   if (charactersRes.status === "fulfilled") {
-    await forEachBatch(
-      charactersRes.value,
-      UPSERT_BATCH_SIZE,
-      async (batch) => {
-        await prisma.$transaction(
-          batch.map((c) =>
-            prisma.character.upsert({
-              where: { id: c.id },
-              create: c,
-              update: c,
-            }),
-          ),
+    await prisma.$transaction(
+      async (tx) => {
+        await forEachBatch(
+          charactersRes.value,
+          UPSERT_BATCH_SIZE,
+          async (batch) => {
+            await Promise.all(
+              batch.map((c) =>
+                tx.character.upsert({
+                  where: { id: c.id },
+                  create: c,
+                  update: c,
+                }),
+              ),
+            );
+          },
         );
+        const characterIds = charactersRes.value.map((c) => c.id);
+        const excludeIds = idsForNotIn(characterIds);
+        if (excludeIds) {
+          await tx.character.deleteMany({
+            where: {
+              id: { notIn: excludeIds },
+              progresses: { none: {} },
+            },
+          });
+        }
       },
+      { timeout: 30_000 },
     );
-    // プロバイダー変更などでAPIに存在しなくなったデータを削除する。
-    // ただしユーザーの育成データが紐づいているキャラは残す（データ保護）
-    const characterIds = charactersRes.value.map((c) => c.id);
-    const excludeIds = idsForNotIn(characterIds);
-    if (excludeIds) {
-      await prisma.character.deleteMany({
-        where: {
-          id: { notIn: excludeIds },
-          progresses: { none: {} },
-        },
-      });
-    }
     result.characters = charactersRes.value.length;
   } else {
-    result.errors.push(`characters: ${String(charactersRes.reason)}`);
+    result.errors.push(syncErrorCode("characters", charactersRes.reason));
   }
 
   if (weaponsRes.status === "fulfilled") {
-    await forEachBatch(weaponsRes.value, UPSERT_BATCH_SIZE, async (batch) => {
-      await prisma.$transaction(
-        batch.map((w) =>
-          prisma.weapon.upsert({
-            where: { id: w.id },
-            create: w,
-            update: w,
-          }),
-        ),
-      );
-    });
-    const weaponIds = weaponsRes.value.map((w) => w.id);
-    // UserProgress.weaponId は FK ではないため、参照中の武器 ID を保護リストに加える
-    const referencedWeaponIds = (
-      await prisma.userProgress.findMany({
-        where: { weaponId: { not: "" } },
-        select: { weaponId: true },
-        distinct: ["weaponId"],
-      })
-    ).map((r) => r.weaponId);
-    const keepWeaponIds = [...new Set([...weaponIds, ...referencedWeaponIds])];
-    const excludeWeaponIds = idsForNotIn(keepWeaponIds);
-    if (excludeWeaponIds) {
-      await prisma.weapon.deleteMany({
-        where: { id: { notIn: excludeWeaponIds } },
-      });
-    }
+    await prisma.$transaction(
+      async (tx) => {
+        await forEachBatch(
+          weaponsRes.value,
+          UPSERT_BATCH_SIZE,
+          async (batch) => {
+            await Promise.all(
+              batch.map((weapon) =>
+                tx.weapon.upsert({
+                  where: { id: weapon.id },
+                  create: weapon,
+                  update: weapon,
+                }),
+              ),
+            );
+          },
+        );
+        const weaponIds = weaponsRes.value.map((weapon) => weapon.id);
+        const referencedWeaponIds = (
+          await tx.userProgress.findMany({
+            where: { weaponId: { not: "" } },
+            select: { weaponId: true },
+            distinct: ["weaponId"],
+          })
+        ).map((row) => row.weaponId);
+        const keepWeaponIds = [
+          ...new Set([...weaponIds, ...referencedWeaponIds]),
+        ];
+        const excludeWeaponIds = idsForNotIn(keepWeaponIds);
+        if (excludeWeaponIds) {
+          await tx.weapon.deleteMany({
+            where: { id: { notIn: excludeWeaponIds } },
+          });
+        }
+      },
+      { timeout: 30_000 },
+    );
     result.weapons = weaponsRes.value.length;
   } else {
-    result.errors.push(`weapons: ${String(weaponsRes.reason)}`);
+    result.errors.push(syncErrorCode("weapons", weaponsRes.reason));
   }
 
   if (materialsRes.status === "fulfilled") {
-    await forEachBatch(materialsRes.value, UPSERT_BATCH_SIZE, async (batch) => {
-      await prisma.$transaction(
-        batch.map((m) =>
-          prisma.material.upsert({
-            where: { id: m.id },
-            create: m,
-            update: m,
-          }),
-        ),
-      );
-    });
-    const materialIds = materialsRes.value.map((m) => m.id);
-    const excludeMaterialIds = idsForNotIn(materialIds);
-    if (excludeMaterialIds) {
-      await prisma.material.deleteMany({
-        where: { id: { notIn: excludeMaterialIds } },
-      });
-    }
+    await prisma.$transaction(
+      async (tx) => {
+        await forEachBatch(
+          materialsRes.value,
+          UPSERT_BATCH_SIZE,
+          async (batch) => {
+            await Promise.all(
+              batch.map((material) =>
+                tx.material.upsert({
+                  where: { id: material.id },
+                  create: material,
+                  update: material,
+                }),
+              ),
+            );
+          },
+        );
+        const materialIds = materialsRes.value.map((material) => material.id);
+        const excludeMaterialIds = idsForNotIn(materialIds);
+        if (excludeMaterialIds) {
+          await tx.material.deleteMany({
+            where: { id: { notIn: excludeMaterialIds } },
+          });
+        }
+      },
+      { timeout: 30_000 },
+    );
     result.materials = materialsRes.value.length;
   } else {
-    result.errors.push(`materials: ${String(materialsRes.reason)}`);
+    result.errors.push(syncErrorCode("materials", materialsRes.reason));
   }
 
   // 突破・天賦・EXP（差分同期。fullUpgrade で全件再取得）
@@ -170,4 +193,10 @@ export async function syncMasterData(
   });
 
   return result;
+}
+
+function syncErrorCode(phase: string, error: unknown): string {
+  const code =
+    error instanceof UpstreamFetchError ? error.code : "unavailable";
+  return `${phase}:${code}`;
 }
