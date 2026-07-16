@@ -38,14 +38,34 @@ class CharacterDetailScreen extends ConsumerStatefulWidget {
 class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
     with SingleTickerProviderStateMixin {
   static const _tabCount = 6;
+  static const _diagnosisHideScrollThreshold = 16.0;
 
   late TabController _tabController;
   List<MaterialBookmarkEntry> _bookmarks = [];
   late final CharacterDetailBookmarkActions _bookmarkActions;
   bool _bookmarksLoaded = false;
+  bool _diagnosisVisible = true;
 
   CharacterDetailNotifier get _notifier =>
       ref.read(characterDetailProvider(widget.characterId).notifier);
+
+  bool _onTabScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    // ListView inside TabBarView (skip nested horizontal/inner noise).
+    if (notification.depth > 2) return false;
+    if (notification is! ScrollUpdateNotification &&
+        notification is! OverscrollNotification &&
+        notification is! ScrollEndNotification) {
+      return false;
+    }
+
+    final shouldShow =
+        notification.metrics.pixels <= _diagnosisHideScrollThreshold;
+    if (shouldShow != _diagnosisVisible) {
+      setState(() => _diagnosisVisible = shouldShow);
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -274,7 +294,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
             constellation: detail.constellation,
             onConstellationChanged: notifier.updateConstellation,
           ),
-          _DiagnosisCard(characterId: widget.characterId),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: _diagnosisVisible
+                ? _DiagnosisCard(characterId: widget.characterId)
+                : const SizedBox(width: double.infinity),
+          ),
           _GrowthGoalButton(
             characterId: widget.characterId,
             detail: detail,
@@ -297,58 +324,61 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
           ),
           const Divider(height: 1),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: CharacterDetailTabViews(
-                characterId: widget.characterId,
-                character: character,
-                hoyolabSynced: detail.hoyolabSynced,
-                level: detail.level,
-                targetLevel: detail.targetLevel,
-                talentNormal: detail.talentNormal,
-                talentSkill: detail.talentSkill,
-                talentBurst: detail.talentBurst,
-                weaponId: detail.weaponId,
-                weaponLevel: detail.weaponLevel,
-                targetWeaponLevel: detail.targetWeaponLevel,
-                weaponRarity: detail.weaponRarity,
-                weaponRefinement: detail.progress?.weaponRefinement ?? 1,
-                artifacts: detail.artifacts,
-                promotes: detail.promotes,
-                weaponPromotes: detail.weaponPromotes,
-                talents: detail.talents,
-                weapons: detail.weapons,
-                bookmarks: _bookmarks,
-                fetchedSnapshot: detail.fetchedSnapshot,
-                artifactScoreType: detail.artifactScoreType,
-                resolvedArtifactScoreType: detail.resolvedArtifactScoreType,
-                artifactScoreWeights: detail.artifactScoreWeights,
-                artifactScoreTypeUserSet: detail.artifactScoreTypeUserSet,
-                artifactCompleted: detail.artifactCompleted,
-                bookmarkCtx: bookmarkCtx,
-                weaponBookmarkCtx: weaponBookmarkCtx,
-                rangeLines: rangeLines,
-                rangeSourceKey: rangeSourceKey,
-                nextStage: nextStage,
-                bookmarkActions: _bookmarkActions,
-                resolveName: (id) => _resolveName(detail, id),
-                resolveIcon: (id) => _resolveIcon(detail, id),
-                isBookmarked: _isBookmarked,
-                onLevelChanged: notifier.updateLevel,
-                onTargetLevelChanged: notifier.updateTargetLevel,
-                onTalentNormalChanged: notifier.updateTalentNormal,
-                onTalentSkillChanged: notifier.updateTalentSkill,
-                onTalentBurstChanged: notifier.updateTalentBurst,
-                onWeaponSelected: (id) => _onWeaponSelected(detail, id),
-                onWeaponLevelChanged: notifier.updateWeaponLevel,
-                onTargetWeaponLevelChanged: notifier.updateTargetWeaponLevel,
-                onArtifactsChanged: notifier.updateArtifacts,
-                onArtifactScoreTypeChanged: notifier.updateArtifactScoreType,
-                onArtifactCompletedChanged: notifier.updateArtifactCompleted,
-                onResetToFetched: () =>
-                    unawaited(_confirmResetToFetched(detail)),
-                snapshotFromCurrent: detail.snapshotFromCurrent,
-              ).buildTabs(context),
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _onTabScrollNotification,
+              child: TabBarView(
+                controller: _tabController,
+                children: CharacterDetailTabViews(
+                  characterId: widget.characterId,
+                  character: character,
+                  hoyolabSynced: detail.hoyolabSynced,
+                  level: detail.level,
+                  targetLevel: detail.targetLevel,
+                  talentNormal: detail.talentNormal,
+                  talentSkill: detail.talentSkill,
+                  talentBurst: detail.talentBurst,
+                  weaponId: detail.weaponId,
+                  weaponLevel: detail.weaponLevel,
+                  targetWeaponLevel: detail.targetWeaponLevel,
+                  weaponRarity: detail.weaponRarity,
+                  weaponRefinement: detail.progress?.weaponRefinement ?? 1,
+                  artifacts: detail.artifacts,
+                  promotes: detail.promotes,
+                  weaponPromotes: detail.weaponPromotes,
+                  talents: detail.talents,
+                  weapons: detail.weapons,
+                  bookmarks: _bookmarks,
+                  fetchedSnapshot: detail.fetchedSnapshot,
+                  artifactScoreType: detail.artifactScoreType,
+                  resolvedArtifactScoreType: detail.resolvedArtifactScoreType,
+                  artifactScoreWeights: detail.artifactScoreWeights,
+                  artifactScoreTypeUserSet: detail.artifactScoreTypeUserSet,
+                  artifactCompleted: detail.artifactCompleted,
+                  bookmarkCtx: bookmarkCtx,
+                  weaponBookmarkCtx: weaponBookmarkCtx,
+                  rangeLines: rangeLines,
+                  rangeSourceKey: rangeSourceKey,
+                  nextStage: nextStage,
+                  bookmarkActions: _bookmarkActions,
+                  resolveName: (id) => _resolveName(detail, id),
+                  resolveIcon: (id) => _resolveIcon(detail, id),
+                  isBookmarked: _isBookmarked,
+                  onLevelChanged: notifier.updateLevel,
+                  onTargetLevelChanged: notifier.updateTargetLevel,
+                  onTalentNormalChanged: notifier.updateTalentNormal,
+                  onTalentSkillChanged: notifier.updateTalentSkill,
+                  onTalentBurstChanged: notifier.updateTalentBurst,
+                  onWeaponSelected: (id) => _onWeaponSelected(detail, id),
+                  onWeaponLevelChanged: notifier.updateWeaponLevel,
+                  onTargetWeaponLevelChanged: notifier.updateTargetWeaponLevel,
+                  onArtifactsChanged: notifier.updateArtifacts,
+                  onArtifactScoreTypeChanged: notifier.updateArtifactScoreType,
+                  onArtifactCompletedChanged: notifier.updateArtifactCompleted,
+                  onResetToFetched: () =>
+                      unawaited(_confirmResetToFetched(detail)),
+                  snapshotFromCurrent: detail.snapshotFromCurrent,
+                ).buildTabs(context),
+              ),
             ),
           ),
         ],
