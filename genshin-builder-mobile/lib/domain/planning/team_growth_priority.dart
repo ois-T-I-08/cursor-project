@@ -5,6 +5,7 @@ import 'upgrade_option.dart';
 class TeamMemberGrowthPriority {
   const TeamMemberGrowthPriority({
     required this.characterId,
+    this.characterName = '',
     this.priority = 0,
     this.score = 0.0,
     this.upgradeOptions = const [],
@@ -13,11 +14,18 @@ class TeamMemberGrowthPriority {
   });
 
   final String characterId;
+  /// Display name from master / snapshot; falls back to [characterId] in UI.
+  final String characterName;
   final int priority;
   final double score;
   final List<UpgradeOption> upgradeOptions;
   final List<String> reasons;
   final RecommendationConfidence confidence;
+
+  String get displayName {
+    final name = characterName.trim();
+    return name.isNotEmpty ? name : characterId;
+  }
 }
 
 /// Priority report for a saved team.

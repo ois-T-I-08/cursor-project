@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../application/hoyolab/sync_hoyolab_relics_to_progress_use_case.dart';
 import '../data/akasha/akasha_artifact_set_usage_repository.dart';
 import '../data/config/artifact_set_recommendations_loader.dart';
 import '../data/hoyolab/models/game_record.dart';
@@ -197,6 +198,10 @@ final artifactSetOverviewsProvider =
     try {
       final repo = await ref.watch(hoyolabGameDataRepositoryProvider.future);
       detailBuilds = await repo.fetchOwnedCharacterBuilds();
+      // Persist so account health / snapshot see the same relic data.
+      await SyncHoyolabRelicsToProgressUseCase(
+        progressRepository: progressRepo,
+      )(userId: userId, builds: detailBuilds.values);
     } catch (_) {
       // 詳細取得失敗時は owned/progress フォールバック
     }

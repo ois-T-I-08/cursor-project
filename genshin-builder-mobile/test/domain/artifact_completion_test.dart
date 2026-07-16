@@ -1,7 +1,6 @@
 import 'package:genshin_builder_mobile/domain/artifact_completion.dart';
 import 'package:genshin_builder_mobile/domain/artifact_score.dart';
 import 'package:genshin_builder_mobile/domain/artifacts/artifact_set_overview.dart';
-import 'package:genshin_builder_mobile/domain/artifacts/artifact_set_recommendations.dart';
 import 'package:genshin_builder_mobile/domain/models/amber_detail_models.dart';
 import 'package:genshin_builder_mobile/domain/models/artifact_state.dart';
 import 'package:genshin_builder_mobile/domain/models/master_models.dart';
@@ -18,11 +17,11 @@ void main() {
     });
 
     test('equipped maxed piece approaches 100%', () {
-      final piece = ArtifactPiece(
+      const piece = ArtifactPiece(
         setName: '絶縁の旗印',
         mainStat: '攻撃力%',
         level: 20,
-        substats: const [
+        substats: [
           ArtifactSubstat(stat: '会心率', value: 10),
           ArtifactSubstat(stat: '会心ダメージ', value: 20),
           ArtifactSubstat(stat: '攻撃力%', value: 5),
@@ -55,7 +54,7 @@ void main() {
 
   group('artifact_set_overview', () {
     test('only lists characters with 2+ pieces of the set', () {
-      final raiden = MasterCharacter(
+      const raiden = MasterCharacter(
         id: '10000052',
         name: '雷電将軍',
         element: '雷',
@@ -65,7 +64,7 @@ void main() {
         iconUrl: '',
         scoreType: 'recharge',
       );
-      final xiangling = MasterCharacter(
+      const xiangling = MasterCharacter(
         id: '10000023',
         name: '香菱',
         element: '炎',
@@ -75,7 +74,7 @@ void main() {
         iconUrl: '',
         scoreType: 'atk',
       );
-      final zhongli = MasterCharacter(
+      const zhongli = MasterCharacter(
         id: '10000030',
         name: '鍾離',
         element: '岩',
@@ -86,18 +85,18 @@ void main() {
         scoreType: 'hp',
       );
 
-      final emblem = const ArtifactSetDetail(
+      const emblem = ArtifactSetDetail(
         id: '15020',
         name: '絶縁の旗印',
         iconUrl: 'emblem.png',
-        effects: const [],
+        effects: [],
         route: 'Emblem of Severed Fate',
       );
-      final glad = const ArtifactSetDetail(
+      const glad = ArtifactSetDetail(
         id: '15001',
         name: '剣闘士のフィナーレ',
         iconUrl: 'glad.png',
-        effects: const [],
+        effects: [],
         route: "Gladiator's Finale",
       );
       final catalog = ArtifactSetCatalog.fromSets([emblem, glad]);
@@ -175,7 +174,7 @@ void main() {
     });
 
     test('resolves set by icon id even when setName language differs', () {
-      final varesa = MasterCharacter(
+      const varesa = MasterCharacter(
         id: '10000111',
         name: 'ヴァレサ',
         element: '雷',
@@ -184,12 +183,12 @@ void main() {
         region: 'ナタ',
         iconUrl: '',
       );
-      final scroll = const ArtifactSetDetail(
+      const scroll = ArtifactSetDetail(
         id: '15037',
         name: '灰燼の都に立つ英雄の絵巻',
         iconUrl:
             'https://gi.yatta.moe/assets/UI/reliquary/UI_RelicIcon_15037_4.png',
-        effects: const [],
+        effects: [],
         route: 'Scroll of the Hero of Cinder City',
       );
       final catalog = ArtifactSetCatalog.fromSets([scroll]);
@@ -235,7 +234,7 @@ void main() {
     });
 
     test('resolves set via aliases when names differ', () {
-      final furina = MasterCharacter(
+      const furina = MasterCharacter(
         id: '10000089',
         name: 'フリーナ',
         element: '水',
@@ -244,11 +243,11 @@ void main() {
         region: 'フォンテーヌ',
         iconUrl: '',
       );
-      final troupe = const ArtifactSetDetail(
+      const troupe = ArtifactSetDetail(
         id: '15034',
         name: '黄金の劇団',
         iconUrl: null,
-        effects: const [],
+        effects: [],
         route: 'Golden Troupe',
       );
       final catalog = ArtifactSetCatalog.fromSets(
@@ -277,14 +276,14 @@ void main() {
     });
 
     test('builds overviews with recommendations', () {
-      final set = const ArtifactSetDetail(
+      const set = ArtifactSetDetail(
         id: '1',
         name: '絶縁の旗印',
         iconUrl: null,
         effects: ['元素チャージ効率+20%', '元素爆発ダメージアップ'],
         route: 'Emblem of Severed Fate',
       );
-      final raiden = MasterCharacter(
+      const raiden = MasterCharacter(
         id: '10000052',
         name: '雷電将軍',
         element: '雷',
@@ -310,14 +309,14 @@ void main() {
     });
 
     test('prefers akasha hits over config', () {
-      final set = const ArtifactSetDetail(
+      const set = ArtifactSetDetail(
         id: '15020',
         name: '絶縁の旗印',
         iconUrl: null,
-        effects: const [],
+        effects: [],
         route: 'Emblem of Severed Fate',
       );
-      final raiden = MasterCharacter(
+      const raiden = MasterCharacter(
         id: '10000052',
         name: '雷電将軍',
         element: '雷',
@@ -327,7 +326,7 @@ void main() {
         iconUrl: '',
         scoreType: 'recharge',
       );
-      final xiangling = MasterCharacter(
+      const xiangling = MasterCharacter(
         id: '10000023',
         name: '香菱',
         element: '炎',
@@ -366,4 +365,3 @@ void main() {
     });
   });
 }
-

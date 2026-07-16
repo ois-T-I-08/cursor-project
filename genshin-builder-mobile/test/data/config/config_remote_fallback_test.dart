@@ -172,7 +172,7 @@ void main() {
 
   group('daily composite', () {
     test('remote failure falls back to local', () async {
-      final local = _FakeSchedule(() async => DailyMaterialSchedule(
+      final local = _FakeSchedule(() async => const DailyMaterialSchedule(
             version: 1,
             talentSeries: [
               DailyMaterialSeries(
@@ -180,8 +180,8 @@ void main() {
                 name: 't',
                 region: 'r',
                 kind: DailyMaterialKind.talentBook,
-                days: const [1],
-                materialIds: const ['1'],
+                days: [1],
+                materialIds: ['1'],
               ),
             ],
             weaponSeries: [
@@ -190,8 +190,8 @@ void main() {
                 name: 'w',
                 region: 'r',
                 kind: DailyMaterialKind.weaponAscension,
-                days: const [1],
-                materialIds: const ['2'],
+                days: [1],
+                materialIds: ['2'],
               ),
             ],
           ));
@@ -222,9 +222,9 @@ void main() {
         );
       });
       final local = _FakeHistory(() async {
-        return GachaBannerSchedule(
+        return const GachaBannerSchedule(
           version: 1,
-          banners: const [],
+          banners: [],
         );
       });
       final source = PreferRemoteGachaBannerHistorySource(

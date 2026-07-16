@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../domain/planning/daily_plan_item_key.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/background_master_repair_provider.dart';
 import '../../providers/daily_materials_providers.dart';
+import '../../providers/daily_plan_completion_providers.dart';
 import '../../providers/hoyolab_home_providers.dart';
 import '../../providers/hoyolab_providers.dart';
 import '../../providers/growth_providers.dart';
@@ -290,35 +292,72 @@ class _DailyPlanHomeCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final planAsync = ref.watch(dailyPlanProvider);
+    final completionsAsync = ref.watch(dailyPlanTodayCompletionsProvider);
     final theme = Theme.of(context);
+    final completed = completionsAsync.valueOrNull ?? const <String>{};
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('\u4eca\u65e5\u3084\u308b\u3053\u3068', style: theme.textTheme.titleMedium),
+            Text('今日やること', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             planAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => const Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc'),
+              error: (e, _) => const Text('読み込みエラー'),
               data: (plan) {
                 if (plan.topItems.isEmpty) {
-                  return Text('\u80b2\u6210\u76ee\u6a19\u3092\u8a2d\u5b9a\u3059\u308b\u3068\u3001\u4eca\u65e5\u304a\u3059\u3059\u3081\u306e\u80b2\u6210\u9805\u76ee\u304c\u8868\u793a\u3055\u308c\u307e\u3059\u3002',
-                      style: theme.textTheme.bodySmall);
+                  return Text(
+                    '育成目標を設定すると、今日おすすめの育成項目が表示されます。',
+                    style: theme.textTheme.bodySmall,
+                  );
                 }
+                final doneCount = plan.topItems
+                    .where((i) => completed.contains(dailyPlanItemKey(i)))
+                    .length;
                 return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ...plan.topItems.map((item) => ListTile(
-                          dense: true,
-                          title: Text(item.title, style: theme.textTheme.bodyMedium),
-                          subtitle: item.reasons.isNotEmpty
-                              ? Text(item.reasons.first, maxLines: 1, overflow: TextOverflow.ellipsis)
-                              : null,
-                        )),
+                    Text(
+                      '完了 $doneCount / ${plan.topItems.length}',
+                      style: theme.textTheme.labelMedium,
+                    ),
+                    ...plan.topItems.map((item) {
+                      final isDone =
+                          completed.contains(dailyPlanItemKey(item));
+                      return ListTile(
+                        dense: true,
+                        leading: Icon(
+                          isDone
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
+                          color: isDone
+                              ? Colors.green
+                              : theme.colorScheme.outline,
+                          size: 20,
+                        ),
+                        title: Text(
+                          item.title,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            decoration: isDone
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: isDone ? theme.disabledColor : null,
+                          ),
+                        ),
+                        subtitle: item.reasons.isNotEmpty
+                            ? Text(
+                                item.reasons.first,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            : null,
+                      );
+                    }),
                     TextButton(
                       onPressed: () => context.push('/daily-plan'),
-                      child: const Text('\u3059\u3079\u3066\u898b\u308b'),
+                      child: const Text('すべて見る'),
                     ),
                   ],
                 );

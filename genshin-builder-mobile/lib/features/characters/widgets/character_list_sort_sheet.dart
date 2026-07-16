@@ -125,15 +125,20 @@ class _SortSection extends StatelessWidget {
                 ),
           ),
         ],
-        ...modes.map(
-          (mode) => RadioListTile<CharacterListSortMode>(
-            contentPadding: EdgeInsets.zero,
-            title: Text(mode.label),
-            value: mode,
-            groupValue: selected,
-            onChanged: (value) {
-              if (value != null) onSelected(value);
-            },
+        RadioGroup<CharacterListSortMode>(
+          groupValue: selected,
+          onChanged: (value) {
+            if (value != null) onSelected(value);
+          },
+          child: Column(
+            children: [
+              for (final mode in modes)
+                RadioListTile<CharacterListSortMode>(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(mode.label),
+                  value: mode,
+                ),
+            ],
           ),
         ),
       ],

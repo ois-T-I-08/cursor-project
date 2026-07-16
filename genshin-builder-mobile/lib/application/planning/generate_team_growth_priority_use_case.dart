@@ -22,57 +22,66 @@ class GenerateTeamGrowthPriorityUseCase {
     DateTime? generatedAt,
   }) {
     final priorities = <TeamMemberGrowthPriority>[];
+    final names = {
+      for (final c in snapshot.characters) c.characterId: c.name,
+    };
 
     for (final member in team.members) {
-      final char = snapshot.characters
-          .where((c) => c.characterId == member.characterId)
-          .firstOrNull;
+      final char = _resolveCharacter(member.characterId, snapshot.characters);
+      final displayName = _resolveCharacterName(member.characterId, names) ??
+          char?.name.trim() ??
+          '';
 
       if (char == null || !char.isOwned) {
         priorities.add(TeamMemberGrowthPriority(
           characterId: member.characterId,
+          characterName: displayName,
           priority: -1,
-          reasons: ['Character not owned or not found'],
+          reasons: ['未所持、またはキャラが見つかりません'],
           confidence: RecommendationConfidence.unknown,
         ));
         continue;
       }
 
-      final options = upgradeOptionsByCharacter[member.characterId] ?? [];
+      final options = upgradeOptionsByCharacter[member.characterId] ??
+          upgradeOptionsByCharacter[char.characterId] ??
+          [];
       final reasons = <String>[];
       double totalScore = 0;
 
-      // Evaluate based on options
       if (options.isNotEmpty) {
         for (final opt in options) {
           totalScore += opt.impact?.impactScore ?? 0;
         }
-        reasons.add('${options.length} upgrade options available');
+        reasons.add('強化候補が ${options.length} 件あります');
       }
 
-      // General evaluation
       if (char.level < 80) {
-        reasons.add('Character level (${char.level}) below 80');
+        reasons.add('キャラレベル（${char.level}）が 80 未満です');
         totalScore += 0.1;
       }
       if (char.weaponLevel < 80) {
-        reasons.add('Weapon level (${char.weaponLevel}) below 80');
+        reasons.add('武器レベル（${char.weaponLevel}）が 80 未満です');
         totalScore += 0.08;
       }
       final maxTalent = [char.talentNormal, char.talentSkill, char.talentBurst]
           .reduce((a, b) => a > b ? a : b);
       if (maxTalent < 6) {
-        reasons.add('Highest talent (Lv.$maxTalent) below 6');
+        reasons.add('最高天賦（Lv.$maxTalent）が 6 未満です');
         totalScore += 0.05;
       }
 
-      final priority = totalScore > 0.3 ? 3
-          : totalScore > 0.15 ? 2
-          : totalScore > 0 ? 1
-          : 0;
+      final priority = totalScore > 0.3
+          ? 3
+          : totalScore > 0.15
+              ? 2
+              : totalScore > 0
+                  ? 1
+                  : 0;
 
       priorities.add(TeamMemberGrowthPriority(
         characterId: member.characterId,
+        characterName: displayName.isNotEmpty ? displayName : char.name,
         priority: priority,
         score: totalScore,
         upgradeOptions: options.take(3).toList(),
@@ -90,6 +99,10 @@ class GenerateTeamGrowthPriorityUseCase {
       return b.score.compareTo(a.score);
     });
 
+    final nameById = {
+      for (final p in priorities) p.characterId: p.displayName,
+    };
+
     // Shared material opportunities
     final allMaterials = <String, Set<String>>{};
     for (final p in priorities) {
@@ -102,7 +115,11 @@ class GenerateTeamGrowthPriorityUseCase {
     }
     final shared = allMaterials.entries
         .where((e) => e.value.length > 1)
-        .map((e) => 'Material ${e.key} shared by ${e.value.join(", ")}')
+        .map((e) {
+          final charNames =
+              e.value.map((id) => nameById[id] ?? id).join('、');
+          return '素材 ${e.key} を $charNames が共有';
+        })
         .toList();
 
     return TeamGrowthPriorityReport(
@@ -117,5 +134,41 @@ class GenerateTeamGrowthPriorityUseCase {
       missingData: snapshot.missingData,
       generatedAt: generatedAt ?? DateTime.now(),
     );
+  }
+
+  CharacterSnapshot? _resolveCharacter(
+    String characterId,
+    List<CharacterSnapshot> characters,
+  ) {
+    for (final c in characters) {
+      if (c.characterId == characterId) return c;
+    }
+    final base = characterId.split('-').first;
+    for (final c in characters) {
+      if (c.characterId == base || c.characterId.startsWith('$base-')) {
+        return c;
+      }
+    }
+    return null;
+  }
+
+  String? _resolveCharacterName(
+    String characterId,
+    Map<String, String> names,
+  ) {
+    final direct = names[characterId];
+    if (direct != null && direct.trim().isNotEmpty) return direct.trim();
+
+    final base = characterId.split('-').first;
+    final byBase = names[base];
+    if (byBase != null && byBase.trim().isNotEmpty) return byBase.trim();
+
+    for (final e in names.entries) {
+      if (e.key == base || e.key.startsWith('$base-')) {
+        final n = e.value.trim();
+        if (n.isNotEmpty) return n;
+      }
+    }
+    return null;
   }
 }

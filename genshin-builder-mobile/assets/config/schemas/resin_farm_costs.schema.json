@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "resin_farm_costs.schema.json",
+  "title": "Resin farm costs",
+  "type": "object",
+  "required": ["version", "kinds"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "description": { "type": "string" },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "naturalResinPerDay": { "type": "integer", "minimum": 1 },
+        "condensedResinValue": { "type": "integer", "minimum": 1 },
+        "synthesisRatio": { "type": "integer", "minimum": 2 },
+        "weekdayLabels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 7,
+          "maxItems": 7
+        }
+      }
+    },
+    "kinds": {
+      "type": "object",
+      "required": [
+        "talentDomain",
+        "weaponDomain",
+        "artifactDomain",
+        "weeklyBoss",
+        "worldBoss",
+        "leyLineExp",
+        "leyLineMora"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "talentDomain": { "$ref": "#/$defs/kindWithDrops" },
+        "weaponDomain": { "$ref": "#/$defs/kindWithDrops" },
+        "artifactDomain": { "$ref": "#/$defs/kindWithDrops" },
+        "weeklyBoss": { "$ref": "#/$defs/kindWithDrops" },
+        "worldBoss": { "$ref": "#/$defs/kindWithDrops" },
+        "leyLineExp": { "$ref": "#/$defs/kindLeyLineExp" },
+        "leyLineMora": { "$ref": "#/$defs/kindWithMora" }
+      }
+    },
+    "zeroResinCategories": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "kindWithDrops": {
+      "type": "object",
+      "required": ["resinPerRun"],
+      "additionalProperties": false,
+      "properties": {
+        "resinPerRun": { "type": "integer", "minimum": 0 },
+        "assumedDropsPerRun": { "type": "number", "exclusiveMinimum": 0 },
+        "assumedDropsPerRunMin": { "type": "number", "exclusiveMinimum": 0 },
+        "assumedDropsPerRunMax": { "type": "number", "exclusiveMinimum": 0 },
+        "challengesPerWeek": { "type": "integer", "minimum": 1 },
+        "contentLabel": { "type": "string" }
+      }
+    },
+    "kindLeyLineExp": {
+      "type": "object",
+      "required": ["resinPerRun"],
+      "additionalProperties": false,
+      "properties": {
+        "resinPerRun": { "type": "integer", "minimum": 0 },
+        "assumedDropsPerRun": { "type": "number", "exclusiveMinimum": 0 },
+        "assumedHeroWitEquivalentPerRun": { "type": "number", "exclusiveMinimum": 0 },
+        "contentLabel": { "type": "string" }
+      }
+    },
+    "kindWithMora": {
+      "type": "object",
+      "required": ["resinPerRun", "assumedMoraPerRun"],
+      "additionalProperties": false,
+      "properties": {
+        "resinPerRun": { "type": "integer", "minimum": 0 },
+        "assumedMoraPerRun": { "type": "integer", "exclusiveMinimum": 0 },
+        "contentLabel": { "type": "string" }
+      }
+    }
+  }
+}

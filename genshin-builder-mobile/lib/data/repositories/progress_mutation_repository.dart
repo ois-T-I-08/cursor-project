@@ -5,6 +5,8 @@ import 'package:uuid/uuid.dart';
 import '../../domain/models/master_models.dart';
 import '../../domain/history/growth_event.dart';
 import '../../domain/account/account_snapshot.dart';
+import '../../domain/artifact_completion.dart';
+import '../../domain/artifact_score.dart';
 import '../../domain/repositories/progress_mutation_repository.dart' as domain;
 import '../db/app_database_facade.dart';
 import '../db/drift/daos/growth_dao.dart' show EventParams;
@@ -113,6 +115,7 @@ class DriftProgressMutationRepository
 
   /// Build a simple CharacterSnapshot from UserProgress for diff detection.
   CharacterSnapshot _toSnapshot(UserProgress p, {bool isOwned = false}) {
+    final completion = _artifactCompletion(p);
     return CharacterSnapshot(
       characterId: p.characterId,
       name: '',
@@ -131,8 +134,27 @@ class DriftProgressMutationRepository
       equippedWeaponName: p.weaponName.isNotEmpty ? p.weaponName : null,
       weaponLevel: p.weaponLevel,
       weaponRefinement: p.weaponRefinement,
-      artifactCompletion: p.artifactCompleted ? 1.0 : 0.0,
-      artifactCompletionAvailable: p.artifactCompleted,
+      artifactCompletion: completion.value,
+      artifactCompletionAvailable: completion.available,
+    );
+  }
+
+  /// Same metric as character detail artifact completion panel (0.0–1.0).
+  ({double value, bool available}) _artifactCompletion(UserProgress p) {
+    final artifacts = p.artifacts;
+    final available = artifacts.values.any(isArtifactPieceEquipped);
+    if (!available) return (value: 0.0, available: false);
+    final scoreType = userArtifactScoreTypeFromStorage(p.artifactScoreType) ??
+        artifactScoreTypeFromString(p.artifactScoreType) ??
+        ArtifactScoreType.atk;
+    final report = calcArtifactCompletionReport(
+      artifacts,
+      scoreType: scoreType,
+      weights: scoreWeightsForType(scoreType),
+    );
+    return (
+      value: (report.overallPercent / 100.0).clamp(0.0, 1.0),
+      available: true,
     );
   }
 }

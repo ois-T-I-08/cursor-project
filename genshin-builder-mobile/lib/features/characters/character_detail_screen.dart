@@ -38,14 +38,34 @@ class CharacterDetailScreen extends ConsumerStatefulWidget {
 class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
     with SingleTickerProviderStateMixin {
   static const _tabCount = 6;
+  static const _diagnosisHideScrollThreshold = 16.0;
 
   late TabController _tabController;
   List<MaterialBookmarkEntry> _bookmarks = [];
   late final CharacterDetailBookmarkActions _bookmarkActions;
   bool _bookmarksLoaded = false;
+  bool _diagnosisVisible = true;
 
   CharacterDetailNotifier get _notifier =>
       ref.read(characterDetailProvider(widget.characterId).notifier);
+
+  bool _onTabScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    // ListView inside TabBarView (skip nested horizontal/inner noise).
+    if (notification.depth > 2) return false;
+    if (notification is! ScrollUpdateNotification &&
+        notification is! OverscrollNotification &&
+        notification is! ScrollEndNotification) {
+      return false;
+    }
+
+    final shouldShow =
+        notification.metrics.pixels <= _diagnosisHideScrollThreshold;
+    if (shouldShow != _diagnosisVisible) {
+      setState(() => _diagnosisVisible = shouldShow);
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -274,7 +294,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
             constellation: detail.constellation,
             onConstellationChanged: notifier.updateConstellation,
           ),
-          _DiagnosisCard(characterId: widget.characterId),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: _diagnosisVisible
+                ? _DiagnosisCard(characterId: widget.characterId)
+                : const SizedBox(width: double.infinity),
+          ),
           _GrowthGoalButton(
             characterId: widget.characterId,
             detail: detail,
@@ -297,58 +324,61 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
           ),
           const Divider(height: 1),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: CharacterDetailTabViews(
-                characterId: widget.characterId,
-                character: character,
-                hoyolabSynced: detail.hoyolabSynced,
-                level: detail.level,
-                targetLevel: detail.targetLevel,
-                talentNormal: detail.talentNormal,
-                talentSkill: detail.talentSkill,
-                talentBurst: detail.talentBurst,
-                weaponId: detail.weaponId,
-                weaponLevel: detail.weaponLevel,
-                targetWeaponLevel: detail.targetWeaponLevel,
-                weaponRarity: detail.weaponRarity,
-                weaponRefinement: detail.progress?.weaponRefinement ?? 1,
-                artifacts: detail.artifacts,
-                promotes: detail.promotes,
-                weaponPromotes: detail.weaponPromotes,
-                talents: detail.talents,
-                weapons: detail.weapons,
-                bookmarks: _bookmarks,
-                fetchedSnapshot: detail.fetchedSnapshot,
-                artifactScoreType: detail.artifactScoreType,
-                resolvedArtifactScoreType: detail.resolvedArtifactScoreType,
-                artifactScoreWeights: detail.artifactScoreWeights,
-                artifactScoreTypeUserSet: detail.artifactScoreTypeUserSet,
-                artifactCompleted: detail.artifactCompleted,
-                bookmarkCtx: bookmarkCtx,
-                weaponBookmarkCtx: weaponBookmarkCtx,
-                rangeLines: rangeLines,
-                rangeSourceKey: rangeSourceKey,
-                nextStage: nextStage,
-                bookmarkActions: _bookmarkActions,
-                resolveName: (id) => _resolveName(detail, id),
-                resolveIcon: (id) => _resolveIcon(detail, id),
-                isBookmarked: _isBookmarked,
-                onLevelChanged: notifier.updateLevel,
-                onTargetLevelChanged: notifier.updateTargetLevel,
-                onTalentNormalChanged: notifier.updateTalentNormal,
-                onTalentSkillChanged: notifier.updateTalentSkill,
-                onTalentBurstChanged: notifier.updateTalentBurst,
-                onWeaponSelected: (id) => _onWeaponSelected(detail, id),
-                onWeaponLevelChanged: notifier.updateWeaponLevel,
-                onTargetWeaponLevelChanged: notifier.updateTargetWeaponLevel,
-                onArtifactsChanged: notifier.updateArtifacts,
-                onArtifactScoreTypeChanged: notifier.updateArtifactScoreType,
-                onArtifactCompletedChanged: notifier.updateArtifactCompleted,
-                onResetToFetched: () =>
-                    unawaited(_confirmResetToFetched(detail)),
-                snapshotFromCurrent: detail.snapshotFromCurrent,
-              ).buildTabs(context),
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _onTabScrollNotification,
+              child: TabBarView(
+                controller: _tabController,
+                children: CharacterDetailTabViews(
+                  characterId: widget.characterId,
+                  character: character,
+                  hoyolabSynced: detail.hoyolabSynced,
+                  level: detail.level,
+                  targetLevel: detail.targetLevel,
+                  talentNormal: detail.talentNormal,
+                  talentSkill: detail.talentSkill,
+                  talentBurst: detail.talentBurst,
+                  weaponId: detail.weaponId,
+                  weaponLevel: detail.weaponLevel,
+                  targetWeaponLevel: detail.targetWeaponLevel,
+                  weaponRarity: detail.weaponRarity,
+                  weaponRefinement: detail.progress?.weaponRefinement ?? 1,
+                  artifacts: detail.artifacts,
+                  promotes: detail.promotes,
+                  weaponPromotes: detail.weaponPromotes,
+                  talents: detail.talents,
+                  weapons: detail.weapons,
+                  bookmarks: _bookmarks,
+                  fetchedSnapshot: detail.fetchedSnapshot,
+                  artifactScoreType: detail.artifactScoreType,
+                  resolvedArtifactScoreType: detail.resolvedArtifactScoreType,
+                  artifactScoreWeights: detail.artifactScoreWeights,
+                  artifactScoreTypeUserSet: detail.artifactScoreTypeUserSet,
+                  artifactCompleted: detail.artifactCompleted,
+                  bookmarkCtx: bookmarkCtx,
+                  weaponBookmarkCtx: weaponBookmarkCtx,
+                  rangeLines: rangeLines,
+                  rangeSourceKey: rangeSourceKey,
+                  nextStage: nextStage,
+                  bookmarkActions: _bookmarkActions,
+                  resolveName: (id) => _resolveName(detail, id),
+                  resolveIcon: (id) => _resolveIcon(detail, id),
+                  isBookmarked: _isBookmarked,
+                  onLevelChanged: notifier.updateLevel,
+                  onTargetLevelChanged: notifier.updateTargetLevel,
+                  onTalentNormalChanged: notifier.updateTalentNormal,
+                  onTalentSkillChanged: notifier.updateTalentSkill,
+                  onTalentBurstChanged: notifier.updateTalentBurst,
+                  onWeaponSelected: (id) => _onWeaponSelected(detail, id),
+                  onWeaponLevelChanged: notifier.updateWeaponLevel,
+                  onTargetWeaponLevelChanged: notifier.updateTargetWeaponLevel,
+                  onArtifactsChanged: notifier.updateArtifacts,
+                  onArtifactScoreTypeChanged: notifier.updateArtifactScoreType,
+                  onArtifactCompletedChanged: notifier.updateArtifactCompleted,
+                  onResetToFetched: () =>
+                      unawaited(_confirmResetToFetched(detail)),
+                  snapshotFromCurrent: detail.snapshotFromCurrent,
+                ).buildTabs(context),
+              ),
             ),
           ),
         ],
@@ -373,14 +403,37 @@ class _GrowthGoalButton extends ConsumerStatefulWidget {
 class _GrowthGoalButtonState extends ConsumerState<_GrowthGoalButton> {
   bool _saving = false;
 
-  Future<void> _save() async {
-    if (_saving) return;
-    final detail = widget.detail;
+  ({int? targetLevel, String? weaponId, int? weaponLevel}) _targetsFrom(
+    CharacterDetailState detail,
+  ) {
     final targetLevel =
         detail.targetLevel > detail.level ? detail.targetLevel : null;
     final hasWeaponTarget = detail.weaponId.isNotEmpty &&
         detail.targetWeaponLevel > detail.weaponLevel;
-    if (targetLevel == null && !hasWeaponTarget) return;
+    return (
+      targetLevel: targetLevel,
+      weaponId: hasWeaponTarget ? detail.weaponId : null,
+      weaponLevel: hasWeaponTarget ? detail.targetWeaponLevel : null,
+    );
+  }
+
+  bool _alreadySavedForCurrentTargets({
+    required GrowthGoal? existing,
+    required CharacterDetailState detail,
+  }) {
+    if (existing == null) return false;
+    final t = _targetsFrom(detail);
+    if (t.targetLevel == null && t.weaponId == null) return false;
+    return existing.targetLevel == t.targetLevel &&
+        existing.targetWeaponId == t.weaponId &&
+        existing.targetWeaponLevel == t.weaponLevel;
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final detail = widget.detail;
+    final targets = _targetsFrom(detail);
+    if (targets.targetLevel == null && targets.weaponId == null) return;
 
     setState(() => _saving = true);
     try {
@@ -389,16 +442,19 @@ class _GrowthGoalButtonState extends ConsumerState<_GrowthGoalButton> {
       final existing = snapshot.activeGoals
           .where((goal) => goal.characterId == widget.characterId)
           .firstOrNull;
+      if (_alreadySavedForCurrentTargets(existing: existing, detail: detail)) {
+        return;
+      }
       final now = DateTime.now();
       final goal = GrowthGoal(
         id: existing?.id ?? const Uuid().v4(),
         userId: userId,
         characterId: widget.characterId,
-        targetLevel: targetLevel,
-        targetWeaponId: hasWeaponTarget ? detail.weaponId : null,
-        targetWeaponLevel:
-            hasWeaponTarget ? detail.targetWeaponLevel : null,
-        priority: existing?.priority ?? 0,
+        targetLevel: targets.targetLevel,
+        targetWeaponId: targets.weaponId,
+        targetWeaponLevel: targets.weaponLevel,
+        // 新規は優先枠へ入れ、今日やることにすぐ載るようにする
+        priority: existing?.priority ?? 1,
         status: GrowthGoalStatus.active,
         memo: existing?.memo,
         createdAt: existing?.createdAt ?? now,
@@ -406,7 +462,9 @@ class _GrowthGoalButtonState extends ConsumerState<_GrowthGoalButton> {
       );
       final repository = await ref.read(growthGoalRepoProvider.future);
       await repository.save(goal);
+      // スナップショット再読込を待ってから Daily Plan を更新（古いキャッシュ回避）
       ref.invalidate(accountSnapshotProvider);
+      await ref.read(accountSnapshotProvider.future);
       ref.invalidate(dailyPlanProvider);
       ref.invalidate(characterDiagnosisProvider(widget.characterId));
       ref.invalidate(accountHealthReportProvider);
@@ -431,15 +489,31 @@ class _GrowthGoalButtonState extends ConsumerState<_GrowthGoalButton> {
     if (!enabledByFlag) return const SizedBox.shrink();
 
     final detail = widget.detail;
-    final enabled = detail.targetLevel > detail.level ||
+    final hasTargets = detail.targetLevel > detail.level ||
         (detail.weaponId.isNotEmpty &&
             detail.targetWeaponLevel > detail.weaponLevel);
+    final snapshotAsync = ref.watch(accountSnapshotProvider);
+    final existing = snapshotAsync.valueOrNull?.activeGoals
+        .where((goal) => goal.characterId == widget.characterId)
+        .firstOrNull;
+    final alreadySaved = _alreadySavedForCurrentTargets(
+      existing: existing,
+      detail: detail,
+    );
+    final canPress = hasTargets && !_saving && !alreadySaved;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: OutlinedButton.icon(
-        onPressed: enabled && !_saving ? _save : null,
-        icon: const Icon(Icons.flag_outlined),
-        label: Text(_saving ? '保存中...' : '現在の目標レベルを育成目標に保存'),
+        onPressed: canPress ? _save : null,
+        icon: Icon(alreadySaved ? Icons.check : Icons.flag_outlined),
+        label: Text(
+          _saving
+              ? '保存中...'
+              : alreadySaved
+                  ? '育成目標に保存済み'
+                  : '現在の目標レベルを育成目標に保存',
+        ),
       ),
     );
   }
@@ -451,94 +525,119 @@ class _DiagnosisCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final flagsAsync = ref.watch(featureFlagsProvider);
-    return flagsAsync.maybeWhen(
-      data: (flags) => flags.enableInvestmentDiagnosis
-          ? _DiagnosisContent(characterId: characterId)
-          : const SizedBox.shrink(),
-      orElse: () => const SizedBox.shrink(),
-    );
-  }
-}
-
-class _DiagnosisContent extends ConsumerWidget {
-  const _DiagnosisContent({required this.characterId});
-  final String characterId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
     final diagAsync = ref.watch(characterDiagnosisProvider(characterId));
     final theme = Theme.of(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: diagAsync.when(
-        loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
-        data: (diag) {
-          if (diag.topFindings.isEmpty) return const SizedBox.shrink();
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('\u80b2\u6210\u8a3a\u65ad', style: theme.textTheme.titleSmall),
-                  const SizedBox(height: 6),
-                  ...diag.topFindings.map((f) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              f.severity == DiagnosisSeverity.warning
-                                  ? Icons.warning_amber
-                                  : Icons.info_outline,
-                              size: 18,
-                              color: f.severity == DiagnosisSeverity.warning
-                                  ? Colors.orange
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(f.title, style: theme.textTheme.bodyMedium),
-                                  if (f.explanation.isNotEmpty)
-                                    Text(f.explanation, style: theme.textTheme.bodySmall?.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    )),
-                                  if (f.recommendation != null && f.recommendation!.isNotEmpty)
-                                    Text(f.recommendation!,
-                                        style: theme.textTheme.labelSmall?.copyWith(
-                                          color: theme.colorScheme.primary,
-                                        )),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      )),
-                  Text(
-                    '\u4fe1\u983c\u5ea6: ${_confidenceLabel(diag.topFindings.firstOrNull?.confidence ?? RecommendationConfidence.unknown)}',
-                    style: theme.textTheme.labelSmall,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('育成診断', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 6),
+              diagAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
+                error: (_, __) => Text(
+                  '診断を取得できませんでした',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                ],
+                ),
+                data: (diag) {
+                  final findings = diag.topFindings;
+                  if (findings.isEmpty) {
+                    return Text(
+                      '特に指摘はありません',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    );
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ...findings.map(
+                        (f) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                f.severity == DiagnosisSeverity.warning ||
+                                        f.severity == DiagnosisSeverity.critical
+                                    ? Icons.warning_amber
+                                    : Icons.info_outline,
+                                size: 18,
+                                color: f.severity == DiagnosisSeverity.warning ||
+                                        f.severity == DiagnosisSeverity.critical
+                                    ? Colors.orange
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      f.title,
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                    if (f.explanation.isNotEmpty)
+                                      Text(
+                                        f.explanation,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                          color: theme
+                                              .colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    if (f.recommendation != null &&
+                                        f.recommendation!.isNotEmpty)
+                                      Text(
+                                        f.recommendation!,
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '信頼度: ${_confidenceLabel(findings.first.confidence)}',
+                        style: theme.textTheme.labelSmall,
+                      ),
+                    ],
+                  );
+                },
               ),
-            ),
-          );
-        },
+            ],
+          ),
+        ),
       ),
     );
   }
 
   String _confidenceLabel(RecommendationConfidence c) {
     switch (c) {
-      case RecommendationConfidence.high: return '\u9ad8';
-      case RecommendationConfidence.medium: return '\u4e2d';
-      case RecommendationConfidence.low: return '\u4f4e';
-      case RecommendationConfidence.unknown: return '\u4e0d\u660e';
+      case RecommendationConfidence.high:
+        return '高';
+      case RecommendationConfidence.medium:
+        return '中';
+      case RecommendationConfidence.low:
+        return '低';
+      case RecommendationConfidence.unknown:
+        return '不明';
     }
   }
 }

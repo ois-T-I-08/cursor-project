@@ -115,7 +115,7 @@ class CharacterRelicsSection extends StatelessWidget {
           ),
         const SizedBox(height: 8),
         DropdownButtonFormField<ArtifactScoreType>(
-          value: scoreType,
+          initialValue: scoreType,
           decoration: InputDecoration(
             labelText: _scoreTypeFieldLabel(
               resolvedScoreType: resolvedScoreType,

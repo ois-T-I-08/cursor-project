@@ -4,6 +4,7 @@ import '../../domain/daily_materials/daily_material_models.dart';
 import '../../domain/daily_materials/daily_progress_prefetch.dart';
 import '../../domain/hoyolab_slider_sync.dart';
 import '../hoyolab/hoyolab_game_data_repository.dart';
+import '../hoyolab/hoyolab_relic_sync.dart';
 import '../hoyolab/models/game_record.dart';
 import '../../domain/repositories/character_repository.dart';
 import '../../domain/repositories/progress_repository.dart';
@@ -155,6 +156,14 @@ class DailyProgressPrefetchService {
       weaponRefinement: build.weapon?.refinement,
     );
 
+    var artifacts = existing.artifacts;
+    if (build.relics.isNotEmpty) {
+      artifacts = mergeRelicsFromHoyolab(
+        local: artifacts,
+        relics: build.relics,
+      );
+    }
+
     final updated = existing.copyWith(
       level: snapshot.level,
       ascension: snapshot.promoteLevel,
@@ -168,8 +177,11 @@ class DailyProgressPrefetchService {
       weaponLevel: snapshot.weaponLevel ?? existing.weaponLevel,
       weaponRefinement:
           snapshot.weaponRefinement ?? existing.weaponRefinement,
+      artifacts: artifacts,
     );
     await _progressRepository.save(updated);
-    return build.talents.isNotEmpty || snapshot.weaponId != null;
+    return build.talents.isNotEmpty ||
+        snapshot.weaponId != null ||
+        build.relics.isNotEmpty;
   }
 }

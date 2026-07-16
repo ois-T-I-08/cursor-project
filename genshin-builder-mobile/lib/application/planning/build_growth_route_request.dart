@@ -1,6 +1,9 @@
 import '../../domain/planning/daily_plan.dart';
 import '../../domain/planning/growth_route_request.dart';
 
+/// Default daily resin budget when HoYoLAB max resin is unknown.
+const kDefaultDailyResinBudget = 160;
+
 GrowthRouteRequest buildGrowthRouteRequest(
   DailyPlan plan,
   DateTime startDate,
@@ -15,5 +18,6 @@ GrowthRouteRequest buildGrowthRouteRequest(
         .toList(),
     startDate: normalizedDate,
     startWeekday: normalizedDate.weekday,
+    dailyResinBudget: plan.maxResin ?? kDefaultDailyResinBudget,
   );
 }

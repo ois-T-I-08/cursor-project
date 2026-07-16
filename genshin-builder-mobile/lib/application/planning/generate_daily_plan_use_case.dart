@@ -29,38 +29,34 @@ class GenerateDailyPlanUseCase {
     final hasInventory = inventory.isNotEmpty;
     final resin = snapshot.currentResin;
     final missingData = <MissingData>[];
+    final names = {
+      for (final c in snapshot.characters) c.characterId: c.name,
+    };
 
     if (!hasInventory) missingData.add(MissingData.materialInventory);
     if (resin == null) missingData.add(MissingData.currentResin);
 
-    // 1. High-priority goals. Weekday-specific tasks are produced by the
-    // dedicated daily-material planner, not guessed here.
-    for (final goal in goals.where((g) => g.priority > 0).take(2)) {
+    // アクティブな育成目標をすべて今日やることへ反映（件数上限で落とさない）
+    for (final goal in goals) {
+      final high = goal.priority > 0;
       items.add(DailyPlanItem(
-        id: 'pri_${goal.id}',
-        type: DailyPlanItemType.growthGoal,
-        title: 'High priority: ${_goalSummary(goal)}',
+        id: '${high ? 'pri' : 'gen'}_${goal.id}',
+        type: high
+            ? DailyPlanItemType.growthGoal
+            : DailyPlanItemType.generalMaterial,
+        title: high
+            ? '優先: ${_goalSummary(goal, names)}'
+            : _goalSummary(goal, names),
         characterIds: [goal.characterId],
-        priority: 80 + goal.priority,
+        priority: high ? 80 + goal.priority : 50,
         relatedGoalId: goal.id,
-        reasons: ['High-priority growth goal'],
-        estimatedResinCost: resin,
-        confidence: hasInventory ? RecommendationConfidence.high : RecommendationConfidence.low,
-        missingData: missingData,
-      ));
-    }
-
-    // 2. General goals
-    for (final goal in goals.where((g) => g.priority <= 0).take(2)) {
-      items.add(DailyPlanItem(
-        id: 'gen_${goal.id}',
-        type: DailyPlanItemType.generalMaterial,
-        title: _goalSummary(goal),
-        characterIds: [goal.characterId],
-        priority: 50,
-        relatedGoalId: goal.id,
-        reasons: ['General growth material farming'],
-        confidence: hasInventory ? RecommendationConfidence.high : RecommendationConfidence.low,
+        reasons: [
+          high ? '優先度の高い育成目標' : '育成素材集め',
+        ],
+        estimatedResinCost: null,
+        confidence: hasInventory
+            ? RecommendationConfidence.high
+            : RecommendationConfidence.low,
         missingData: missingData,
       ));
     }
@@ -73,20 +69,52 @@ class GenerateDailyPlanUseCase {
       items: items,
       currentResin: resin,
       maxResin: snapshot.maxResin,
-      confidence: hasInventory ? RecommendationConfidence.high : RecommendationConfidence.low,
+      confidence: hasInventory
+          ? RecommendationConfidence.high
+          : RecommendationConfidence.low,
       completeness: snapshot.completeness,
       missingData: missingData,
       generatedAt: generatedAt ?? DateTime.now(),
     );
   }
 
-  String _goalSummary(GrowthGoal goal) {
+  String _goalSummary(GrowthGoal goal, Map<String, String> names) {
+    final charName = _resolveCharacterName(goal.characterId, names);
     final parts = <String>[];
     if (goal.targetLevel != null) parts.add('Lv.${goal.targetLevel}');
-    if (goal.targetTalentNormal != null || goal.targetTalentSkill != null || goal.targetTalentBurst != null) {
-      parts.add('Talents');
+    if (goal.targetTalentNormal != null ||
+        goal.targetTalentSkill != null ||
+        goal.targetTalentBurst != null) {
+      parts.add('天賦');
     }
-    if (goal.targetWeaponId != null) parts.add('Weapon');
-    return parts.isEmpty ? goal.characterId : parts.join(' + ');
+    if (goal.targetWeaponId != null || goal.targetWeaponLevel != null) {
+      parts.add('武器');
+    }
+    final focus = parts.isEmpty ? '育成' : parts.join('・');
+    if (charName != null) {
+      return '$charName（$focus）';
+    }
+    return focus;
+  }
+
+  /// HoYoLAB ID（接尾辞付き）とマスタ ID のゆれを吸収して表示名を解決する。
+  String? _resolveCharacterName(
+    String characterId,
+    Map<String, String> names,
+  ) {
+    final direct = names[characterId];
+    if (direct != null && direct.trim().isNotEmpty) return direct.trim();
+
+    final base = characterId.split('-').first;
+    final byBase = names[base];
+    if (byBase != null && byBase.trim().isNotEmpty) return byBase.trim();
+
+    for (final e in names.entries) {
+      if (e.key == base || e.key.startsWith('$base-')) {
+        final n = e.value.trim();
+        if (n.isNotEmpty) return n;
+      }
+    }
+    return null;
   }
 }

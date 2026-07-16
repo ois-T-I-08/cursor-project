@@ -55,8 +55,8 @@ void main() {
         weekday: DateTime.wednesday,
         materials: materials,
         characters: [
-          CharacterTalentCatalogEntry(
-            character: const MasterCharacter(
+          const CharacterTalentCatalogEntry(
+            character: MasterCharacter(
               id: 'unowned',
               name: '未所持キャラ',
               element: 'electro',
@@ -67,8 +67,8 @@ void main() {
             ),
             talentMaterialIds: {'104328'},
           ),
-          CharacterTalentCatalogEntry(
-            character: const MasterCharacter(
+          const CharacterTalentCatalogEntry(
+            character: MasterCharacter(
               id: 'complete',
               name: '八重神子',
               element: 'electro',
@@ -89,18 +89,18 @@ void main() {
             ),
             talents: {
               'skill_0': [
-                const TalentLevelUpgrade(
+                TalentLevelUpgrade(
                   level: 2,
                   coinCost: 0,
                   costItems: {'104328': 3},
                 ),
               ],
-              'skill_1': const [],
-              'skill_2': const [],
+              'skill_1': [],
+              'skill_2': [],
             },
           ),
-          CharacterTalentCatalogEntry(
-            character: const MasterCharacter(
+          const CharacterTalentCatalogEntry(
+            character: MasterCharacter(
               id: 'need',
               name: '雷電将軍',
               element: 'electro',
@@ -121,14 +121,14 @@ void main() {
             ),
             talents: {
               'skill_0': [
-                const TalentLevelUpgrade(
+                TalentLevelUpgrade(
                   level: 2,
                   coinCost: 0,
                   costItems: {'104328': 12},
                 ),
               ],
-              'skill_1': const [],
-              'skill_2': const [],
+              'skill_1': [],
+              'skill_2': [],
             },
           ),
         ],
@@ -160,8 +160,8 @@ void main() {
         materials: materials,
         characters: const [],
         weapons: [
-          WeaponAscensionCatalogEntry(
-            weapon: const MasterWeapon(
+          const WeaponAscensionCatalogEntry(
+            weapon: MasterWeapon(
               id: 'w1',
               name: '草薙の稲光',
               weaponType: 'polearm',
@@ -172,14 +172,14 @@ void main() {
             weaponLevel: 80,
             weaponRefinement: 1,
             promotes: [
-              const PromoteStage(
+              PromoteStage(
                 promoteLevel: 5,
                 unlockMaxLevel: 90,
                 costItems: {'114008': 5},
                 coinCost: 0,
               ),
             ],
-            equippedCharacters: const [
+            equippedCharacters: [
               DailyEquippedCharacter(
                 id: '10000052',
                 name: '雷電将軍',
@@ -188,8 +188,8 @@ void main() {
             ],
             isOwned: true,
           ),
-          WeaponAscensionCatalogEntry(
-            weapon: const MasterWeapon(
+          const WeaponAscensionCatalogEntry(
+            weapon: MasterWeapon(
               id: 'w2',
               name: '風鷹剣',
               weaponType: 'sword',

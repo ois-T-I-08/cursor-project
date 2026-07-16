@@ -176,7 +176,7 @@ void main() {
     test('shows set counts and levels', () {
       final state = createEmptyArtifactState();
       for (final slot in ArtifactSlotKey.values) {
-        state[slot] = ArtifactPiece(setName: '深林の記憶', level: 20);
+        state[slot] = const ArtifactPiece(setName: '深林の記憶', level: 20);
       }
 
       final summary = buildArtifactSummary(state);

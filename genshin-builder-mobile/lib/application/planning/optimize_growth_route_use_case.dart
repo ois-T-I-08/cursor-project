@@ -22,6 +22,8 @@ class OptimizeGrowthRouteUseCase {
     required DateTime startDate,
     required int startWeekday, // 1=Mon..7=Sun
     int? dailyResinBudget,
+    /// When false (default for UI), budget is display-only and does not cut actions.
+    bool enforceDailyResinBudget = false,
     int dayCount = defaultDayCount,
     Map<String, Set<int>>? weekdayMap,
   }) {
@@ -29,6 +31,8 @@ class OptimizeGrowthRouteUseCase {
     final remaining = List<UpgradeOption>.from(options);
     final unresolved = <String>[];
     final wkMap = weekdayMap ?? const {};
+    final budgetForEnforce =
+        enforceDailyResinBudget ? dailyResinBudget : null;
 
     _sortRemaining(remaining);
 
@@ -50,7 +54,7 @@ class OptimizeGrowthRouteUseCase {
 
       for (final opt in candidatesForToday) {
         if (actions.length >= 6) break;
-        if (!_withinBudget(dailyResinBudget, dayResin, opt)) continue;
+        if (!_withinBudget(budgetForEnforce, dayResin, opt)) continue;
         final at = _isWeekdayLimited(opt) && _matchesDay(opt, weekday, wkMap)
             ? 'weekdayMaterial'
             : 'generalMaterial';
@@ -76,12 +80,19 @@ class OptimizeGrowthRouteUseCase {
     final hasInv = options.any((o) => o.inventoryStatus == InventoryStatus.ownedSufficient ||
         o.inventoryStatus == InventoryStatus.ownedInsufficient);
 
+    final totalResin = days.fold<int>(
+      0,
+      (sum, day) => sum + (day.estimatedResinUsed ?? 0),
+    );
+
     return GrowthRoute(
       userId: userId,
       startDate: startDate,
       endDate: startDate.add(Duration(days: dayCount - 1)),
       days: days,
       goals: options.map((o) => o.relatedGoalId ?? o.optionId).toSet().toList(),
+      totalEstimatedResin: totalResin,
+      dailyResinBudget: dailyResinBudget,
       unresolvedCosts: unresolved,
       confidence: hasInv ? RecommendationConfidence.high : RecommendationConfidence.low,
       completeness: hasInv ? DataCompleteness.partial : DataCompleteness.minimal,

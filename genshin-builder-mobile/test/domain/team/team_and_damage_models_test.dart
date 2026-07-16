@@ -18,7 +18,7 @@ void main() {
   });
 
   test('estimateDamage returns placeholder notes', () {
-    final character = MasterCharacter(
+    const character = MasterCharacter(
       id: '10000046',
       name: '胡桃',
       element: 'pyro',
@@ -27,7 +27,7 @@ void main() {
       region: '璃月',
       iconUrl: '',
     );
-    final result = estimateDamage(DamageContext(character: character, level: 90));
+    final result = estimateDamage(const DamageContext(character: character, level: 90));
     expect(result.average, 0);
     expect(result.notes, isNotEmpty);
   });

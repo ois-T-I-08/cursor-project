@@ -1,7 +1,10 @@
 import '../../domain/account/account_snapshot.dart';
+import '../../domain/daily_materials/daily_material_models.dart';
 import '../../domain/models/calculation_models.dart';
 import '../../domain/models/bookmark.dart';
 import '../../domain/planning/growth_goal.dart';
+import '../../domain/planning/resin_farm_cost_table.dart';
+import '../../domain/planning/resin_farm_estimate.dart';
 import '../../domain/planning/upgrade_option.dart';
 import '../../domain/recommendation/recommendation.dart';
 import '../../domain/level_config.dart';
@@ -9,7 +12,15 @@ import '../../domain/material_requirements.dart';
 
 /// Generates UpgradeOptions from GrowthGoals + AccountSnapshot.
 class GenerateUpgradeOptionsUseCase {
-  const GenerateUpgradeOptionsUseCase();
+  const GenerateUpgradeOptionsUseCase({
+    this.resinFarmCostTable,
+    this.materialIndex = const {},
+    this.materialCategories = const {},
+  });
+
+  final ResinFarmCostTable? resinFarmCostTable;
+  final Map<String, DailyMaterialSeries> materialIndex;
+  final Map<String, String> materialCategories;
 
   List<UpgradeOption> call({
     required GrowthGoal goal,
@@ -228,6 +239,14 @@ class GenerateUpgradeOptionsUseCase {
       materialsCost: materials,
       moraCost: mora,
       expItemCost: expItems,
+      estimatedResinCost: _estimateResin(
+        materials: materials,
+        expItems: expItems,
+        mora: mora,
+        owned: owned,
+        remaining: remaining,
+        invStatus: invStatus,
+      ),
       ownedMaterials: owned,
       remainingMaterials: remaining,
       inventoryStatus: invStatus,
@@ -248,6 +267,35 @@ class GenerateUpgradeOptionsUseCase {
       usedDataSources: sources,
       calculationMode: calcMode,
       generatedAt: now,
+    );
+  }
+
+  int? _estimateResin({
+    required Map<String, int> materials,
+    required Map<String, int> expItems,
+    required int mora,
+    required Map<String, int> owned,
+    required Map<String, int> remaining,
+    required InventoryStatus invStatus,
+  }) {
+    final table = resinFarmCostTable;
+    if (table == null) return null;
+    final draft = UpgradeOption(
+      optionId: '_',
+      characterId: '_',
+      optionType: '_',
+      materialsCost: materials,
+      moraCost: mora,
+      expItemCost: expItems,
+      ownedMaterials: owned,
+      remainingMaterials: remaining,
+      inventoryStatus: invStatus,
+    );
+    return estimateResinCostForUpgradeOption(
+      option: draft,
+      table: table,
+      materialIndex: materialIndex,
+      materialCategories: materialCategories,
     );
   }
 

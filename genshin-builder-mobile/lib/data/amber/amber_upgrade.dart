@@ -169,13 +169,18 @@ class AmberUpgradeApi {
   fetchWeaponUpgrade(String weaponId) async {
     final data = await _fetchV2('/weapon/$weaponId');
 
+    // マネキン武器など upgrade 未実装はスキップ（同期全体を落とさない）
     if (data['upgrade'] is! Map<String, dynamic>) {
-      throw const FormatException('Missing weapon upgrade fields');
+      return null;
     }
     final upgrade = data['upgrade'] as Map<String, dynamic>;
-    final promotes = parsePromotes(upgrade['promote'] as List<dynamic>?);
+    final promoteRaw = upgrade['promote'];
+    if (promoteRaw is! List) {
+      return null;
+    }
+    final promotes = parsePromotes(promoteRaw);
     if (promotes.isEmpty) {
-      throw const FormatException('Empty weapon promotes');
+      return null;
     }
     final items = data['items'] as Map<String, dynamic>?;
     final levelUpItemIds = parseWeaponEnhancementOreIds(items);

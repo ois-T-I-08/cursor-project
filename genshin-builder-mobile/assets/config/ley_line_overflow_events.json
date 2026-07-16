@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "description": "地脈の奔流の開催定義。カレンダーAPIと突き合わせ、失敗時は events のフォールバックを使う。開催期間は events / カレンダーから取得し、ここへ固定しない。",
+  "defaults": {
+    "displayName": "地脈の奔流",
+    "eventType": "leyLineOverflow",
+    "dailyBonusLimit": 3,
+    "rewardMultiplier": 2,
+    "condensedResinEligible": false,
+    "eligibleLeyLineTypes": ["exp", "mora"],
+    "nameMatchers": [
+      "地脈の奔流",
+      "Ley Line Overflow",
+      "地脉奔流",
+      "地脉之流"
+    ]
+  },
+  "events": []
+}

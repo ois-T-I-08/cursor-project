@@ -67,11 +67,15 @@ void main() {
         ProviderScope(
           overrides: [
             teamGrowthPriorityProvider('team-1').overrideWith(
-              (ref) async => TeamGrowthPriorityReport(
+              (ref) async => const TeamGrowthPriorityReport(
                 teamId: 'team-1',
                 teamName: 'Trimmed',
-                memberPriorities: const [
-                  TeamMemberGrowthPriority(characterId: 'char1', priority: 1),
+                memberPriorities: [
+                  TeamMemberGrowthPriority(
+                    characterId: 'char1',
+                    characterName: 'テストキャラ',
+                    priority: 1,
+                  ),
                 ],
               ),
             ),
@@ -86,6 +90,8 @@ void main() {
       // Should show the report content, not empty guidance.
       expect(find.text('編成が選択されていません'), findsNothing);
       expect(find.text('Trimmed'), findsOneWidget);
+      expect(find.text('テストキャラ'), findsOneWidget);
+      expect(find.text('char1'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   });

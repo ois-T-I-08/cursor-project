@@ -104,7 +104,7 @@ class TeamGrowthPriorityScreen extends ConsumerWidget {
             margin: const EdgeInsets.symmetric(vertical: 4),
             child: ListTile(
               leading: CircleAvatar(child: Text('$rank')),
-              title: Text(p.characterId, style: theme.textTheme.bodyMedium),
+              title: Text(p.displayName, style: theme.textTheme.bodyMedium),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

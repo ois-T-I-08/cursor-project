@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ley_line_overflow_events.schema.json",
+  "type": "object",
+  "required": ["version", "defaults"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "description": { "type": "string" },
+    "defaults": {
+      "type": "object",
+      "required": ["displayName", "dailyBonusLimit", "nameMatchers"],
+      "properties": {
+        "displayName": { "type": "string", "minLength": 1 },
+        "eventType": { "type": "string" },
+        "dailyBonusLimit": { "type": "integer", "minimum": 0 },
+        "rewardMultiplier": { "type": "integer", "minimum": 2 },
+        "condensedResinEligible": { "type": "boolean", "const": false },
+        "eligibleLeyLineTypes": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["exp", "mora", "leyLineExp", "leyLineMora"] }
+        },
+        "nameMatchers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["eventId", "startAt", "endAt"],
+        "properties": {
+          "eventId": { "type": "string", "minLength": 1 },
+          "eventType": { "type": "string" },
+          "displayName": { "type": "string" },
+          "enabled": { "type": "boolean" },
+          "startAt": { "type": "string" },
+          "endAt": { "type": "string" },
+          "dailyBonusLimit": { "type": "integer", "minimum": 0 },
+          "rewardMultiplier": { "type": "integer", "minimum": 2 },
+          "eligibleLeyLineTypes": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "source": { "type": "string" },
+          "updatedAt": { "type": "string" }
+        }
+      }
+    }
+  }
+}

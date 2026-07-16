@@ -80,6 +80,55 @@ void main() {
       );
       expect(characters.single.scoreType, 'hp');
     });
+    test('skips null-element mannequin entries without failing', () {
+      final characters = parseCharactersFromAmberItems({
+        'mannequin': {
+          'id': 10000117,
+          'name': 'ドール（男）',
+          'element': null,
+          'weaponType': 'WEAPON_SWORD_ONE_HAND',
+          'rank': 5,
+          'region': 'MAINACTOR',
+          'icon': 'UI_AvatarIcon_MannequinBoy',
+          'specialProp': 'FIGHT_PROP_ATTACK_PERCENT',
+        },
+        'ok': {
+          'id': 10000042,
+          'name': '刻晴',
+          'element': 'Electric',
+          'weaponType': 'WEAPON_SWORD_ONE_HAND',
+          'rank': 5,
+          'region': 'Liyue',
+          'icon': 'UI_AvatarIcon_Keqing',
+          'specialProp': 'FIGHT_PROP_CRITICAL',
+        },
+      });
+
+      expect(characters.map((c) => c.id), ['10000042']);
+      expect(
+        countSyncableCharactersFromAmberItems({
+          'mannequin': {
+            'id': 10000117,
+            'name': 'ドール（男）',
+            'element': null,
+            'weaponType': 'WEAPON_SWORD_ONE_HAND',
+            'rank': 5,
+            'region': 'MAINACTOR',
+            'icon': 'UI_AvatarIcon_MannequinBoy',
+          },
+          'ok': {
+            'id': 10000042,
+            'name': '刻晴',
+            'element': 'Electric',
+            'weaponType': 'WEAPON_SWORD_ONE_HAND',
+            'rank': 5,
+            'region': 'Liyue',
+            'icon': 'UI_AvatarIcon_Keqing',
+          },
+        }),
+        1,
+      );
+    });
   });
 
   group('parseWeaponsFromAmberItems', () {

@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -11,9 +10,7 @@ import 'package:genshin_builder_mobile/domain/account/snapshot_supplement.dart';
 void main() {
   group('GrowthEvent composite cursor pagination', () {
     testWidgets('same observedAt events paginate correctly', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async { try { await db.close(); } catch (_) {} });
 
       final dt = DateTime(2026, 7, 14, 12, 0, 0);
@@ -68,9 +65,7 @@ void main() {
     });
 
     testWidgets('empty history returns empty list', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async { try { await db.close(); } catch (_) {} });
       final page = await db.growthDao.eventsGetByUser('local', limit: 50);
       expect(page, isEmpty);
@@ -80,9 +75,7 @@ void main() {
 
   group('GrowthEvent source and dedup', () {
     testWidgets('events save with correct source', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async { try { await db.close(); } catch (_) {} });
       await db.growthDao.eventsSaveAll([
         EventParams(eventId: 'src_1', userId: 'local', characterId: 'c1',
@@ -101,9 +94,7 @@ void main() {
     });
 
     testWidgets('duplicate dedupKey is ignored', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async { try { await db.close(); } catch (_) {} });
       await db.growthDao.eventsSaveAll([
         EventParams(eventId: 'dup_1', userId: 'local', characterId: 'c1',
@@ -122,15 +113,13 @@ void main() {
 
   group('Transaction rollback', () {
     testWidgets('baseline produces no events', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async { try { await db.close(); } catch (_) {} });
-      await db.characterDao.upsertCharacter(MasterCharacter(
+      await db.characterDao.upsertCharacter(const MasterCharacter(
         id: '10000002', name: 'Ayaka', element: 'cryo',
         weaponType: 'sword', rarity: 5, region: 'Inazuma', iconUrl: '',
       ));
-      await db.progressDao.upsertProgress(UserProgress(
+      await db.progressDao.upsertProgress(const UserProgress(
         id: 'p1', userId: 'local', characterId: '10000002', level: 80,
       ));
       expect((await db.growthDao.eventsGetByUser('local', limit: 50)), isEmpty);
@@ -138,20 +127,18 @@ void main() {
     });
 
     testWidgets('transaction rolls back on error', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async { try { await db.close(); } catch (_) {} });
-      await db.characterDao.upsertCharacter(MasterCharacter(
+      await db.characterDao.upsertCharacter(const MasterCharacter(
         id: '10000002', name: 'Ayaka', element: 'cryo',
         weaponType: 'sword', rarity: 5, region: 'Inazuma', iconUrl: '',
       ));
-      await db.progressDao.upsertProgress(UserProgress(
+      await db.progressDao.upsertProgress(const UserProgress(
         id: 'p1', userId: 'local', characterId: '10000002', level: 1,
       ));
       try {
         await db.transaction(() async {
-          await db.progressDao.upsertProgress(UserProgress(
+          await db.progressDao.upsertProgress(const UserProgress(
             id: 'p1', userId: 'local', characterId: '10000002', level: 90,
           ));
           await db.customStatement('INVALID_SQL');
@@ -163,16 +150,14 @@ void main() {
     });
 
     testWidgets('progress + events saved in transaction', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async { try { await db.close(); } catch (_) {} });
-      await db.characterDao.upsertCharacter(MasterCharacter(
+      await db.characterDao.upsertCharacter(const MasterCharacter(
         id: '10000002', name: 'Ayaka', element: 'cryo',
         weaponType: 'sword', rarity: 5, region: 'Inazuma', iconUrl: '',
       ));
       await db.transaction(() async {
-        await db.progressDao.upsertProgress(UserProgress(
+        await db.progressDao.upsertProgress(const UserProgress(
           id: 'p1', userId: 'local', characterId: '10000002', level: 90,
         ));
         await db.growthDao.eventsSaveAll([
@@ -252,7 +237,7 @@ void main() {
     });
 
     test('supplement is immutable and has no side effects', () {
-      final sup = AccountSnapshotSupplement(
+      const sup = AccountSnapshotSupplement(
         currentResin: 160, maxResin: 200,
         status: SnapshotSupplementStatus.linked,
       );

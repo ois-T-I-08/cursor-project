@@ -2,6 +2,16 @@
 
 セッションごとの設計判断ログ。重要な決定のみ追記する。
 
+## 2026-07-15 — 育成ルート樹脂見積もり（設定駆動・表示予算）
+
+- 状態: **実装完了**
+- 方針:
+  - `assets/config/resin_farm_costs.json` で種類ごとの樹脂／想定ドロップを持つ（キャラID固定リストなし）
+  - `UpgradeOption.estimatedResinCost` を schedule kind + Amber category から概算
+  - `dailyResinBudget = maxResin ?? 160` は **表示比較用**。割当は曜日・優先度・1日最大6件のみ（予算で切らない）
+- 主要ファイル: `resin_farm_estimate.dart` / `resin_farm_cost_repository.dart` / `GenerateUpgradeOptionsUseCase` / `OptimizeGrowthRouteUseCase.enforceDailyResinBudget` / `growth_route_screen.dart`
+- Daily Plan の `estimatedResinCost` に所持樹脂を入れる誤用は削除
+
 ## 2026-07-12 — [P1-8B] 樹脂190 / 探索派遣5完了ローカル通知
 
 - 状態: **実装完了・Android実機確認保留**

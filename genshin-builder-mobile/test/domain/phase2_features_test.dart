@@ -35,6 +35,8 @@ CharacterSnapshot _testChar(
   int level = 1,
   int weaponLevel = 1,
   bool owned = true,
+  double artifactCompletion = 0.0,
+  bool artifactCompletionAvailable = false,
 }) {
   return CharacterSnapshot(
     characterId: id,
@@ -46,6 +48,8 @@ CharacterSnapshot _testChar(
     isOwned: owned,
     level: level,
     weaponLevel: weaponLevel,
+    artifactCompletion: artifactCompletion,
+    artifactCompletionAvailable: artifactCompletionAvailable,
   );
 }
 
@@ -222,6 +226,45 @@ void main() {
       );
       expect(f, isNotEmpty);
     });
+
+    test('artifact completion below 80% produces finding', () {
+      final char = _testChar(
+        '10000002',
+        artifactCompletion: 0.42,
+        artifactCompletionAvailable: true,
+      );
+      final snapshot = _testSnapshot(characters: [char]);
+      final diag = const DiagnoseCharacterInvestmentUseCase()(
+        snapshot: snapshot,
+        characterId: '10000002',
+      );
+      final f = diag.findings.singleWhere(
+        (f) => f.type == DiagnosisType.artifactCompletionLow,
+      );
+      expect(f.title, '聖遺物完成度 42%');
+      expect(f.severity, DiagnosisSeverity.warning);
+    });
+
+    test('artifact completion at 80%+ produces no artifact finding', () {
+      final char = _testChar(
+        '10000002',
+        artifactCompletion: 0.85,
+        artifactCompletionAvailable: true,
+      );
+      final snapshot = _testSnapshot(characters: [char]);
+      final diag = const DiagnoseCharacterInvestmentUseCase()(
+        snapshot: snapshot,
+        characterId: '10000002',
+      );
+      expect(
+        diag.findings.where(
+          (f) =>
+              f.type == DiagnosisType.artifactCompletionUnset ||
+              f.type == DiagnosisType.artifactCompletionLow,
+        ),
+        isEmpty,
+      );
+    });
   });
 
   group('DetectGrowthEventsUseCase', () {
@@ -305,7 +348,7 @@ void main() {
         snapshot: snapshot,
       );
       final levelCat = report.categories.firstWhere(
-        (c) => c.name == 'Character Levels',
+        (c) => c.name == 'キャラレベル',
       );
       expect(levelCat.evaluated, isTrue);
     });

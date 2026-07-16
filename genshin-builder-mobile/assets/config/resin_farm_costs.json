@@ -1,0 +1,62 @@
+{
+  "version": 2,
+  "description": "育成ルート用の樹脂見積もり定数。想定ドロップは概算で、設定変更で調整可能。",
+  "meta": {
+    "naturalResinPerDay": 180,
+    "condensedResinValue": 40,
+    "synthesisRatio": 3,
+    "weekdayLabels": ["月", "火", "水", "木", "金", "土", "日"]
+  },
+  "kinds": {
+    "talentDomain": {
+      "resinPerRun": 20,
+      "assumedDropsPerRun": 2.2,
+      "contentLabel": "熟知秘境"
+    },
+    "weaponDomain": {
+      "resinPerRun": 20,
+      "assumedDropsPerRun": 2.2,
+      "contentLabel": "煉武秘境"
+    },
+    "artifactDomain": {
+      "resinPerRun": 20,
+      "assumedDropsPerRun": 1,
+      "contentLabel": "聖遺物秘境"
+    },
+    "weeklyBoss": {
+      "resinPerRun": 30,
+      "assumedDropsPerRun": 1,
+      "assumedDropsPerRunMin": 1,
+      "assumedDropsPerRunMax": 2,
+      "challengesPerWeek": 3,
+      "contentLabel": "週ボス"
+    },
+    "worldBoss": {
+      "resinPerRun": 40,
+      "assumedDropsPerRun": 2,
+      "assumedDropsPerRunMin": 1.5,
+      "assumedDropsPerRunMax": 2.5,
+      "contentLabel": "フィールドボス"
+    },
+    "leyLineExp": {
+      "resinPerRun": 20,
+      "assumedHeroWitEquivalentPerRun": 2.5,
+      "contentLabel": "地脈の花（経験値）"
+    },
+    "leyLineMora": {
+      "resinPerRun": 20,
+      "assumedMoraPerRun": 60000,
+      "contentLabel": "モラ地脈"
+    }
+  },
+  "zeroResinCategories": [
+    "localSpecialtyMondstadt",
+    "localSpecialtyLiyue",
+    "localSpecialtyInazuma",
+    "localSpecialtySumeru",
+    "localSpecialtyFontaine",
+    "localSpecialtyNatlan",
+    "localSpecialtyNodKrai",
+    "characterandWeaponEnhancementMaterial"
+  ]
+}

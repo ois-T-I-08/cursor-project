@@ -7,38 +7,38 @@ import 'package:genshin_builder_mobile/domain/recommendation/recommendation.dart
 void main() {
   group('GrowthGoal', () {
     test('validate rejects empty id', () {
-      final g = GrowthGoal(id: '', userId: 'u1', characterId: 'c1', targetLevel: 90);
+      const g = GrowthGoal(id: '', userId: 'u1', characterId: 'c1', targetLevel: 90);
       expect(GrowthGoal.validate(g), isNotNull);
     });
 
     test('validate rejects empty userId', () {
-      final g = GrowthGoal(id: 'g1', userId: '', characterId: 'c1', targetLevel: 90);
+      const g = GrowthGoal(id: 'g1', userId: '', characterId: 'c1', targetLevel: 90);
       expect(GrowthGoal.validate(g), isNotNull);
     });
 
     test('validate rejects empty characterId', () {
-      final g = GrowthGoal(id: 'g1', userId: 'u1', characterId: '', targetLevel: 90);
+      const g = GrowthGoal(id: 'g1', userId: 'u1', characterId: '', targetLevel: 90);
       expect(GrowthGoal.validate(g), isNotNull);
     });
 
     test('validate rejects no targets', () {
-      final g = GrowthGoal(id: 'g1', userId: 'u1', characterId: 'c1');
+      const g = GrowthGoal(id: 'g1', userId: 'u1', characterId: 'c1');
       expect(g.hasAnyTarget, isFalse);
       expect(GrowthGoal.validate(g), isNotNull);
     });
 
     test('validate rejects invalid level', () {
-      final g = GrowthGoal(id: 'g1', userId: 'u1', characterId: 'c1', targetLevel: 91);
+      const g = GrowthGoal(id: 'g1', userId: 'u1', characterId: 'c1', targetLevel: 91);
       expect(GrowthGoal.validate(g), isNotNull);
     });
 
     test('validate rejects invalid ascension', () {
-      final g = GrowthGoal(id: 'g1', userId: 'u1', characterId: 'c1', targetAscension: 7);
+      const g = GrowthGoal(id: 'g1', userId: 'u1', characterId: 'c1', targetAscension: 7);
       expect(GrowthGoal.validate(g), isNotNull);
     });
 
     test('validate accepts valid goal', () {
-      final g = GrowthGoal(
+      const g = GrowthGoal(
         id: 'g1',
         userId: 'u1',
         characterId: 'c1',
@@ -49,7 +49,7 @@ void main() {
     });
 
     test('partial goal (talent only) is valid', () {
-      final g = GrowthGoal(
+      const g = GrowthGoal(
         id: 'g1',
         userId: 'u1',
         characterId: 'c1',
@@ -60,12 +60,12 @@ void main() {
     });
 
     test('hasAnyTarget false when all null', () {
-      final g = GrowthGoal(id: 'g1', userId: 'u1', characterId: 'c1');
+      const g = GrowthGoal(id: 'g1', userId: 'u1', characterId: 'c1');
       expect(g.hasAnyTarget, isFalse);
     });
 
     test('hasAnyTarget true when weapon set', () {
-      final g = GrowthGoal(
+      const g = GrowthGoal(
         id: 'g1',
         userId: 'u1',
         characterId: 'c1',
@@ -166,8 +166,8 @@ void main() {
 
   group('Recommendation', () {
     test('recommendation holds reasons', () {
-      final reason = RecommendationReason(message: 'Very strong synergy');
-      final rec = Recommendation(
+      const reason = RecommendationReason(message: 'Very strong synergy');
+      const rec = Recommendation(
         recommendationId: 'r1',
         recommendationType: 'growth',
         targetType: 'character',
@@ -179,7 +179,7 @@ void main() {
     });
 
     test('missingData is independent of confidence', () {
-      final rec = Recommendation(
+      const rec = Recommendation(
         recommendationId: 'r1',
         recommendationType: 'test',
         targetType: 'c',
@@ -196,7 +196,7 @@ void main() {
 
   group('RecommendationReason', () {
     test('default importance is 1', () {
-      final r = RecommendationReason(message: 'Test');
+      const r = RecommendationReason(message: 'Test');
       expect(r.importance, 1);
     });
   });

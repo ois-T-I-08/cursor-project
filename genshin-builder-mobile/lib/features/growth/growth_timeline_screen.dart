@@ -90,17 +90,21 @@ class _GrowthTimelineScreenState extends ConsumerState<GrowthTimelineScreen> {
   @override
   Widget build(BuildContext context) {
     final timelineAsync = ref.watch(growthTimelineProvider);
+    final charactersAsync = ref.watch(charactersProvider);
     final theme = Theme.of(context);
+    final nameById = <String, String>{
+      for (final c in charactersAsync.valueOrNull ?? const []) c.id: c.name,
+    };
 
     return Scaffold(
-      appBar: AppBar(title: const Text('\u6210\u9577\u30bf\u30a4\u30e0\u30e9\u30a4\u30f3')),
+      appBar: AppBar(title: const Text('成長タイムライン')),
       body: timelineAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => const Center(child: Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc')),
+        error: (e, _) => const Center(child: Text('読み込みエラー')),
         data: (events) {
           if (events.isEmpty) {
             return Center(
-              child: Text('\u80b2\u6210\u5c65\u6b74\u306f\u307e\u3060\u3042\u308a\u307e\u305b\u3093\u3002', style: theme.textTheme.bodyLarge),
+              child: Text('育成履歴はまだありません。', style: theme.textTheme.bodyLarge),
             );
           }
           final all = _allEvents.isEmpty ? events : _allEvents;
@@ -127,13 +131,18 @@ class _GrowthTimelineScreenState extends ConsumerState<GrowthTimelineScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(date, style: theme.textTheme.titleSmall),
                   ),
-                  ...dayEvents.map((e) => Card(
-                        child: ListTile(
-                          dense: true,
-                          title: Text(e.characterId, style: theme.textTheme.labelSmall),
-                          subtitle: Text(_eventLabel(e)),
-                        ),
-                      )),
+                  ...dayEvents.map((e) {
+                    final name = e.characterId.isEmpty
+                        ? '（全体）'
+                        : (nameById[e.characterId] ?? e.characterId);
+                    return Card(
+                      child: ListTile(
+                        dense: true,
+                        title: Text(name, style: theme.textTheme.labelSmall),
+                        subtitle: Text(_eventLabel(e)),
+                      ),
+                    );
+                  }),
                 ],
               );
             },

@@ -19,16 +19,19 @@ List<MasterCharacter> parseCharactersFromAmberItems(
       throw const FormatException('Invalid character record');
     }
     final avatar = raw;
-    final elementKey = avatar['element'] as String?;
-    final element = elementKey != null ? elementMap[elementKey] : null;
-    final name = avatar['name'] as String?;
-    final rank = (avatar['rank'] as num?)?.toInt();
-    if (element == null ||
-        name == null ||
-        name.isEmpty ||
-        (rank != 4 && rank != 5)) {
+    // element が null のデータ（未実装のドール等）は除外（Web project-amber と同方針）
+    final elementKey = avatar['element'];
+    if (elementKey != null && elementKey is! String) {
       throw const FormatException('Invalid character record');
     }
+    final element =
+        elementKey is String ? elementMap[elementKey] : null;
+    final name = avatar['name'] as String?;
+    final rank = (avatar['rank'] as num?)?.toInt();
+    if (name == null || name.isEmpty || (rank != 4 && rank != 5)) {
+      throw const FormatException('Invalid character record');
+    }
+    if (element == null) continue;
 
     final id = '${avatar['id']}';
     if (id.isEmpty || id == 'null') {
@@ -69,7 +72,7 @@ List<MasterCharacter> parseCharactersFromAmberItems(
   return characters;
 }
 
-/// 同期対象キャラ件数（旅人女スキップ・element/name 必須 — parse と同じ条件）
+/// 同期対象キャラ件数（旅人女スキップ・null element 除外 — parse と同じ条件）
 int countSyncableCharactersFromAmberItems(Map<String, dynamic> items) {
   var count = 0;
   for (final raw in items.values) {
@@ -77,16 +80,18 @@ int countSyncableCharactersFromAmberItems(Map<String, dynamic> items) {
       throw const FormatException('Invalid character record');
     }
     final avatar = raw;
-    final elementKey = avatar['element'] as String?;
-    final element = elementKey != null ? elementMap[elementKey] : null;
-    final name = avatar['name'] as String?;
-    final rank = (avatar['rank'] as num?)?.toInt();
-    if (element == null ||
-        name == null ||
-        name.isEmpty ||
-        (rank != 4 && rank != 5)) {
+    final elementKey = avatar['element'];
+    if (elementKey != null && elementKey is! String) {
       throw const FormatException('Invalid character record');
     }
+    final element =
+        elementKey is String ? elementMap[elementKey] : null;
+    final name = avatar['name'] as String?;
+    final rank = (avatar['rank'] as num?)?.toInt();
+    if (name == null || name.isEmpty || (rank != 4 && rank != 5)) {
+      throw const FormatException('Invalid character record');
+    }
+    if (element == null) continue;
     final id = '${avatar['id']}';
     if (id.isEmpty || id == 'null') {
       throw const FormatException('Invalid character id');

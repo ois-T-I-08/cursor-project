@@ -7,6 +7,8 @@ import '../data/artifact_score/composite_artifact_score_weight_source.dart';
 import '../data/artifact_score/artifact_score_weight_source.dart';
 import '../data/artifact_score/local_json_artifact_score_weight_source.dart';
 import '../data/artifact_score/remote_artifact_score_weight_source.dart';
+import '../data/config/resin_farm_cost_repository.dart';
+import '../data/config/ley_line_overflow_repository.dart';
 import '../data/daily_materials/composite_daily_material_schedule_source.dart';
 import '../data/daily_materials/daily_material_schedule_repository.dart';
 import '../data/daily_materials/remote_daily_material_schedule_source.dart';
@@ -74,6 +76,26 @@ final dailyMaterialScheduleRepositoryProvider =
       localSource: LocalJsonDailyMaterialScheduleSource(),
       remoteSource: remote,
     ),
+  );
+});
+
+final resinFarmCostRepositoryProvider = Provider<ResinFarmCostRepository>((ref) {
+  return ResinFarmCostRepository(LocalJsonResinFarmCostSource());
+});
+
+final leyLineOverflowCatalogSourceProvider =
+    Provider<LeyLineOverflowCatalogSource>((ref) {
+  const remoteUrl = String.fromEnvironment(
+    'LEY_LINE_OVERFLOW_EVENTS_URL',
+    defaultValue: '',
+  );
+  final local = LocalJsonLeyLineOverflowCatalogSource();
+  final remote = remoteUrl.isEmpty
+      ? null
+      : RemoteLeyLineOverflowCatalogSource(url: remoteUrl);
+  return CompositeLeyLineOverflowCatalogSource(
+    localSource: local,
+    remoteSource: remote,
   );
 });
 

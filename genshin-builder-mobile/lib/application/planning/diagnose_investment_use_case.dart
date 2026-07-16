@@ -34,12 +34,12 @@ class DiagnoseCharacterInvestmentUseCase {
           type: DiagnosisType.levelBelowGoal,
           severity: DiagnosisSeverity.warning,
           title: 'Lv.${char.level} → Lv.${goal.targetLevel}',
-          explanation: 'Character level is below the growth goal target.',
+          explanation: 'キャラレベルが育成目標に届いていません。',
           characterId: characterId,
           relatedGoalId: goal.id,
           currentValue: '${char.level}',
           targetValue: '${goal.targetLevel}',
-          recommendation: 'Prioritize leveling to reach the growth goal target.',
+          recommendation: '目標レベルまで優先して上げましょう。',
           confidence: RecommendationConfidence.high,
           completeness: snapshot.completeness,
         ));
@@ -47,9 +47,9 @@ class DiagnoseCharacterInvestmentUseCase {
 
       // Talent below goal
       for (final talentCheck in [
-        ('Normal Attack', goal.targetTalentNormal, char.talentNormal),
-        ('Elemental Skill', goal.targetTalentSkill, char.talentSkill),
-        ('Elemental Burst', goal.targetTalentBurst, char.talentBurst),
+        ('通常攻撃', goal.targetTalentNormal, char.talentNormal),
+        ('元素スキル', goal.targetTalentSkill, char.talentSkill),
+        ('元素爆発', goal.targetTalentBurst, char.talentBurst),
       ]) {
         final label = talentCheck.$1;
         final target = talentCheck.$2;
@@ -59,12 +59,12 @@ class DiagnoseCharacterInvestmentUseCase {
             type: DiagnosisType.talentBelowGoal,
             severity: DiagnosisSeverity.warning,
             title: '$label Lv.$current → Lv.$target',
-            explanation: 'Talent level is below the growth goal target.',
+            explanation: '天賦レベルが育成目標に届いていません。',
             characterId: characterId,
             relatedGoalId: goal.id,
             currentValue: '$current',
             targetValue: '$target',
-            recommendation: 'Farm talent materials to reach the goal.',
+            recommendation: '天賦素材を集めて目標まで上げましょう。',
             confidence: RecommendationConfidence.high,
           ));
         }
@@ -75,13 +75,13 @@ class DiagnoseCharacterInvestmentUseCase {
         findings.add(DiagnosisFinding(
           type: DiagnosisType.weaponBelowGoal,
           severity: DiagnosisSeverity.warning,
-          title: 'Weapon Lv.${char.weaponLevel} → Lv.${goal.targetWeaponLevel}',
-          explanation: 'Weapon level is below the growth goal target.',
+          title: '武器 Lv.${char.weaponLevel} → Lv.${goal.targetWeaponLevel}',
+          explanation: '武器レベルが育成目標に届いていません。',
           characterId: characterId,
           relatedGoalId: goal.id,
           currentValue: '${char.weaponLevel}',
           targetValue: '${goal.targetWeaponLevel}',
-          recommendation: 'Farm weapon ascension/exp materials.',
+          recommendation: '武器突破・強化素材を集めましょう。',
           confidence: RecommendationConfidence.high,
         ));
       }
@@ -92,25 +92,43 @@ class DiagnoseCharacterInvestmentUseCase {
       findings.add(DiagnosisFinding(
         type: DiagnosisType.weaponLevelLowVsCharacter,
         severity: DiagnosisSeverity.info,
-        title: 'Weapon level is significantly below character level',
-        explanation: 'Weapon Lv.${char.weaponLevel} vs Character Lv.${char.level}',
+        title: '武器レベルがキャラレベルより大きく遅れています',
+        explanation: '武器 Lv.${char.weaponLevel} / キャラ Lv.${char.level}',
         characterId: characterId,
         currentValue: '${char.weaponLevel}',
         targetValue: '${char.level}',
-        recommendation: 'Consider leveling the weapon to match the character level.',
+        recommendation: '武器レベルをキャラに近づけましょう。',
         confidence: RecommendationConfidence.medium,
       ));
     }
 
-    if (char.artifactCompletion == 0.0 && char.isOwned) {
+    // Artifact completion — same metric as character detail 聖遺物完成度
+    if (char.isOwned && !char.artifactCompletionAvailable) {
       findings.add(DiagnosisFinding(
         type: DiagnosisType.artifactCompletionUnset,
         severity: DiagnosisSeverity.info,
-        title: 'Artifact completion not set',
-        explanation: 'Set artifact completion to track artifact progress.',
+        title: '聖遺物データがありません',
+        explanation: 'キャラ詳細の聖遺物完成度を参照するには、装備データを登録してください。',
         characterId: characterId,
-        recommendation: 'Set artifact completion in character details.',
+        recommendation: 'キャラ詳細の聖遺物項目で装備を登録しましょう。',
         confidence: RecommendationConfidence.medium,
+      ));
+    } else if (char.artifactCompletionAvailable &&
+        char.artifactCompletion < 0.8) {
+      final pct = (char.artifactCompletion * 100).round();
+      findings.add(DiagnosisFinding(
+        type: DiagnosisType.artifactCompletionLow,
+        severity: char.artifactCompletion < 0.5
+            ? DiagnosisSeverity.warning
+            : DiagnosisSeverity.info,
+        title: '聖遺物完成度 $pct%',
+        explanation: 'キャラ詳細と同じ完成度指標で 80% 未満です'
+            '（部位の装備・レベル・メイン／サブステ・スコア寄与の平均）。',
+        characterId: characterId,
+        currentValue: '$pct',
+        targetValue: '80',
+        recommendation: '未装備部位の補完や強化で完成度を上げましょう。',
+        confidence: RecommendationConfidence.high,
       ));
     }
 
