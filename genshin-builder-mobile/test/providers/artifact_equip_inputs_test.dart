@@ -28,11 +28,11 @@ void main() {
         ),
       };
       final details = {
-        '10000052': HoyolabCharacterBuild(
+        '10000052': const HoyolabCharacterBuild(
           id: '10000052',
           isOwned: true,
           level: 90,
-          relics: const [
+          relics: [
             GameRecordRelic(
               id: '1',
               name: '花',
@@ -97,7 +97,7 @@ void main() {
     });
 
     test('maps traveler hoyolab id to master id with element suffix', () {
-      final traveler = MasterCharacter(
+      const traveler = MasterCharacter(
         id: '10000005-anemo',
         name: '旅人',
         element: '風',
@@ -107,10 +107,10 @@ void main() {
         iconUrl: '',
       );
       final details = {
-        '10000005': HoyolabCharacterBuild(
+        '10000005': const HoyolabCharacterBuild(
           id: '10000005',
           isOwned: true,
-          relics: const [
+          relics: [
             GameRecordRelic(
               id: '1',
               name: '花',
@@ -143,7 +143,7 @@ void main() {
   group('resolveMasterCharacterId', () {
     test('returns direct id when present', () {
       final byId = {
-        '10000052': MasterCharacter(
+        '10000052': const MasterCharacter(
           id: '10000052',
           name: '雷電将軍',
           element: '雷',

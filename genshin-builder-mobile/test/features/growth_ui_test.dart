@@ -67,10 +67,10 @@ void main() {
         ProviderScope(
           overrides: [
             teamGrowthPriorityProvider('team-1').overrideWith(
-              (ref) async => TeamGrowthPriorityReport(
+              (ref) async => const TeamGrowthPriorityReport(
                 teamId: 'team-1',
                 teamName: 'Trimmed',
-                memberPriorities: const [
+                memberPriorities: [
                   TeamMemberGrowthPriority(
                     characterId: 'char1',
                     characterName: 'テストキャラ',

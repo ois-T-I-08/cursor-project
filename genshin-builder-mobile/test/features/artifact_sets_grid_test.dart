@@ -33,8 +33,8 @@ void main() {
 
   test('groupArtifactSetOverviewsByRegion keeps region order', () {
     final sections = groupArtifactSetOverviewsByRegion([
-      ArtifactSetOverview(
-        set: const ArtifactSetDetail(
+      const ArtifactSetOverview(
+        set: ArtifactSetDetail(
           id: '15025',
           name: '深林の記憶',
           iconUrl: null,
@@ -42,11 +42,11 @@ void main() {
           region: 'スメール',
           sortOrder: 82,
         ),
-        equippedCharacters: const [],
-        recommendedCharacters: const [],
+        equippedCharacters: [],
+        recommendedCharacters: [],
       ),
-      ArtifactSetOverview(
-        set: const ArtifactSetDetail(
+      const ArtifactSetOverview(
+        set: ArtifactSetDetail(
           id: '15020',
           name: '絶縁の旗印',
           iconUrl: null,
@@ -54,8 +54,8 @@ void main() {
           region: '稲妻',
           sortOrder: 71,
         ),
-        equippedCharacters: const [],
-        recommendedCharacters: const [],
+        equippedCharacters: [],
+        recommendedCharacters: [],
       ),
     ]);
     expect(sections.map((s) => s.region), ['稲妻', 'スメール']);

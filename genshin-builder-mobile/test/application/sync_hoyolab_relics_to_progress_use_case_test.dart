@@ -47,10 +47,10 @@ void main() {
     final written = await useCase(
       userId: 'u1',
       builds: [
-        HoyolabCharacterBuild(
+        const HoyolabCharacterBuild(
           id: '10000052',
           isOwned: true,
-          relics: const [
+          relics: [
             GameRecordRelic(
               id: 'r1',
               name: '雷のような怒り',
@@ -77,10 +77,10 @@ void main() {
     final useCase = SyncHoyolabRelicsToProgressUseCase(
       progressRepository: repo,
     );
-    final build = HoyolabCharacterBuild(
+    const build = HoyolabCharacterBuild(
       id: '10000002',
       isOwned: true,
-      relics: const [
+      relics: [
         GameRecordRelic(
           id: 'r1',
           name: '花',

@@ -18,7 +18,7 @@ MasterWeapon _w({
     );
 
 void main() {
-  final character = MasterCharacter(
+  const character = MasterCharacter(
     id: '1',
     name: 'テスト',
     element: 'pyro',

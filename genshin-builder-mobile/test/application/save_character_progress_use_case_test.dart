@@ -27,7 +27,7 @@ class _FakeProgressRepository implements ProgressRepository {
 void main() {
   test('SaveCharacterProgressUseCase persists edited fields', () async {
     final repo = _FakeProgressRepository();
-    final base = UserProgress(
+    const base = UserProgress(
       id: 'p1',
       userId: 'u1',
       characterId: '10000046',

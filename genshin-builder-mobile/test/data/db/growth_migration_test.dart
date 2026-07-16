@@ -9,9 +9,7 @@ void main() {
   group('DB migration v6 → v7', () {
     testWidgets('v7 database creates growth tables on fresh install',
         (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async {
         try { await db.close(); } catch (_) {}
       });
@@ -42,9 +40,7 @@ void main() {
 
     testWidgets('existing v6 tables still exist alongside v7 tables',
         (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async {
         try { await db.close(); } catch (_) {}
       });
@@ -63,9 +59,7 @@ void main() {
     });
 
     testWidgets('growth goal CRUD works', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async {
         try { await db.close(); } catch (_) {}
       });
@@ -85,12 +79,12 @@ void main() {
       expect(goals.first.id, 'g1');
 
       // Update
-      await db.growthDao.goalUpsert(GrowthGoalsCompanion(
-        id: const Value('g1'),
-        userId: const Value('local'),
-        characterId: const Value('10000002'),
-        targetLevel: const Value(80),
-        status: const Value('active'),
+      await db.growthDao.goalUpsert(const GrowthGoalsCompanion(
+        id: Value('g1'),
+        userId: Value('local'),
+        characterId: Value('10000002'),
+        targetLevel: Value(80),
+        status: Value('active'),
       ));
       final updated = await db.growthDao.goalGetById('g1');
       expect(updated!.targetLevel, 80);
@@ -104,9 +98,7 @@ void main() {
     });
 
     testWidgets('material inventory CRUD works', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async {
         try { await db.close(); } catch (_) {}
       });
@@ -129,9 +121,7 @@ void main() {
     });
 
     testWidgets('growth event dedup works via unique index', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async {
         try { await db.close(); } catch (_) {}
       });
@@ -167,9 +157,7 @@ void main() {
     });
 
     testWidgets('saved team CRUD works', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection.fromExecutor(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(NativeDatabase.memory());
       addTearDown(() async {
         try { await db.close(); } catch (_) {}
       });

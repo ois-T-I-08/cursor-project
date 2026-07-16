@@ -95,11 +95,11 @@ void main() {
     final table = _table();
 
     test('ceils drops for talent domain', () {
-      final option = UpgradeOption(
+      const option = UpgradeOption(
         optionId: 'o1',
         characterId: 'c1',
         optionType: 'talentNormal',
-        materialsCost: const {'104301': 5},
+        materialsCost: {'104301': 5},
       );
       final resin = estimateResinCostForUpgradeOption(
         option: option,
@@ -120,7 +120,7 @@ void main() {
     });
 
     test('mora uses ley line', () {
-      final option = UpgradeOption(
+      const option = UpgradeOption(
         optionId: 'o1',
         characterId: 'c1',
         optionType: 'level',
@@ -133,11 +133,11 @@ void main() {
     });
 
     test('unknown materials contribute 0', () {
-      final option = UpgradeOption(
+      const option = UpgradeOption(
         optionId: 'o1',
         characterId: 'c1',
         optionType: 'level',
-        materialsCost: const {'zzz': 99},
+        materialsCost: {'zzz': 99},
       );
       expect(
         estimateResinCostForUpgradeOption(option: option, table: table),
@@ -146,12 +146,12 @@ void main() {
     });
 
     test('uses remaining when inventory set', () {
-      final option = UpgradeOption(
+      const option = UpgradeOption(
         optionId: 'o1',
         characterId: 'c1',
         optionType: 'talentNormal',
-        materialsCost: const {'104301': 10},
-        remainingMaterials: const {'104301': 3},
+        materialsCost: {'104301': 10},
+        remainingMaterials: {'104301': 3},
         inventoryStatus: InventoryStatus.ownedInsufficient,
       );
       final resin = estimateResinCostForUpgradeOption(
@@ -187,11 +187,11 @@ void main() {
           'leyLineMora': {'resinPerRun': 20, 'assumedMoraPerRun': 60000},
         },
       });
-      final option = UpgradeOption(
+      const option = UpgradeOption(
         optionId: 'o1',
         characterId: 'c1',
         optionType: 'level',
-        expItemCost: const {'104003': 5},
+        expItemCost: {'104003': 5},
       );
       // ceil(5/2.5)=2 * 20 = 40
       expect(

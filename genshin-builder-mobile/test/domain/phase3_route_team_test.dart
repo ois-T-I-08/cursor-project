@@ -32,10 +32,10 @@ void main() {
 
     test('options produce scheduled days', () {
       final options = [
-        UpgradeOption(optionId: 'o1', characterId: 'c1', optionType: 'level',
+        const UpgradeOption(optionId: 'o1', characterId: 'c1', optionType: 'level',
             fromValue: 1, toValue: 80, priority: 2,
             calculationMode: CalculationMode.exactMasterData),
-        UpgradeOption(optionId: 'o2', characterId: 'c1', optionType: 'talentBurst',
+        const UpgradeOption(optionId: 'o2', characterId: 'c1', optionType: 'talentBurst',
             fromValue: 1, toValue: 8, priority: 1,
             calculationMode: CalculationMode.exactMasterData),
       ];
@@ -49,7 +49,7 @@ void main() {
 
     test('same input produces same output', () {
       final options = [
-        UpgradeOption(optionId: 'o1', characterId: 'c1', optionType: 'level',
+        const UpgradeOption(optionId: 'o1', characterId: 'c1', optionType: 'level',
             fromValue: 1, toValue: 90, priority: 2,
             calculationMode: CalculationMode.exactMasterData),
       ];
@@ -71,7 +71,7 @@ void main() {
 
     test('options without inventory show low confidence', () {
       final options = [
-        UpgradeOption(optionId: 'o1', characterId: 'c1', optionType: 'level',
+        const UpgradeOption(optionId: 'o1', characterId: 'c1', optionType: 'level',
             fromValue: 1, toValue: 80,
             calculationMode: CalculationMode.estimatedInventoryMissing),
       ];
@@ -83,7 +83,7 @@ void main() {
 
     test('weekday-limited option placed on correct day', () {
       final options = [
-        UpgradeOption(optionId: 'tue', characterId: 'c1', optionType: 'talentNormal',
+        const UpgradeOption(optionId: 'tue', characterId: 'c1', optionType: 'talentNormal',
             fromValue: 1, toValue: 8, priority: 2,
             materialsCost: {'mat_tue': 3},
             calculationMode: CalculationMode.exactMasterData),
@@ -110,11 +110,11 @@ void main() {
 
     test('daily budget respects resin limit', () {
       final options = [
-        UpgradeOption(optionId: 'o1', characterId: 'c1', optionType: 'level',
+        const UpgradeOption(optionId: 'o1', characterId: 'c1', optionType: 'level',
             fromValue: 1, toValue: 90, priority: 2,
             estimatedResinCost: 200,
             calculationMode: CalculationMode.exactMasterData),
-        UpgradeOption(optionId: 'o2', characterId: 'c1', optionType: 'talentBurst',
+        const UpgradeOption(optionId: 'o2', characterId: 'c1', optionType: 'talentBurst',
             fromValue: 1, toValue: 10, priority: 1,
             estimatedResinCost: 200,
             calculationMode: CalculationMode.exactMasterData),
@@ -133,11 +133,11 @@ void main() {
 
     test('weekday-limited item not placed on unavailable weekday as generalMaterial', () {
       final options = [
-        UpgradeOption(optionId: 'talent_tue', characterId: 'c1', optionType: 'talentNormal',
+        const UpgradeOption(optionId: 'talent_tue', characterId: 'c1', optionType: 'talentNormal',
             fromValue: 1, toValue: 8, priority: 2,
             materialsCost: {'mat_tue_only': 3},
             calculationMode: CalculationMode.exactMasterData),
-        UpgradeOption(optionId: 'non_limited', characterId: 'c1', optionType: 'level',
+        const UpgradeOption(optionId: 'non_limited', characterId: 'c1', optionType: 'level',
             fromValue: 1, toValue: 10, priority: 1,
             materialsCost: {'mat_any': 2},
             calculationMode: CalculationMode.exactMasterData),
@@ -163,7 +163,7 @@ void main() {
 
     test('weekday-limited item placed on correct weekday', () {
       final options = [
-        UpgradeOption(optionId: 'talent_tue', characterId: 'c1', optionType: 'talentNormal',
+        const UpgradeOption(optionId: 'talent_tue', characterId: 'c1', optionType: 'talentNormal',
             fromValue: 1, toValue: 8, priority: 2,
             materialsCost: {'mat_tue_only': 3},
             calculationMode: CalculationMode.exactMasterData),
@@ -186,7 +186,7 @@ void main() {
 
   group('GenerateTeamGrowthPriorityUseCase', () {
     test('empty team returns empty report', () {
-      final team = Team(id: 't1', name: 'Test', members: []);
+      const team = Team(id: 't1', name: 'Test', members: []);
       final snapshot = _testSnapshot([]);
       final report = const GenerateTeamGrowthPriorityUseCase()(
         team: team, snapshot: snapshot, upgradeOptionsByCharacter: {},
@@ -212,7 +212,7 @@ void main() {
 
     test('member displayName uses snapshot character name', () {
       final chars = [
-        CharacterSnapshot(
+        const CharacterSnapshot(
           characterId: '10000052',
           name: '雷電将軍',
           element: 'electro',
@@ -224,10 +224,10 @@ void main() {
         ),
       ];
       final snapshot = _testSnapshot(chars);
-      final team = Team(
+      const team = Team(
         id: 't1',
         name: 'Test',
-        members: const [TeamMemberSlot(characterId: '10000052', position: 0)],
+        members: [TeamMemberSlot(characterId: '10000052', position: 0)],
       );
       final report = const GenerateTeamGrowthPriorityUseCase()(
         team: team,
@@ -240,13 +240,13 @@ void main() {
     test('characters with upgrade options get higher priority', () {
       final chars = [_testChar('c1', level: 80), _testChar('c2', level: 80)];
       final snapshot = _testSnapshot(chars);
-      final team = Team(id: 't1', name: 'Test', members: [
+      const team = Team(id: 't1', name: 'Test', members: [
         TeamMemberSlot(characterId: 'c1', position: 0),
         TeamMemberSlot(characterId: 'c2', position: 1),
       ]);
       final opts = {
         'c1': [
-          UpgradeOption(optionId: 'opt', characterId: 'c1', optionType: 'level',
+          const UpgradeOption(optionId: 'opt', characterId: 'c1', optionType: 'level',
             fromValue: 80, toValue: 90, priority: 2,
             calculationMode: CalculationMode.exactMasterData,
             impact: UpgradeImpact(impactScore: 0.3, impactBand: ImpactBand.high)),
@@ -261,11 +261,11 @@ void main() {
     test('unowned character is deprioritized', () {
       final chars = [
         _testChar('c1', level: 80),
-        CharacterSnapshot(characterId: 'c2', name: 'Test2', element: 'pyro',
+        const CharacterSnapshot(characterId: 'c2', name: 'Test2', element: 'pyro',
             weaponType: 'sword', rarity: 5, region: 'Mondstadt', isOwned: false),
       ];
       final snapshot = _testSnapshot(chars);
-      final team = Team(id: 't1', name: 'Test', members: [
+      const team = Team(id: 't1', name: 'Test', members: [
         TeamMemberSlot(characterId: 'c1', position: 0),
         TeamMemberSlot(characterId: 'c2', position: 1),
       ]);
@@ -279,18 +279,18 @@ void main() {
     test('shared materials are detected', () {
       final chars = [_testChar('c1'), _testChar('c2')];
       final snapshot = _testSnapshot(chars);
-      final team = Team(id: 't1', name: 'Test', members: [
+      const team = Team(id: 't1', name: 'Test', members: [
         TeamMemberSlot(characterId: 'c1', position: 0),
         TeamMemberSlot(characterId: 'c2', position: 1),
       ]);
       final opts = {
         'c1': [
-          UpgradeOption(optionId: 's1', characterId: 'c1', optionType: 'level',
+          const UpgradeOption(optionId: 's1', characterId: 'c1', optionType: 'level',
             fromValue: 1, toValue: 90, materialsCost: {'mat_x': 10},
             calculationMode: CalculationMode.exactMasterData),
         ],
         'c2': [
-          UpgradeOption(optionId: 's2', characterId: 'c2', optionType: 'level',
+          const UpgradeOption(optionId: 's2', characterId: 'c2', optionType: 'level',
             fromValue: 1, toValue: 90, materialsCost: {'mat_x': 15},
             calculationMode: CalculationMode.exactMasterData),
         ],
@@ -304,7 +304,7 @@ void main() {
     test('deterministic output for same input', () {
       final chars = [_testChar('c1'), _testChar('c2')];
       final snapshot = _testSnapshot(chars);
-      final team = Team(id: 't1', name: 'Test', members: [
+      const team = Team(id: 't1', name: 'Test', members: [
         TeamMemberSlot(characterId: 'c1', position: 0),
         TeamMemberSlot(characterId: 'c2', position: 1),
       ]);

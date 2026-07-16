@@ -10,7 +10,7 @@ class DailyPlanIncompleteNotifier {
 
   Future<void> showIncomplete({required int incompleteCount}) async {
     await NotificationBootstrap.ensureInitializedOrThrow();
-    final title = DailyPlanNotificationIds.incompleteTitle;
+    const title = DailyPlanNotificationIds.incompleteTitle;
     final body = DailyPlanNotificationIds.incompleteBody(incompleteCount);
     await NotificationBootstrap.plugin.show(
       DailyPlanNotificationIds.incomplete,

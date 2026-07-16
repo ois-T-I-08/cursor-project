@@ -1,5 +1,10 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # CLI tools intentionally use print for stdout
+    - tool/**
+
 linter:
   rules:
     prefer_const_constructors: true
