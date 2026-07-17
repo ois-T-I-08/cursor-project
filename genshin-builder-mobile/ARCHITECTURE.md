@@ -63,18 +63,18 @@ flowchart TB
 | **UI** | キャラ詳細（Lv/天賦/武器スライダー、次段階/範囲素材、ブックマーク） | `DetailEditor`, `LevelMaterialsPanel`, `TalentSection`, `WeaponSection`, `MarkSlider` |
 | **ブックマーク** | materialId 合算、キャラアイコン、sourceKey 規約 | `bookmark-utils.ts`, `MaterialBookmarkContext`, `HomeWithBookmarks` |
 
-**Phase 1 でやらないこと**: Cookie / UID / HoYoLAB API / DS 署名
+**Phase 1 の当初対象外**だった Cookie / UID / HoYoLAB API は、現在の Phase 2 実装に含まれる。
 
-### Phase 2 — 詳細（今回: 設計 + 骨組みまで）
+### Phase 2 — HoYoLAB 連携（実装済み）
 
 | 領域 | 内容 | genshin_material 参考 |
 |------|------|------------------------|
-| **WebView ログイン** | HoYoLAB にログインし Cookie 取得 | Pigeon `HoyolabIntegrationApi.fetchCookie()` + ネイティブ WebView |
+| **WebView ログイン** | HoYoLAB にログインし Cookie 取得 | `MethodChannel` + ネイティブ WebView |
 | **Secure Storage** | Cookie・region・uid を端末内暗号化保存 | `flutter_secure_storage` |
 | **API クライアント** | dailyNote（樹脂・デイリー）、verifyLToken | `lib/core/hoyolab_api.dart`（DS salt / app_version は自前定数で管理） |
 | **UI** | 設定 → ログイン、ホーム → 樹脂ウィジェット | pages 相当を features/hoyolab に再構成 |
 
-**Phase 2 骨組み** = インターフェース・空実装・ルート・Provider まで。API バージョン追従は設定画面から app_version を更新できる設計を検討。
+Cookie は検証成功後だけ secure storage へ保存し、ログには出力しない。API の失敗はローカル機能を停止させず、再ログインまたは再試行へ誘導する。
 
 ---
 
@@ -111,10 +111,8 @@ genshin-builder-mobile/
 │   │   └── secure/                  # Phase 2 骨組み
 │   │       └── secure_storage_service.dart
 │   │
-│   ├── platform/                    # Phase 2 骨組み
-│   │   └── pigeon/
-│   │       ├── hoyolab_integration.dart   # @HostApi 定義
-│   │       └── hoyolab_integration.g.dart   # codegen
+│   ├── platform/
+│   │   └── hoyolab_cookie_channel.dart    # MethodChannel bridge
 │   │
 │   ├── features/
 │   │   ├── home/
@@ -130,7 +128,6 @@ genshin-builder-mobile/
 │   │
 │   └── providers/
 │
-├── pigeon/hoyolab_integration.dart    # Pigeon 入力（Phase 2）
 ├── docs/
 │   ├── PHASE1_IMPLEMENTATION.md
 │   ├── PHASE2_HOYOLAB.md
@@ -157,7 +154,7 @@ genshin-builder-mobile/
 | `sync_logs` | 同期履歴 |
 | `app_settings` | 匿名 userId、最終同期時刻（Phase 2 で HoYoLAB 設定キー追加） |
 
-Codegen: `dart run build_runner build --delete-conflicting-outputs`
+Codegen: `dart run build_runner build`
 
 ### 4.2 Project Amber
 

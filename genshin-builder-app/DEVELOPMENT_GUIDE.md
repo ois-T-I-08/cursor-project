@@ -239,8 +239,8 @@ UI では「データがありません」+ **設定への Link**（`LevelMateri
 
 ### 現状
 
-- 自動テストなし
-- `npm run build` + `npm run lint` が最低ライン
+- Vitest テストを `src/lib/__tests__/` に配置
+- `npm run lint` + `npm test` + `npm run build` が最低ライン
 
 ### 手動テストチェックリスト
 
@@ -252,11 +252,11 @@ UI では「データがありません」+ **設定への Link**（`LevelMateri
 - [ ] 育成保存 → リロード後も保持
 - [ ] API 不通時も一覧表示（DB データ）
 
-### 将来のテスト優先度
+### 追加テストの優先度
 
-1. `level-progression.ts` — 素材計算
-2. `artifact-score.ts` — スコア
-3. `sync-utils.ts` — idsForNotIn
+1. 同期の認証・排他・中断・失敗復旧
+2. 外部 API のタイムアウト・サイズ上限・異常レスポンス
+3. Server Action / Route Handler の入力境界
 4. E2E — 同期 → 詳細保存
 
 ---

@@ -4,12 +4,22 @@
 
 > **免責事項**: 本アプリは miHoYo / HoYoverse とは一切関係ありません。ゲームデータは [Project Amber (gi.yatta.moe)](https://gi.yatta.moe) 等の第三者ソースを参照しており、正確性・最新性は保証されません。
 
-## 機能（Phase 1 MVP）
+## 主な機能
 
 - キャラクター一覧・詳細（Lv / 天賦 / 武器スライダー + 必要素材表示）
 - 素材ブックマーク（ローカル DB、materialId 合算、キャラアイコン表示）
 - ゲームマスターデータ同期（Project Amber → ローカル SQLite）
 - HoYoLAB 連携（WebView ログイン・樹脂/デイリー/派遣表示・secure storage）
+
+## 外部通信
+
+- Project Amber (`gi.yatta.moe`) — キャラクター・武器・素材・突破データ
+- ennead (`api.ennead.cc`) — 現行祈願・イベントカレンダー
+- Akasha System (`akasha.cv`) — 公開ビルドからの武器使用率
+- HoYoLAB — ユーザーが明示的にログインした場合のみ、樹脂・デイリー等を取得
+- 任意設定のリモート JSON — 日替わり素材、祈願履歴、聖遺物重み、地脈イベント設定
+
+リモート JSON は HTTPS、タイムアウト、応答サイズ上限、JSON 形式を検証し、取得失敗時は同梱データへフォールバックします。HoYoLAB Cookie は secure storage のみに保存し、ログへ出力しません。
 
 ## 関連プロジェクト
 
@@ -31,7 +41,7 @@ cd genshin-builder-mobile
 flutter create . --project-name genshin_builder_mobile
 
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs   # Drift codegen
+dart run build_runner build   # Drift codegen
 flutter analyze
 flutter test
 flutter run

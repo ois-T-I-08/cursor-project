@@ -104,23 +104,27 @@
 
 ## 6. テスト方針（現状）
 
-- **自動テスト:** 未整備（Jest/Vitest/Playwright なし）
-- **必須の手動確認:**
+- **自動テスト:** Vitest（`src/lib/__tests__/`）。`npm test` で実行する。
+- **必須の確認:**
+  - `npm run lint`
+  - `npm test`
   - `npm run build`
+- **主要な手動確認:**
   - 設定 → 通常同期
   - キャラ詳細 → レベル/武器/天賦スライダー → 素材表示
   - 武器切り替え → `/api/weapons/[id]` 経由で性能表示
-- **テスト追加時:** ビジネスロジック（`level-progression.ts`, `artifact-score.ts`, `sync-utils.ts`）を優先
+- **テスト追加時:** ビジネスロジック、同期の認証・排他・失敗復旧、公開 API の入力境界を優先する。
 
 ---
 
 ## 7. セキュリティ注意（エージェント向け）
 
-- `POST /api/sync` は現状**未認証**。本番では Cron + シークレット or 管理者のみに制限予定。
+- `POST /api/sync` は `SYNC_API_SECRET` の Bearer 認証必須。本番で未設定なら fail closed とする。
+- 同期はレート制限と分散リースで多重実行を防ぐ。認証・排他を迂回する経路を追加しない。
 - ユーザー識別は `gb_user_id` cookie（httpOnly）。他ユーザーデータへのアクセス経路を作らない。
 - `saveProgress` の入力は clamp / 長さ制限済み。新フィールド追加時も同様に sanitize する。
 - API 説明文は `stripMarkup()` 済み。HTML 生挿入しない。
-- 本番デプロイ時: cookie `secure: true`、sync エンドポイント保護を検討。
+- 本番では cookie の `secure: true` を維持し、エラー応答・ログへ Cookie、トークン、DB 接続情報を出さない。
 
 ---
 
