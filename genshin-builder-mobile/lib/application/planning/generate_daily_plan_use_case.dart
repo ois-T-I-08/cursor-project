@@ -39,11 +39,11 @@ class GenerateDailyPlanUseCase {
       items.add(DailyPlanItem(
         id: 'pri_${goal.id}',
         type: DailyPlanItemType.growthGoal,
-        title: 'High priority: ${_goalSummary(goal)}',
+        title: '優先: ${_goalSummary(goal)}',
         characterIds: [goal.characterId],
         priority: 80 + goal.priority,
         relatedGoalId: goal.id,
-        reasons: ['High-priority growth goal'],
+        reasons: ['優先度の高い育成目標'],
         estimatedResinCost: resin,
         confidence: hasInventory ? RecommendationConfidence.high : RecommendationConfidence.low,
         missingData: missingData,
@@ -59,7 +59,7 @@ class GenerateDailyPlanUseCase {
         characterIds: [goal.characterId],
         priority: 50,
         relatedGoalId: goal.id,
-        reasons: ['General growth material farming'],
+        reasons: ['育成素材集め'],
         confidence: hasInventory ? RecommendationConfidence.high : RecommendationConfidence.low,
         missingData: missingData,
       ));
@@ -83,10 +83,12 @@ class GenerateDailyPlanUseCase {
   String _goalSummary(GrowthGoal goal) {
     final parts = <String>[];
     if (goal.targetLevel != null) parts.add('Lv.${goal.targetLevel}');
-    if (goal.targetTalentNormal != null || goal.targetTalentSkill != null || goal.targetTalentBurst != null) {
-      parts.add('Talents');
+    if (goal.targetTalentNormal != null ||
+        goal.targetTalentSkill != null ||
+        goal.targetTalentBurst != null) {
+      parts.add('天賦');
     }
-    if (goal.targetWeaponId != null) parts.add('Weapon');
+    if (goal.targetWeaponId != null) parts.add('武器');
     return parts.isEmpty ? goal.characterId : parts.join(' + ');
   }
 }

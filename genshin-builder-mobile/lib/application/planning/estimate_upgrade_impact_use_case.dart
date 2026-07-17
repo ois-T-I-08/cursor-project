@@ -32,30 +32,24 @@ class EstimateUpgradeImpactUseCase {
         final diff = (option.toValue ?? 1) - (option.fromValue ?? 1);
         if (diff >= 40) {
           impactScore = 0.35;
-          reasons.add(
-            'Large level gap ($diff levels) has significant base stat impact',
-          );
+          reasons.add('レベル差が大きい（$diff）ため基礎ステータスへの影響が大きいです');
         } else if (diff >= 20) {
           impactScore = 0.20;
-          reasons.add('Moderate level gap ($diff levels)');
+          reasons.add('レベル差は中程度です（$diff）');
         } else if (diff >= 10) {
           impactScore = 0.10;
-          reasons.add('Small level gap ($diff levels)');
+          reasons.add('レベル差は小さめです（$diff）');
         } else {
           impactScore = 0.05;
-          reasons.add('Minimal level gap');
+          reasons.add('レベル差はごくわずかです');
         }
         areas.addAll(['baseStats', 'survivability']);
         break;
 
       case 'ascension':
         impactScore = 0.30;
-        reasons.add(
-          'Ascension unlocks higher level cap and grants bonus stats',
-        );
-        reasons.add(
-          'Ascension passives may significantly boost character performance',
-        );
+        reasons.add('突破によりレベル上限が上がり、ステータスボーナスが得られます');
+        reasons.add('突破固有効果でキャラ性能が大きく伸びることがあります');
         areas.addAll(['baseStats', 'survivability', 'specialStat']);
         break;
 
@@ -70,7 +64,7 @@ class EstimateUpgradeImpactUseCase {
         } else {
           impactScore = 0.10;
         }
-        reasons.add('Talent level increase directly increases base multiplier');
+        reasons.add('天賦レベルを上げると基礎倍率に直接反映されます');
         areas.add('damageOutput');
         break;
 
@@ -78,13 +72,13 @@ class EstimateUpgradeImpactUseCase {
         final diff = (option.toValue ?? 1) - (option.fromValue ?? 1);
         if (diff >= 40) {
           impactScore = 0.30;
-          reasons.add('Large weapon level gap has significant base ATK impact');
+          reasons.add('武器レベル差が大きいため基礎攻撃力への影響が大きいです');
         } else if (diff >= 20) {
           impactScore = 0.20;
-          reasons.add('Moderate weapon level gap');
+          reasons.add('武器レベル差は中程度です');
         } else {
           impactScore = 0.10;
-          reasons.add('Small weapon level gap');
+          reasons.add('武器レベル差は小さめです');
         }
         areas.addAll(['baseStats', 'damageOutput']);
         break;

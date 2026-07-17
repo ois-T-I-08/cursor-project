@@ -34,13 +34,17 @@ class GenerateAccountHealthReportUseCase {
       levelEval = true;
     }
     categories.add(AccountHealthCategory(
-      name: 'Character Levels',
+      name: 'キャラレベル',
       score: levelScore,
       weight: 1.5,
       evaluated: levelEval,
       evidenceCount: totalOwned,
-      reasons: levelEval ? ['$leveled of $totalOwned owned characters are Lv.80+'] : ['No owned characters'],
-      improvementHints: levelScore < 50 && levelEval ? ['Focus on leveling key characters to 80+'] : [],
+      reasons: levelEval
+          ? ['所持キャラ $totalOwned 体中 $leveled 体が Lv.80以上']
+          : ['所持キャラがありません'],
+      improvementHints: levelScore < 50 && levelEval
+          ? ['主要なキャラを Lv.80以上まで育てましょう']
+          : [],
       missingData: totalOwned == 0 ? [MissingData.materialInventory] : [],
     ));
 
@@ -60,13 +64,17 @@ class GenerateAccountHealthReportUseCase {
       talentEval = true;
     }
     categories.add(AccountHealthCategory(
-      name: 'Talent Levels',
+      name: '天賦レベル',
       score: talentScore,
       weight: 1.2,
       evaluated: talentEval,
       evidenceCount: talentChars,
-      reasons: talentEval ? ['$talentChars characters have 2+ talents at Lv.6+'] : ['No owned characters'],
-      improvementHints: talentScore < 40 && talentEval ? ['Raise key talents on main characters'] : [],
+      reasons: talentEval
+          ? ['$talentChars 体が天賦 Lv.6以上を2つ以上持っています']
+          : ['所持キャラがありません'],
+      improvementHints: talentScore < 40 && talentEval
+          ? ['メインキャラの主要天賦を上げましょう']
+          : [],
     ));
 
     // 3. Weapon level investment
@@ -79,12 +87,14 @@ class GenerateAccountHealthReportUseCase {
       weaponEval = true;
     }
     categories.add(AccountHealthCategory(
-      name: 'Weapon Levels',
+      name: '武器レベル',
       score: weaponScore,
       weight: 1.0,
       evaluated: weaponEval,
       evidenceCount: weaponChars,
-      reasons: weaponEval ? ['$weaponChars characters have weapons at Lv.80+'] : ['No owned characters'],
+      reasons: weaponEval
+          ? ['$weaponChars 体の武器が Lv.80以上です']
+          : ['所持キャラがありません'],
     ));
 
     // 4. Artifact completion — only evaluate if artifact data is available
@@ -96,14 +106,18 @@ class GenerateAccountHealthReportUseCase {
       artifactScore = (artifactChars / totalOwned * 100).clamp(0.0, 100.0);
     }
     categories.add(AccountHealthCategory(
-      name: 'Artifact Completion',
+      name: '聖遺物完成度',
       score: artifactScore,
       weight: 0.8,
       evaluated: artifactAvailable,
       evidenceCount: artifactChars,
-      reasons: artifactAvailable ? ['$artifactChars characters have artifacts completed'] : ['Artifact data not available'],
+      reasons: artifactAvailable
+          ? ['$artifactChars 体の聖遺物完成度（キャラ詳細と同じ指標）が 80% 以上です']
+          : ['聖遺物データがありません'],
       missingData: !artifactAvailable ? [MissingData.materialInventory] : [],
-      improvementHints: !artifactAvailable ? ['Set artifact completion in character details to track progress'] : [],
+      improvementHints: !artifactAvailable
+          ? ['キャラ詳細の聖遺物項目で装備を登録すると完成度を評価できます']
+          : [],
     ));
 
     // 5. Growth goal completion — evaluated only when goals exist
@@ -111,13 +125,15 @@ class GenerateAccountHealthReportUseCase {
     final goalEval = totalGoals > 0;
     final goalScore = goalEval ? 50.0 : 0.0;
     categories.add(AccountHealthCategory(
-      name: 'Growth Goals',
+      name: '育成目標',
       score: goalScore,
       weight: 0.5,
       evaluated: goalEval,
       evidenceCount: totalGoals,
-      reasons: goalEval ? ['$totalGoals active growth goals to track'] : ['No growth goals set — cannot evaluate'],
-      improvementHints: !goalEval ? ['Set growth goals to prioritize farming'] : [],
+      reasons: goalEval
+          ? ['アクティブな育成目標が $totalGoals 件あります']
+          : ['育成目標が未設定のため評価できません'],
+      improvementHints: !goalEval ? ['育成目標を設定して優先順位を決めましょう'] : [],
     ));
 
     // Calculate weighted total from evaluated categories only
@@ -136,10 +152,13 @@ class GenerateAccountHealthReportUseCase {
     final improvements = categories.where((c) => c.evaluated && c.normalizedScore < 40).map((c) => c.name).toList();
 
     // Data coverage (separate from health score)
-    final dataCoverage = snapshot.completeness == DataCompleteness.complete ? 'High'
-        : snapshot.completeness == DataCompleteness.partial ? 'Medium'
-        : snapshot.completeness == DataCompleteness.minimal ? 'Low'
-        : 'Unavailable';
+    final dataCoverage = snapshot.completeness == DataCompleteness.complete
+        ? '高'
+        : snapshot.completeness == DataCompleteness.partial
+            ? '中'
+            : snapshot.completeness == DataCompleteness.minimal
+                ? '低'
+                : '不明';
 
     return AccountHealthReport(
       totalScore: effectiveScore,

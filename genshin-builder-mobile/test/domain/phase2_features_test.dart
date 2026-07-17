@@ -305,7 +305,7 @@ void main() {
         snapshot: snapshot,
       );
       final levelCat = report.categories.firstWhere(
-        (c) => c.name == 'Character Levels',
+        (c) => c.name == 'キャラレベル',
       );
       expect(levelCat.evaluated, isTrue);
     });

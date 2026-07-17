@@ -14,7 +14,7 @@ class LocalOnlyCloudSync implements CloudSyncPort {
   @override
   Future<UserAccount> currentAccount() async => UserAccount(
         id: localUserId,
-        displayName: 'Local',
+        displayName: 'ローカル',
         kind: AccountKind.localAnonymous,
       );
 
@@ -26,7 +26,7 @@ class LocalOnlyCloudSync implements CloudSyncPort {
         : (await _progress.getAll(localUserId)).length;
     return CloudSyncResult(
       ok: true,
-      message: 'Local-only mode (no remote). $count progress rows kept on device.',
+      message: 'ローカル専用モードです（リモートなし）。進捗 $count 件を端末に保持しています。',
       pushed: 0,
     );
   }

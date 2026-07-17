@@ -44,6 +44,6 @@ class CloudSyncResult {
 
   static const disabled = CloudSyncResult(
     ok: true,
-    message: 'Cloud sync is not configured',
+    message: 'クラウド同期は未設定です',
   );
 }
