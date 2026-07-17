@@ -8,6 +8,7 @@
  */
 
 import { cache } from "react";
+import { fetchJsonObject } from "@/lib/api/safe-json-fetch";
 import { LEVEL_MARKS } from "@/lib/level-config";
 import { parseWeaponEnhancementOreIds } from "@/lib/weapon-exp";
 
@@ -122,11 +123,6 @@ export interface ArtifactSetInfo {
 // APIレスポンスの型（必要な項目のみ）
 // ---------------------------------------------------------
 
-interface AmberResponse<T> {
-  response: number;
-  data: T;
-}
-
 interface ApiTalentPromote {
   level?: number;
   costItems?: Record<string, number> | null;
@@ -191,15 +187,23 @@ interface ApiArtifactSet {
 
 async function fetchData<T>(path: string): Promise<T | null> {
   try {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      next: { revalidate: REVALIDATE_SEC },
-      signal: AbortSignal.timeout(15_000),
+    const json = await fetchJsonObject(`${BASE_URL}${path}`, {
+      timeoutMs: 15_000,
+      maxBytes: 4 * 1024 * 1024,
+      retries: 2,
+      revalidateSeconds: REVALIDATE_SEC,
     });
-    if (!res.ok) return null;
-    const json = (await res.json()) as AmberResponse<T>;
-    return json.data;
-  } catch (error) {
-    console.error(`詳細データの取得に失敗しました: ${path}`, error);
+    if (
+      json.response !== 200 ||
+      typeof json.data !== "object" ||
+      json.data === null ||
+      Array.isArray(json.data)
+    ) {
+      return null;
+    }
+    return json.data as T;
+  } catch {
+    console.error("Project Amberの詳細データ取得に失敗しました。");
     return null;
   }
 }
