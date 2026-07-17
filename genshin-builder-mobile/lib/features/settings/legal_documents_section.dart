@@ -1,23 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+import '../../application/legal/legal_url_launcher.dart';
 
 const privacyPolicyUrl = 'https://ois-t-i-08.github.io/.github.io/privacy.html';
 const termsOfUseUrl = 'https://ois-t-i-08.github.io/.github.io/terms.html';
 
-typedef LegalUrlLauncher = Future<bool> Function(Uri uri);
-
-Future<bool> launchExternalLegalUrl(Uri uri) {
-  if (uri.scheme != 'https' || uri.host.isEmpty) {
-    return Future.value(false);
-  }
-  return launchUrl(uri, mode: LaunchMode.externalApplication);
-}
-
 class LegalDocumentsSection extends StatefulWidget {
-  const LegalDocumentsSection({
-    super.key,
-    this.launcher = launchExternalLegalUrl,
-  });
+  const LegalDocumentsSection({super.key, required this.launcher});
 
   final LegalUrlLauncher launcher;
 

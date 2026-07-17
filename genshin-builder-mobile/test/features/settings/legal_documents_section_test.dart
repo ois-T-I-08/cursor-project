@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:genshin_builder_mobile/application/legal/legal_url_launcher.dart';
 import 'package:genshin_builder_mobile/features/settings/legal_documents_section.dart';
 
 void main() {
@@ -10,6 +11,7 @@ void main() {
     required LegalUrlLauncher launcher,
     ThemeData? theme,
     Size? size,
+    double textScaleFactor = 1,
   }) async {
     if (size != null) {
       await tester.binding.setSurfaceSize(size);
@@ -18,6 +20,13 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: theme,
+        builder:
+            (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(textScaleFactor)),
+              child: child!,
+            ),
         home: Scaffold(
           body: ListView(children: [LegalDocumentsSection(launcher: launcher)]),
         ),
@@ -77,6 +86,24 @@ void main() {
     expect(find.text('ページを開けませんでした。通信環境またはブラウザ設定を確認してください。'), findsOneWidget);
   });
 
+  testWidgets('shows the same safe error when the launcher throws', (
+    tester,
+  ) async {
+    await pumpSection(
+      tester,
+      launcher: (_) => throw StateError('sensitive implementation detail'),
+    );
+
+    await tester.tap(find.byKey(const Key('privacy-policy-link')));
+    await tester.pump();
+
+    expect(find.text('ページを開けませんでした。通信環境またはブラウザ設定を確認してください。'), findsOneWidget);
+    expect(
+      find.textContaining('sensitive implementation detail'),
+      findsNothing,
+    );
+  });
+
   testWidgets('prevents another launch while one is in progress', (
     tester,
   ) async {
@@ -103,6 +130,20 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('does not update state after disposal', (tester) async {
+    final pending = Completer<bool>();
+    await pumpSection(tester, launcher: (_) => pending.future);
+
+    await tester.tap(find.byKey(const Key('privacy-policy-link')));
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox.shrink());
+
+    pending.complete(true);
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('renders on a small screen in light and dark themes', (
     tester,
   ) async {
@@ -112,6 +153,7 @@ void main() {
         launcher: (_) async => true,
         theme: ThemeData(brightness: brightness),
         size: const Size(320, 480),
+        textScaleFactor: 2,
       );
       expect(tester.takeException(), isNull);
       expect(find.text('プライバシーポリシー'), findsOneWidget);
