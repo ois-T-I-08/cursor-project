@@ -23,6 +23,8 @@ export interface SafeJsonFetchOptions {
   maxBytes: number;
   retries?: number;
   revalidateSeconds?: number;
+  headers?: HeadersInit;
+  fetchImpl?: typeof fetch;
 }
 
 export async function fetchJsonObject(
@@ -48,8 +50,10 @@ async function fetchJsonObjectOnce(
   const controller = new AbortController();
   let response: Response;
   try {
+    const fetchImpl = options.fetchImpl ?? fetch;
     response = await withDeadline(
-      fetch(url, {
+      fetchImpl(url, {
+        headers: options.headers,
         next:
           options.revalidateSeconds === undefined
             ? undefined

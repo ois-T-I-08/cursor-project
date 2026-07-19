@@ -140,3 +140,15 @@ model SyncLease {
   acquiredAt  DateTime
   expiresAt   DateTime
 }
+
+/// 外部APIの最終正常レスポンス（障害時フォールバック用）
+model ExternalApiCache {
+  cacheKey   String   @id
+  source     String
+  version    String
+  sampleSize Int
+  payload    String
+  fetchedAt  DateTime
+  expiresAt  DateTime
+  updatedAt  DateTime @updatedAt
+}

@@ -10,6 +10,7 @@
 - 素材ブックマーク（ローカル DB、materialId 合算、キャラアイコン表示）
 - ゲームマスターデータ同期（Project Amber → ローカル SQLite）
 - HoYoLAB 連携（WebView ログイン・樹脂/デイリー/派遣表示・secure storage）
+- 深境螺旋のキャラクター／編成統計（AZA.GG 提供データを Web バックエンド経由で表示）
 
 ## 関連プロジェクト
 
@@ -36,6 +37,14 @@ flutter analyze
 flutter test
 flutter run
 ```
+
+深境螺旋統計を使う場合は、Web 版の公開 origin をビルド時に指定します。Flutter から AZA.GG へは直接接続しません。
+
+```bash
+flutter run --dart-define=GENSHIN_BUILDER_API_BASE_URL=https://builder.example.com
+```
+
+Android エミュレーターでローカル Web 版へ接続する場合は、必要に応じて `http://10.0.2.2:3000` を指定してください。本番は HTTPS を使用してください。
 
 `flutter doctor` で Android / Visual Studio の警告が出る場合があります。テスト・codegen には Flutter + Chrome で十分です。実機ビルドには Android Studio または Visual Studio の C++ ワークロードが必要です。
 

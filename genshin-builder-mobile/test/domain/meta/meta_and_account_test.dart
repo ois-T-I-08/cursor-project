@@ -14,7 +14,7 @@ void main() {
     final push = await sync.push();
     expect(push.ok, isTrue);
     final pull = await sync.pull();
-    expect(pull.message, contains('not configured'));
+    expect(pull.message, 'クラウド同期は未設定です');
   });
 
   test('MetaRankingSnapshot scoresById maps entries', () {

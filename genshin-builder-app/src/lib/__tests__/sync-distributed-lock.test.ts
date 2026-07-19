@@ -18,8 +18,7 @@ type LeaseRow = {
 function createLeaseDb() {
   const rows = new Map<string, LeaseRow>();
 
-  const db = {
-    syncLease: {
+  const syncLease = {
       findUnique: async ({ where }: { where: { lockKey: string } }) =>
         rows.get(where.lockKey) ?? null,
       create: async ({
@@ -62,12 +61,18 @@ function createLeaseDb() {
         rows.delete(where.lockKey);
         return { count: 1 };
       },
-    },
-    $transaction: async <T>(callback: (tx: typeof db) => Promise<T>) =>
-      callback(db),
+  };
+  const db = {
+    syncLease,
+    $transaction: async <T>(
+      callback: (tx: { syncLease: typeof syncLease }) => Promise<T>,
+    ) => callback({ syncLease }),
   };
 
-  return { db, rows };
+  return {
+    db: db as unknown as Parameters<typeof tryAcquireSyncLease>[4],
+    rows,
+  };
 }
 
 describe("sync distributed lease", () => {

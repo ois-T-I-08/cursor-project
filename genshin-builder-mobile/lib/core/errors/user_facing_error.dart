@@ -6,6 +6,7 @@ import '../../data/config/config_load_log.dart';
 import '../../data/config/remote_json_fetch.dart';
 import '../../data/db/database_open_exception.dart';
 import '../../data/hoyolab/hoyolab_exceptions.dart';
+import '../../domain/abyss/abyss_statistics.dart';
 
 /// ユーザー向けに安全なエラー文言へ変換する。
 /// 内部例外・スタック・URL・パスは露出させない。
@@ -19,6 +20,22 @@ String userFacingError(
     return trimmed.isEmpty ? fallback : trimmed;
   }
   if (error is HoyolabApiException) return error.userMessage;
+  if (error is AbyssStatisticsException) {
+    return switch (error.failure) {
+      AbyssStatisticsFailure.networkError ||
+      AbyssStatisticsFailure
+          .unknownError => '統計データを取得できませんでした。しばらくしてから再試行してください。',
+      AbyssStatisticsFailure.timeout => '統計データの取得がタイムアウトしました。再試行してください。',
+      AbyssStatisticsFailure.rateLimited =>
+        '統計データの取得が混み合っています。時間をおいて再試行してください。',
+      AbyssStatisticsFailure.invalidResponse =>
+        '統計データの形式を確認できませんでした。しばらくしてから再試行してください。',
+      AbyssStatisticsFailure.notConfigured => '統計機能の接続先が設定されていません。',
+      AbyssStatisticsFailure.featureDisabled => '深境螺旋統計は現在利用できません。',
+      AbyssStatisticsFailure.noData => '表示できる統計データがありません。',
+      AbyssStatisticsFailure.staleCache => '前回取得した統計データを表示しています。',
+    };
+  }
   if (error is TimeoutException) {
     return '通信がタイムアウトしました。再試行してください。';
   }

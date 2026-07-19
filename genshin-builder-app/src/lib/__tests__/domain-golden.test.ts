@@ -294,7 +294,7 @@ describe("domain golden parity (shared/domain-golden)", () => {
           substats: { stat: string; value: number }[];
         };
         const piece = {
-          setName: "",
+          setId: "",
           level: 0,
           mainStat: "",
           substats: input.substats,

@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-07-19 — AZA.GG 深境螺旋統計バックエンド
+
+- **目的:** Flutter に AZA.GG の深境螺旋キャラクター／編成統計を安全に提供する
+- **決定事項:** Flutter は AZA を直接呼ばず `GET /api/abyss/statistics` のみ利用。`AbyssStatisticsProvider` を交換境界とし、AZA 公開 KV API を実レスポンスの確認済みフィールドだけで正規化。API キーは現在不要のため未確認ヘッダーを送らない
+- **可用性:** Prisma `ExternalApiCache` に最終成功値を保存。6時間 TTL、同一 Node.js プロセス内だけの single-flight、最大1回再試行、期限切れ時の stale fallback、`AZA_ABYSS_ENABLED` kill switch。現時点では AZA 経路に分散ロックを追加しない
+- **契約監視:** 既知 `meta.api_ver` は `5.6`。未知版は現行スキーマ適合なら warning で継続、不適合なら `invalidResponse`。2026-07-19 の120キャラは全件 `phase` キーが `"1"` のみで、明示的な `"2"` がない場合だけ補数を使用
+- **安全性:** HTTPS upstream、10秒 timeout、2MiB、配列／ID／比率／日時検証、安全なエラー code と許可フィールド限定ログ。ゲームバージョンと編成使用回数は upstream にないため生成しない
+- **変更ファイル（主要）:** `src/lib/api/abyss/*`, `src/lib/abyss/*`, `src/app/api/abyss/statistics/route.ts`, Prisma schema/migration, `.env.example`, 関連テスト・資料
+- **検証:** Vitest 全155成功、lint 0、`npm run typecheck` 成功、Prisma validate/generate 成功、Next production build 成功
+- **未完了 / 次回:** 本番 DB の未適用 migration 2件（`add_sync_lease`、`add_external_api_cache`）、AZA 利用規約／クレジット文言／商用・広告利用の運用確認、公開 API 変更監視
+
 ## エントリの書き方
 
 ```markdown

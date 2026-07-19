@@ -36,6 +36,10 @@ npm run dev
 |------|------|------|
 | `DATABASE_URL` | はい | Prisma の接続先（開発: `file:./dev.db`） |
 | `SYNC_API_SECRET` | 本番のみ | `/api/sync` と設定画面の手動同期で共用する認証トークン。手動同期時は画面へ同じ値を入力 |
+| `AZA_API_BASE_URL` | 統計機能のみ | AZA.GG 公開 API の HTTPS origin。既定例は `https://c1-api.aza.gg` |
+| `AZA_ABYSS_ENABLED` | いいえ | `false` で深境螺旋統計の upstream 更新を停止する kill switch（キャッシュがあれば stale で返却） |
+| `AZA_CACHE_TTL_SECONDS` | いいえ | 統計の DB キャッシュ TTL。300〜86400 秒、既定 21600 秒（6時間） |
+| `AZA_REQUEST_TIMEOUT_MS` | いいえ | AZA.GG へのタイムアウト。1000〜30000 ms、既定 10000 ms |
 
 `DATABASE_URL` が未設定の状態で起動すると、Prisma Client の初期化時にエラーが表示されます。
 
@@ -71,6 +75,22 @@ Next.js サーバー（POST /api/sync）
 - APIが利用できなくてもDB内のデータでアプリは動作し続ける
 - プロバイダー変更時は `lib/api/` の実装を差し替えるだけでよい
 - 同期履歴は `SyncLog` テーブルに記録（将来のCron自動実行を想定）
+
+### 深境螺旋統計
+
+```
+AZA.GG 公開 API
+    ↓ src/lib/api/abyss（取得・検証・内部 DTO へ正規化）
+AbyssStatisticsService（6時間 TTL・process-local single-flight・最大1回再試行）
+    ↓ 成功時に ExternalApiCache へ最終成功スナップショットを保存
+GET /api/abyss/statistics（Flutter 向け安全な同一-origin DTO）
+```
+
+- Flutter は AZA.GG を直接呼ばず、この Next.js API だけを呼び出す
+- 期限切れ後の upstream 障害時は、最終成功キャッシュを `isStale: true` で返す
+- 現在確認できる公開 KV API は API キー不要。未確認の認証ヘッダーは送信しない
+- 原神ゲームバージョンや編成使用回数は upstream に存在しないため生成しない
+- migration、kill switch、stale fallback、staging 確認手順は [`docs/AZA_ABYSS_OPERATIONS.md`](./docs/AZA_ABYSS_OPERATIONS.md) を参照
 
 ## ディレクトリ構成
 
@@ -109,6 +129,7 @@ src/
 | [`AI_AGENT_RULES.md`](./AI_AGENT_RULES.md) | AI エージェント向けルール・禁止事項 |
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | アーキテクチャ・データフロー |
 | [`DEVELOPMENT_GUIDE.md`](./DEVELOPMENT_GUIDE.md) | 開発ガイド・命名規則 |
+| [`docs/AZA_ABYSS_OPERATIONS.md`](./docs/AZA_ABYSS_OPERATIONS.md) | AZA.GG 深境螺旋統計の運用・障害対応 |
 | [`AGENTS.md`](./AGENTS.md) | エントリポイント（Next.js 16 注意含む） |
 
 ## 今後追加予定

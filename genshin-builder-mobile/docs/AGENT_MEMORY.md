@@ -2,6 +2,16 @@
 
 セッションごとの設計判断ログ。重要な決定のみ追記する。
 
+## 2026-07-19 — AZA.GG 深境螺旋統計画面
+
+- 状態: **実装・Flutter 3.44.5で静的解析完了、Flutter test は端末ポリシーで実行保留**
+- 範囲: Backend DTO → domain/repository/use case/provider → キャラクター／編成タブ、loading/empty/error/stale/retry、取得時刻・期間・origin/ref サンプル、免責・AZA.GG credit、Drawer 導線
+- 境界: Flutter は `GENSHIN_BUILDER_API_BASE_URL` の Next.js `/api/abyss/statistics` だけを呼ぶ。AZA 直アクセス・AZA JSON・秘密情報なし。本番 HTTPS、HTTP は localhost/loopback/Android emulator のみ
+- マスタ結合: キャラ／武器の名前・アイコンは既存 `CharacterRepository` のローカルマスタから補完。不明 ID は ID 表示。ゲーム版・編成件数は生成しない
+- 変更: `domain/abyss/*`, repository contract, `data/abyss/*`, `application/abyss/*`, providers, `features/abyss/*`, router, user-facing errors, README/ARCHITECTURE、関連テスト
+- 検証: `flutter pub get`、build_runner、`flutter analyze` 全体0 issue。新規対象・保護3・全 suite は Windows Application Control により `flutter_tester.exe` の起動前で停止したため未実行（テスト無効化なし、GitHub Actionsを最終判定に使用）
+- 次回: 許可済み Flutter 実行環境で `flutter test`、本番 backend origin の dart-define、実機 UI／ネットワーク確認
+
 ## 2026-07-12 — [P1-8B] 樹脂190 / 探索派遣5完了ローカル通知
 
 - 状態: **実装完了・Android実機確認保留**

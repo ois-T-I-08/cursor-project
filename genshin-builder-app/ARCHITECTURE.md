@@ -20,7 +20,7 @@
 | ORM | Prisma 6 |
 | DB（開発） | SQLite（`prisma/dev.db`） |
 | DB（本番予定） | PostgreSQL |
-| 外部 API | Project Amber — `https://gi.yatta.moe` |
+| 外部 API | Project Amber — `https://gi.yatta.moe`、AZA.GG（深境螺旋統計） |
 | デプロイ（予定） | Vercel |
 
 ---
@@ -105,6 +105,9 @@
 | `amber-upgrade.ts` | 同期用 detail（突破・天賦・EXP 素材） |
 | `merge-promotes.ts` | DB 突破 + API addProps のマージ |
 | `genshin-jmp-blue.ts` | レガシー（未使用） |
+| `abyss/provider.ts` | `AbyssStatisticsProvider` 交換契約 |
+| `abyss/aza-provider.ts` | AZA.GG 公開 KV API の HTTPS 取得、上限・timeout・再試行・エラー分類 |
+| `abyss/normalize-aza.ts` | AZA 固有 JSON の検証と内部 DTO への正規化 |
 
 **Prisma 禁止。UI から直接 import しない（pages/actions/sync 経由）。**
 
@@ -165,6 +168,7 @@
 | Model | 内容 |
 |-------|------|
 | `SyncLog` | 同期結果 JSON |
+| `ExternalApiCache` | 外部統計の最終成功スナップショット、取得時刻、失効時刻、版、サンプル数 |
 
 ---
 
@@ -223,6 +227,26 @@ DetailEditor → fetch /api/weapons/[id]
   → WeaponSection 更新
 ```
 
+### 5. 深境螺旋統計（Flutter 向け）
+
+```
+Flutter → GET /api/abyss/statistics
+  → AbyssStatisticsService
+      → fresh ExternalApiCache があれば即返却
+      → miss / expired は AzaAbyssStatisticsProvider（同一プロセス内は single-flight）
+          → GET https://c1-api.aza.gg/kv/read?key_id=genshin_abyss_statistics
+          → normalizeAzaAbyssStatistics（型・範囲・配列上限を検証）
+          → 成功時だけ ExternalApiCache を更新
+      → upstream 失敗か kill switch 時は最終成功値を stale として返却
+```
+
+責務境界:
+
+- `AbyssStatisticsProvider` は AZA 固有の取得・正規化を担当し、別提供元へ交換できる
+- `AbyssStatisticsService` は TTL、process-local single-flight、stale fallback、kill switch、構造化ログを担当する。Promise の共有範囲は同一 Node.js プロセスだけで、複数インスタンス間の排他は行わない
+- Route Handler は安全なエラー code と内部 DTO だけを Flutter へ返し、upstream 本文・URL・内部例外を露出しない
+- API の `meta.api_ver` は **AZA API 仕様版** として保持する。既知版は `5.6`。未知版でも現行スキーマに適合すれば warning を記録して継続し、不適合なら `invalidResponse` とする。ゲームバージョンや upstream にない編成使用回数は補完しない
+
 ---
 
 ## API 利用マップ
@@ -238,6 +262,7 @@ DetailEditor → fetch /api/weapons/[id]
 | `/api/v2/static/avatarCurve` | ステ計算 | 24h + React cache |
 | `/api/v2/static/weaponCurve` | 武器ステ | 24h + React cache |
 | `/api/v2/jp/reliquary` | 聖遺物セット | 24h + React cache |
+| `GET /api/abyss/statistics` | Flutter 向け深境螺旋統計 DTO | DB 6h TTL + stale fallback |
 
 ---
 
@@ -261,6 +286,7 @@ Server Component (page)
 | 層 | 方針 |
 |----|------|
 | `lib/api/*` | try/catch → `null` or 空配列。console.error |
+| `lib/api/abyss/*` | typed error code。本文・秘密・内部例外をログやレスポンスへ出さない |
 | `repository/*` | try/catch → 空/ダミー。画面を落とさない |
 | `sync*` | `Promise.allSettled` + errors 配列。部分成功を許容 |
 | `actions/*` | `{ ok: boolean }` を返す |

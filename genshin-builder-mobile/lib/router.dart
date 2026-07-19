@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'domain/team/main_tab.dart';
+import 'features/abyss/abyss_statistics_screen.dart';
 import 'features/artifacts/artifact_sets_screen.dart';
 import 'features/bootstrap/initial_sync_screen.dart';
 import 'features/bookmarks/bookmarks_screen.dart';
@@ -32,7 +33,9 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _homeNavKey = GlobalKey<NavigatorState>(debugLabel: 'homeBranch');
 
 /// Characters branch Navigator.
-final _charactersNavKey = GlobalKey<NavigatorState>(debugLabel: 'charactersBranch');
+final _charactersNavKey = GlobalKey<NavigatorState>(
+  debugLabel: 'charactersBranch',
+);
 
 /// Teams branch Navigator.
 final _teamsNavKey = GlobalKey<NavigatorState>(debugLabel: 'teamsBranch');
@@ -41,7 +44,9 @@ final _teamsNavKey = GlobalKey<NavigatorState>(debugLabel: 'teamsBranch');
 final _dailyNavKey = GlobalKey<NavigatorState>(debugLabel: 'dailyBranch');
 
 /// Materials branch Navigator.
-final _materialsNavKey = GlobalKey<NavigatorState>(debugLabel: 'materialsBranch');
+final _materialsNavKey = GlobalKey<NavigatorState>(
+  debugLabel: 'materialsBranch',
+);
 
 // ---------------------------------------------------------------------------
 // GoRouter
@@ -56,32 +61,65 @@ final appRouter = GoRouter(
       builder: (context, state) => const InitialSyncScreen(),
     ),
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) =>
-          AppShell(navigationShell: navigationShell),
+      builder:
+          (context, state, navigationShell) =>
+              AppShell(navigationShell: navigationShell),
       branches: [
         // 0: Home
         StatefulShellBranch(
           navigatorKey: _homeNavKey,
           routes: [
             GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
-            GoRoute(path: '/artifacts', builder: (context, state) => const ArtifactSetsScreen()),
-            GoRoute(path: '/gacha', builder: (context, state) => const GachaScreen()),
-            GoRoute(path: '/daily-plan', builder: (context, state) => const DailyPlanScreen()),
-            GoRoute(path: '/growth-timeline', builder: (context, state) => const GrowthTimelineScreen()),
-            GoRoute(path: '/account-health', builder: (context, state) => const AccountHealthScreen()),
-            GoRoute(path: '/growth-route', builder: (context, state) {
-              final request = state.extra is GrowthRouteRequest ? state.extra as GrowthRouteRequest : null;
-              return GrowthRouteScreen(request: request);
-            }),
-            GoRoute(path: '/team-priority', builder: (context, state) {
-              final teamId = state.extra is String ? state.extra as String : null;
-              return TeamGrowthPriorityScreen(teamId: teamId);
-            }),
+            GoRoute(
+              path: '/abyss',
+              builder: (context, state) => const AbyssStatisticsScreen(),
+            ),
+            GoRoute(
+              path: '/artifacts',
+              builder: (context, state) => const ArtifactSetsScreen(),
+            ),
+            GoRoute(
+              path: '/gacha',
+              builder: (context, state) => const GachaScreen(),
+            ),
+            GoRoute(
+              path: '/daily-plan',
+              builder: (context, state) => const DailyPlanScreen(),
+            ),
+            GoRoute(
+              path: '/growth-timeline',
+              builder: (context, state) => const GrowthTimelineScreen(),
+            ),
+            GoRoute(
+              path: '/account-health',
+              builder: (context, state) => const AccountHealthScreen(),
+            ),
+            GoRoute(
+              path: '/growth-route',
+              builder: (context, state) {
+                final request =
+                    state.extra is GrowthRouteRequest
+                        ? state.extra as GrowthRouteRequest
+                        : null;
+                return GrowthRouteScreen(request: request);
+              },
+            ),
+            GoRoute(
+              path: '/team-priority',
+              builder: (context, state) {
+                final teamId =
+                    state.extra is String ? state.extra as String : null;
+                return TeamGrowthPriorityScreen(teamId: teamId);
+              },
+            ),
             GoRoute(
               path: '/settings',
               builder: (context, state) => const SettingsScreen(),
               routes: [
-                GoRoute(path: 'hoyolab', builder: (context, state) => const HoyolabSettingsScreen()),
+                GoRoute(
+                  path: 'hoyolab',
+                  builder: (context, state) => const HoyolabSettingsScreen(),
+                ),
               ],
             ),
           ],
@@ -96,8 +134,10 @@ final appRouter = GoRouter(
               routes: [
                 GoRoute(
                   path: ':id',
-                  builder: (context, state) =>
-                      CharacterDetailScreen(characterId: state.pathParameters['id']!),
+                  builder:
+                      (context, state) => CharacterDetailScreen(
+                        characterId: state.pathParameters['id']!,
+                      ),
                 ),
               ],
             ),
@@ -107,21 +147,30 @@ final appRouter = GoRouter(
         StatefulShellBranch(
           navigatorKey: _teamsNavKey,
           routes: [
-            GoRoute(path: '/teams', builder: (context, state) => const TeamBuilderScreen()),
+            GoRoute(
+              path: '/teams',
+              builder: (context, state) => const TeamBuilderScreen(),
+            ),
           ],
         ),
         // 3: Daily
         StatefulShellBranch(
           navigatorKey: _dailyNavKey,
           routes: [
-            GoRoute(path: '/daily', builder: (context, state) => const DailyMaterialsScreen()),
+            GoRoute(
+              path: '/daily',
+              builder: (context, state) => const DailyMaterialsScreen(),
+            ),
           ],
         ),
         // 4: Bookmarks
         StatefulShellBranch(
           navigatorKey: _materialsNavKey,
           routes: [
-            GoRoute(path: '/bookmarks', builder: (context, state) => const BookmarksScreen()),
+            GoRoute(
+              path: '/bookmarks',
+              builder: (context, state) => const BookmarksScreen(),
+            ),
           ],
         ),
       ],
@@ -155,12 +204,7 @@ class _DrawerDestination {
     required String label,
     required IconData icon,
     required int branchIndex,
-  }) : this._(
-          label: label,
-          icon: icon,
-          branchIndex: branchIndex,
-          path: null,
-        );
+  }) : this._(label: label, icon: icon, branchIndex: branchIndex, path: null);
 
   /// Same-branch route navigation (uses router.go).
   const _DrawerDestination.route({
@@ -168,12 +212,7 @@ class _DrawerDestination {
     required IconData icon,
     required String path,
     required int branchIndex,
-  }) : this._(
-          label: label,
-          icon: icon,
-          branchIndex: branchIndex,
-          path: path,
-        );
+  }) : this._(label: label, icon: icon, branchIndex: branchIndex, path: path);
 
   final String label;
   final IconData icon;
@@ -238,14 +277,55 @@ final _bottomNavItems = <_NavItem>[
 ];
 
 final _drawerDestinations = <_DrawerDestination>[
-  _DrawerDestination.branch(label: '\u30db\u30fc\u30e0', icon: Icons.home_outlined, branchIndex: MainTab.home.index),
-  _DrawerDestination.branch(label: '\u30ad\u30e3\u30e9', icon: Icons.people_outlined, branchIndex: MainTab.characters.index),
-  _DrawerDestination.branch(label: '\u7de8\u6210', icon: Icons.groups_outlined, branchIndex: MainTab.teams.index),
-  _DrawerDestination.branch(label: '\u66dc\u65e5', icon: Icons.calendar_today_outlined, branchIndex: MainTab.daily.index),
-  _DrawerDestination.route(label: '\u8056\u907a\u7269', icon: Icons.diamond_outlined, path: '/artifacts', branchIndex: MainTab.home.index),
-  _DrawerDestination.branch(label: '\u7d20\u6750', icon: Icons.bookmark_outline, branchIndex: MainTab.materials.index),
-  _DrawerDestination.route(label: '\u30ac\u30c1\u30e3', icon: Icons.casino_outlined, path: '/gacha', branchIndex: MainTab.home.index),
-  _DrawerDestination.route(label: '\u8a2d\u5b9a', icon: Icons.settings_outlined, path: '/settings', branchIndex: MainTab.home.index),
+  _DrawerDestination.branch(
+    label: '\u30db\u30fc\u30e0',
+    icon: Icons.home_outlined,
+    branchIndex: MainTab.home.index,
+  ),
+  _DrawerDestination.branch(
+    label: '\u30ad\u30e3\u30e9',
+    icon: Icons.people_outlined,
+    branchIndex: MainTab.characters.index,
+  ),
+  _DrawerDestination.branch(
+    label: '\u7de8\u6210',
+    icon: Icons.groups_outlined,
+    branchIndex: MainTab.teams.index,
+  ),
+  _DrawerDestination.branch(
+    label: '\u66dc\u65e5',
+    icon: Icons.calendar_today_outlined,
+    branchIndex: MainTab.daily.index,
+  ),
+  _DrawerDestination.route(
+    label: '\u8056\u907a\u7269',
+    icon: Icons.diamond_outlined,
+    path: '/artifacts',
+    branchIndex: MainTab.home.index,
+  ),
+  _DrawerDestination.branch(
+    label: '\u7d20\u6750',
+    icon: Icons.bookmark_outline,
+    branchIndex: MainTab.materials.index,
+  ),
+  _DrawerDestination.route(
+    label: '\u6df1\u5883\u87ba\u65cb\u7d71\u8a08',
+    icon: Icons.auto_graph_outlined,
+    path: '/abyss',
+    branchIndex: MainTab.home.index,
+  ),
+  _DrawerDestination.route(
+    label: '\u30ac\u30c1\u30e3',
+    icon: Icons.casino_outlined,
+    path: '/gacha',
+    branchIndex: MainTab.home.index,
+  ),
+  _DrawerDestination.route(
+    label: '\u8a2d\u5b9a',
+    icon: Icons.settings_outlined,
+    path: '/settings',
+    branchIndex: MainTab.home.index,
+  ),
 ];
 
 /// Compute the selected index in the drawer (first matching destination).
@@ -255,10 +335,14 @@ int _drawerSelectedIndex(String currentPath) {
     if (d.path != null && currentPath.startsWith(d.path!)) return i;
     if (d.isMainTabSwitch) {
       if ((d.branchIndex == MainTab.home.index && currentPath == '/') ||
-          (d.branchIndex == MainTab.characters.index && currentPath.startsWith('/characters')) ||
-          (d.branchIndex == MainTab.teams.index && currentPath.startsWith('/teams')) ||
-          (d.branchIndex == MainTab.daily.index && currentPath.startsWith('/daily')) ||
-          (d.branchIndex == MainTab.materials.index && currentPath.startsWith('/bookmarks'))) {
+          (d.branchIndex == MainTab.characters.index &&
+              currentPath.startsWith('/characters')) ||
+          (d.branchIndex == MainTab.teams.index &&
+              currentPath.startsWith('/teams')) ||
+          (d.branchIndex == MainTab.daily.index &&
+              currentPath.startsWith('/daily')) ||
+          (d.branchIndex == MainTab.materials.index &&
+              currentPath.startsWith('/bookmarks'))) {
         return i;
       }
     }
@@ -293,7 +377,10 @@ class AppShellScope extends InheritedWidget {
   /// Convenience accessor. Throws if scope is missing.
   static AppShellScope of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<AppShellScope>();
-    assert(scope != null, 'AppShellScope.of() called with no AppShellScope in context');
+    assert(
+      scope != null,
+      'AppShellScope.of() called with no AppShellScope in context',
+    );
     return scope!;
   }
 
@@ -352,7 +439,10 @@ class _AppShellState extends State<AppShell> {
 
     if (index == MainTab.home.index) {
       // Home tab always goes to root, regardless of current branch state.
-      widget.navigationShell.goBranch(MainTab.home.index, initialLocation: true);
+      widget.navigationShell.goBranch(
+        MainTab.home.index,
+        initialLocation: true,
+      );
       return;
     }
 
@@ -408,7 +498,9 @@ class _AppShellState extends State<AppShell> {
     final theme = Theme.of(context);
 
     // Compute PopScope conditions with state-tracked drawer.
-    final canPop = !_isEndDrawerOpen && (_branchCanPop || shell.currentIndex == MainTab.home.index);
+    final canPop =
+        !_isEndDrawerOpen &&
+        (_branchCanPop || shell.currentIndex == MainTab.home.index);
 
     Widget body = shell;
 
@@ -455,7 +547,10 @@ class _AppShellState extends State<AppShell> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(28, 16, 16, 8),
-            child: Text('\u30e1\u30cb\u30e5\u30fc', style: theme.textTheme.titleSmall),
+            child: Text(
+              '\u30e1\u30cb\u30e5\u30fc',
+              style: theme.textTheme.titleSmall,
+            ),
           ),
           for (final dest in _drawerDestinations)
             NavigationDrawerDestination(
