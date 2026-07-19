@@ -191,6 +191,7 @@ class _TestShell {
                 ] else ...[
                   GoRoute(path: '/settings', builder: (_, __) => const SizedBox.shrink()),
                 ],
+                GoRoute(path: '/abyss', builder: (_, __) => const SizedBox.shrink()),
                 GoRoute(path: '/gacha', builder: (_, __) => const SizedBox.shrink()),
                 GoRoute(path: '/artifacts', builder: (_, __) => const SizedBox.shrink()),
               ],
