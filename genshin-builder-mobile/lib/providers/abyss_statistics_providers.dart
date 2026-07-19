@@ -6,6 +6,7 @@ import '../data/abyss/http_abyss_statistics_repository.dart';
 import '../domain/abyss/abyss_statistics.dart';
 import '../domain/repositories/abyss_statistics_repository.dart';
 import 'app_providers.dart';
+import 'character_detail_providers.dart';
 
 final backendAbyssStatisticsApiProvider = Provider<BackendAbyssStatisticsApi>((
   ref,
@@ -32,9 +33,14 @@ final loadAbyssStatisticsUseCaseProvider =
       final characterRepository = await ref.watch(
         characterRepositoryProvider.future,
       );
+      final amberDetail = ref.watch(amberDetailRepositoryProvider);
       return LoadAbyssStatisticsUseCase(
         statisticsRepository: ref.watch(abyssStatisticsRepositoryProvider),
         characterRepository: characterRepository,
+        artifactSetNames: () async {
+          final sets = await amberDetail.getArtifactSets();
+          return {for (final set in sets) set.id: set.name};
+        },
       );
     });
 

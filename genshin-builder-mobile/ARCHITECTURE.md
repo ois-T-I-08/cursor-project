@@ -233,14 +233,14 @@ sequenceDiagram
   Backend->>AZA: server-side fetch (cache miss/expired only)
   AZA-->>Backend: public statistics snapshot
   Backend-->>UseCase: validated DTO or safe error code
-  UseCase->>Master: character / weapon name and icon lookup
+  UseCase->>Master: character / weapon / artifact-set name and icon lookup
   Master-->>UseCase: local master data
   UseCase-->>UI: enriched AbyssStatistics
 ```
 
 - Domain: `domain/abyss/abyss_statistics.dart` と `AbyssStatisticsRepository` は純 Dart
 - Data: `BackendAbyssStatisticsApi` は `GENSHIN_BUILDER_API_BASE_URL` の同一バックエンドだけを呼ぶ。AZA 固有 JSON や認証情報を Flutter へ持ち込まない
-- Application: AZA の ID を既存ローカルマスタの表示名・アイコンへ結合し、見つからない ID は安全な ID 表示へフォールバック
+- Application: AZA の ID を既存ローカルマスタ（キャラ・武器・聖遺物セット）の表示名・アイコンへ結合し、見つからない ID は安全な ID 表示へフォールバック
 - UI: loading / empty / error / stale / retry、取得時刻、期間、サンプル数、参考統計の免責、`Statistics data provided by AZA.GG` を表示
 - 比率の内部単位は 0〜1。UI だけで百分率へ変換する
 - upstream に存在しないゲームバージョンと編成使用回数はモデル化しない。`sourceApiVersion` は AZA API 仕様版である

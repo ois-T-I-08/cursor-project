@@ -300,10 +300,14 @@ class _CharacterCard extends StatelessWidget {
             for (final item in character.artifacts.take(5))
               _BuildLine(
                 label: item.setPieces
-                    .map(
-                      (piece) =>
-                          'セットID ${piece.artifactSetId} ${piece.pieces}点',
-                    )
+                    .map((piece) {
+                      final name = piece.displayName?.trim();
+                      final label =
+                          (name != null && name.isNotEmpty)
+                              ? name
+                              : 'セットID ${piece.artifactSetId}';
+                      return '$label ${piece.pieces}点';
+                    })
                     .join(' + '),
                 value: item.usageRate,
               ),

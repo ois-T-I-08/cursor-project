@@ -91,10 +91,19 @@ class AbyssArtifactSetPiece {
   const AbyssArtifactSetPiece({
     required this.artifactSetId,
     required this.pieces,
+    this.displayName,
   });
 
   final String artifactSetId;
   final int pieces;
+  final String? displayName;
+
+  AbyssArtifactSetPiece copyWith({String? displayName}) =>
+      AbyssArtifactSetPiece(
+        artifactSetId: artifactSetId,
+        pieces: pieces,
+        displayName: displayName ?? this.displayName,
+      );
 }
 
 class AbyssArtifactStatistic {
@@ -105,6 +114,12 @@ class AbyssArtifactStatistic {
 
   final List<AbyssArtifactSetPiece> setPieces;
   final double usageRate;
+
+  AbyssArtifactStatistic copyWith({List<AbyssArtifactSetPiece>? setPieces}) =>
+      AbyssArtifactStatistic(
+        setPieces: setPieces ?? this.setPieces,
+        usageRate: usageRate,
+      );
 }
 
 class AbyssConstellationStatistic {
@@ -148,6 +163,7 @@ class AbyssCharacterStatistic {
     String? characterName,
     String? iconUrl,
     List<AbyssRateStatistic>? weapons,
+    List<AbyssArtifactStatistic>? artifacts,
   }) => AbyssCharacterStatistic(
     characterId: characterId,
     characterName: characterName ?? this.characterName,
@@ -159,7 +175,7 @@ class AbyssCharacterStatistic {
     lowerHalfRate: lowerHalfRate,
     constellationRates: constellationRates,
     weapons: weapons ?? this.weapons,
-    artifacts: artifacts,
+    artifacts: artifacts ?? this.artifacts,
   );
 }
 

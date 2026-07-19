@@ -15,6 +15,7 @@ void main() {
       final useCase = LoadAbyssStatisticsUseCase(
         statisticsRepository: _StatisticsRepository(sampleAbyssStatistics()),
         characterRepository: _CharacterRepository(),
+        artifactSetNames: () async => const {'15020': '絶縁の旗印'},
       );
 
       final result = await useCase.execute();
@@ -25,6 +26,10 @@ void main() {
         'https://example.com/raiden.png',
       );
       expect(result.characters.single.weapons.single.displayName, '草薙の稲光');
+      expect(
+        result.characters.single.artifacts.single.setPieces.single.displayName,
+        '絶縁の旗印',
+      );
       expect(result.teams.single.members.first.characterName, '雷電将軍');
       expect(result.teams.single.members[1].characterName, isNull);
     },
