@@ -316,13 +316,15 @@ const _teams = 2;
 const _daily = 3;
 const _materials = 4;
 
-// Drawer item indices (8 items: home, chars, teams, daily, artifacts, materials, gacha, settings)
+// Drawer item indices (9 items: home, chars, teams, daily, artifacts,
+// materials, abyss, gacha, settings)
 const _drawerHome = 0;
 const _drawerChars = 1;
 const _drawerTeams = 2;
 const _drawerArtifacts = 4;
-const _drawerGacha = 6;
-const _drawerSettings = 7;
+const _drawerAbyss = 6;
+const _drawerGacha = 7;
+const _drawerSettings = 8;
 
 // Tests
 
@@ -685,6 +687,20 @@ void main() {
   });
 
   group('Drawer direct route items', () {
+    testWidgets('drawer abyss navigates without exception', (tester) async {
+      final tr = _TestShell(useProductionAppShell: true);
+      addTearDown(() => tr.dispose());
+      await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
+
+      _openDrawer(tester);
+      await tester.pumpAndSettle(const Duration(seconds: 5));
+      await _tapDrawerItem(tester, _drawerAbyss);
+      await tester.pumpAndSettle(const Duration(seconds: 5));
+
+      expect(_getShellScaffold(tester).isEndDrawerOpen, isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('drawer settings opens settings screen', (tester) async {
       final tr = _TestShell(includeSettings: true, useProductionAppShell: true);
       addTearDown(() => tr.dispose());
