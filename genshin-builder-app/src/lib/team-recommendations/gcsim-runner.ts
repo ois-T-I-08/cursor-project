@@ -29,7 +29,9 @@ export class SecureGcsimRunner implements GcsimRunner {
     const directory = await mkdtemp(join(tmpdir(), "genshin-builder-gcsim-"));
     try {
       const binary = trustedBinaryPath();
-      this.checksumPromise ??= verifyChecksum(binary);
+      const expectedChecksum = GCSIM_BINARY_SHA256[`${process.platform}-${process.arch}`];
+      if (!expectedChecksum) throw new Error("unsupportedPlatform");
+      this.checksumPromise ??= verifyFileChecksum(binary, expectedChecksum);
       await this.checksumPromise;
       const configPath = resolve(directory, "config.txt");
       const outputPath = resolve(directory, "result.json");
@@ -57,10 +59,7 @@ function trustedBinaryPath(): string {
   return resolve(process.cwd(), "vendor", "gcsim", GCSIM_VERSION, fileName);
 }
 
-async function verifyChecksum(binary: string): Promise<void> {
-  const key = `${process.platform}-${process.arch}`;
-  const expected = GCSIM_BINARY_SHA256[key];
-  if (!expected) throw new Error("unsupportedPlatform");
+export async function verifyFileChecksum(binary: string, expected: string): Promise<void> {
   const digest = await new Promise<string>((resolveDigest, reject) => {
     const hash = createHash("sha256");
     const stream = createReadStream(binary);
@@ -71,7 +70,7 @@ async function verifyChecksum(binary: string): Promise<void> {
   if (digest !== expected) throw new Error("binaryChecksumMismatch");
 }
 
-async function safeRemoveTempDirectory(directory: string): Promise<void> {
+export async function safeRemoveTempDirectory(directory: string): Promise<void> {
   const resolved = resolve(directory);
   if (dirname(resolved) !== resolve(tmpdir()) || !basename(resolved).startsWith("genshin-builder-gcsim-")) {
     throw new Error("unsafeTempDirectory");

@@ -58,21 +58,31 @@ class TeamRecommendationController
   final String attackerId;
   TeamRecommendationOptions _lastOptions = const TeamRecommendationOptions();
   bool _cancelled = false;
+  int _runId = 0;
 
   Future<void> start(TeamRecommendationOptions options) async {
+    if (_cancelled) return;
+    final runId = ++_runId;
+    bool isActive() => !_cancelled && _runId == runId;
     _lastOptions = options;
     state = const AsyncValue.loading();
     try {
       final characters = await ref.read(charactersProvider.future);
+      if (!isActive()) return;
       final gameRepository = await ref.read(
         hoyolabGameDataRepositoryProvider.future,
       );
+      if (!isActive()) return;
       final builds = await gameRepository.fetchOwnedCharacterBuilds();
+      if (!isActive()) return;
       final userId = await ref.read(localUserIdProvider.future);
+      if (!isActive()) return;
       final progressRepository = await ref.read(
         progressRepositoryProvider.future,
       );
+      if (!isActive()) return;
       final progress = await progressRepository.getAll(userId);
+      if (!isActive()) return;
       final snapshots = normalizeSimulationBuilds(
         characters: characters,
         hoyolabBuilds: builds,
@@ -89,16 +99,19 @@ class TeamRecommendationController
           characters: snapshots,
         ),
       );
+      if (!isActive()) return;
       state = AsyncValue.data(job);
       job = await pollTeamRecommendationJob(
         repository: repository,
         initial: job,
-        onProgress: (next) => state = AsyncValue.data(next),
-        isCancelled: () => _cancelled,
+        onProgress: (next) {
+          if (isActive()) state = AsyncValue.data(next);
+        },
+        isCancelled: () => !isActive(),
       );
-      if (!_cancelled) state = AsyncValue.data(job);
+      if (isActive()) state = AsyncValue.data(job);
     } catch (error, stackTrace) {
-      if (!_cancelled) state = AsyncValue.error(error, stackTrace);
+      if (isActive()) state = AsyncValue.error(error, stackTrace);
     }
   }
 
@@ -107,6 +120,7 @@ class TeamRecommendationController
   @override
   void dispose() {
     _cancelled = true;
+    _runId += 1;
     super.dispose();
   }
 }

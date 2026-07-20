@@ -23,11 +23,11 @@ Ranking combines configurable performance 35%, AZA usage 20%, current build 15%,
 
 ## Job, cache, and fallback
 
-`POST /api/team-recommendations` validates the DTO and returns a UUID Job. `GET /api/team-recommendations/jobs/{jobId}` returns queued/running/completed/failed/expired. Identical non-expired requests reuse the request hash. Expired Job rows are deleted during enqueue; result caches retain last success for stale fallback. Only successful simulations update `TeamSimulationCache`.
+`POST /api/team-recommendations` validates the DTO and returns an unpredictable UUIDv4 Job capability. `GET /api/team-recommendations/jobs/{jobId}` returns queued/running/completed/failed/expired without persisting the submitted build. Identical non-expired requests reuse the request hash, and concurrent enqueue within one process shares a Promise. Expired Job rows are deleted during enqueue; result caches retain last success for one additional cache TTL as stale fallback and are then purged. Only successful simulations update `TeamSimulationCache`.
 
 Fallback order is current gcsim result, last successful stale simulation, AZA.GG observed/rule result, then pure rule result. `GCSIM_ENABLED=false` skips the runner. An error in this feature must not affect `/api/abyss/statistics`, app startup, saved teams or domain calculations.
 
-Initial background work is process-local and is not a durable distributed queue. A production topology that can terminate request processes must move `GcsimRunner` behind a worker/queue before enabling the kill switch.
+Initial background work is process-local, capped at eight active Jobs by default, and is not a durable distributed queue. A production topology that can terminate request processes must move `GcsimRunner` behind a worker/queue before enabling the kill switch.
 
 ## Migration and pre-production checks
 

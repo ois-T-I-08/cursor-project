@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TeamCandidateGenerator, teamKey } from "@/lib/team-recommendations/candidate-generator";
-import { stableHash, simulationCacheKey } from "@/lib/team-recommendations/cache-key";
+import { stableHash, simulationCacheKey, teamRecommendationRequestHash } from "@/lib/team-recommendations/cache-key";
 import { GcsimConfigGenerator, UnsupportedGcsimInputError } from "@/lib/team-recommendations/config-generator";
 import { GcsimArtifactMapper, GcsimCharacterMapper, GcsimWeaponMapper } from "@/lib/team-recommendations/mappers";
 import { GcsimOutputParser } from "@/lib/team-recommendations/output-parser";
@@ -50,6 +50,17 @@ describe("trusted config generator", () => {
     expect(() => new GcsimConfigGenerator().generate({ candidate, builds: changed, iterations: 1000, durationSeconds: 90, enemy: "single" }))
       .toThrow(UnsupportedGcsimInputError);
   });
+  it("rejects unsupported characters and artifacts independently", () => {
+    const unknownCharacter = { ...candidate, members: ["99999999", ...candidate.members.slice(1)] };
+    const unknownBuilds = [build("99999999", "hydro", "11513"), ...request.characters.slice(1)];
+    expect(() => new GcsimConfigGenerator().generate({ candidate: unknownCharacter, builds: unknownBuilds, iterations: 1000, durationSeconds: 90, enemy: "single" }))
+      .toThrow("unsupportedCharacter");
+    const unknownArtifact = request.characters.map((value) => value.characterId === "10000089"
+      ? { ...value, artifacts: { sets: [{ setId: "99999", count: 4 }], stats: {} } }
+      : value);
+    expect(() => new GcsimConfigGenerator().generate({ candidate, builds: unknownArtifact, iterations: 1000, durationSeconds: 90, enemy: "single" }))
+      .toThrow("unsupportedArtifact");
+  });
 });
 
 describe("request boundary", () => {
@@ -83,7 +94,12 @@ describe("candidate and cache normalization", () => {
   });
   it("creates stable canonical hashes", () => {
     expect(stableHash({ b: 2, a: 1 })).toBe(stableHash({ a: 1, b: 2 }));
-    expect(simulationCacheKey({ request, candidate, iterations: 1000 })).toHaveLength(64);
+    const key = simulationCacheKey({ request, candidate, iterations: 1000, durationSeconds: 90 });
+    expect(key).toHaveLength(64);
+    expect(simulationCacheKey({ request, candidate, iterations: 1000, durationSeconds: 60 })).not.toBe(key);
+    const reordered = { ...request, characters: [...request.characters].reverse() };
+    expect(teamRecommendationRequestHash(reordered)).toBe(teamRecommendationRequestHash(request));
+    expect(simulationCacheKey({ request: reordered, candidate, iterations: 1000, durationSeconds: 90 })).toBe(key);
   });
 });
 
@@ -94,6 +110,10 @@ describe("gcsim output parser", () => {
   });
   it.each(["not json", "{}", '{"schema_version":{"major":"3","minor":"0"},"statistics":{"iterations":1000,"dps":{"mean":1}}}'])("rejects invalid output", (raw) => {
     expect(() => new GcsimOutputParser().parse(raw)).toThrow("invalidGcsimOutput");
+  });
+  it("rejects output from a different gcsim commit", () => {
+    expect(() => new GcsimOutputParser().parse(JSON.stringify({ ...gcsimFixture, sim_version: "wrong-commit" })))
+      .toThrow("invalidGcsimOutput");
   });
 });
 

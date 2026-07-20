@@ -54,15 +54,67 @@ void main() {
     expect(result.status, TeamSimulationJobStatus.failed);
     expect(result.errorCode, 'simulationFailed');
   });
+
+  test('does not publish an in-flight response after cancellation', () async {
+    var cancelled = false;
+    final repository = _FakeRepository(const [
+      TeamSimulationJob(jobId: id, status: TeamSimulationJobStatus.running),
+    ], onGet: () => cancelled = true);
+    var progressCalls = 0;
+    final result = await pollTeamRecommendationJob(
+      repository: repository,
+      initial: const TeamSimulationJob(
+        jobId: id,
+        status: TeamSimulationJobStatus.queued,
+      ),
+      interval: Duration.zero,
+      delay: (_) async {},
+      onProgress: (_) => progressCalls += 1,
+      isCancelled: () => cancelled,
+    );
+    expect(result.status, TeamSimulationJobStatus.queued);
+    expect(repository.calls, 1);
+    expect(progressCalls, 0);
+  });
+
+  test('stops after the finite polling limit', () async {
+    final repository = _FakeRepository(
+      List.filled(
+        2,
+        const TeamSimulationJob(
+          jobId: id,
+          status: TeamSimulationJobStatus.running,
+        ),
+      ),
+    );
+    await expectLater(
+      pollTeamRecommendationJob(
+        repository: repository,
+        initial: const TeamSimulationJob(
+          jobId: id,
+          status: TeamSimulationJobStatus.queued,
+        ),
+        maxAttempts: 2,
+        interval: Duration.zero,
+        delay: (_) async {},
+      ),
+      throwsA(isA<TeamRecommendationPollingException>()),
+    );
+    expect(repository.calls, 2);
+  });
 }
 
 class _FakeRepository implements TeamRecommendationRepository {
-  _FakeRepository(this.jobs);
+  _FakeRepository(this.jobs, {this.onGet});
   final List<TeamSimulationJob> jobs;
+  final void Function()? onGet;
   int calls = 0;
   @override
   Future<TeamSimulationJob> enqueue(TeamRecommendationRequest request) async =>
       jobs.first;
   @override
-  Future<TeamSimulationJob> getJob(String jobId) async => jobs[calls++];
+  Future<TeamSimulationJob> getJob(String jobId) async {
+    onGet?.call();
+    return jobs[calls++];
+  }
 }

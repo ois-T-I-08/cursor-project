@@ -6,12 +6,12 @@
 
 ## 2026-07-20 — gcsimおすすめ編成バックエンド
 
-- gcsimは`v2.43.4` / commit `24042de8ba3243693e97cd7efe22292762b08331` / 公式release SHA-256へ固定。既定`GCSIM_ENABLED=false`。
+- gcsimは`v2.43.4` / commit `24042de8ba3243693e97cd7efe22292762b08331` / 公式release SHA-256へ固定。macOS 2 assetを含めGitHub release digestと再照合済み。既定`GCSIM_ENABLED=false`。
 - APIは正規化済み戦闘DTOだけを受け、未知キーを拒否する。Cookie、UID、HoYoLAB本文、任意Config/command/pathは受けない。
 - `team-recommendations/`を候補生成、ID mapper、Config、rotation、Runner、parser、score、store/serviceへ分割。Runnerはshellなし・固定path/checksum・temp cleanup・timeout/output/concurrency制限・環境変数除去。
 - Prisma migration `20260720120000_add_team_simulation_jobs`は`TeamSimulationJob`と`TeamSimulationCache`の追加のみ。本番未適用。
 - gcsim未対応/失敗時もAZA.GG・ルール候補を返す。成功値だけcache更新し、失敗時はstale最終成功値を使う。
-- process-localバックグラウンド実行は初期実装。複数instance/production有効化前にdurable queue/workerを再評価する。
+- process-localバックグラウンド実行は初期実装。同一request enqueueのsingle-flight、既定8 active Job上限、期限切れcache purgeを適用し、複数instance/production有効化前にdurable queue/workerを再評価する。
 
 ---
 

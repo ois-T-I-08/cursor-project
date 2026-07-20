@@ -9,6 +9,7 @@ export interface SimulationCacheEntry {
 
 export interface SimulationStore {
   deleteExpiredJobs(now: Date): Promise<void>;
+  deleteStaleCaches(expiredBefore: Date): Promise<void>;
   findReusableJob(requestHash: string, now: Date): Promise<TeamRecommendationJob | null>;
   createJob(input: { jobId: string; requestHash: string; attackerId: string; expiresAt: Date }): Promise<void>;
   setJobStatus(jobId: string, status: JobStatus): Promise<void>;
@@ -22,6 +23,9 @@ export interface SimulationStore {
 export class PrismaSimulationStore implements SimulationStore {
   async deleteExpiredJobs(now: Date): Promise<void> {
     await prisma.teamSimulationJob.deleteMany({ where: { expiresAt: { lte: now } } });
+  }
+  async deleteStaleCaches(expiredBefore: Date): Promise<void> {
+    await prisma.teamSimulationCache.deleteMany({ where: { expiresAt: { lte: expiredBefore } } });
   }
   async findReusableJob(requestHash: string, now: Date): Promise<TeamRecommendationJob | null> {
     const row = await prisma.teamSimulationJob.findFirst({

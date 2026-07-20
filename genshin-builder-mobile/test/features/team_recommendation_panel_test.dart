@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:genshin_builder_mobile/domain/team_recommendation/team_recommendation.dart';
 import 'package:genshin_builder_mobile/features/teams/team_recommendation_panel.dart';
 import 'package:genshin_builder_mobile/providers/app_providers.dart';
+import 'package:genshin_builder_mobile/providers/team_recommendation_providers.dart';
 
 void main() {
   testWidgets('shows theoretical value warning and credits', (tester) async {
@@ -69,4 +70,42 @@ void main() {
     expect(find.textContaining('入力品質: partial'), findsOneWidget);
     expect(find.textContaining('ベネット'), findsOneWidget);
   });
+
+  testWidgets('disables a second calculation while a job is active', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          charactersProvider.overrideWith((ref) async => []),
+          teamRecommendationControllerProvider(
+            '10000089',
+          ).overrideWith((ref) => _BusyController(ref)),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: TeamRecommendationPanel(attackerId: '10000089'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'おすすめ編成を計算'),
+    );
+    expect(button.onPressed, isNull);
+  });
+}
+
+class _BusyController extends TeamRecommendationController {
+  _BusyController(Ref ref) : super(ref, '10000089') {
+    state = const AsyncValue.data(
+      TeamSimulationJob(
+        jobId: '123e4567-e89b-42d3-a456-426614174000',
+        status: TeamSimulationJobStatus.running,
+      ),
+    );
+  }
 }

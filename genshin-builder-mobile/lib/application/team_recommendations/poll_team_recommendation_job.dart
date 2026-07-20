@@ -4,8 +4,8 @@ import '../../domain/team_recommendation/team_recommendation.dart';
 Future<TeamSimulationJob> pollTeamRecommendationJob({
   required TeamRecommendationRepository repository,
   required TeamSimulationJob initial,
-  int maxAttempts = 60,
-  Duration interval = const Duration(seconds: 1),
+  int maxAttempts = 180,
+  Duration interval = const Duration(seconds: 2),
   Future<void> Function(Duration) delay = Future<void>.delayed,
   void Function(TeamSimulationJob job)? onProgress,
   bool Function()? isCancelled,
@@ -15,7 +15,9 @@ Future<TeamSimulationJob> pollTeamRecommendationJob({
     if (_terminal(job.status) || (isCancelled?.call() ?? false)) return job;
     await delay(interval);
     if (isCancelled?.call() ?? false) return job;
-    job = await repository.getJob(job.jobId);
+    final next = await repository.getJob(job.jobId);
+    if (isCancelled?.call() ?? false) return job;
+    job = next;
     onProgress?.call(job);
   }
   throw const TeamRecommendationPollingException();

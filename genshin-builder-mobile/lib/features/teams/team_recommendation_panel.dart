@@ -35,6 +35,11 @@ class _TeamRecommendationPanelState
     final state = ref.watch(
       teamRecommendationControllerProvider(widget.attackerId),
     );
+    final currentJob = state.valueOrNull;
+    final isBusy =
+        state.isLoading ||
+        currentJob?.status == TeamSimulationJobStatus.queued ||
+        currentJob?.status == TeamSimulationJobStatus.running;
     final characters =
         ref.watch(charactersProvider).valueOrNull ?? const <MasterCharacter>[];
     final names = {for (final value in characters) value.id: value.name};
@@ -76,7 +81,7 @@ class _TeamRecommendationPanelState
             const SizedBox(height: 12),
             FilledButton.icon(
               onPressed:
-                  state.isLoading
+                  isBusy
                       ? null
                       : () => ref
                           .read(

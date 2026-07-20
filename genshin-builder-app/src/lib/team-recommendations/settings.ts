@@ -8,14 +8,15 @@ export const ROTATION_TEMPLATE_VERSION = "rotation-v1";
 export const GCSIM_BINARY_SHA256: Readonly<Record<string, string>> = {
   "linux-x64": "c0ea87f2acee0eea1f4df8a7fb39d4c1de4b2ec179520a6e090d66147b641344",
   "win32-x64": "d866d1faa029b7f9ab808759116d39b015edbe09cbba3ac38314f5e0f551dd6a",
-  "darwin-x64": "32e04a5651252b2795575bd67fc556352d2ac2a4cb9a22bb2a8751bbf4f4207b",
-  "darwin-arm64": "4598972d201fe7afd36e59d94bdc7a7f4064c507c936da6ed580163199cc2af4",
+  "darwin-x64": "32e04c351668be1e22f4615d4e9129b6dc497eb6d5a5233c84bd6984e6fe542a",
+  "darwin-arm64": "4598bfe8c86d4aab76cd5d7c2e88642410e282309737ea5595a532c68282e8ec",
 };
 
 export interface TeamRecommendationSettings {
   enabled: boolean;
   maxCandidates: number;
   maxConcurrency: number;
+  maxActiveJobs: number;
   timeoutMs: number;
   iterations: number;
   cacheTtlSeconds: number;
@@ -32,6 +33,7 @@ export function readTeamRecommendationSettings(
     enabled: env.GCSIM_ENABLED?.trim().toLowerCase() === "true",
     maxCandidates: boundedInt(env.GCSIM_MAX_CANDIDATES, 20, 1, 20),
     maxConcurrency: boundedInt(env.GCSIM_MAX_CONCURRENCY, 2, 1, 4),
+    maxActiveJobs: boundedInt(env.GCSIM_MAX_ACTIVE_JOBS, 8, 1, 32),
     timeoutMs: boundedInt(env.GCSIM_TIMEOUT_SECONDS, 30, 5, 120) * 1_000,
     iterations: boundedInt(env.GCSIM_ITERATIONS, 1_000, 50, 5_000),
     cacheTtlSeconds: boundedInt(env.GCSIM_CACHE_TTL_SECONDS, 86_400, 300, 604_800),

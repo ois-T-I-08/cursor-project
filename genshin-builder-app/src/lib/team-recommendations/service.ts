@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AbyssStatistics } from "@/lib/abyss/types";
-import { stableHash, simulationCacheKey } from "./cache-key";
+import { simulationCacheKey, teamRecommendationRequestHash } from "./cache-key";
 import { TeamCandidateGenerator } from "./candidate-generator";
 import { GcsimConfigGenerator } from "./config-generator";
 import type { GcsimRunner } from "./gcsim-runner";
@@ -13,6 +13,8 @@ type SafeLog = (event: string, details: Partial<{ jobId: string; attackerId: str
 
 export class TeamRecommendationService {
   private readonly activeJobs = new Map<string, Promise<void>>();
+  private readonly enqueueFlights = new Map<string, Promise<TeamRecommendationJob>>();
+  private pendingEnqueues = 0;
   constructor(
     private readonly store: SimulationStore,
     private readonly runner: GcsimRunner,
@@ -24,19 +26,40 @@ export class TeamRecommendationService {
     private readonly scorer = new TeamRecommendationScorer(),
   ) {}
 
-  async enqueue(request: TeamRecommendationRequest): Promise<TeamRecommendationJob> {
+  enqueue(request: TeamRecommendationRequest): Promise<TeamRecommendationJob> {
+    const requestHash = teamRecommendationRequestHash(request);
+    const existingFlight = this.enqueueFlights.get(requestHash);
+    if (existingFlight) return existingFlight;
+    const flight = this.enqueueOnce(request, requestHash).finally(() => this.enqueueFlights.delete(requestHash));
+    this.enqueueFlights.set(requestHash, flight);
+    return flight;
+  }
+
+  private async enqueueOnce(request: TeamRecommendationRequest, requestHash: string): Promise<TeamRecommendationJob> {
     const now = this.now();
-    await this.store.deleteExpiredJobs(now);
-    const requestHash = stableHash(request);
+    await Promise.all([
+      this.store.deleteExpiredJobs(now),
+      this.store.deleteStaleCaches(new Date(now.getTime() - this.settings.cacheTtlSeconds * 1_000)),
+    ]);
     const existing = await this.store.findReusableJob(requestHash, now);
     if (existing) return existing;
+    if (this.activeJobs.size + this.pendingEnqueues >= this.settings.maxActiveJobs) {
+      throw new Error("jobCapacityExceeded");
+    }
+    this.pendingEnqueues += 1;
     const jobId = randomUUID();
-    await this.store.createJob({ jobId, requestHash, attackerId: request.attackerId, expiresAt: new Date(now.getTime() + this.settings.jobTtlSeconds * 1_000) });
-    const work = this.process(jobId, request).finally(() => this.activeJobs.delete(jobId));
-    this.activeJobs.set(jobId, work);
-    void work;
-    this.log("job_queued", { jobId, attackerId: request.attackerId, status: "queued" });
-    return { jobId, status: "queued" };
+    try {
+      await this.store.createJob({ jobId, requestHash, attackerId: request.attackerId, expiresAt: new Date(now.getTime() + this.settings.jobTtlSeconds * 1_000) });
+      const work = this.process(jobId, request)
+        .catch(() => this.log("job_worker_failed", { jobId, attackerId: request.attackerId, status: "failed" }))
+        .finally(() => this.activeJobs.delete(jobId));
+      this.activeJobs.set(jobId, work);
+      void work;
+      this.log("job_queued", { jobId, attackerId: request.attackerId, status: "queued" });
+      return { jobId, status: "queued" };
+    } finally {
+      this.pendingEnqueues -= 1;
+    }
   }
 
   get(jobId: string): Promise<TeamRecommendationJob | null> {
@@ -79,7 +102,12 @@ export class TeamRecommendationService {
   }
 
   private async evaluate(request: TeamRecommendationRequest, candidate: TeamCandidate): Promise<{ candidate: TeamCandidate; run?: GcsimRunResult; isCached: boolean; isStale: boolean }> {
-    const key = simulationCacheKey({ request, candidate, iterations: this.settings.iterations });
+    const key = simulationCacheKey({
+      request,
+      candidate,
+      iterations: this.settings.iterations,
+      durationSeconds: this.settings.durationSeconds,
+    });
     const cached = await this.store.readCache(key);
     const now = this.now();
     if (cached && cached.expiresAt > now) return { candidate, run: cached.value, isCached: true, isStale: false };

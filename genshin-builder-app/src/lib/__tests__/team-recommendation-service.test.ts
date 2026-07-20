@@ -55,11 +55,42 @@ describe("TeamRecommendationService", () => {
   it("deduplicates identical active/completed requests", async () => {
     const store = new MemoryStore();
     const service = createService(store, { run: async () => run }, false);
-    const first = await service.enqueue(request);
+    const [first, concurrent] = await Promise.all([service.enqueue(request), service.enqueue(request)]);
+    expect(concurrent.jobId).toBe(first.jobId);
     await service.waitForLocalJob(first.jobId);
     const second = await service.enqueue(request);
     expect(second.jobId).toBe(first.jobId);
     expect(store.createdJobs).toBe(1);
+  });
+
+  it("bounds process-local active jobs", async () => {
+    let finishRun: (() => void) | undefined;
+    const runner = {
+      run: vi.fn(() => new Promise<GcsimRunResult>((resolve) => {
+        finishRun = () => resolve(run);
+      })),
+    };
+    const store = new MemoryStore();
+    const service = new TeamRecommendationService(
+      store,
+      runner,
+      async () => abyss(),
+      settings(true, { maxActiveJobs: 1 }),
+      { now: () => now, log: () => undefined },
+    );
+    const first = await service.enqueue(request);
+    await vi.waitFor(() => expect(runner.run).toHaveBeenCalled());
+    await expect(service.enqueue({ ...request, preference: "built" })).rejects.toThrow("jobCapacityExceeded");
+    finishRun?.();
+    await service.waitForLocalJob(first.jobId);
+  });
+
+  it("purges caches only after one additional stale-retention TTL", async () => {
+    const store = new MemoryStore();
+    const service = createService(store, { run: async () => run }, false);
+    const job = await service.enqueue(request);
+    await service.waitForLocalJob(job.jobId);
+    expect(store.cacheCleanupBefore?.toISOString()).toBe("2026-07-19T00:00:00.000Z");
   });
 
   it("logs only safe job metadata", async () => {
@@ -79,8 +110,8 @@ describe("TeamRecommendationService", () => {
 function createService(store: MemoryStore, runner: GcsimRunner, enabled: boolean) {
   return new TeamRecommendationService(store, runner, async () => abyss(), settings(enabled), { now: () => now, log: () => undefined });
 }
-function settings(enabled: boolean): TeamRecommendationSettings {
-  return { enabled, maxCandidates: 20, maxConcurrency: 2, timeoutMs: 1000, iterations: 1000, cacheTtlSeconds: 86400, jobTtlSeconds: 86400, maxConfigBytes: 65536, maxOutputBytes: 2097152, durationSeconds: 90 };
+function settings(enabled: boolean, overrides: Partial<TeamRecommendationSettings> = {}): TeamRecommendationSettings {
+  return { enabled, maxCandidates: 20, maxConcurrency: 2, maxActiveJobs: 8, timeoutMs: 1000, iterations: 1000, cacheTtlSeconds: 86400, jobTtlSeconds: 86400, maxConfigBytes: 65536, maxOutputBytes: 2097152, durationSeconds: 90, ...overrides };
 }
 function build(characterId: string, weaponId: string): TeamRecommendationRequest["characters"][number] {
   return { characterId, element: "hydro", rarity: 5, isOwned: true, level: 90, ascension: 6, constellation: 0,
@@ -98,8 +129,10 @@ class MemoryStore implements SimulationStore {
   readonly jobs = new Map<string, { job: TeamRecommendationJob; hash: string; expiresAt: Date }>();
   cacheWrites = 0;
   createdJobs = 0;
+  cacheCleanupBefore: Date | null = null;
   constructor(private readonly cached: SimulationCacheEntry | null = null) {}
   async deleteExpiredJobs(current: Date) { for (const [id, row] of this.jobs) if (row.expiresAt <= current) this.jobs.delete(id); }
+  async deleteStaleCaches(expiredBefore: Date) { this.cacheCleanupBefore = expiredBefore; }
   async findReusableJob(requestHash: string, current: Date) {
     return [...this.jobs.values()].find((row) => row.hash === requestHash && row.expiresAt > current && ["queued", "running", "completed"].includes(row.job.status))?.job ?? null;
   }

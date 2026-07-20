@@ -1,5 +1,5 @@
 import type { GcsimRunResult } from "./types";
-import { GCSIM_RESULT_SCHEMA_VERSION } from "./settings";
+import { GCSIM_COMMIT_SHA, GCSIM_RESULT_SCHEMA_VERSION } from "./settings";
 
 export class GcsimOutputParser {
   parse(raw: string): GcsimRunResult {
@@ -7,6 +7,7 @@ export class GcsimOutputParser {
     try { value = JSON.parse(raw); } catch { throw new Error("invalidGcsimOutput"); }
     if (!isRecord(value) || !isRecord(value.schema_version) || !isRecord(value.statistics)) throw new Error("invalidGcsimOutput");
     if (`${value.schema_version.major}.${value.schema_version.minor}` !== GCSIM_RESULT_SCHEMA_VERSION) throw new Error("invalidGcsimOutput");
+    if (value.sim_version !== GCSIM_COMMIT_SHA) throw new Error("invalidGcsimOutput");
     const statistics = value.statistics;
     if (!isRecord(statistics.dps) || !finiteNonNegative(statistics.dps.mean) || !integer(statistics.iterations, 1, 100_000)) {
       throw new Error("invalidGcsimOutput");
