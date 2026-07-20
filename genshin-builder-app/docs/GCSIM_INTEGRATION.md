@@ -35,10 +35,14 @@ v2.43.4 does not expose a main-simulation fixed-seed option in its CLI/config pa
 
 The parser requires result schema `4.2` and the pinned `sim_version` commit, then reads only `statistics.dps.mean`, `iterations`, source reaction means and ending energy means from the bounded JSON result. Full output and Config are not persisted. Cache keys include the tag, commit, Config/result contracts, duration, iterations, normalized build, enemy settings and rotation version.
 
+## ID maps
+
+Pinned-tag character/weapon/artifact IDs are generated into `src/lib/team-recommendations/gcsim-id-maps.generated.ts` via `node scripts/generate-gcsim-id-maps.mjs`. Do not hand-edit that file. Unsupported IDs still fall back to AZA/rule recommendations; never invent keys for characters absent from the pinned tag.
+
 ## Adding support
 
-1. Confirm the numeric ID and key in the pinned official tag's `data_gen.textproto` or artifact `config.yml`.
-2. Add the mapping and tests. Never map by Japanese/English display name.
+1. Confirm the numeric ID and key in the pinned official tag's `data_gen.textproto` or artifact `config.yml`, then regenerate the ID maps.
+2. Add rotations/tests as needed. Never map by Japanese/English display name.
 3. Add a trusted rotation at team, attacker or reaction scope. Generic rotation stays low confidence.
 4. Run Config Golden, parser, fake runner and security tests.
 5. Upgrading gcsim requires a separate review of license, tag commit, checksums, Config parser and result proto.

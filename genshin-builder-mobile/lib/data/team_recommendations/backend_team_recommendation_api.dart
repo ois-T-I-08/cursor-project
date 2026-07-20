@@ -74,6 +74,9 @@ class BackendTeamRecommendationApi {
     if (response.statusCode < 200 ||
         response.statusCode >= 300 ||
         decoded is! Map) {
+      if (response.statusCode == 400) {
+        throw const TeamRecommendationApiException('invalidRequest');
+      }
       throw const TeamRecommendationApiException('requestFailed');
     }
     return _parseJob(Map<String, Object?>.from(decoded));
