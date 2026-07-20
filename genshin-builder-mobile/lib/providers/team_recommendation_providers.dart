@@ -88,6 +88,9 @@ class TeamRecommendationController
         hoyolabBuilds: builds,
         localProgress: {for (final value in progress) value.characterId: value},
       );
+      if (!snapshots.any((value) => value.characterId == attackerId)) {
+        throw const TeamRecommendationApiException('attackerUnavailable');
+      }
       final repository = ref.read(teamRecommendationRepositoryProvider);
       var job = await repository.enqueue(
         TeamRecommendationRequest(

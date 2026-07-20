@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/team_recommendations/backend_team_recommendation_api.dart';
 import '../../domain/models/master_models.dart';
 import '../../domain/team_recommendation/team_recommendation.dart';
 import '../../providers/app_providers.dart';
@@ -98,7 +99,8 @@ class _TeamRecommendationPanelState
               loading:
                   () => const _JobProgress(label: '正規化済み育成データから候補を準備しています'),
               error:
-                  (_, __) => _Failure(
+                  (error, _) => _Failure(
+                    message: _errorMessage(error),
                     onRetry:
                         () =>
                             ref
@@ -140,6 +142,7 @@ class _TeamRecommendationPanelState
     if (job.status == TeamSimulationJobStatus.failed ||
         job.status == TeamSimulationJobStatus.expired) {
       return _Failure(
+        message: 'おすすめ編成の計算に失敗しました。時間をおいて再試行してください。',
         onRetry:
             () =>
                 ref
@@ -162,7 +165,7 @@ class _TeamRecommendationPanelState
             child: Text(
               result.warning == 'staleSimulation'
                   ? '前回の正常なシミュレーション結果を表示しています。'
-                  : 'gcsimを利用できないため、AZA.GG実績とルールに基づく候補を表示しています。',
+                  : 'gcsimでシミュレーションできませんでした（未対応キャラ／武器、または育成データ不足）。AZA.GG実績とルールに基づく候補を表示しています。',
             ),
           ),
         for (final recommendation in result.recommendations)
@@ -217,13 +220,17 @@ class _JobProgress extends StatelessWidget {
 }
 
 class _Failure extends StatelessWidget {
-  const _Failure({required this.onRetry});
+  const _Failure({required this.onRetry, this.message});
   final VoidCallback onRetry;
+  final String? message;
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text('おすすめ編成を取得できませんでした。既存の編成・螺旋統計機能は引き続き利用できます。'),
+      Text(
+        message ??
+            'おすすめ編成を取得できませんでした。既存の編成・螺旋統計機能は引き続き利用できます。',
+      ),
       TextButton.icon(
         onPressed: onRetry,
         icon: const Icon(Icons.refresh),
@@ -231,6 +238,22 @@ class _Failure extends StatelessWidget {
       ),
     ],
   );
+}
+
+String _errorMessage(Object error) {
+  if (error is TeamRecommendationApiException) {
+    return switch (error.code) {
+      'notConfigured' => 'おすすめ編成の接続先が設定されていません。',
+      'attackerUnavailable' =>
+        'このキャラではおすすめ編成を計算できません（旅人の複合IDなど未対応の場合があります）。',
+      'timeout' => 'おすすめ編成の取得がタイムアウトしました。再試行してください。',
+      'networkError' => '通信に失敗しました。接続を確認して再試行してください。',
+      'invalidRequest' || 'requestFailed' =>
+        '送信データの形式を確認できませんでした。所持キャラ同期後に再試行してください。',
+      _ => 'おすすめ編成を取得できませんでした。既存の編成・螺旋統計機能は引き続き利用できます。',
+    };
+  }
+  return 'おすすめ編成を取得できませんでした。既存の編成・螺旋統計機能は引き続き利用できます。';
 }
 
 class TeamRecommendationCard extends StatelessWidget {
