@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:genshin_builder_mobile/domain/planning/growth_route.dart';
 import 'package:genshin_builder_mobile/domain/planning/growth_route_request.dart';
 import 'package:genshin_builder_mobile/domain/planning/team_growth_priority.dart';
 import 'package:genshin_builder_mobile/features/growth/growth_route_screen.dart';
@@ -19,6 +20,54 @@ void main() {
       );
 
       expect(find.text('育成目標が設定されていません'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('育成アクションの内部値を日本語で表示する', (tester) async {
+      final request = GrowthRouteRequest(
+        goalIds: ['goal1'],
+        startDate: DateTime(2026, 7, 20),
+        startWeekday: 1,
+      );
+      final route = GrowthRoute(
+        userId: 'user1',
+        startDate: DateTime(2026, 7, 20),
+        endDate: DateTime(2026, 7, 20),
+        days: [
+          GrowthRouteDay(
+            date: DateTime(2026, 7, 20),
+            weekday: 1,
+            actions: const [
+              GrowthRouteAction(
+                optionId: 'goal1_weekdayMaterial',
+                actionType: 'weekdayMaterial',
+                characterId: '10000089',
+                priority: 2,
+              ),
+              GrowthRouteAction(
+                optionId: 'goal1_generalMaterial',
+                actionType: 'generalMaterial',
+                priority: 1,
+              ),
+            ],
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            growthRouteProvider(request).overrideWith((ref) async => route),
+          ],
+          child: MaterialApp(home: GrowthRouteScreen(request: request)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('曜日素材（キャラクターID: 10000089）'), findsOneWidget);
+      expect(find.text('汎用素材'), findsOneWidget);
+      expect(find.text('優先度: 2'), findsOneWidget);
+      expect(find.textContaining('weekdayMaterial'), findsNothing);
+      expect(find.textContaining('generalMaterial'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   });

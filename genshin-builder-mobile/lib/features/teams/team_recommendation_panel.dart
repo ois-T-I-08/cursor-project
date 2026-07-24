@@ -120,7 +120,7 @@ class _TeamRecommendationPanelState
             ),
             const SizedBox(height: 8),
             Text(
-              'Simulation: gcsim (MIT License) / Usage statistics: AZA.GG',
+              'シミュレーション: gcsim（MITライセンス）／利用統計: AZA.GG',
               style: theme.textTheme.labelSmall,
             ),
           ],
@@ -300,7 +300,9 @@ class TeamRecommendationCard extends StatelessWidget {
                   : 'ルールベース'}${recommendation.isCached ? '（キャッシュ）' : ''}${recommendation.isStale ? '（前回値）' : ''}',
             ),
             Text(
-              '入力品質: ${recommendation.inputQuality.name} / ローテーション信頼度: ${recommendation.rotationConfidence}',
+              '入力品質: ${_inputQualityLabel(recommendation.inputQuality)}'
+              '／ローテーション信頼度: '
+              '${_rotationConfidenceLabel(recommendation.rotationConfidence)}',
             ),
             Text('更新: ${generatedAt.toLocal()}'),
             for (final reason in recommendation.reasons)
@@ -314,4 +316,22 @@ class TeamRecommendationCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _inputQualityLabel(SimulationInputQuality quality) {
+  return switch (quality) {
+    SimulationInputQuality.exact => '完全',
+    SimulationInputQuality.partial => '一部不足',
+    SimulationInputQuality.defaulted => '既定値で補完',
+    SimulationInputQuality.unsupported => '未対応',
+  };
+}
+
+String _rotationConfidenceLabel(String confidence) {
+  return switch (confidence) {
+    'high' => '高',
+    'medium' => '中',
+    'low' => '低',
+    _ => '不明',
+  };
 }
