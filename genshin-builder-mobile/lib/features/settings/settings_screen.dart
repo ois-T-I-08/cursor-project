@@ -6,9 +6,11 @@ import '../../data/models/sync_status.dart';
 import '../../core/errors/user_facing_error.dart';
 import '../../data/sync/background_master_repair.dart';
 import '../../data/sync/master_sync_runner.dart';
+import '../../domain/battle_statistics/battle_statistics.dart';
 import '../../platform/app_notification_settings_channel.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/background_master_repair_provider.dart';
+import '../../providers/battle_statistics_providers.dart';
 import '../../providers/hoyolab_home_providers.dart';
 import '../../providers/hoyolab_reminder_providers.dart';
 import '../../providers/legal_url_launcher_provider.dart';
@@ -230,6 +232,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final syncStatusAsync = ref.watch(syncStatusProvider);
     final versionStatusAsync = ref.watch(versionStatusProvider);
     final reminderStoreAsync = ref.watch(reminderSettingsStoreProvider);
+    final battleStatsEnabled = ref.watch(battleStatisticsSyncEnabledProvider);
+    final battleStatsSyncAsync =
+        battleStatsEnabled
+            ? ref.watch(battleStatisticsStartupSyncProvider)
+            : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -322,6 +329,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SizedBox(height: 12),
                     Text(_lastMessage!),
                   ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '編成統計データ',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  if (!battleStatsEnabled)
+                    const Text('バックエンド接続先が未設定です。')
+                  else
+                    battleStatsSyncAsync!.when(
+                      data:
+                          (result) => Text(
+                            result.manifestNotModified
+                                ? '最新の統計データを使用しています。'
+                                : result.states.entries
+                                    .map(
+                                      (entry) =>
+                                          '${_battleContentLabel(entry.key)}: '
+                                          '${_battleStateLabel(entry.value)}',
+                                    )
+                                    .join('\n'),
+                          ),
+                      loading: () => const Text('更新を確認しています…'),
+                      error: (_, __) => const Text('端末内の前回正常データを使用します。'),
+                    ),
+                  const SizedBox(height: 8),
+                  const Text('使用率は集計上の参考値です。強さや最適編成を保証するものではありません。'),
                 ],
               ),
             ),
@@ -422,6 +466,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 }
+
+String _battleContentLabel(BattleStatsContentType type) => switch (type) {
+  BattleStatsContentType.abyss => '深境螺旋',
+  BattleStatsContentType.stygian => '幽境の激戦',
+};
+
+String _battleStateLabel(RemoteBattleStatsState state) => switch (state) {
+  RemoteBattleStatsState.current => '最新',
+  RemoteBattleStatsState.updateAvailable => '更新あり',
+  RemoteBattleStatsState.syncing => '同期中',
+  RemoteBattleStatsState.valid => '更新済み',
+  RemoteBattleStatsState.invalid => '更新を適用できませんでした',
+  RemoteBattleStatsState.unsupportedSchema => '未対応のデータ形式',
+  RemoteBattleStatsState.stale => '前回データを使用中',
+  RemoteBattleStatsState.offlineUsingCache => 'オフライン・前回データを使用中',
+};
 
 String _shortVersion(String? value) {
   if (value == null || value.isEmpty) return '-';

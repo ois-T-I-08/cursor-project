@@ -133,6 +133,28 @@ describe("fetchJsonObject", () => {
       code: "bodyTooLarge",
     });
   });
+
+  it("requires an explicit JSON content type when requested", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response('{"ok":true}', {
+            status: 200,
+            headers: { "content-type": "text/plain" },
+          }),
+      ),
+    );
+
+    await expect(
+      fetchJsonObject("https://example.test/data", {
+        timeoutMs: 1_000,
+        maxBytes: 1_024,
+        retries: 0,
+        requireJsonContentType: true,
+      }),
+    ).rejects.toMatchObject({ code: "invalidData" });
+  });
 });
 
 function fetchSafe(

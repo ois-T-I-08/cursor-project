@@ -34,7 +34,7 @@ powershell -ExecutionPolicy Bypass -File scripts\setup-android-sdk.ps1
 **新しい PowerShell** を開いて（環境変数反映のため）:
 
 ```powershell
-cd "c:\cursor project\genshin-builder-mobile"
+cd genshin-builder-mobile
 flutter devices
 adb devices
 ```
@@ -50,7 +50,7 @@ adb devices
 ### 方法 A: Flutter で直接実行（開発向け・ホットリロード可）
 
 ```powershell
-cd "c:\cursor project\genshin-builder-mobile"
+cd genshin-builder-mobile
 flutter run
 ```
 

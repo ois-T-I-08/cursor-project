@@ -4,6 +4,15 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-07-24 — Neon PostgreSQL / YShelper編成統計基盤
+
+- Prisma datasourceをNeon PostgreSQLのpooled/direct URLへ変更。SQLite migrationは`migrations-sqlite-archive`へ保持し、空DB用PostgreSQL baselineを新設。`dev.db`と匿名UserProgress 2件は削除・自動移行していない。
+- YShelper実endpoint/fixtureはリポジトリにないため推測実装せず、確認済み`canonical-v1` bridge adapterを明示設定した場合だけ通信する。
+- `BattleStatsSyncRun/Snapshot/TeamUsage/TeamMember/CharacterUsage/Manifest`を追加。14日server gate、SyncLease、検証、安定SHA-256、重複防止、valid時だけManifest更新。
+- 公開APIはManifest(ETag/304)、500件Bundle、cursor付きteams/characters。失敗・suspicious・invalid時は最終正常Manifestを維持。
+- FlutterはDrift v9へ追加テーブルをmigrationし、起動非ブロッキングで変更種類だけ全ページ取得、hash/ID検証後にtransaction切替。所持・育成判定は統計使用率と分離。
+- 詳細なNeon/Secrets/deploy/rollback/実仕様確認事項は`docs/YSHELPER_BATTLE_STATISTICS.md`。
+
 ## 2026-07-20 — gcsimおすすめ編成バックエンド
 
 - gcsimは`v2.43.4` / commit `24042de8ba3243693e97cd7efe22292762b08331` / 公式release SHA-256へ固定。macOS 2 assetを含めGitHub release digestと再照合済み。既定`GCSIM_ENABLED=false`。
@@ -71,7 +80,7 @@
 
 - **目的:** Agent ターン終了時に Memory 追記を手動依頼なしでトリガー
 - **決定事項:**
-  - `c:\cursor project\.cursor\hooks.json`（ワークスペースルート）
+  - `.cursor/hooks.json`（ワークスペースルート）
   - `afterFileEdit`（Write）→ `genshin-builder-app/.cursor/.memory-pending` フラグ
   - `stop`（completed, loop_count=0）→ `followup_message` で AGENT_MEMORY 追記を自動実行
   - loop_count≥1 でフラグ削除・ループ終了（`loop_limit: 2`）

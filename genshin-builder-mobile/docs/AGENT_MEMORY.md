@@ -2,6 +2,14 @@
 
 セッションごとの設計判断ログ。重要な決定のみ追記する。
 
+## 2026-07-24 — YShelper編成統計の端末同期基盤
+
+- FlutterはYShelper/Neonへ直接接続せず、既存`GENSHIN_BUILDER_API_BASE_URL`のManifest/Bundleだけを呼ぶ。
+- 起動時確認はUI非ブロッキング。ETag 304またはrevision/hash同一ならBundleを取得しない。
+- Drift schema v9へManifest、編成、メンバー、キャラ使用率、同期状態を追加。全ページ・schema・hash・Character ID検証後だけtransactionで切替し、失敗時は旧revisionを維持。
+- `BattleTeamAvailabilityEvaluator`で統計使用率と所持・育成を分離し、ready/underbuilt/missing/unknown等を判定。
+- 設定画面の状態表示は日本語。Neon URL、YShelper token、Collector secret、Cookie、UIDはFlutter型・DB・ログに含めない。
+
 ## 2026-07-20 — おすすめ編成とgcsim連携
 
 - `SimulationBuildSnapshot`はHoYoLAB Cookie/UID/未加工レスポンスを型に持たず、正規化済み戦闘値だけをNext.jsへ送る。

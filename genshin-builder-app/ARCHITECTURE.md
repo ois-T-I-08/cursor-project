@@ -18,8 +18,7 @@
 | UI | React 19, Tailwind CSS v4 |
 | Language | TypeScript 5（strict） |
 | ORM | Prisma 6 |
-| DB（開発） | SQLite（`prisma/dev.db`） |
-| DB（本番予定） | PostgreSQL |
+| DB | Neon PostgreSQL（runtime=pooled、Migration=direct） |
 | 外部 API | Project Amber — `https://gi.yatta.moe`、AZA.GG（深境螺旋統計） |
 | デプロイ（予定） | Vercel |
 
@@ -45,7 +44,7 @@
 │  └──────┬───────────────────────────────┬───────────────────┘ │
 │         │                               │                     │
 │  ┌──────▼──────┐                 ┌──────▼──────┐              │
-│  │ Prisma/SQLite│                 │ lib/api     │              │
+│  │ Prisma/Neon │                 │ lib/api     │              │
 │  │ Master+User  │                 │ fetch+norm  │              │
 │  └──────────────┘                 └──────┬──────┘              │
 └──────────────────────────────────────────┼──────────────────────┘
@@ -171,6 +170,11 @@
 | `ExternalApiCache` | 外部統計の最終成功スナップショット、取得時刻、失効時刻、版、サンプル数 |
 | `TeamSimulationJob` | 正規化済み戦闘入力の非同期Job状態。Cookie・UID・HoYoLAB本文は保存しない |
 | `TeamSimulationCache` | gcsim固定版・入力hash単位の最終正常結果。失敗値では上書きしない |
+| `BattleStatsSyncRun` | YShelper収集履歴。本文・token・URLは保存しない |
+| `BattleStatsSnapshot` | abyss/stygian別の検証結果付き履歴 |
+| `BattleTeamUsage` / `BattleTeamMember` | 編成使用率とキャラ検索用の正規化メンバー |
+| `BattleCharacterUsage` | キャラクター使用率 |
+| `BattleStatsManifest` | 検証済みSnapshotだけを指す公開revision |
 
 ---
 
@@ -275,6 +279,14 @@ FlutterはHoYoLAB情報を端末内で`SimulationBuildSnapshot`へ縮約し、Co
 `GcsimConfigGenerator`は数値IDの許可リストと信頼済み`RotationTemplateRepository`だけからConfigを生成する。クライアントConfig、command、pathはAPI検証で拒否する。`GcsimRunner`は固定チェックサムのバイナリを`spawn`の引数配列で起動し、専用一時ディレクトリ、削除、timeout、stdout/stderr/結果上限、同時実行上限、最小環境変数を適用する。実行層はinterfaceのため、専用worker/containerへ交換可能である。
 
 gcsim失敗時は期限切れを含む最終正常cache、AZA候補、ルール候補の順にフォールバックする。`GCSIM_ENABLED=false`でも既存AZA画面とルール推薦は動作する。詳細は`docs/GCSIM_INTEGRATION.md`と`docs/TEAM_RECOMMENDATION.md`を参照。
+
+### 7. YShelper編成統計
+
+手動GitHub Actionsは`POST /api/internal/yshelper/collect`を起動する。定期実行は正式仕様と検証が揃うまで無効とする。内部APIはBearer認証、レート制限、process-local排他、`SyncLease`による複数instance排他を適用し、最終成功から14日未満なら`not_due`で終了する。
+
+YShelper固有境界は`src/lib/yshelper`に分離する。リポジトリに実レスポンス仕様がないため、確認済みendpointと`YSHELPER_ADAPTER_MODE=canonical-v1`が揃うまで通信しない。正規化後に構造・既知Character・急減・使用率変動を検証し、`suspicious`/`invalid`は履歴だけ残してManifestを更新しない。
+
+公開APIはManifest、ページ分割Bundle、編成、キャラクター使用率の4経路。ManifestはETag/304対応、一覧はcursor pagination、Bundleは公開revisionだけを返す。秘密情報、upstream URL、レスポンス本文は返さない。
 
 ---
 

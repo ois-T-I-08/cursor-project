@@ -6,11 +6,13 @@ on:
       - "genshin-builder-app/**"
       - "shared/domain-golden/**"
       - ".github/workflows/genshin-web-ci.yml"
+      - ".github/workflows/yshelper-battle-statistics.yml"
   pull_request:
     paths:
       - "genshin-builder-app/**"
       - "shared/domain-golden/**"
       - ".github/workflows/genshin-web-ci.yml"
+      - ".github/workflows/yshelper-battle-statistics.yml"
 
 jobs:
   lint-and-build:
@@ -19,7 +21,22 @@ jobs:
       run:
         working-directory: genshin-builder-app
     env:
-      DATABASE_URL: "file:./dev.db"
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/genshin_test?schema=public"
+      DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/genshin_test?schema=public"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: genshin_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -39,6 +56,9 @@ jobs:
 
       - name: Validate Prisma schema
         run: npx prisma validate
+
+      - name: Apply PostgreSQL migrations
+        run: npx prisma migrate deploy
 
       - name: Lint
         run: npm run lint

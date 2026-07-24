@@ -11,6 +11,7 @@
 - ゲームマスターデータ同期（Project Amber → ローカル SQLite）
 - HoYoLAB 連携（WebView ログイン・樹脂/デイリー/派遣表示・secure storage）
 - 深境螺旋のキャラクター／編成統計（AZA.GG 提供データを Web バックエンド経由で表示）
+- 深境螺旋／幽境の激戦の履歴統計（Next.js Manifest/Bundleを端末DBへ差分同期）
 
 ## 関連プロジェクト
 
@@ -38,7 +39,7 @@ flutter test
 flutter run
 ```
 
-深境螺旋統計を使う場合は、Web 版の公開 origin をビルド時に指定します。Flutter から AZA.GG へは直接接続しません。
+統計同期を使う場合は、Web 版の公開 origin をビルド時に指定します。Flutter からAZA.GG、YShelper、Neonへは直接接続しません。
 
 ```bash
 flutter run --dart-define=GENSHIN_BUILDER_API_BASE_URL=https://builder.example.com
