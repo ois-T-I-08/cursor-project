@@ -118,12 +118,27 @@ class _DayCard extends StatelessWidget {
             else
               ...day.actions.map((a) => ListTile(
                     dense: true,
-                    title: Text(a.optionId, style: theme.textTheme.bodySmall),
-                    subtitle: Text('${a.actionType} | P${a.priority}'),
+                    title: Text(_growthActionTitle(a), style: theme.textTheme.bodySmall),
+                    subtitle: Text('優先度: ${a.priority}'),
                   )),
           ],
         ),
       ),
     );
   }
+}
+
+String _growthActionTitle(GrowthRouteAction action) {
+  final actionLabel = switch (action.actionType) {
+    'weekdayMaterial' => '曜日素材',
+    'generalMaterial' => '汎用素材',
+    'mora' => 'モラ',
+    'expBook' => 'キャラクター経験値素材',
+    'boss' => 'ボス素材',
+    _ => 'その他の育成',
+  };
+  final characterId = action.characterId;
+  return characterId == null
+      ? actionLabel
+      : '$actionLabel（キャラクターID: $characterId）';
 }
