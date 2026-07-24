@@ -29,7 +29,7 @@ void main() {
     }
   });
 
-  test('real v7 file migrates legacy user data to v8 without loss', () async {
+  test('real v7 file migrates legacy user data to v9 without loss', () async {
     final file = File(p.join(tempDir.path, 'legacy-v7.db'));
     await _createAndSeedV7(file);
 
@@ -136,7 +136,7 @@ void main() {
     await retried.close();
 
     raw = sqlite.sqlite3.open(file.path);
-    expect(raw.userVersion, 8);
+    expect(raw.userVersion, 9);
     for (final table in [
       'growth_goals',
       'user_material_inventory',
@@ -163,7 +163,7 @@ void main() {
     var raw = sqlite.sqlite3.open(file.path);
     raw.execute('CREATE TABLE future_marker (value TEXT NOT NULL)');
     raw.execute("INSERT INTO future_marker VALUES ('future-data')");
-    raw.userVersion = 9;
+    raw.userVersion = 10;
     raw.dispose();
 
     await expectLater(
@@ -178,7 +178,7 @@ void main() {
     );
 
     raw = sqlite.sqlite3.open(file.path);
-    expect(raw.userVersion, 9);
+    expect(raw.userVersion, 10);
     expect(
       raw
           .select("SELECT value FROM app_settings WHERE key = 'sentinel'")
@@ -370,7 +370,7 @@ Future<void> _verifyMigratedData(DriftAppDatabase db) async {
     (await db.customSelect('PRAGMA user_version').getSingle()).read<int>(
       'user_version',
     ),
-    8,
+    9,
   );
   expect(await db.progressDao.getSetting('local_user_id'), _localUuid);
 

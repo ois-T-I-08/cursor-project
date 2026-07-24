@@ -23,6 +23,8 @@ export interface SafeJsonFetchOptions {
   maxBytes: number;
   retries?: number;
   revalidateSeconds?: number;
+  requireJsonContentType?: boolean;
+  acceptedContentTypes?: readonly string[];
   headers?: HeadersInit;
   fetchImpl?: typeof fetch;
 }
@@ -83,6 +85,18 @@ async function fetchJsonObjectOnce(
     );
   }
 
+  const contentType = response.headers.get("content-type");
+  if (
+    (options.acceptedContentTypes !== undefined &&
+      !isAcceptedContentType(contentType, options.acceptedContentTypes)) ||
+    (options.acceptedContentTypes === undefined &&
+      options.requireJsonContentType === true &&
+      !isJsonContentType(contentType))
+  ) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new UpstreamFetchError("invalidData");
+  }
+
   const declaredLength = Number(response.headers.get("content-length"));
   if (
     Number.isFinite(declaredLength) &&
@@ -125,6 +139,23 @@ async function fetchJsonObjectOnce(
     throw new UpstreamFetchError("invalidData");
   }
   return parsed as Record<string, unknown>;
+}
+
+function isJsonContentType(value: string | null): boolean {
+  if (!value) return false;
+  const mediaType = value.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+  return mediaType === "application/json" || mediaType.endsWith("+json");
+}
+
+function isAcceptedContentType(
+  value: string | null,
+  accepted: readonly string[],
+): boolean {
+  if (!value || accepted.length === 0) return false;
+  const mediaType = value.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+  return accepted.some(
+    (candidate) => candidate.trim().toLowerCase() === mediaType,
+  );
 }
 
 async function readBodyWithLimit(

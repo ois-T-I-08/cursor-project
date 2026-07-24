@@ -1,4 +1,5 @@
 import '../../domain/models/bookmark.dart';
+import '../../domain/battle_statistics/battle_statistics.dart';
 import '../../domain/models/calculation_models.dart';
 import '../models/master_models.dart';
 import '../models/sync_status.dart';
@@ -208,6 +209,37 @@ class AppDatabase {
       lastSyncedAt: lastSync,
     );
   }
+
+  Future<BattleStatsManifestItem?> getRemoteBattleManifest(
+    BattleStatsContentType contentType,
+  ) async {
+    final row = await _inner.battleStatisticsDao.readManifest(contentType.name);
+    if (row == null) return null;
+    return BattleStatsManifestItem(
+      contentType: contentType,
+      seasonId: row.seasonId,
+      revision: row.revision,
+      payloadHash: row.payloadHash,
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(row.sourceUpdatedAt),
+    );
+  }
+
+  Future<void> replaceRemoteBattleBundle(BattleStatsBundle bundle) =>
+      _inner.battleStatisticsDao.replaceBundle(bundle);
+
+  Future<List<RemoteBattleTeam>> getRemoteBattleTeams(
+    BattleStatsContentType contentType,
+  ) => _inner.battleStatisticsDao.readTeams(contentType.name);
+
+  Future<void> recordRemoteBattleSyncState(
+    BattleStatsContentType contentType,
+    RemoteBattleStatsState state, {
+    String? errorCode,
+  }) => _inner.battleStatisticsDao.recordSyncState(
+    contentType.name,
+    state,
+    errorCode: errorCode,
+  );
 
   // ═══ Growth / Planning DAO access ══════════════════════════════
 

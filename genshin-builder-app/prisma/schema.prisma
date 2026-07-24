@@ -1,14 +1,14 @@
-// Prisma スキーマ
-// 開発初期は SQLite を使用。本番では provider を "postgresql" に変更するだけで移行できるよう、
-// SQLite 固有の機能は使わない方針。
+// Prisma スキーマ（Neon PostgreSQL）
+// 通常実行は pooled connection、Migration は direct connection を使用する。
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================================
@@ -181,4 +181,133 @@ model TeamSimulationCache {
 
   @@index([attackerId])
   @@index([expiresAt])
+}
+
+/// YShelper 統計収集の実行履歴。秘密情報や upstream 本文は保存しない。
+model BattleStatsSyncRun {
+  id                       String   @id @default(cuid())
+  source                   String
+  status                   String
+  startedAt                DateTime @default(now())
+  finishedAt               DateTime?
+  lastSuccessfulAt         DateTime?
+  previousSuccessfulRunId  String?
+  attemptedContentTypes    Json
+  responseStatus           Int?
+  sourceVersion            String?
+  payloadHash              String?
+  recordCount              Int      @default(0)
+  validationState          String
+  validationErrors         Json
+  errorCode                String?
+  errorDetail              String?
+  createdAt                DateTime @default(now())
+
+  previousSuccessfulRun BattleStatsSyncRun?  @relation("BattleStatsPreviousSuccessfulRun", fields: [previousSuccessfulRunId], references: [id], onDelete: SetNull)
+  followingRuns         BattleStatsSyncRun[] @relation("BattleStatsPreviousSuccessfulRun")
+  snapshots             BattleStatsSnapshot[]
+
+  @@index([source, status, startedAt])
+  @@index([previousSuccessfulRunId])
+}
+
+/// 検証結果を含む履歴スナップショット。Manifest が指したものだけを公開する。
+model BattleStatsSnapshot {
+  id               String   @id @default(cuid())
+  source           String
+  contentType      String
+  seasonId         String
+  revision         Int
+  schemaVersion    Int
+  payloadHash      String
+  sourceVersion    String?
+  sourceUpdatedAt  DateTime
+  fetchedAt        DateTime
+  validatedAt      DateTime
+  publishedAt      DateTime?
+  validationState  String
+  sampleSize       Int?
+  metadata         Json
+  syncRunId        String
+
+  syncRun        BattleStatsSyncRun          @relation(fields: [syncRunId], references: [id], onDelete: Restrict)
+  teamUsages     BattleTeamUsage[]
+  characterUsage BattleCharacterUsage[]
+  manifest       BattleStatsManifest?
+
+  @@unique([source, contentType, seasonId, payloadHash])
+  @@unique([contentType, revision])
+  @@index([contentType, seasonId, publishedAt])
+  @@index([syncRunId])
+}
+
+/// 編成使用率。並び順非依存の teamKey と表示順を分離する。
+model BattleTeamUsage {
+  id              String  @id @default(cuid())
+  snapshotId      String
+  teamKey         String
+  usageRate       Float
+  usageCount      Int?
+  rank            Int?
+  side            String?
+  stageKey        String?
+  scopeKey        String
+  sampleSize      Int?
+  isResolved      Boolean @default(true)
+  sourceMetadata  Json
+
+  snapshot BattleStatsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  members  BattleTeamMember[]
+
+  @@unique([snapshotId, teamKey, scopeKey])
+  @@index([snapshotId, usageRate])
+  @@index([snapshotId, side, stageKey])
+}
+
+model BattleTeamMember {
+  id            String @id @default(cuid())
+  teamUsageId   String
+  characterId   String
+  slot          Int
+  displayOrder  Int
+
+  teamUsage BattleTeamUsage @relation(fields: [teamUsageId], references: [id], onDelete: Cascade)
+
+  @@unique([teamUsageId, characterId])
+  @@unique([teamUsageId, slot])
+  @@index([characterId, teamUsageId])
+}
+
+model BattleCharacterUsage {
+  id                    String  @id @default(cuid())
+  snapshotId            String
+  characterId           String
+  usageRate             Float
+  usageCount            Int?
+  rank                  Int?
+  side                  String?
+  scopeKey              String
+  ownershipRate         Float?
+  usageAmongOwnersRate  Float?
+  sampleSize            Int?
+  isResolved            Boolean @default(true)
+
+  snapshot BattleStatsSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, characterId, scopeKey])
+  @@index([snapshotId, usageRate])
+  @@index([characterId, snapshotId])
+}
+
+/// 検証済み最新スナップショットだけを指す公開ポインタ。
+model BattleStatsManifest {
+  contentType          String   @id
+  publishedSnapshotId String   @unique
+  revision            Int
+  payloadHash          String
+  schemaVersion        Int
+  seasonId             String
+  updatedAt            DateTime @updatedAt
+
+  publishedSnapshot BattleStatsSnapshot @relation(fields: [publishedSnapshotId], references: [id], onDelete: Restrict)
 }

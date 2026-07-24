@@ -1,0 +1,42 @@
+name: YShelper Battle Statistics Collector
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yshelper-battle-statistics-collector
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate collector configuration
+        env:
+          BACKEND_URL: ${{ secrets.GENSHIN_BUILDER_BACKEND_URL }}
+          COLLECT_SECRET: ${{ secrets.YSHELPER_COLLECT_SECRET }}
+        run: |
+          node -e '
+            const value = process.env.BACKEND_URL ?? "";
+            let url;
+            try { url = new URL(value); } catch { process.exit(1); }
+            if (url.protocol !== "https:" || url.username || url.password ||
+                url.pathname !== "/" || url.search || url.hash) process.exit(1);
+            if (!(process.env.COLLECT_SECRET ?? "").trim()) process.exit(1);
+          '
+
+      - name: Request collector
+        env:
+          BACKEND_URL: ${{ secrets.GENSHIN_BUILDER_BACKEND_URL }}
+          COLLECT_SECRET: ${{ secrets.YSHELPER_COLLECT_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${COLLECT_SECRET}" \
+            --header "Accept: application/json" \
+            --max-time 330 \
+            "${BACKEND_URL%/}/api/internal/yshelper/collect"
