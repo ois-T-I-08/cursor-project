@@ -37,7 +37,7 @@ class AccountHealthReport {
     this.categories = const [],
     this.strengths = const [],
     this.improvementCandidates = const [],
-    this.dataCoverage = 'Unavailable',
+    this.dataCoverage = '不明',
     this.confidence = RecommendationConfidence.unknown,
     this.completeness = DataCompleteness.unavailable,
     this.missingData = const [],

@@ -127,7 +127,7 @@ void main() {
         refinement: 1,
         promoteLevel: 6,
       ),
-      relics: const [],
+      relics: [],
     );
     final snapshot = normalizeSimulationBuilds(
       characters: const [character],

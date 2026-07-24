@@ -2,7 +2,6 @@ import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, st
 import { tmpdir } from "node:os";
 import { dirname, join, basename } from "node:path";
 import { pipeline } from "node:stream/promises";
-import { createGunzip } from "node:zlib";
 import { execFileSync } from "node:child_process";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
