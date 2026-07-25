@@ -1,5 +1,8 @@
 # Neon PostgreSQL / YShelper編成統計 運用手順
 
+運用 Runbook（有効化前チェック・停止・map更新・障害調査）: [YSHELPER_OPERATIONS_RUNBOOK.md](./YSHELPER_OPERATIONS_RUNBOOK.md)
+PR #16 外の将来項目: [YSHELPER_BACKLOG.md](./YSHELPER_BACKLOG.md)
+
 ## 現在確認できている境界
 
 - Next.jsはPrisma 6.19.3、Neon PostgreSQLを使用する。

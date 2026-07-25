@@ -63,6 +63,37 @@ describe("YshelperHttpClient", () => {
     );
   });
 
+  it("maps upstream HTTP failures without leaking URL or body text", async () => {
+    const fetchImpl = vi.fn(async () =>
+      new Response("upstream secret body with token=abc", {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const client = new YshelperHttpClient({
+      fetchImpl: fetchImpl as typeof fetch,
+      env: {
+        YSHELPER_API_BASE_URL: "https://statistics.example.test",
+        YSHELPER_ABYSS_ENDPOINT: "/verified/abyss?star=all",
+        YSHELPER_API_TOKEN: "client-secret-token",
+      },
+    });
+
+    const rejection = client.fetch("abyss");
+    await expect(rejection).rejects.toMatchObject({
+      code: "httpStatus",
+      status: 429,
+    });
+    await expect(rejection).rejects.toSatisfy((error: unknown) => {
+      const text = error instanceof Error ? error.message : String(error);
+      return (
+        !text.includes("token=abc") &&
+        !text.includes("client-secret-token") &&
+        !text.includes("statistics.example.test")
+      );
+    });
+  });
+
   it("rejects HTTP, absolute endpoints, other origins, and fragments", () => {
     const invalid = [
       {

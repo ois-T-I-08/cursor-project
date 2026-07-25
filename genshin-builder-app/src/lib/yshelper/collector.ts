@@ -371,7 +371,11 @@ function safeFailure(error: unknown): {
     return { code: `upstream_${error.code}`, responseStatus: error.status };
   }
   if (error instanceof YshelperSchemaError) {
-    return { code: "invalid_response" };
+    // Field paths are schema pointers only (no character names / bodies).
+    const field = sanitizeSchemaField(error.field);
+    return {
+      code: field ? `invalid_response:${field}` : "invalid_response",
+    };
   }
   if (
     error instanceof YshelperAdapterNotConfiguredError ||
@@ -380,6 +384,18 @@ function safeFailure(error: unknown): {
     return { code: "not_configured" };
   }
   return { code: "internal_error" };
+}
+
+function sanitizeSchemaField(field: string): string | undefined {
+  const trimmed = field.trim();
+  if (
+    trimmed.length === 0 ||
+    trimmed.length > 128 ||
+    !/^[A-Za-z0-9._$[\]-]+$/.test(trimmed)
+  ) {
+    return undefined;
+  }
+  return trimmed;
 }
 
 function defaultLog(

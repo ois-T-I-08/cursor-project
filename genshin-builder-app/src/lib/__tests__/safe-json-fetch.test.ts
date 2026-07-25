@@ -168,6 +168,48 @@ describe("fetchJsonObject", () => {
       expect.objectContaining({ redirect: "error" }),
     );
   });
+
+  it("rejects HTTP 429 without leaking status body text", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response("rate limited secret-token=abc", {
+            status: 429,
+            headers: { "retry-after": "1" },
+          }),
+      ),
+    );
+
+    const rejection = fetchSafe();
+    await expect(rejection).rejects.toMatchObject({
+      code: "httpStatus",
+      status: 429,
+    });
+    await expect(rejection).rejects.toSatisfy((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      return (
+        !message.includes("secret-token") &&
+        !message.includes("https://example.test")
+      );
+    });
+  });
+
+  it("aborts in-flight fetch via AbortSignal on timeout", async () => {
+    let observedSignal: AbortSignal | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(((_url: string, init?: RequestInit) => {
+        observedSignal = init?.signal ?? undefined;
+        return new Promise<Response>(() => {});
+      }) as typeof fetch),
+    );
+
+    await expect(fetchSafe({ timeoutMs: 15 })).rejects.toMatchObject({
+      code: "timeout",
+    });
+    expect(observedSignal?.aborted).toBe(true);
+  });
 });
 
 function fetchSafe(
