@@ -3,11 +3,18 @@
  * Does not enable kill switches, does not write DB, does not log URLs or bodies.
  *
  * Usage:
- *   npx tsx scripts/yshelper-native-dry-run.mts
+ *   node --env-file=.env --import tsx scripts/yshelper-native-dry-run.mts
+ *   node --env-file=.env --import tsx scripts/yshelper-native-dry-run.mts --require-db
  */
 import { PrismaClient } from "@prisma/client";
 
 import { NativeV1YshelperAdapter } from "../src/lib/yshelper/adapter";
+import {
+  hostKindFromDatabaseUrl,
+  loadKnownCharacterIds,
+  missingCharacterIds,
+  parseRequireDb,
+} from "../src/lib/yshelper/dry-run-db";
 import type { BattleContentType } from "../src/lib/yshelper/types";
 
 const adapter = new NativeV1YshelperAdapter();
@@ -107,7 +114,6 @@ function countTravelerTeams(payload: Record<string, unknown>): number {
       }
     }
   }
-  // Also count PlayerGirl / PlayerBoy style avatars commonly used for Traveler teams.
   let teams = 0;
   for (const team of result[3]) {
     if (typeof team !== "object" || team === null) continue;
@@ -125,20 +131,46 @@ function countTravelerTeams(payload: Record<string, unknown>): number {
   return teams;
 }
 
-async function loadKnownCharacterIds(): Promise<Set<string> | null> {
-  const prisma = new PrismaClient();
-  try {
-    const rows = await prisma.character.findMany({ select: { id: true } });
-    return new Set(rows.map((row) => row.id));
-  } catch {
-    return null;
-  } finally {
-    await prisma.$disconnect().catch(() => undefined);
-  }
-}
-
 async function main(): Promise<void> {
-  const knownIds = await loadKnownCharacterIds();
+  const requireDb = parseRequireDb(process.argv.slice(2), process.env);
+  const dbUrlKind = hostKindFromDatabaseUrl(process.env.DATABASE_URL);
+  const directUrlKind = hostKindFromDatabaseUrl(process.env.DIRECT_URL);
+
+  console.log(
+    JSON.stringify({
+      phase: "db_probe",
+      requireDb,
+      DATABASE_URL_set: Boolean(process.env.DATABASE_URL),
+      DIRECT_URL_set: Boolean(process.env.DIRECT_URL),
+      DATABASE_URL_kind: dbUrlKind,
+      DIRECT_URL_kind: directUrlKind,
+      dbWrites: 0,
+    }),
+  );
+
+  const prisma = new PrismaClient();
+  const dbLoad = await loadKnownCharacterIds(prisma);
+  await prisma.$disconnect().catch(() => undefined);
+
+  if (!dbLoad.ok) {
+    console.log(
+      JSON.stringify({
+        phase: "db_error",
+        name: dbLoad.name,
+        code: dbLoad.code,
+        message: dbLoad.message,
+        dbWrites: 0,
+      }),
+    );
+    if (requireDb) {
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const knownIds = dbLoad.ok ? dbLoad.ids : null;
+  const unionPublished = new Set<string>();
+  const perTargetMissing: Record<string, string[]> = {};
 
   for (const target of TARGETS) {
     const raw = await fetchJson(target.pathWithQuery);
@@ -147,9 +179,11 @@ async function main(): Promise<void> {
     const travelerTeams = countTravelerTeams(raw);
     const normalized = adapter.adapt(target.contentType, raw);
 
-    const ratesOk = normalized.characters.every(
-      (c) => c.usageRate >= 0 && c.usageRate <= 1,
-    ) && normalized.teams.every((t) => t.usageRate >= 0 && t.usageRate <= 1);
+    const ratesOk =
+      normalized.characters.every(
+        (c) => c.usageRate >= 0 && c.usageRate <= 1,
+      ) &&
+      normalized.teams.every((t) => t.usageRate >= 0 && t.usageRate <= 1);
 
     const teamKeys = normalized.teams.map(
       (t) => `${t.teamKey}|${t.side ?? ""}|${t.stageKey ?? ""}`,
@@ -157,13 +191,17 @@ async function main(): Promise<void> {
     const uniqueTeamKeys = new Set(teamKeys);
     const duplicateTeamScopes = teamKeys.length - uniqueTeamKeys.size;
 
-    const unresolvedPublished =
+    const publishedIds = normalized.characters.map((c) => c.characterId);
+    for (const id of publishedIds) unionPublished.add(id);
+
+    const missing =
       knownIds === null
         ? null
-        : normalized.characters.filter((c) => !knownIds.has(c.characterId))
-            .length;
+        : missingCharacterIds(publishedIds, knownIds);
+    if (missing) {
+      perTargetMissing[target.label] = missing;
+    }
 
-    // Aggregate-only output (no URL, no body).
     console.log(
       JSON.stringify({
         label: target.label,
@@ -174,18 +212,49 @@ async function main(): Promise<void> {
         travelerTeamsExcludedEstimate: travelerTeams,
         usageRatesInUnitInterval: ratesOk,
         duplicateTeamSideScopes: duplicateTeamScopes,
-        publishedCharacterIdsMissingFromDb: unresolvedPublished,
+        publishedCharacterIdsMissingFromDb: missing?.length ?? null,
         knownCharacterRows: knownIds?.size ?? null,
         sampleSize: normalized.sampleSize ?? null,
         seasonId: normalized.seasonId,
+        dbWrites: 0,
       }),
     );
+  }
+
+  if (knownIds) {
+    const unionMissing = missingCharacterIds([...unionPublished], knownIds);
+    const summary = {
+      phase: "db_summary",
+      knownCharacterRows: knownIds.size,
+      unionPublishedIds: unionPublished.size,
+      unionMissingCount: unionMissing.length,
+      abyssMissingCount: perTargetMissing.abyss?.length ?? null,
+      stygianMissingCount: perTargetMissing.stygian_nandu6?.length ?? null,
+      dbWrites: 0,
+      ...(unionMissing.length > 0 ? { missingIds: unionMissing } : {}),
+    };
+    console.log(JSON.stringify(summary));
+    if (requireDb && unionMissing.length > 0) {
+      process.exitCode = 1;
+    }
+  } else if (requireDb) {
+    process.exitCode = 1;
   }
 }
 
 main().catch(async (error: unknown) => {
-  const code =
-    error instanceof Error ? error.message.slice(0, 80) : "dry_run_failed";
-  console.error(JSON.stringify({ ok: false, code }));
+  const err = error as { name?: string; code?: string; message?: string };
+  console.error(
+    JSON.stringify({
+      ok: false,
+      name: err.name ?? "Error",
+      code: err.code ?? null,
+      message: String(err.message ?? "dry_run_failed")
+        .replace(/postgresql:\/\/[^@\s]+@/gi, "postgresql://***@")
+        .replace(/https?:\/\/[^\s]+/gi, "[redacted-url]")
+        .slice(0, 200),
+      dbWrites: 0,
+    }),
+  );
   process.exitCode = 1;
 });

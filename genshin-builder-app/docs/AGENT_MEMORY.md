@@ -4,6 +4,12 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-07-25 — YShelper公開IDを開発用Neonと照合
+
+- `yshelper:dry-run:db`（`--require-db`）でlive公開キャラクターIDを開発用Neon `Character`と照合。書き込み0。
+- Character 122件、abyss/stygian/union 欠損0。シェルの古いlocalhost `DATABASE_URL`上書きに注意。
+- kill switchはfalse。利用許可・再配布・レート制限・SLAは未確認。
+
 ## 2026-07-25 — YShelper native-v1 Adapter
 
 - 確認済み`getAbyssRank.php` / `getAbyssRank2.php?star=only_nandu6`生JSONを`native-v1`で`canonical-v1`へ変換。`canonical-v1` bridgeは維持。

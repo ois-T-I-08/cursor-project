@@ -77,6 +77,12 @@ YShelper token、Neon URL、Collector secretをGitHub VariablesやFlutterの`dar
 - avatar → `ename` → Amber ID。`Ambor`→Amber。`Traveler`は未解決。1〜3人編成・未解決・重複キャラは除外。
 - avatar URL・生本文・token・完全URLはDB/ログへ保存しない。
 
+## 開発用Neonでの公開ID照合
+
+- スクリプト: `npm run yshelper:dry-run:db`（`--require-db`）。DB書き込みは行わない。
+- シェルに古い`DATABASE_URL=localhost`が残っていると`.env`のNeon URLが上書きされる。照合前に当該変数を外すか、`node --env-file=.env`をクリーンな環境で実行する。
+- 2026-07-25時点のlive dry-run: 開発用Neon `Character` 122件に対し、abyss/stygian公開ID欠損0件（union欠損0）。kill switchはfalseのまま。
+
 ## 有効化前に未確認のまま残す事項
 
 1. 第三者アプリでの利用許可・規約。
