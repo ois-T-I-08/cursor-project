@@ -50,14 +50,16 @@ class SyncBattleStatisticsUseCase {
     }
     if (response.notModified) {
       for (final type in BattleStatsContentType.values) {
-        states[type] = RemoteBattleStatsState.current;
+        final local = await repository.readManifest(type);
+        if (local != null) {
+          states[type] = RemoteBattleStatsState.current;
+        }
       }
       return BattleStatisticsSyncResult(
         states: states,
-        manifestNotModified: true,
+        manifestNotModified: states.isNotEmpty,
       );
     }
-
     final manifest = response.manifest;
     if (manifest == null) {
       throw const FormatException('manifest missing');

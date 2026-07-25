@@ -7,6 +7,16 @@ import 'package:genshin_builder_mobile/domain/repositories/battle_statistics_rep
 import 'package:genshin_builder_mobile/domain/repositories/character_repository.dart';
 
 void main() {
+  test('not modified without cached data reports no statistics', () async {
+    final repository = _FakeRepository();
+    final remote = _FakeRemote(_manifest(), notModified: true);
+    final result = await _useCase(repository, remote).execute();
+
+    expect(result.states, isEmpty);
+    expect(result.manifestNotModified, isFalse);
+    expect(remote.bundleCalls, 0);
+  });
+
   test('same revision and hash do not fetch a bundle', () async {
     final repository =
         _FakeRepository()..manifests[BattleStatsContentType.abyss] = _item;
@@ -179,10 +189,11 @@ SyncBattleStatisticsUseCase _useCase(
 }
 
 class _FakeRemote implements BattleStatisticsRemoteSource {
-  _FakeRemote(this.manifest, {this.pages = const []});
+  _FakeRemote(this.manifest, {this.pages = const [], this.notModified = false});
 
   final BattleStatsManifest manifest;
   final List<BattleStatsBundlePage> pages;
+  final bool notModified;
   var bundleCalls = 0;
   var failManifest = false;
 
@@ -190,8 +201,8 @@ class _FakeRemote implements BattleStatisticsRemoteSource {
   Future<BattleStatsManifestFetchResult> fetchManifest({String? etag}) async {
     if (failManifest) throw const FormatException('offline');
     return BattleStatsManifestFetchResult(
-      notModified: false,
-      manifest: manifest,
+      notModified: notModified,
+      manifest: notModified ? null : manifest,
     );
   }
 

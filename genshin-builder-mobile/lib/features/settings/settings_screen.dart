@@ -351,8 +351,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     battleStatsSyncAsync!.when(
                       data:
                           (result) => Text(
-                            result.manifestNotModified
-                                ? '最新の統計データを使用しています。'
+                            result.states.isEmpty
+                                ? '統計データはまだありません。'
+                                : result.manifestNotModified
+                                    ? '最新の統計データを使用しています。'
                                 : result.states.entries
                                     .map(
                                       (entry) =>
