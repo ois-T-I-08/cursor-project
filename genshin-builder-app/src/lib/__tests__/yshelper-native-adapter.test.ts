@@ -183,6 +183,16 @@ describe("YShelper native-v1 adapter", () => {
       ),
     ).toThrow(YshelperSchemaError);
 
+    expect(() =>
+      adapter.adapt(
+        "abyss",
+        payload({
+          ...yshelperNativeAbyssFixture,
+          last_update: "2026-02-30",
+        }),
+      ),
+    ).toThrow(YshelperSchemaError);
+
     const overRate = payload(yshelperNativeAbyssFixture);
     const firstList = (
       (overRate.result as unknown[])[0] as unknown[]
@@ -198,6 +208,50 @@ describe("YShelper native-v1 adapter", () => {
     const negCharacters = negList.list as Record<string, unknown>[];
     negCharacters[0] = { ...negCharacters[0], use: -1 };
     expect(() => adapter.adapt("abyss", negative)).toThrow(YshelperSchemaError);
+  });
+
+  it("rejects top_own=0, use above sample, and scientific-notation counts", () => {
+    expect(() =>
+      adapter.adapt(
+        "abyss",
+        payload({
+          ...yshelperNativeAbyssFixture,
+          top_own: 0,
+        }),
+      ),
+    ).toThrow(YshelperSchemaError);
+
+    const overUse = payload(yshelperNativeAbyssFixture);
+    const overList = (
+      (overUse.result as unknown[])[0] as unknown[]
+    )[0] as Record<string, unknown>;
+    const overCharacters = overList.list as Record<string, unknown>[];
+    overCharacters[0] = { ...overCharacters[0], use: 56_926 };
+    expect(() => adapter.adapt("abyss", overUse)).toThrow(YshelperSchemaError);
+
+    const scientific = payload(yshelperNativeAbyssFixture);
+    const sciList = (
+      (scientific.result as unknown[])[0] as unknown[]
+    )[0] as Record<string, unknown>;
+    const sciCharacters = sciList.list as Record<string, unknown>[];
+    sciCharacters[0] = { ...sciCharacters[0], use: "1e3" };
+    expect(() => adapter.adapt("abyss", scientific)).toThrow(
+      YshelperSchemaError,
+    );
+  });
+
+  it("fails closed on non-Traveler unresolved character names", () => {
+    const broken = payload(yshelperNativeAbyssFixture);
+    const firstList = (
+      (broken.result as unknown[])[0] as unknown[]
+    )[0] as Record<string, unknown>;
+    const characters = firstList.list as Record<string, unknown>[];
+    characters[0] = {
+      ...characters[0],
+      ename: "CompletelyUnknownHero",
+      name: "CompletelyUnknownHero",
+    };
+    expect(() => adapter.adapt("abyss", broken)).toThrow(YshelperSchemaError);
   });
 
   it("rejects mismatched side usage totals", () => {

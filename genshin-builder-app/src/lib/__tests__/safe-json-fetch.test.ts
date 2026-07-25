@@ -155,6 +155,19 @@ describe("fetchJsonObject", () => {
       }),
     ).rejects.toMatchObject({ code: "invalidData" });
   });
+
+  it("disables automatic redirect following", async () => {
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError("unexpected redirect");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchSafe()).rejects.toMatchObject({ code: "network" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://example.test/data",
+      expect.objectContaining({ redirect: "error" }),
+    );
+  });
 });
 
 function fetchSafe(

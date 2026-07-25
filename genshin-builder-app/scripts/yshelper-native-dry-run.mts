@@ -148,6 +148,20 @@ async function main(): Promise<void> {
     }),
   );
 
+  if (requireDb && dbUrlKind === "localhost") {
+    console.log(
+      JSON.stringify({
+        phase: "db_error",
+        name: "DryRunDatabaseError",
+        code: "localhost_not_allowed",
+        message: "require_db_rejects_localhost",
+        dbWrites: 0,
+      }),
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   const prisma = new PrismaClient();
   const dbLoad = await loadKnownCharacterIds(prisma);
   await prisma.$disconnect().catch(() => undefined);

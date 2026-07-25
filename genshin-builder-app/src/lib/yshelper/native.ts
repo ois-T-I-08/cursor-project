@@ -49,7 +49,14 @@ function nativeToCanonical(
   const {
     characters,
     avatarToCharacterId,
+    unresolvedNonTravelerCount,
   } = parseCharacters(rankSection, sampleSize);
+
+  // Traveler is intentionally unresolved (element-split IDs). Any other unknown
+  // ename must fail closed so map drift cannot silently shrink published stats.
+  if (unresolvedNonTravelerCount > 0) {
+    fail("$.result[0].unresolvedCharacter");
+  }
 
   const teams = parseTeams(
     teamSection,
@@ -80,11 +87,13 @@ function parseCharacters(
 ): {
   characters: CanonicalSourceCharacter[];
   avatarToCharacterId: ReadonlyMap<string, string>;
+  unresolvedNonTravelerCount: number;
 } {
   const characters: CanonicalSourceCharacter[] = [];
   const seenIds = new Set<string>();
   const avatarCandidates = new Map<string, string | null>();
   let rank = 0;
+  let unresolvedNonTravelerCount = 0;
 
   for (let rankIndex = 0; rankIndex < rankSection.length; rankIndex += 1) {
     const rankValue = object(
@@ -111,6 +120,8 @@ function parseCharacters(
         } else if (previous !== characterId) {
           avatarCandidates.set(avatar, null);
         }
+      } else if (sourceName.trim().toLowerCase() !== "traveler") {
+        unresolvedNonTravelerCount += 1;
       }
 
       if (!characterId || seenIds.has(characterId)) {
@@ -152,7 +163,7 @@ function parseCharacters(
     }
   }
 
-  return { characters, avatarToCharacterId };
+  return { characters, avatarToCharacterId, unresolvedNonTravelerCount };
 }
 
 function parseTeams(
@@ -309,17 +320,42 @@ function parseSourceVersion(value: string): string {
 
 function parseSourceUpdatedAt(value: string): string {
   const match = value.match(
-    /^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?$/,
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}:\d{2}))?$/,
   );
   if (!match) {
     fail("$.last_update");
   }
 
-  const parsed = new Date(
-    `${match[1]}T${match[2] ?? "00:00"}:00+08:00`,
-  );
+  const year = match[1];
+  const month = match[2];
+  const day = match[3];
+  const clock = match[4] ?? "00:00";
+  const parsed = new Date(`${year}-${month}-${day}T${clock}:00+08:00`);
 
   if (Number.isNaN(parsed.getTime())) {
+    fail("$.last_update");
+  }
+
+  // JS Date overflows invalid calendar days (e.g. 2026-02-30 → March).
+  // Reject unless the Asia/Shanghai civil date/time matches the input.
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(parsed);
+  const read = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  const roundTripClock = `${read("hour").padStart(2, "0")}:${read("minute").padStart(2, "0")}`;
+  if (
+    read("year") !== year ||
+    read("month") !== month ||
+    read("day") !== day ||
+    roundTripClock !== clock
+  ) {
     fail("$.last_update");
   }
 

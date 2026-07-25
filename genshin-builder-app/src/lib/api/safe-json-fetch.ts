@@ -56,6 +56,9 @@ async function fetchJsonObjectOnce(
     response = await withDeadline(
       fetchImpl(url, {
         headers: options.headers,
+        // Do not follow redirects: a same-origin open redirect could otherwise
+        // bypass the HTTPS/origin checks performed by callers (e.g. YShelper).
+        redirect: "error",
         next:
           options.revalidateSeconds === undefined
             ? undefined

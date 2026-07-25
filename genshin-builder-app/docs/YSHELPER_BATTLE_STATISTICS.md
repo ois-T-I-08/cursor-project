@@ -82,6 +82,9 @@ YShelper token、Neon URL、Collector secretをGitHub VariablesやFlutterの`dar
 - スクリプト: `npm run yshelper:dry-run:db`（`--require-db`）。DB書き込みは行わない。
 - シェルに古い`DATABASE_URL=localhost`が残っていると`.env`のNeon URLが上書きされる。照合前に当該変数を外すか、`node --env-file=.env`をクリーンな環境で実行する。
 - 2026-07-25時点のlive dry-run: 開発用Neon `Character` 122件に対し、abyss/stygian公開ID欠損0件（union欠損0）。kill switchはfalseのまま。
+- `native-v1`はTraveler以外の未解決enameをfail-closedで拒否する（map更新漏れの黙殺防止）。
+- upstream fetchは`redirect: "error"`（同一origin open redirect経由の境界迂回を防ぐ）。
+- `--require-db`はlocalhost接続を拒否する。
 
 ## 有効化前に未確認のまま残す事項
 
