@@ -90,7 +90,7 @@ export async function syncMasterData(
           });
         }
       },
-      { timeout: 30_000 },
+      { timeout: 120_000 },
     );
     result.characters = charactersRes.value.length;
   } else {
@@ -133,7 +133,7 @@ export async function syncMasterData(
           });
         }
       },
-      { timeout: 30_000 },
+      { timeout: 120_000 },
     );
     result.weapons = weaponsRes.value.length;
   } else {
@@ -166,7 +166,7 @@ export async function syncMasterData(
           });
         }
       },
-      { timeout: 30_000 },
+      { timeout: 120_000 },
     );
     result.materials = materialsRes.value.length;
   } else {

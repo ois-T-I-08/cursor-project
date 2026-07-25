@@ -214,27 +214,29 @@ export const projectAmberProvider: GameDataProvider = {
   async fetchWeapons(): Promise<MasterWeapon[]> {
     const items = await fetchItems<AmberWeapon>("/api/v2/jp/weapon");
     const ids = new Set<string>();
-    const weapons = Object.values(items).map((weapon) => {
-      if (
-        !isRecord(weapon) ||
-        typeof weapon.name !== "string" ||
-        weapon.name.trim() === "" ||
-        !Number.isInteger(weapon.rank) ||
-        weapon.rank < 1 ||
-        weapon.rank > 5 ||
-        typeof weapon.type !== "string" ||
-        typeof weapon.icon !== "string"
-      ) {
-        throw new UpstreamFetchError("invalidData");
-      }
-      return {
-        id: requireUniqueId(ids, weapon.id),
-        name: weapon.name,
-        weaponType: WEAPON_TYPE_MAP[weapon.type] ?? "sword",
-        rarity: weapon.rank,
-        iconUrl: iconUrl(weapon.icon),
-      };
-    });
+    const weapons = Object.values(items)
+      .filter((weapon) => /^\d{5}$/.test(String(weapon.id)))
+      .map((weapon) => {
+        if (
+          !isRecord(weapon) ||
+          typeof weapon.name !== "string" ||
+          weapon.name.trim() === "" ||
+          !Number.isInteger(weapon.rank) ||
+          weapon.rank < 1 ||
+          weapon.rank > 5 ||
+          typeof weapon.type !== "string" ||
+          typeof weapon.icon !== "string"
+        ) {
+          throw new UpstreamFetchError("invalidData");
+        }
+        return {
+          id: requireUniqueId(ids, weapon.id),
+          name: weapon.name,
+          weaponType: WEAPON_TYPE_MAP[weapon.type] ?? "sword",
+          rarity: weapon.rank,
+          iconUrl: iconUrl(weapon.icon),
+        };
+      });
     if (weapons.length === 0) {
       throw new UpstreamFetchError("invalidData");
     }
