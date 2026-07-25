@@ -72,6 +72,9 @@ export function resolveEndpoint(
   } catch {
     throw new YshelperClientConfigurationError();
   }
+  // Relative path only. Fixed query strings are allowed (YShelper requires
+  // star/role/lang). Absolute URLs, other origins, credentials, and fragments
+  // stay rejected. Base must remain a bare HTTPS origin.
   if (
     base.protocol !== "https:" ||
     base.username ||
@@ -81,15 +84,29 @@ export function resolveEndpoint(
     base.hash ||
     !endpointValue.startsWith("/") ||
     endpointValue.startsWith("//") ||
+    endpointValue.includes("#") ||
     endpoint.origin !== base.origin ||
     endpoint.username ||
     endpoint.password ||
-    endpoint.search ||
-    endpoint.hash ||
-    endpoint.pathname !== endpointValue
+    endpoint.hash
   ) {
     throw new YshelperClientConfigurationError();
   }
+
+  const pathOnly = endpointValue.split("?")[0] ?? endpointValue;
+  if (endpoint.pathname !== pathOnly) {
+    throw new YshelperClientConfigurationError();
+  }
+
+  const queryIndex = endpointValue.indexOf("?");
+  if (queryIndex >= 0) {
+    if (endpoint.search !== endpointValue.slice(queryIndex)) {
+      throw new YshelperClientConfigurationError();
+    }
+  } else if (endpoint.search) {
+    throw new YshelperClientConfigurationError();
+  }
+
   return endpoint.toString();
 }
 

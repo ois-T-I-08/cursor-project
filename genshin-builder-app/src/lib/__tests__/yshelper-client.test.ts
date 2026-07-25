@@ -42,7 +42,28 @@ describe("YshelperHttpClient", () => {
     expect(fetchImpl).toHaveBeenCalledOnce();
   });
 
-  it("rejects HTTP, absolute endpoint URLs, query strings, and fragments", () => {
+  it("allows a fixed query string on the relative endpoint", () => {
+    expect(
+      resolveEndpoint("abyss", {
+        YSHELPER_API_BASE_URL: "https://api.yshelper.com",
+        YSHELPER_ABYSS_ENDPOINT:
+          "/ys/getAbyssRank.php?star=all&role=all&lang=en",
+      }),
+    ).toBe(
+      "https://api.yshelper.com/ys/getAbyssRank.php?star=all&role=all&lang=en",
+    );
+    expect(
+      resolveEndpoint("stygian", {
+        YSHELPER_API_BASE_URL: "https://api.yshelper.com",
+        YSHELPER_STYGIAN_ENDPOINT:
+          "/ys/getAbyssRank2.php?star=only_nandu6&role=all&lang=en",
+      }),
+    ).toBe(
+      "https://api.yshelper.com/ys/getAbyssRank2.php?star=only_nandu6&role=all&lang=en",
+    );
+  });
+
+  it("rejects HTTP, absolute endpoints, other origins, and fragments", () => {
     const invalid = [
       {
         YSHELPER_API_BASE_URL: "http://statistics.example.test",
@@ -54,11 +75,15 @@ describe("YshelperHttpClient", () => {
       },
       {
         YSHELPER_API_BASE_URL: "https://statistics.example.test",
-        YSHELPER_ABYSS_ENDPOINT: "/verified/abyss?lang=unknown",
+        YSHELPER_ABYSS_ENDPOINT: "//other.example.test/abyss",
       },
       {
         YSHELPER_API_BASE_URL: "https://statistics.example.test",
         YSHELPER_ABYSS_ENDPOINT: "/verified/abyss#section",
+      },
+      {
+        YSHELPER_API_BASE_URL: "https://user:pass@statistics.example.test",
+        YSHELPER_ABYSS_ENDPOINT: "/verified/abyss",
       },
     ];
     for (const env of invalid) {

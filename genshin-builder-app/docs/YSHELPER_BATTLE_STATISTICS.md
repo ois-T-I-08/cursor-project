@@ -5,10 +5,19 @@
 - Next.jsはPrisma 6.19.3、Neon PostgreSQLを使用する。
 - `DATABASE_URL`はpooled connection、`DIRECT_URL`はdirect connection専用。
 - FlutterはNext.jsの公開APIだけを呼び、NeonとYShelperへ直接接続しない。
-- リポジトリ内にYShelperの正式なendpoint、利用条件、匿名化fixture、レスポンス型は存在しない。
-- そのため実URLやフィールドを推測していない。`YSHELPER_ADAPTER_MODE`未設定時はCollectorが外部通信を開始しない。
+- 技術的に確認済みのHTTPS endpoint / 生JSON構造は`native-v1` Adapterで`canonical-v1`へ変換する。
+- kill switch（`YSHELPER_*_ENABLED`）と`YSHELPER_ADAPTER_MODE`が揃うまでCollectorは外部通信しない。既定は無効。
 
-`canonical-v1`は確認済みbridge responseを差し込むためのリポジトリ内契約であり、YShelperの生レスポンス仕様を表すものではない。
+### 確認済みendpoint（技術仕様）
+
+| contentType | path + fixed query |
+|-------------|--------------------|
+| `abyss` | `/ys/getAbyssRank.php?star=all&role=all&lang=en` |
+| `stygian`（採用） | `/ys/getAbyssRank2.php?star=only_nandu6&role=all&lang=en` |
+
+Base origin例: `https://api.yshelper.com`。全難易度版（`star=all`）は仕様確認用に残してよいが、本番設定例は難度6のみ。
+
+`canonical-v1`はbridge / fixture用契約。`native-v1`が確認済み生レスポンス用Adapter。
 
 ## Neonセットアップ
 
@@ -43,10 +52,10 @@ Next.js/Vercel:
 
 - `DATABASE_URL`: Neon pooled connection
 - `DIRECT_URL`: Neon direct connection
-- `YSHELPER_API_BASE_URL`: 利用許可済みHTTPS origin
-- `YSHELPER_ABYSS_ENDPOINT`: 確認済み相対path
-- `YSHELPER_STYGIAN_ENDPOINT`: 確認済み相対path
-- `YSHELPER_ADAPTER_MODE`: fixture一致確認後のみ`canonical-v1`
+- `YSHELPER_API_BASE_URL`: HTTPS origin（例 `https://api.yshelper.com`）
+- `YSHELPER_ABYSS_ENDPOINT`: 確認済み相対path + 固定query
+- `YSHELPER_STYGIAN_ENDPOINT`: 確認済み相対path + 固定query（難度6）
+- `YSHELPER_ADAPTER_MODE`: 生JSONは`native-v1`、bridgeは`canonical-v1`。未設定は通信しない
 - `YSHELPER_API_TOKEN`: 必要な場合だけ。ログ・DB・Flutterへ出さない
 - `YSHELPER_COLLECT_SECRET`: 内部Collector APIのBearer secret
 - `YSHELPER_ABYSS_ENABLED` / `YSHELPER_STYGIAN_ENABLED`: 個別kill switch。明示的な`true`だけ有効
@@ -61,22 +70,27 @@ GitHub Actions Secrets:
 
 YShelper token、Neon URL、Collector secretをGitHub VariablesやFlutterの`dart-define`へ登録しない。
 
-## 実レスポンスを有効化する前に必要な情報
+## Native Adapter変換（要約）
 
-1. YShelper側の利用許可、規約、レート制限、再配信可否。
-2. abyss/stygianそれぞれの正式endpointとHTTP method。
-3. token要否と正式な認証header。
-4. 個人情報を除去した実レスポンスfixture。
-5. season ID、更新日時、sample size、全編成、全キャラ使用率の正式フィールド。
-6. usage rateがratioかpercentかの明示仕様。
-7. side、stage、usage count、ownership rateが存在するか。
-8. source schema/versionの変更通知方法。
+- キャラクター: `usageRate = use / top_own`、`usageCount = use`、`ownershipRate = own_rate`、`usageAmongOwnersRate = use_rate`（入力はpercent、normalizeでratio）。
+- 編成: side件数（`up`/`mid`/`down_use_num` → `upper`/`middle`/`lower`）を`top_own`で割る。side欠落時のみ`use / top_own`。side合計≠`use`はschema error。
+- avatar → `ename` → Amber ID。`Ambor`→Amber。`Traveler`は未解決。1〜3人編成・未解決・重複キャラは除外。
+- avatar URL・生本文・token・完全URLはDB/ログへ保存しない。
 
-fixtureが現在の`canonical-v1`と異なる場合は、生レスポンス専用adapterを追加してから有効化する。adapter testなしで`canonical-v1`へ合わせ込まない。
+## 有効化前に未確認のまま残す事項
+
+1. 第三者アプリでの利用許可・規約。
+2. 保存・加工・再配布可否。
+3. 正式なレート制限。
+4. API変更通知方法。
+5. SLA。
+6. token要否と正式な認証header（現状は公開JSONとして取得できるが保証ではない）。
+
+kill switchを有効化するのは上記が揃ってから。
 
 ## Collector
 
-`.github/workflows/yshelper-battle-statistics.yml`は`workflow_dispatch`でのみ内部APIを起動する。定期取得は正式仕様・匿名化fixture・Neon developmentでの検証が揃うまで有効化しない。
+`.github/workflows/yshelper-battle-statistics.yml`は`workflow_dispatch`でのみ内部APIを起動する。定期取得（cron）は利用許可と運用確認が揃うまで有効化しない。
 
 ```text
 POST /api/internal/yshelper/collect

@@ -4,10 +4,17 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-07-25 — YShelper native-v1 Adapter
+
+- 確認済み`getAbyssRank.php` / `getAbyssRank2.php?star=only_nandu6`生JSONを`native-v1`で`canonical-v1`へ変換。`canonical-v1` bridgeは維持。
+- `Ambor`→Amber、`Traveler`未解決、1〜3人編成除外、side件数整合、query付き相対endpoint許可。
+- kill switch既定`false`。利用許可・再配布・レート制限・SLAは未確認のまま本番有効化しない。
+- 小型fixtureのみコミット。生レスポンス全文は保存しない。
+
 ## 2026-07-24 — Neon PostgreSQL / YShelper編成統計基盤
 
 - Prisma datasourceをNeon PostgreSQLのpooled/direct URLへ変更。SQLite migrationは`migrations-sqlite-archive`へ保持し、空DB用PostgreSQL baselineを新設。`dev.db`と匿名UserProgress 2件は削除・自動移行していない。
-- YShelper実endpoint/fixtureはリポジトリにないため推測実装せず、確認済み`canonical-v1` bridge adapterを明示設定した場合だけ通信する。
+- 初期は確認済み`canonical-v1` bridgeのみ。後続で`native-v1`を追加（2026-07-25エントリ）。
 - `BattleStatsSyncRun/Snapshot/TeamUsage/TeamMember/CharacterUsage/Manifest`を追加。14日server gate、SyncLease、検証、安定SHA-256、重複防止、valid時だけManifest更新。
 - 公開APIはManifest(ETag/304)、500件Bundle、cursor付きteams/characters。失敗・suspicious・invalid時は最終正常Manifestを維持。
 - FlutterはDrift v9へ追加テーブルをmigrationし、起動非ブロッキングで変更種類だけ全ページ取得、hash/ID検証後にtransaction切替。所持・育成判定は統計使用率と分離。

@@ -42,7 +42,7 @@ npm run dev
 | `AZA_CACHE_TTL_SECONDS` | いいえ | 統計の DB キャッシュ TTL。300〜86400 秒、既定 21600 秒（6時間） |
 | `AZA_REQUEST_TIMEOUT_MS` | いいえ | AZA.GG へのタイムアウト。1000〜30000 ms、既定 10000 ms |
 | `YSHELPER_COLLECT_SECRET` | Collectorのみ | 手動GitHub Actionsから内部Collector APIを呼ぶBearer secret |
-| `YSHELPER_ADAPTER_MODE` | YShelper有効化時 | 実fixture確認後のみ`canonical-v1`。未設定時は外部通信しない |
+| `YSHELPER_ADAPTER_MODE` | YShelper有効化時 | 生JSONは`native-v1`、bridgeは`canonical-v1`。未設定時は外部通信しない |
 
 `DATABASE_URL` が未設定の状態で起動すると、Prisma Client の初期化時にエラーが表示されます。
 
@@ -99,7 +99,7 @@ GET /api/abyss/statistics（Flutter 向け安全な同一-origin DTO）
 
 GitHub Actionsは手動実行時だけ認証済み内部APIを起動し、定期取得は無効です。サーバーが前回成功から14日以上かを判定し、期限前は外部APIを呼びません。検証済みSnapshotだけがManifestから公開され、Flutterはrevision/hashが変わった種類だけを同期します。
 
-YShelperの実エンドポイントと生レスポンス仕様はリポジトリ内で未確認です。利用許可と匿名化fixtureを確認するまではadapterを有効にせず、URLやフィールドを推測しません。Neon、Migration、Secrets、障害時、rollbackの手順は [`docs/YSHELPER_BATTLE_STATISTICS.md`](./docs/YSHELPER_BATTLE_STATISTICS.md) を参照してください。
+YShelperのHTTPS endpointと生JSON構造は`native-v1` Adapterで確認済みです（深境螺旋 / 幽境の激戦・難度6）。kill switchは既定`false`のままにし、利用許可・再配布条件・レート制限・SLAが確認できるまで本番収集を有効化しません。Neon、Migration、Secrets、障害時、rollbackの手順は [`docs/YSHELPER_BATTLE_STATISTICS.md`](./docs/YSHELPER_BATTLE_STATISTICS.md) を参照してください。
 
 ## ディレクトリ構成
 

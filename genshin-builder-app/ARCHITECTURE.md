@@ -284,7 +284,7 @@ gcsim失敗時は期限切れを含む最終正常cache、AZA候補、ルール�
 
 手動GitHub Actionsは`POST /api/internal/yshelper/collect`を起動する。定期実行は正式仕様と検証が揃うまで無効とする。内部APIはBearer認証、レート制限、process-local排他、`SyncLease`による複数instance排他を適用し、最終成功から14日未満なら`not_due`で終了する。
 
-YShelper固有境界は`src/lib/yshelper`に分離する。リポジトリに実レスポンス仕様がないため、確認済みendpointと`YSHELPER_ADAPTER_MODE=canonical-v1`が揃うまで通信しない。正規化後に構造・既知Character・急減・使用率変動を検証し、`suspicious`/`invalid`は履歴だけ残してManifestを更新しない。
+YShelper固有境界は`src/lib/yshelper`に分離する。生JSONは`YSHELPER_ADAPTER_MODE=native-v1`、bridgeは`canonical-v1`。未設定またはkill switch無効では通信しない。`native-v1`は確認済み`getAbyssRank*.php`構造を`canonical-v1`へ変換し、正規化後に構造・既知Character・急減・使用率変動を検証する。`suspicious`/`invalid`は履歴だけ残してManifestを更新しない。
 
 公開APIはManifest、ページ分割Bundle、編成、キャラクター使用率の4経路。ManifestはETag/304対応、一覧はcursor pagination、Bundleは公開revisionだけを返す。秘密情報、upstream URL、レスポンス本文は返さない。
 
