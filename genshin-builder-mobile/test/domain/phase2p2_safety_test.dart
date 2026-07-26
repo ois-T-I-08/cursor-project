@@ -116,6 +116,7 @@ void main() {
       const report = AccountHealthReport();
       expect(report.isEvaluable, isFalse);
       expect(report.totalScore, isNull);
+      expect(report.dataCoverage, '不明');
     });
 
     test('scoreToRating is not called with null', () {

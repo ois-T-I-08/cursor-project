@@ -80,4 +80,61 @@ void main() {
       containsAll(['talents', 'weapon', 'artifacts']),
     );
   });
+
+  test('traveler composite ids and invalid elements are dropped', () {
+    const traveler = MasterCharacter(
+      id: '10000005-anemo',
+      name: '旅人',
+      element: 'anemo',
+      weaponType: 'sword',
+      rarity: 5,
+      region: '',
+      iconUrl: '',
+    );
+    const badElement = MasterCharacter(
+      id: '10000002',
+      name: 'Unknown',
+      element: 'None',
+      weaponType: 'sword',
+      rarity: 5,
+      region: '',
+      iconUrl: '',
+    );
+    final result = normalizeSimulationBuilds(
+      characters: const [character, traveler, badElement],
+      hoyolabBuilds: const {},
+      localProgress: const {},
+    );
+    expect(result.map((value) => value.characterId), ['10000089']);
+  });
+
+  test('invalid weapon ids are omitted instead of failing the request', () {
+    const build = HoyolabCharacterBuild(
+      id: '10000089',
+      isOwned: true,
+      level: 90,
+      promoteLevel: 6,
+      constellation: 0,
+      talents: [
+        GameRecordTalent(name: '通常攻撃', level: 1),
+        GameRecordTalent(name: '元素スキル', level: 1),
+        GameRecordTalent(name: '元素爆発', level: 1),
+      ],
+      weapon: GameRecordWeapon(
+        id: 'weapon-foo',
+        name: 'x',
+        level: 90,
+        refinement: 1,
+        promoteLevel: 6,
+      ),
+      relics: [],
+    );
+    final snapshot = normalizeSimulationBuilds(
+      characters: const [character],
+      hoyolabBuilds: const {'10000089': build},
+      localProgress: const {},
+    ).single;
+    expect(snapshot.weapon, isNull);
+    expect(snapshot.defaultedFields, contains('weapon'));
+  });
 }

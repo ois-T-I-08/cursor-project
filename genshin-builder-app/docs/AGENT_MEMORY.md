@@ -4,6 +4,14 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-07-20 — おすすめ編成: リクエスト正規化 + gcsim IDマップ拡充
+
+- Flutterは旅人複合ID等を除外し、APIの`^\d{5,12}$`/元素/レアリティ制約に合うスナップショットだけ送る。attackerが落ちた場合は`attackerUnavailable`。
+- gcsim IDマップは`v2.43.4`の`data_gen.textproto`/`config.yml`から生成（キャラ106・武器228・聖遺物52）。再生成は`node scripts/generate-gcsim-id-maps.mjs`。
+- 公式最新releaseも`v2.43.4`のまま。サンドローネ等はupstream未実装のためシミュレーション不可（AZA/ルールへフォールバック）。
+- ローカル有効化: `vendor/gcsim/v2.43.4/`へ公式バイナリ配置（SHA-256検証）+ `GCSIM_ENABLED=true`。バイナリは`.gitignore`。
+- 未完了: 旅人複合ID→gcsimキー変換、gcsim新version取り込み（upstream release待ち）、production有効化前のdurable queue再評価。
+
 ## 2026-07-20 — gcsimおすすめ編成バックエンド
 
 - gcsimは`v2.43.4` / commit `24042de8ba3243693e97cd7efe22292762b08331` / 公式release SHA-256へ固定。macOS 2 assetを含めGitHub release digestと再照合済み。既定`GCSIM_ENABLED=false`。
@@ -12,8 +20,6 @@
 - Prisma migration `20260720120000_add_team_simulation_jobs`は`TeamSimulationJob`と`TeamSimulationCache`の追加のみ。本番未適用。
 - gcsim未対応/失敗時もAZA.GG・ルール候補を返す。成功値だけcache更新し、失敗時はstale最終成功値を使う。
 - process-localバックグラウンド実行は初期実装。同一request enqueueのsingle-flight、既定8 active Job上限、期限切れcache purgeを適用し、複数instance/production有効化前にdurable queue/workerを再評価する。
-
----
 
 ---
 

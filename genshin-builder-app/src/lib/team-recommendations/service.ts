@@ -81,12 +81,19 @@ export class TeamRecommendationService {
         await this.store.failJob(jobId, "noCandidates");
         return;
       }
-      const evaluated = await Promise.all(candidates.map((candidate) => this.evaluate(request, candidate)));
+      const skipCounts = new Map<string, number>();
+      const evaluated = await Promise.all(
+        candidates.map((candidate) => this.evaluate(request, candidate, skipCounts)),
+      );
       const maxDps = Math.max(0, ...evaluated.map((entry) => entry.run?.estimatedDps ?? 0));
       const recommendations = evaluated.map((entry) => this.toRecommendation(request, entry.candidate, entry.run, entry.isCached, entry.isStale, maxDps));
       recommendations.sort((a, b) => b.score - a.score);
       const hasStale = recommendations.some((value) => value.isStale);
       const hasSimulation = recommendations.some((value) => value.simulationStatus === "simulated");
+      if (!hasSimulation && skipCounts.size > 0) {
+        const summary = [...skipCounts.entries()].map(([code, count]) => `${code}:${count}`).join(",");
+        this.log("gcsim_skipped", { jobId, attackerId: request.attackerId, status: summary });
+      }
       await this.store.completeJob(jobId, {
         attackerId: request.attackerId,
         generatedAt: this.now().toISOString(),
@@ -101,7 +108,11 @@ export class TeamRecommendationService {
     }
   }
 
-  private async evaluate(request: TeamRecommendationRequest, candidate: TeamCandidate): Promise<{ candidate: TeamCandidate; run?: GcsimRunResult; isCached: boolean; isStale: boolean }> {
+  private async evaluate(
+    request: TeamRecommendationRequest,
+    candidate: TeamCandidate,
+    skipCounts: Map<string, number>,
+  ): Promise<{ candidate: TeamCandidate; run?: GcsimRunResult; isCached: boolean; isStale: boolean }> {
     const key = simulationCacheKey({
       request,
       candidate,
@@ -117,7 +128,9 @@ export class TeamRecommendationService {
       const run = await this.runner.run(generated.config);
       await this.store.writeCache({ cacheKey: key, attackerId: request.attackerId, value: run, expiresAt: new Date(now.getTime() + this.settings.cacheTtlSeconds * 1_000) });
       return { candidate: { ...candidate, rotationConfidence: generated.rotationConfidence, sourceTypes: [...candidate.sourceTypes, "gcsim"] }, run, isCached: false, isStale: false };
-    } catch {
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "unknown";
+      skipCounts.set(code, (skipCounts.get(code) ?? 0) + 1);
       return cached ? { candidate, run: cached.value, isCached: true, isStale: true } : { candidate, isCached: false, isStale: false };
     }
   }

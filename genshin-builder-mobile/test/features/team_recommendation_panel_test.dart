@@ -24,6 +24,9 @@ void main() {
     expect(find.textContaining('シミュレーション結果は理論値です'), findsOneWidget);
     expect(find.textContaining('gcsim'), findsWidgets);
     expect(find.textContaining('AZA.GG'), findsWidgets);
+    expect(find.text('シミュレーション: gcsim（MITライセンス）／利用統計: AZA.GG'), findsOneWidget);
+    expect(find.textContaining('Simulation:'), findsNothing);
+    expect(find.textContaining('Usage statistics:'), findsNothing);
     expect(find.text('所持キャラのみ'), findsOneWidget);
   });
 
@@ -67,7 +70,10 @@ void main() {
     );
     expect(find.textContaining('推定DPS: 78543'), findsOneWidget);
     expect(find.textContaining('前回値'), findsOneWidget);
-    expect(find.textContaining('入力品質: partial'), findsOneWidget);
+    expect(find.textContaining('入力品質: 一部不足'), findsOneWidget);
+    expect(find.textContaining('ローテーション信頼度: 中'), findsOneWidget);
+    expect(find.textContaining('partial'), findsNothing);
+    expect(find.textContaining('medium'), findsNothing);
     expect(find.textContaining('ベネット'), findsOneWidget);
   });
 
