@@ -1,9 +1,9 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/team_recommendations/normalize_simulation_builds.dart';
 import '../application/team_recommendations/poll_team_recommendation_job.dart';
-import '../data/team_recommendations/backend_team_recommendation_api.dart';
+import '../data/team_recommendations/backend_team_recommendation_api.dart'
+    show BackendTeamRecommendationApi, TeamRecommendationApiException;
 import '../data/team_recommendations/http_team_recommendation_repository.dart';
 import '../domain/repositories/team_recommendation_repository.dart';
 import '../domain/team_recommendation/team_recommendation.dart';
@@ -88,6 +88,9 @@ class TeamRecommendationController
         hoyolabBuilds: builds,
         localProgress: {for (final value in progress) value.characterId: value},
       );
+      if (!snapshots.any((value) => value.characterId == attackerId)) {
+        throw const TeamRecommendationApiException('invalidAttacker');
+      }
       final repository = ref.read(teamRecommendationRepositoryProvider);
       var job = await repository.enqueue(
         TeamRecommendationRequest(

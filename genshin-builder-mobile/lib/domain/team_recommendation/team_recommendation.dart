@@ -78,26 +78,20 @@ class TeamRecommendation {
   const TeamRecommendation({
     required this.members,
     required this.score,
-    this.estimatedDps,
     required this.simulationStatus,
     required this.sourceTypes,
     required this.rotationConfidence,
     required this.observedByAza,
-    required this.isCached,
-    required this.isStale,
     required this.inputQuality,
     required this.reasons,
     required this.alternatives,
   });
   final List<String> members;
   final double score;
-  final double? estimatedDps;
   final String simulationStatus;
   final List<String> sourceTypes;
   final String rotationConfidence;
   final bool observedByAza;
-  final bool isCached;
-  final bool isStale;
   final SimulationInputQuality inputQuality;
   final List<String> reasons;
   final Map<String, List<String>> alternatives;
@@ -107,17 +101,13 @@ class TeamRecommendationResult {
   const TeamRecommendationResult({
     required this.attackerId,
     required this.generatedAt,
-    required this.gcsimVersion,
-    required this.iterations,
-    required this.gcsimEnabled,
+    required this.engine,
     required this.recommendations,
     this.warning,
   });
   final String attackerId;
   final DateTime generatedAt;
-  final String gcsimVersion;
-  final int iterations;
-  final bool gcsimEnabled;
+  final String engine;
   final List<TeamRecommendation> recommendations;
   final String? warning;
 }

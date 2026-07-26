@@ -7,10 +7,15 @@ import 'package:genshin_builder_mobile/providers/app_providers.dart';
 import 'package:genshin_builder_mobile/providers/team_recommendation_providers.dart';
 
 void main() {
-  testWidgets('shows theoretical value warning and credits', (tester) async {
+  testWidgets('shows disclaimer and AZA credits', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [charactersProvider.overrideWith((ref) async => [])],
+        overrides: [
+          charactersProvider.overrideWith((ref) async => []),
+          teamRecommendationControllerProvider(
+            '10000089',
+          ).overrideWith((ref) => _IdleController(ref)),
+        ],
         child: const MaterialApp(
           home: Scaffold(
             body: SingleChildScrollView(
@@ -21,27 +26,50 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.textContaining('シミュレーション結果は理論値です'), findsOneWidget);
-    expect(find.textContaining('gcsim'), findsWidgets);
+    await tester.pump();
+    expect(find.textContaining('螺旋の使用実績と共通ルール'), findsOneWidget);
+    expect(find.textContaining('gcsim'), findsNothing);
     expect(find.textContaining('AZA.GG'), findsWidgets);
     expect(find.text('所持キャラのみ'), findsOneWidget);
   });
 
-  testWidgets('recommendation card shows stale, quality and alternatives', (
+  testWidgets('auto-starts recommendation when attacker is set', (tester) async {
+    late _TrackingController controller;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          charactersProvider.overrideWith((ref) async => []),
+          teamRecommendationControllerProvider('10000089').overrideWith((ref) {
+            controller = _TrackingController(ref);
+            return controller;
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: TeamRecommendationPanel(attackerId: '10000089'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(controller.startCount, 1);
+  });
+
+  testWidgets('recommendation card shows quality and alternatives', (
     tester,
   ) async {
     const recommendation = TeamRecommendation(
       members: ['10000089', '10000087', '10000025', '10000054'],
       score: 0.92,
-      estimatedDps: 78543.2,
-      simulationStatus: 'simulated',
-      sourceTypes: ['aza', 'gcsim'],
+      simulationStatus: 'observed',
+      sourceTypes: ['aza'],
       rotationConfidence: 'medium',
       observedByAza: true,
-      isCached: true,
-      isStale: true,
       inputQuality: SimulationInputQuality.partial,
-      reasons: ['前回の正常値'],
+      reasons: ['AZA.GGの深境螺旋で使用実績があります'],
       alternatives: {
         '10000054': ['10000032'],
       },
@@ -60,15 +88,17 @@ void main() {
                 '10000032': 'ベネット',
               },
               generatedAt: DateTime(2026, 7, 20),
+              onApply: () {},
             ),
           ),
         ),
       ),
     );
-    expect(find.textContaining('推定DPS: 78543'), findsOneWidget);
-    expect(find.textContaining('前回値'), findsOneWidget);
+    expect(find.textContaining('推定DPS'), findsNothing);
+    expect(find.textContaining('AZA.GG使用実績'), findsOneWidget);
     expect(find.textContaining('入力品質: partial'), findsOneWidget);
     expect(find.textContaining('ベネット'), findsOneWidget);
+    expect(find.text('この編成を入れる'), findsOneWidget);
   });
 
   testWidgets('disables a second calculation while a job is active', (
@@ -92,11 +122,29 @@ void main() {
       ),
     );
     await tester.pump();
+    await tester.pump();
     final button = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'おすすめ編成を計算'),
+      find.widgetWithText(FilledButton, '再計算'),
     );
     expect(button.onPressed, isNull);
   });
+}
+
+class _IdleController extends TeamRecommendationController {
+  _IdleController(Ref ref) : super(ref, '10000089');
+
+  @override
+  Future<void> start(TeamRecommendationOptions options) async {}
+}
+
+class _TrackingController extends TeamRecommendationController {
+  _TrackingController(Ref ref) : super(ref, '10000089');
+  int startCount = 0;
+
+  @override
+  Future<void> start(TeamRecommendationOptions options) async {
+    startCount += 1;
+  }
 }
 
 class _BusyController extends TeamRecommendationController {
@@ -108,4 +156,7 @@ class _BusyController extends TeamRecommendationController {
       ),
     );
   }
+
+  @override
+  Future<void> start(TeamRecommendationOptions options) async {}
 }

@@ -120,16 +120,18 @@ TeamSimulationJob _parseJob(Map<String, Object?> json) {
 }
 
 TeamRecommendationResult _parseResult(Map<String, Object?> json) {
-  final gcsim = _map(json['gcsim']);
   final rawRecommendations = _list(json['recommendations'], 20);
+  final engineRaw = json['engine'];
+  final engine =
+      engineRaw is String && RegExp(r'^[A-Za-z0-9+_-]{1,40}$').hasMatch(engineRaw)
+          ? engineRaw
+          : 'aza+rules';
   return TeamRecommendationResult(
     attackerId: _string(json['attackerId'], RegExp(r'^\d{5,12}$')),
     generatedAt: DateTime.parse(
       _string(json['generatedAt'], RegExp(r'^.{1,40}$')),
     ),
-    gcsimVersion: _string(gcsim['version'], RegExp(r'^v[0-9.]{1,20}$')),
-    iterations: _int(gcsim['iterations'], 1, 100000),
-    gcsimEnabled: _bool(gcsim['enabled']),
+    engine: engine,
     recommendations:
         rawRecommendations
             .map((raw) => _parseRecommendation(_map(raw)))
@@ -158,13 +160,9 @@ TeamRecommendation _parseRecommendation(Map<String, Object?> json) {
   return TeamRecommendation(
     members: members,
     score: _double(json['score'], 0, 1),
-    estimatedDps:
-        json['estimatedDps'] == null
-            ? null
-            : _double(json['estimatedDps'], 0, 1000000000),
     simulationStatus: _string(
       json['simulationStatus'],
-      RegExp(r'^(simulated|observed|ruleBased|manual)$'),
+      RegExp(r'^(observed|ruleBased|manual)$'),
     ),
     sourceTypes:
         _list(
@@ -176,8 +174,6 @@ TeamRecommendation _parseRecommendation(Map<String, Object?> json) {
       RegExp(r'^(high|medium|low)$'),
     ),
     observedByAza: _bool(json['observedByAza']),
-    isCached: _bool(json['isCached']),
-    isStale: _bool(json['isStale']),
     inputQuality: SimulationInputQuality.values.firstWhere(
       (value) =>
           value.name ==
@@ -211,13 +207,6 @@ List<Object?> _list(Object? value, int max) {
 
 String _string(Object? value, RegExp pattern) {
   if (value is! String || !pattern.hasMatch(value)) {
-    throw const TeamRecommendationApiException('invalidResponse');
-  }
-  return value;
-}
-
-int _int(Object? value, int min, int max) {
-  if (value is! int || value < min || value > max) {
     throw const TeamRecommendationApiException('invalidResponse');
   }
   return value;
