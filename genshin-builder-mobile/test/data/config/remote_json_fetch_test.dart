@@ -55,6 +55,69 @@ void main() {
     expect(map['ok'], isTrue);
   });
 
+  test(
+    'rejects non-HTTPS, credentials, fragments, and malformed URLs',
+    () async {
+      var sendCount = 0;
+      final client = _StreamClient((_) async {
+        sendCount++;
+        return _streamed(statusCode: 200, chunks: [utf8.encode('{}')]);
+      });
+      for (final url in [
+        'http://example.test/config.json',
+        'https://user:secret@example.test/config.json',
+        'https://example.test/config.json#section',
+        'https://',
+      ]) {
+        await expectLater(
+          fetchRemoteJsonMap(
+            client: client,
+            url: url,
+            kind: kind,
+            timeout: const Duration(seconds: 5),
+            maxBytes: maxBytes,
+          ),
+          throwsA(
+            isA<RemoteJsonFetchException>().having(
+              (e) => e.failure,
+              'failure',
+              RemoteJsonFailureKind.invalidUrl,
+            ),
+          ),
+        );
+      }
+      expect(sendCount, 0);
+    },
+  );
+
+  test(
+    'does not follow redirects and forwards explicit safe headers',
+    () async {
+      final client = _StreamClient((request) async {
+        expect(request.followRedirects, isFalse);
+        expect(request.headers['User-Agent'], 'test-agent');
+        return _streamed(statusCode: 302, chunks: [utf8.encode('{}')]);
+      });
+      await expectLater(
+        fetchRemoteJsonMap(
+          client: client,
+          url: 'https://example.test/config.json',
+          kind: kind,
+          timeout: const Duration(seconds: 5),
+          maxBytes: maxBytes,
+          headers: const {'User-Agent': 'test-agent'},
+        ),
+        throwsA(
+          isA<RemoteJsonFetchException>().having(
+            (e) => e.failure,
+            'failure',
+            RemoteJsonFailureKind.httpStatus,
+          ),
+        ),
+      );
+    },
+  );
+
   test('rejects root list', () async {
     final client = _StreamClient(
       (_) async => _streamed(statusCode: 200, chunks: [utf8.encode('[1,2]')]),
@@ -354,6 +417,9 @@ void main() {
     expect(kRemoteJsonMaxBytesGachaBannerHistory, greaterThan(99 * 1024));
     expect(kRemoteJsonMaxBytesArtifactScoreWeights, 256 * 1024);
     expect(kRemoteJsonMaxBytesDailyMaterialSchedule, 256 * 1024);
+    expect(kRemoteJsonMaxBytesGachaCalendar, 1024 * 1024);
+    expect(kRemoteJsonMaxBytesAkashaBuilds, 4 * 1024 * 1024);
+    expect(kRemoteJsonMaxBytesLeyLineOverflow, 256 * 1024);
   });
 
   test('exception toString has no URL or body', () {
