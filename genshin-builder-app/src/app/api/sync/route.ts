@@ -19,6 +19,7 @@ import {
   runSyncExclusive,
   SyncAlreadyRunningError,
 } from "@/lib/sync-execution";
+import { SyncLeaseOwnershipLostError } from "@/lib/sync-distributed-lock";
 import {
   parseSyncRequest,
   SyncRequestError,
@@ -79,7 +80,10 @@ export async function POST(request: Request) {
       { status: errors.length === 0 ? 200 : 502 },
     );
   } catch (error) {
-    if (error instanceof SyncAlreadyRunningError) {
+    if (
+      error instanceof SyncAlreadyRunningError ||
+      error instanceof SyncLeaseOwnershipLostError
+    ) {
       return NextResponse.json(
         { ok: false, message: "同期は既に実行中です。完了後に再度お試しください。" },
         { status: 409 },
