@@ -2,11 +2,15 @@
 
 ローカル Drift DB（`genshin_builder.db`）の任意暗号化。
 
+**方針（v1.0）:** ADR [`docs/adr/0001-sqlcipher-strategy.md`](adr/0001-sqlcipher-strategy.md) が **Accepted**。  
+本番ユーザー向けには平文 Drift/SQLite（非秘密データ）+ Secure Storage（秘密）を採用し、**強制 SQLCipher 移行は実装・有効化しない**。`ENABLE_SQLCIPHER` は開発・検証用オプトインであり、未検証の暗号化を設定画面で公開しない。
+
 ## 既定動作（安全側）
 
 - `--dart-define=ENABLE_SQLCIPHER` 未指定 / `false` → **平文 SQLite**（従来どおり）
 - 既存インストールの DB はそのまま開ける
 - ネイティブは `sqlcipher_flutter_libs` のみ（`sqlite3_flutter_libs` と同時依存不可）。フラグ OFF では PRAGMA key を実行しない
+- 平文実行でも当該ネイティブ依存が必要なため、安易に依存削除しない
 
 ## 有効化
 
