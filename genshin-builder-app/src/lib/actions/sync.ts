@@ -13,6 +13,7 @@ import {
   runSyncExclusive,
   SyncAlreadyRunningError,
 } from "@/lib/sync-execution";
+import { SyncLeaseOwnershipLostError } from "@/lib/sync-distributed-lock";
 
 export type SyncActionResult = SyncResult & {
   ok: boolean;
@@ -37,7 +38,10 @@ export async function syncMasterDataAction(
       ...result,
     };
   } catch (error) {
-    if (error instanceof SyncAlreadyRunningError) {
+    if (
+      error instanceof SyncAlreadyRunningError ||
+      error instanceof SyncLeaseOwnershipLostError
+    ) {
       return failedResult("同期は既に実行中です。完了後に再度お試しください。");
     }
     console.error("マスターデータ同期に失敗しました。");
