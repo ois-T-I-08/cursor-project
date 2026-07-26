@@ -20,6 +20,10 @@ import type {
 } from "@/lib/api/upgrade-types";
 import { UpstreamFetchError } from "@/lib/api/safe-json-fetch";
 import { prisma } from "@/lib/db";
+import {
+  SyncLeaseOwnershipLostError,
+  throwIfSyncAborted,
+} from "@/lib/sync-distributed-lock";
 import { idsForNotIn } from "@/lib/sync-utils";
 
 const EXP_MATERIAL_COUNT = 6;
@@ -30,6 +34,8 @@ const REQUEST_DELAY_MS = 100;
 export interface UpgradeSyncOptions {
   /** true なら全件 detail API を再取得 */
   fullUpgrade?: boolean;
+  /** Lease ownership abort signal from runSyncExclusive */
+  signal?: AbortSignal;
 }
 
 export interface UpgradeSyncResult {
@@ -58,26 +64,33 @@ export async function syncUpgradeData(
   options: UpgradeSyncOptions = {},
 ): Promise<UpgradeSyncResult> {
   const fullUpgrade = options.fullUpgrade ?? false;
+  throwIfSyncAborted(options.signal);
   if (fullUpgrade) {
-    return syncUpgradeDataFull();
+    return syncUpgradeDataFull(options.signal);
   }
-  return syncUpgradeDataIncremental();
+  return syncUpgradeDataIncremental(options.signal);
 }
 
-async function syncUpgradeDataFull(): Promise<UpgradeSyncResult> {
+async function syncUpgradeDataFull(
+  signal?: AbortSignal,
+): Promise<UpgradeSyncResult> {
   const apiCounter = { count: 0 };
   const result = emptyUpgradeResult();
 
   try {
+    throwIfSyncAborted(signal);
     const levelUpMaterials = await fetchLevelUpMaterialsFromApi(() =>
       trackApiCall(apiCounter),
     );
+    throwIfSyncAborted(signal);
     const segments = buildLevelExpSegments();
 
     const [allCharacters, allWeapons] = await Promise.all([
       prisma.character.findMany({ select: { id: true } }),
       prisma.weapon.findMany({ select: { id: true } }),
     ]);
+
+    throwIfSyncAborted(signal);
 
     const characterTargetIds = allCharacters.map((character) => character.id);
     const weaponTargetIds = allWeapons.map((weapon) => weapon.id);
@@ -86,21 +99,28 @@ async function syncUpgradeDataFull(): Promise<UpgradeSyncResult> {
       characterTargetIds,
       CONCURRENCY,
       async (characterId) => {
+        throwIfSyncAborted(signal);
         await delay(REQUEST_DELAY_MS);
         trackApiCall(apiCounter);
         return fetchCharacterUpgradeFromApi(characterId);
       },
     );
 
+    throwIfSyncAborted(signal);
+
     const weaponUpgrades = await mapWithConcurrency(
       weaponTargetIds,
       CONCURRENCY,
       async (weaponId) => {
+        throwIfSyncAborted(signal);
         await delay(REQUEST_DELAY_MS);
         trackApiCall(apiCounter);
         return fetchWeaponUpgradeFromApi(weaponId);
       },
     );
+
+    // Atomic replacement: stop before opening the transaction if ownership lost.
+    throwIfSyncAborted(signal);
 
     await prisma.$transaction(
       async (tx) => {
@@ -121,6 +141,9 @@ async function syncUpgradeDataFull(): Promise<UpgradeSyncResult> {
     result.skippedCharacterUpgrades = 0;
     result.skippedWeaponUpgrades = 0;
   } catch (error) {
+    if (error instanceof SyncLeaseOwnershipLostError) {
+      throw error;
+    }
     result.errors.push(upgradeErrorCode("fullUpgrade", error));
     result.characterUpgrades = await prisma.characterUpgrade.count();
     result.weaponUpgrades = await prisma.weaponUpgrade.count();
@@ -135,20 +158,25 @@ async function syncUpgradeDataFull(): Promise<UpgradeSyncResult> {
   return result;
 }
 
-async function syncUpgradeDataIncremental(): Promise<UpgradeSyncResult> {
+async function syncUpgradeDataIncremental(
+  signal?: AbortSignal,
+): Promise<UpgradeSyncResult> {
   const apiCounter = { count: 0 };
   const result = emptyUpgradeResult();
 
   // 1. 経験値素材（API material detail）— 未設定時のみ
   try {
+    throwIfSyncAborted(signal);
     const existingExpMaterials = await prisma.material.count({
       where: { expValue: { not: null }, expTarget: { not: null } },
     });
 
     if (existingExpMaterials < EXP_MATERIAL_COUNT) {
+      throwIfSyncAborted(signal);
       const levelUpMaterials = await fetchLevelUpMaterialsFromApi(() =>
         trackApiCall(apiCounter),
       );
+      throwIfSyncAborted(signal);
       await prisma.$transaction(
         levelUpMaterials.map((material) =>
           prisma.material.updateMany({
@@ -165,14 +193,21 @@ async function syncUpgradeDataIncremental(): Promise<UpgradeSyncResult> {
       result.expMaterials = existingExpMaterials;
     }
   } catch (error) {
+    if (error instanceof SyncLeaseOwnershipLostError) {
+      throw error;
+    }
     result.errors.push(upgradeErrorCode("expMaterials", error));
   }
 
+  throwIfSyncAborted(signal);
+
   // 2. 目盛り間EXP（API なし・定数）— 未登録時のみ書き込み
   try {
+    throwIfSyncAborted(signal);
     const existingSegments = await prisma.levelExpSegment.count();
     if (existingSegments < LEVEL_EXP_SEGMENT_COUNT) {
       const segments = buildLevelExpSegments();
+      throwIfSyncAborted(signal);
       await prisma.$transaction(
         segments.map((segment) =>
           prisma.levelExpSegment.upsert({
@@ -190,11 +225,17 @@ async function syncUpgradeDataIncremental(): Promise<UpgradeSyncResult> {
       result.levelExpSegments = existingSegments;
     }
   } catch (error) {
+    if (error instanceof SyncLeaseOwnershipLostError) {
+      throw error;
+    }
     result.errors.push(upgradeErrorCode("levelExpSegments", error));
   }
 
+  throwIfSyncAborted(signal);
+
   // 3. キャラクター突破・天賦
   try {
+    throwIfSyncAborted(signal);
     const [allCharacters, existingUpgrades] = await Promise.all([
       prisma.character.findMany({ select: { id: true } }),
       prisma.characterUpgrade.findMany({ select: { characterId: true } }),
@@ -212,12 +253,14 @@ async function syncUpgradeDataIncremental(): Promise<UpgradeSyncResult> {
         targetIds,
         CONCURRENCY,
         async (characterId) => {
+          throwIfSyncAborted(signal);
           await delay(REQUEST_DELAY_MS);
           trackApiCall(apiCounter);
           return fetchCharacterUpgradeFromApi(characterId);
         },
       );
 
+      throwIfSyncAborted(signal);
       await prisma.$transaction(
         async (tx) => {
           await applyCharacterUpgrades(tx, upgrades, { pruneMissing: false });
@@ -228,11 +271,17 @@ async function syncUpgradeDataIncremental(): Promise<UpgradeSyncResult> {
 
     result.characterUpgrades = await prisma.characterUpgrade.count();
   } catch (error) {
+    if (error instanceof SyncLeaseOwnershipLostError) {
+      throw error;
+    }
     result.errors.push(upgradeErrorCode("characterUpgrades", error));
   }
 
+  throwIfSyncAborted(signal);
+
   // 4. 武器突破
   try {
+    throwIfSyncAborted(signal);
     const [allWeapons, existingUpgrades] = await Promise.all([
       prisma.weapon.findMany({ select: { id: true } }),
       prisma.weaponUpgrade.findMany({ select: { weaponId: true } }),
@@ -250,12 +299,14 @@ async function syncUpgradeDataIncremental(): Promise<UpgradeSyncResult> {
         targetIds,
         CONCURRENCY,
         async (weaponId) => {
+          throwIfSyncAborted(signal);
           await delay(REQUEST_DELAY_MS);
           trackApiCall(apiCounter);
           return fetchWeaponUpgradeFromApi(weaponId);
         },
       );
 
+      throwIfSyncAborted(signal);
       await prisma.$transaction(
         async (tx) => {
           await applyWeaponUpgrades(tx, upgrades, { pruneMissing: false });
@@ -266,6 +317,9 @@ async function syncUpgradeDataIncremental(): Promise<UpgradeSyncResult> {
 
     result.weaponUpgrades = await prisma.weaponUpgrade.count();
   } catch (error) {
+    if (error instanceof SyncLeaseOwnershipLostError) {
+      throw error;
+    }
     result.errors.push(upgradeErrorCode("weaponUpgrades", error));
   }
 
