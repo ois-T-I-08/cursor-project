@@ -75,15 +75,16 @@ Base origin 例: `https://api.yshelper.com`（HTTPS 固定。redirect は拒否�
 ### 手順
 
 1. 上記チェックリスト完了を確認
-2. abyss だけ `true` にし、stygian は `false` のまま
-3. `POST /api/internal/yshelper/collect` を1回（Actions `workflow_dispatch` 推奨）。secret をログに残さない
-4. Snapshot: validationState、recordCount、payloadHash、unresolved 関連 issue を確認（本文は見ない）
-5. Manifest: contentType / revision / seasonId / payloadHash
-6. 公開 API: manifest ETag、bundle、teams/characters。metadata・生データが無いこと
-7. Flutter: 304 / revision 更新 / offline 維持
-8. 同じ入力で再実行し `duplicate` / 不要な公開更新が無いこと
-9. 問題なければ stygian だけ同様に有効化し、abyss を一旦 `false` に戻すか、両方 `true` にする方針を決めてから実行
-10. 不審なら即時停止（次節）
+2. Actions secrets にステージング Neon URL（`YSHELPER_COLLECT_*`）と endpoint を設定（値をログに出さない）
+3. Variables で abyss だけ `YSHELPER_ABYSS_ENABLED=true`、stygian は false のまま
+4. Actions `workflow_dispatch` で collector を1回実行（`npm run yshelper:collect`）。HTTP collect は使わない
+5. Snapshot: validationState、recordCount、payloadHash、unresolved 関連 issue を確認（本文は見ない）
+6. Manifest: contentType / revision / seasonId / payloadHash
+7. 公開 API: `/api/v1/battle-statistics/manifest` の ETag、bundle、teams/characters。metadata・生データが無いこと
+8. Flutter: 編成使用率統計画面、304 / revision 更新 / offline 維持
+9. 同じ入力で再実行し `duplicate` / 不要な公開更新が無いこと
+10. 問題なければ stygian だけ同様に有効化
+11. 不審なら即時停止（次節）
 
 ---
 

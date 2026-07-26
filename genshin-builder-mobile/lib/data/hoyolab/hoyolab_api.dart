@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -55,13 +56,49 @@ class HoyolabApi {
   static const _httpTimeout = Duration(seconds: 25);
 
   Future<http.Response> _get(Uri uri, {Map<String, String>? headers}) =>
-      _client.get(uri, headers: headers).timeout(_httpTimeout);
+      _sendBounded(http.Request('GET', uri)..headers.addAll(headers ?? const {}));
 
   Future<http.Response> _post(
     Uri uri, {
     Map<String, String>? headers,
     Object? body,
-  }) => _client.post(uri, headers: headers, body: body).timeout(_httpTimeout);
+  }) {
+    final request = http.Request('POST', uri)
+      ..headers.addAll(headers ?? const {});
+    if (body != null) {
+      if (body is String) {
+        request.body = body;
+      } else if (body is List<int>) {
+        request.bodyBytes = body;
+      } else {
+        request.body = jsonEncode(body);
+        request.headers.putIfAbsent('content-type', () => 'application/json');
+      }
+    }
+    return _sendBounded(request);
+  }
+
+  Future<http.Response> _sendBounded(http.BaseRequest request) async {
+    HoyolabHttpGuard.ensureSafeHoyolabUri(request.url);
+    try {
+      final streamed = await _client.send(request).timeout(_httpTimeout);
+      // Default http.Client follows redirects; reject residual redirect status.
+      if (streamed.statusCode >= 300 && streamed.statusCode < 400) {
+        unawaited(streamed.stream.drain<void>().catchError((_) {}));
+        throw const HoyolabHttpException(HoyolabHttpFailure.httpStatus);
+      }
+      return HoyolabHttpGuard.readBoundedResponse(
+        streamed,
+        timeout: _httpTimeout,
+      );
+    } on TimeoutException {
+      throw const HoyolabHttpException(HoyolabHttpFailure.timeout);
+    } on HoyolabHttpException {
+      rethrow;
+    } on http.ClientException {
+      throw const HoyolabHttpException(HoyolabHttpFailure.network);
+    }
+  }
 
   Future<List<HoyolabRegion>> lookupRegions() {
     return _queue.run(() async {

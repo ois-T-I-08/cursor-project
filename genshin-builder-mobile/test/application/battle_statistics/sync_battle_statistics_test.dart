@@ -254,6 +254,16 @@ class _FakeRepository implements BattleStatisticsRepository {
       storedBundle?.teams ?? const [];
 
   @override
+  Future<List<RemoteBattleCharacterUsage>> readCharacters(
+    BattleStatsContentType type,
+  ) async =>
+      storedBundle?.characters ?? const [];
+
+  @override
+  Future<DateTime?> readSyncedAt(BattleStatsContentType type) async =>
+      manifests.containsKey(type) ? DateTime.utc(2026, 7, 24) : null;
+
+  @override
   Future<void> recordSyncState(
     BattleStatsContentType type,
     RemoteBattleStatsState state, {

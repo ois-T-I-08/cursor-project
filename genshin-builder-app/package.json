@@ -12,9 +12,13 @@
     "test:watch": "vitest",
     "yshelper:dry-run": "tsx scripts/yshelper-native-dry-run.mts",
     "yshelper:dry-run:db": "tsx scripts/yshelper-native-dry-run.mts --require-db",
+    "yshelper:collect": "tsx scripts/yshelper-collect.mts",
     "yshelper:generate-character-map": "tsx scripts/generate-yshelper-character-id-map.mts",
     "yshelper:check-character-map": "tsx scripts/generate-yshelper-character-id-map.mts --check",
     "postinstall": "prisma generate"
+  },
+  "engines": {
+    "node": "20.x"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

@@ -231,6 +231,18 @@ class AppDatabase {
     BattleStatsContentType contentType,
   ) => _inner.battleStatisticsDao.readTeams(contentType.name);
 
+  Future<List<RemoteBattleCharacterUsage>> getRemoteBattleCharacters(
+    BattleStatsContentType contentType,
+  ) => _inner.battleStatisticsDao.readCharacters(contentType.name);
+
+  Future<DateTime?> getRemoteBattleSyncedAt(
+    BattleStatsContentType contentType,
+  ) async {
+    final row = await _inner.battleStatisticsDao.readManifest(contentType.name);
+    if (row == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(row.syncedAt);
+  }
+
   Future<void> recordRemoteBattleSyncState(
     BattleStatsContentType contentType,
     RemoteBattleStatsState state, {

@@ -73,6 +73,59 @@ void main() {
       );
     });
 
+    test('aborts while streaming when the body exceeds maxBytes', () async {
+      final streamed = http.StreamedResponse(
+        Stream<List<int>>.fromIterable([
+          List<int>.filled(8, 0x61),
+          List<int>.filled(8, 0x62),
+        ]),
+        200,
+      );
+      await expectLater(
+        HoyolabHttpGuard.readBoundedResponse(streamed, maxBytes: 10),
+        throwsA(
+          isA<HoyolabHttpException>().having(
+            (error) => error.failure,
+            'failure',
+            HoyolabHttpFailure.responseTooLarge,
+          ),
+        ),
+      );
+    });
+
+    test('rejects Content-Length above the max before reading', () async {
+      final streamed = http.StreamedResponse(
+        const Stream<List<int>>.empty(),
+        200,
+        contentLength: 100,
+      );
+      await expectLater(
+        HoyolabHttpGuard.readBoundedResponse(streamed, maxBytes: 16),
+        throwsA(
+          isA<HoyolabHttpException>().having(
+            (error) => error.failure,
+            'failure',
+            HoyolabHttpFailure.responseTooLarge,
+          ),
+        ),
+      );
+    });
+
+    test('rejects non-HTTPS URIs', () {
+      expect(
+        () => HoyolabHttpGuard.ensureSafeHoyolabUri(
+          Uri.parse('http://example.test/path'),
+        ),
+        throwsA(
+          isA<HoyolabHttpException>().having(
+            (error) => error.failure,
+            'failure',
+            HoyolabHttpFailure.insecureUrl,
+          ),
+        ),
+      );
+    });
+
     test('toString does not include response body or secrets', () {
       const error = HoyolabHttpException(
         HoyolabHttpFailure.httpStatus,

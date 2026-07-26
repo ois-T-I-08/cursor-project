@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../domain/battle_statistics/battle_statistics.dart';
@@ -42,7 +43,7 @@ class BackendBattleStatisticsApi implements BattleStatisticsRemoteSource {
   @override
   Future<BattleStatsManifestFetchResult> fetchManifest({String? etag}) async {
     final response = await _get(
-      _uri('/api/battle-statistics/manifest'),
+      _uri('/api/v1/battle-statistics/manifest'),
       maxBytes: _manifestMaxBytes,
       headers: etag == null ? const {} : {'If-None-Match': etag},
     );
@@ -90,7 +91,7 @@ class BackendBattleStatisticsApi implements BattleStatisticsRemoteSource {
     required int page,
   }) async {
     final response = await _get(
-      _uri('/api/battle-statistics/bundle').replace(
+      _uri('/api/v1/battle-statistics/bundle').replace(
         queryParameters: {
           'type': contentType.name,
           'revision': '$revision',
@@ -282,9 +283,11 @@ class BackendBattleStatisticsApi implements BattleStatisticsRemoteSource {
         BattleStatsRemoteFailure.notConfigured,
       );
     }
+    // Release builds require HTTPS. Local http is allowed only in debug/profile.
+    final allowLocalHttp = !kReleaseMode && _isLocalDevelopmentHttp(base);
     if (!base.hasScheme ||
         !base.hasAuthority ||
-        (base.scheme != 'https' && !_isLocalDevelopmentHttp(base)) ||
+        (base.scheme != 'https' && !allowLocalHttp) ||
         base.userInfo.isNotEmpty ||
         base.hasQuery ||
         base.hasFragment) {

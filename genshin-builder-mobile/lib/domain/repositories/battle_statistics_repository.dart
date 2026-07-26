@@ -13,6 +13,12 @@ abstract class BattleStatisticsRepository {
 
   Future<List<RemoteBattleTeam>> readTeams(BattleStatsContentType contentType);
 
+  Future<List<RemoteBattleCharacterUsage>> readCharacters(
+    BattleStatsContentType contentType,
+  );
+
+  Future<DateTime?> readSyncedAt(BattleStatsContentType contentType);
+
   Future<void> recordSyncState(
     BattleStatsContentType contentType,
     RemoteBattleStatsState state, {

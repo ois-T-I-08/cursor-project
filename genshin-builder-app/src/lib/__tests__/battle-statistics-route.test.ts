@@ -4,50 +4,26 @@ import { createBattleStatsManifestGet } from "@/app/api/battle-statistics/manife
 import { createBattleStatsBundleGet } from "@/app/api/battle-statistics/bundle/route";
 import { createBattleStatsTeamsGet } from "@/app/api/battle-statistics/teams/route";
 import { createYshelperCollectPost } from "@/app/api/internal/yshelper/collect/route";
-import { YshelperAdapterNotConfiguredError } from "@/lib/yshelper/adapter";
 import { encodeCursor } from "@/lib/yshelper/publication";
 import { resetBattleStatsRateLimitForTest } from "@/lib/yshelper/rate-limit";
 import { resetSyncRateLimitForTest } from "@/lib/sync-rate-limit";
 
 describe("battle statistics routes", () => {
   afterEach(() => {
-    delete process.env.YSHELPER_COLLECT_SECRET;
     resetBattleStatsRateLimitForTest();
     resetSyncRateLimitForTest();
   });
 
-  it("requires the collector bearer secret", async () => {
-    process.env.YSHELPER_COLLECT_SECRET = "fixture-secret";
-    const runner = async () => ({ status: "success" as const, items: [] });
-    const post = createYshelperCollectPost(runner);
-
-    expect(
-      (await post(new Request("https://example.test/api/internal/yshelper/collect", {
-        method: "POST",
-      }))).status,
-    ).toBe(401);
-    expect(
-      (await post(new Request("https://example.test/api/internal/yshelper/collect", {
-        method: "POST",
-        headers: { authorization: "Bearer fixture-secret" },
-      }))).status,
-    ).toBe(200);
-  });
-
-  it("reports an unconfigured adapter without leaking internals", async () => {
-    process.env.YSHELPER_COLLECT_SECRET = "fixture-secret";
-    const post = createYshelperCollectPost(async () => {
-      throw new YshelperAdapterNotConfiguredError();
-    });
+  it("retires the HTTP collect route without fetching upstream", async () => {
+    const post = createYshelperCollectPost();
     const response = await post(
       new Request("https://example.test/api/internal/yshelper/collect", {
         method: "POST",
-        headers: { authorization: "Bearer fixture-secret" },
       }),
     );
     const body = await response.json();
-    expect(response.status).toBe(503);
-    expect(body.error.code).toBe("not_configured");
+    expect(response.status).toBe(410);
+    expect(body.error.code).toBe("collector_moved");
     expect(JSON.stringify(body)).not.toContain("YSHELPER_API");
   });
 
@@ -62,13 +38,13 @@ describe("battle statistics routes", () => {
     });
     const get = createBattleStatsManifestGet(loader);
     const initial = await get(
-      new Request("https://example.test/api/battle-statistics/manifest"),
+      new Request("https://example.test/api/v1/battle-statistics/manifest"),
     );
     expect(initial.status).toBe(200);
     expect(initial.headers.get("etag")).toBe('"sha256-fixture"');
 
     const unchanged = await get(
-      new Request("https://example.test/api/battle-statistics/manifest", {
+      new Request("https://example.test/api/v1/battle-statistics/manifest", {
         headers: { "if-none-match": '"sha256-fixture"' },
       }),
     );

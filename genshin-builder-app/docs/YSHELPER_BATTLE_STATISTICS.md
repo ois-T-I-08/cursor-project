@@ -100,18 +100,27 @@ YShelper token、Neon URL、Collector secretをGitHub VariablesやFlutterの`dar
 
 kill switchを有効化するのは上記が揃ってから。
 
-## Collector
+## Collector（GitHub Actions CLI）
 
-`.github/workflows/yshelper-battle-statistics.yml`は`workflow_dispatch`でのみ内部APIを起動する。定期取得（cron）は利用許可と運用確認が揃うまで有効化しない。
+収集は **GitHub Actions 上の Node CLI** が行う。Next.js のリクエスト処理中に YShelper へアクセスしない。
 
 ```text
-POST /api/internal/yshelper/collect
-Authorization: Bearer <YSHELPER_COLLECT_SECRET>
+YShelper
+  → Actions: npm run yshelper:collect
+  → validate / Prisma
+  → Neon
+  → Next.js 公開 API（読み取りのみ）
+  → Flutter
 ```
 
-サーバーは最終完全成功から14日未満なら`skipped / not_due`を返し、外部APIを呼ばない。実行時はprocess-local排他とDB `SyncLease`を併用する。abyss/stygianは個別に記録・検証し、validなSnapshotだけ各Manifestを更新する。片方の失敗値で他方や最終成功値を上書きしない。
+- Workflow: `.github/workflows/yshelper-battle-statistics.yml`（`workflow_dispatch` のみ。schedule はコメントアウト）
+- CLI: `npm run yshelper:collect`（[`scripts/yshelper-collect.mts`](../scripts/yshelper-collect.mts)）
+- Kill switch がすべて false / 未設定なら Workflow は収集を skip して成功終了（既定安全）
+- `POST /api/internal/yshelper/collect` は **410 Gone**（HTTP collect 廃止）
+- 最終完全成功から14日未満なら`skipped / not_due`。process-local排他と DB `SyncLease` を併用
+- abyss/stygian は個別に記録・検証し、valid な Snapshot だけ Manifest を更新する。片方の失敗で他方を壊さない
 
-手動確認はActionsの`workflow_dispatch`を優先する。ローカルでcurlする場合もsecretをコマンド本文・ログ・スクリーンショットへ残さない。
+Actions secrets（例）: `YSHELPER_COLLECT_DATABASE_URL` / `YSHELPER_COLLECT_DIRECT_URL`、endpoint 系。Variables の kill switch は既定 false。secret・URL・本文をログへ出さない。
 
 ## 検証と保持
 
@@ -128,12 +137,16 @@ SnapshotとSyncRunは監査履歴として現時点では自動削除しない�
 
 ## 公開APIとFlutter同期
 
-- `GET /api/battle-statistics/manifest`: ETag、`If-None-Match`、304
-- `GET /api/battle-statistics/bundle?type=abyss&revision=...&page=...`: 500件単位
-- `GET /api/battle-statistics/teams`: cursor、limit最大100、character/side/stage/filter
-- `GET /api/battle-statistics/characters`: cursor、limit最大100
+推奨（Flutter はこちらを使用）:
 
-Flutterは起動を待たせずManifestを確認する。同一ETagなら終了し、変更された種類だけ全ページを取得する。schema、hash、Character ID、重複を確認後、Drift v9 transactionでManifestとデータを切り替える。失敗・offline・timeout時は旧revisionを維持する。
+- `GET /api/v1/battle-statistics/manifest`: ETag、`If-None-Match`、304
+- `GET /api/v1/battle-statistics/bundle?type=abyss&revision=...&page=...`: 500件単位
+- `GET /api/v1/battle-statistics/teams`: cursor、limit最大100
+- `GET /api/v1/battle-statistics/characters`: cursor、limit最大100
+
+互換のため `/api/battle-statistics/*`（v1 なし）も同一実装を公開する。
+
+Flutterは起動を待たせずManifestを確認する。同一ETagなら終了し、変更された種類だけ全ページを取得する。schema、hash、Character ID、重複を確認後、Drift transactionでManifestとデータを切り替える。失敗・offline・timeout時は旧revisionを維持する。閲覧UIは「編成使用率統計」（AZA「深境螺旋統計」とは別）。
 
 ## production適用
 

@@ -12,6 +12,10 @@ void main() {
     'manifest sends ETag and accepts 304 without downloading a bundle',
     () async {
       final client = MockClient((request) async {
+        expect(
+          request.url.path,
+          '/api/v1/battle-statistics/manifest',
+        );
         expect(request.headers['if-none-match'], '"fixture"');
         return http.Response('', 304);
       });
@@ -26,8 +30,23 @@ void main() {
     },
   );
 
+  test('rejects an empty API base URL as not configured', () async {
+    final api = BackendBattleStatisticsApi(baseUrl: '');
+    await expectLater(
+      api.fetchManifest(),
+      throwsA(
+        isA<BattleStatsRemoteException>().having(
+          (error) => error.failure,
+          'failure',
+          BattleStatsRemoteFailure.notConfigured,
+        ),
+      ),
+    );
+  });
+
   test('strictly parses a paged public bundle', () async {
     final client = MockClient((request) async {
+      expect(request.url.path, '/api/v1/battle-statistics/bundle');
       expect(request.url.queryParameters['type'], 'abyss');
       expect(request.url.queryParameters['revision'], '2');
       return http.Response(

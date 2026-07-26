@@ -368,6 +368,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   const SizedBox(height: 8),
                   const Text('使用率は集計上の参考値です。強さや最適編成を保証するものではありません。'),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () => context.push('/battle-statistics'),
+                      child: const Text('編成使用率を見る'),
+                    ),
+                  ),
+                  if (battleStatsEnabled)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () {
+                          ref.invalidate(battleStatisticsStartupSyncProvider);
+                          ref.invalidate(battleStatisticsBrowseProvider);
+                        },
+                        child: const Text('統計を再取得'),
+                      ),
+                    ),
                 ],
               ),
             ),

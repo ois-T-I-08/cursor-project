@@ -31,6 +31,15 @@ class DriftBattleStatisticsRepository implements BattleStatisticsRepository {
   ) => _db.getRemoteBattleTeams(contentType);
 
   @override
+  Future<List<RemoteBattleCharacterUsage>> readCharacters(
+    BattleStatsContentType contentType,
+  ) => _db.getRemoteBattleCharacters(contentType);
+
+  @override
+  Future<DateTime?> readSyncedAt(BattleStatsContentType contentType) =>
+      _db.getRemoteBattleSyncedAt(contentType);
+
+  @override
   Future<void> recordSyncState(
     BattleStatsContentType contentType,
     RemoteBattleStatsState state, {

@@ -110,6 +110,30 @@ class BattleStatisticsDao extends DatabaseAccessor<DriftAppDatabase>
     });
   }
 
+  Future<List<RemoteBattleCharacterUsage>> readCharacters(
+    String contentType,
+  ) async {
+    final rows =
+        await (select(remoteBattleCharacterUsages)
+              ..where((row) => row.contentType.equals(contentType))
+              ..orderBy([(row) => OrderingTerm.desc(row.usageRate)]))
+            .get();
+    return rows
+        .map(
+          (row) => RemoteBattleCharacterUsage(
+            characterId: row.characterId,
+            usageRate: row.usageRate,
+            usageCount: row.usageCount,
+            rank: row.rank,
+            side: row.side,
+            ownershipRate: row.ownershipRate,
+            usageAmongOwnersRate: row.usageAmongOwnersRate,
+            sampleSize: row.sampleSize,
+          ),
+        )
+        .toList();
+  }
+
   Future<List<RemoteBattleTeam>> readTeams(String contentType) async {
     final teamRows =
         await (select(remoteBattleTeams)

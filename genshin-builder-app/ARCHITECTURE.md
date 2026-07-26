@@ -282,11 +282,11 @@ gcsim失敗時は期限切れを含む最終正常cache、AZA候補、ルール�
 
 ### 7. YShelper編成統計
 
-手動GitHub Actionsは`POST /api/internal/yshelper/collect`を起動する。定期実行は正式仕様と検証が揃うまで無効とする。内部APIはBearer認証、レート制限、process-local排他、`SyncLease`による複数instance排他を適用し、最終成功から14日未満なら`not_due`で終了する。
+収集はGitHub Actions上の`npm run yshelper:collect`（Node CLI → Neon）が担当する。Next.jsのリクエスト処理中にYShelperへアクセスしない。`POST /api/internal/yshelper/collect`は410 Gone。定期実行（schedule）は利用許可と検証が揃うまで無効。kill switch既定は無効。CLIはprocess-local排他と`SyncLease`を使い、最終成功から14日未満なら`not_due`で終了する。
 
 YShelper固有境界は`src/lib/yshelper`に分離する。生JSONは`YSHELPER_ADAPTER_MODE=native-v1`、bridgeは`canonical-v1`。未設定またはkill switch無効では通信しない。`native-v1`は確認済み`getAbyssRank*.php`構造を`canonical-v1`へ変換し、正規化後に構造・既知Character・急減・使用率変動を検証する。`suspicious`/`invalid`は履歴だけ残してManifestを更新しない。
 
-公開APIはManifest、ページ分割Bundle、編成、キャラクター使用率の4経路。ManifestはETag/304対応、一覧はcursor pagination、Bundleは公開revisionだけを返す。秘密情報、upstream URL、レスポンス本文は返さない。
+公開APIは`/api/v1/battle-statistics/{manifest,bundle,teams,characters}`（旧パスも互換公開）。ManifestはETag/304対応、一覧はcursor pagination、Bundleは公開revisionだけを返す。秘密情報、upstream URL、レスポンス本文は返さない。Flutterは公開APIのみを呼び、Neon/YShelperへ直接接続しない。
 
 ---
 
