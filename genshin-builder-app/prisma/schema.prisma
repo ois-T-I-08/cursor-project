@@ -353,9 +353,9 @@ model TeamImportLog {
 }
 
 // ============================================================
-// Build Guide recommendations (YouTube + manual transcript)
+// Build Guide recommendations (YouTube metadata + Gemini visual OCR)
 // JSON fields use String columns (SQLite-compatible).
-// Full transcript text is NOT persisted.
+// Video files / frames / audio are NEVER persisted.
 // ============================================================
 
 model GuideChannel {
@@ -369,6 +369,7 @@ model GuideChannel {
   permissionStatus     String    @default("unknown")
   attributionRequired  Boolean   @default(true)
   notes                String    @default("")
+  dailyAnalysisLimit   Int       @default(20)
   lastFetchedAt        DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
@@ -379,76 +380,141 @@ model GuideChannel {
 }
 
 model GuideVideo {
-  id             String    @id @default(cuid())
-  videoId        String    @unique
-  channelId      String
-  channel        GuideChannel @relation(fields: [channelId], references: [channelId], onDelete: Cascade)
-  title          String
-  description    String    @default("")
-  publishedAt    DateTime?
-  thumbnailUrl   String    @default("")
-  metadataHash   String    @default("")
-  sourceUrl      String
-  analysisStatus String    @default("pending")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  videoId          String    @unique
+  channelId        String
+  channel          GuideChannel @relation(fields: [channelId], references: [channelId], onDelete: Cascade)
+  title            String
+  description      String    @default("")
+  publishedAt      DateTime?
+  thumbnailUrl     String    @default("")
+  durationSeconds  Int?
+  privacyStatus    String    @default("unknown")
+  metadataHash     String    @default("")
+  sourceUrl        String
+  analysisStatus   String    @default("pending")
+  lastAnalyzedAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  jobs             GuideAnalysisJob[]
-  results          GuideAnalysisResult[]
-  claims           GuideExtractedClaim[]
-  sourceLinks      GuideAnalysisSourceVideo[]
-  contributions    RecommendationSourceContribution[]
-  evidence         CharacterBuildRecommendationEvidence[]
+  jobs            GuideVisualAnalysisJob[]
+  results         GuideVisualAnalysisResult[]
+  evidences       GuideVisualEvidence[]
+  claims          GuideVisualExtractedClaim[]
+  sourceLinks     GuideAnalysisSourceVideo[]
+  contributions   RecommendationVisualContribution[]
 
   @@index([channelId, publishedAt])
   @@index([analysisStatus])
+  @@index([privacyStatus])
 }
 
-model GuideAnalysisJob {
+model GuideVisualAnalysisJob {
   id              String    @id @default(cuid())
   videoId         String
   video           GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
-  transcriptHash  String
-  inputFormat     String
+  requestHash     String
   status          String
+  providerId      String    @default("")
   modelIdentifier String    @default("")
   promptVersion   String    @default("")
   schemaVersion   String    @default("")
-  characterDataVersion String @default("")
+  gameDataVersion String    @default("")
   attempts        Int       @default(0)
-  segmentCount    Int       @default(0)
-  charCount       Int       @default(0)
-  usagePayload    String    @default("")
+  tokenUsage      String    @default("")
   errorCode       String    @default("")
+  rangesPayload   String    @default("")
+  startedAt       DateTime?
+  completedAt     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  completedAt     DateTime?
 
   @@index([videoId, status])
-  @@index([transcriptHash])
+  @@index([requestHash])
   @@index([createdAt])
 }
 
-model GuideAnalysisResult {
-  id              String   @id @default(cuid())
-  cacheKey        String   @unique
-  videoId         String
-  video           GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
-  transcriptHash  String
-  characterId     String   @default("")
-  modelIdentifier String
-  promptVersion   String
-  schemaVersion   String
-  characterDataVersion String
-  status          String
-  rawAiOutput     String   @default("")
-  validatedPayload String  @default("")
-  errorCode       String   @default("")
-  generatedAt     DateTime
-  updatedAt       DateTime @updatedAt
+model GuideVisualAnalysisResult {
+  id               String   @id @default(cuid())
+  cacheKey         String   @unique
+  videoId          String
+  video            GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  requestHash      String
+  providerId       String
+  modelIdentifier  String
+  promptVersion    String
+  schemaVersion    String
+  gameDataVersion  String
+  status           String
+  rawAiOutput      String   @default("")
+  validatedPayload String   @default("")
+  errorCode        String   @default("")
+  generatedAt      DateTime
+  updatedAt        DateTime @updatedAt
 
-  @@index([videoId, characterId, status])
+  evidences GuideVisualEvidence[]
+
+  @@index([videoId, status])
   @@index([status])
+}
+
+model GuideVisualEvidence {
+  id                 String   @id @default(cuid())
+  analysisResultId   String
+  analysisResult     GuideVisualAnalysisResult @relation(fields: [analysisResultId], references: [id], onDelete: Cascade)
+  videoId            String
+  video              GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  startSeconds       Float
+  endSeconds         Float
+  evidenceType       String
+  normalizedPayload  String   @default("{}")
+  exactVisibleText   String   @default("")
+  confidence         Float    @default(0)
+  validationStatus   String   @default("pending")
+  approvalStatus     String   @default("pending_review")
+  exclusionCode      String   @default("")
+  purposeSummary     String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  visibleTexts  GuideVisualVisibleText[]
+  claims        GuideVisualExtractedClaim[]
+  contributions RecommendationVisualContribution[]
+
+  @@index([videoId, startSeconds])
+  @@index([analysisResultId])
+  @@index([approvalStatus, validationStatus])
+}
+
+model GuideVisualVisibleText {
+  id         String @id @default(cuid())
+  evidenceId String
+  evidence   GuideVisualEvidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  text       String
+  category   String @default("other")
+  confidence Float  @default(0)
+
+  @@index([evidenceId])
+}
+
+model GuideVisualExtractedClaim {
+  id             String   @id @default(cuid())
+  evidenceId     String
+  evidence       GuideVisualEvidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  videoId        String
+  video          GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  characterId    String
+  claimKey       String
+  claimPayload   String
+  purpose        String   @default("unknown")
+  confidence     Float    @default(0)
+  status         String   @default("extracted")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([videoId, characterId])
+  @@index([evidenceId])
+  @@index([characterId, claimKey])
 }
 
 model GuideAnalysisSourceManifest {
@@ -480,24 +546,6 @@ model GuideAnalysisSourceVideo {
   @@index([videoId])
 }
 
-/// Per-video extracted claims (separate from published recommendations).
-model GuideExtractedClaim {
-  id             String   @id @default(cuid())
-  videoId        String
-  video          GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
-  characterId    String
-  claimKey       String
-  claimPayload   String
-  confidence     Float    @default(0)
-  evidencePayload String  @default("")
-  status         String   @default("extracted")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@index([videoId, characterId])
-  @@index([characterId, claimKey])
-}
-
 model CharacterBuildRecommendation {
   id                 String    @id @default(cuid())
   characterId        String
@@ -517,42 +565,31 @@ model CharacterBuildRecommendation {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  contributions RecommendationSourceContribution[]
-  evidence      CharacterBuildRecommendationEvidence[]
+  contributions RecommendationVisualContribution[]
   revisions     GuideRecommendationRevision[]
 
   @@index([characterId, status])
   @@index([status, publishedAt])
 }
 
-model RecommendationSourceContribution {
-  id               String @id @default(cuid())
-  recommendationId String
-  recommendation   CharacterBuildRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
-  videoId          String
-  video            GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
-  fieldPath        String
-  valuePayload     String
-  inclusion        String @default("included")
-  reason           String @default("")
+model RecommendationVisualContribution {
+  id                    String @id @default(cuid())
+  recommendationId      String
+  recommendation        CharacterBuildRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  evidenceId            String
+  evidence              GuideVisualEvidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  videoId               String
+  video                 GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  startSeconds          Float
+  endSeconds            Float
+  exactVisibleText      String
+  contributionRole      String @default("supporting")
+  decision              String @default("adopted")
+  decisionSummary       String @default("")
+  usedInPublishedResult Boolean @default(false)
 
-  @@index([recommendationId, inclusion])
-  @@index([videoId])
-}
-
-model CharacterBuildRecommendationEvidence {
-  id               String @id @default(cuid())
-  recommendationId String
-  recommendation   CharacterBuildRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
-  videoId          String
-  video            GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
-  fieldPath        String    @default("")
-  snippet          String
-  startMs          Int?
-  endMs            Int?
-  segmentIndex     Int?
-
-  @@index([recommendationId])
+  @@index([recommendationId, usedInPublishedResult])
+  @@index([evidenceId])
   @@index([videoId])
 }
 
@@ -588,4 +625,19 @@ model GuideImportLog {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+model GuideVisualUsageLog {
+  id              Int      @id @default(autoincrement())
+  channelId       String   @default("")
+  videoId         String   @default("")
+  providerId      String
+  modelIdentifier String
+  success         Boolean
+  tokenUsage      String   @default("")
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([channelId, createdAt])
+  @@index([videoId, createdAt])
 }

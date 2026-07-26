@@ -1,24 +1,30 @@
 import { createHash } from "node:crypto";
 
-export function buildGuideCacheKey(input: {
+export function buildVisualRequestHash(input: {
   videoId: string;
-  transcriptHash: string;
-  characterDataVersion: string;
-  promptVersion: string;
-  schemaVersion: string;
+  videoMetadataHash: string;
+  videoPublishedAt: string | null;
+  videoDuration: number | null;
+  providerId: string;
   modelIdentifier: string;
-  characterId?: string;
-  mergedVideoIds?: string[];
+  visualPromptVersion: string;
+  visualSchemaVersion: string;
+  gameDataVersion: string;
+  requestedRanges?: Array<{ startSeconds: number; endSeconds: number }>;
 }): string {
   const payload = {
     videoId: input.videoId,
-    transcriptHash: input.transcriptHash,
-    characterDataVersion: input.characterDataVersion,
-    promptVersion: input.promptVersion,
-    schemaVersion: input.schemaVersion,
+    videoMetadataHash: input.videoMetadataHash,
+    videoPublishedAt: input.videoPublishedAt ?? "",
+    videoDuration: input.videoDuration ?? null,
+    providerId: input.providerId,
     modelIdentifier: input.modelIdentifier,
-    characterId: input.characterId ?? "",
-    mergedVideoIds: [...(input.mergedVideoIds ?? [])].sort(),
+    visualPromptVersion: input.visualPromptVersion,
+    visualSchemaVersion: input.visualSchemaVersion,
+    gameDataVersion: input.gameDataVersion,
+    requestedRanges: (input.requestedRanges ?? [])
+      .map((r) => `${r.startSeconds}-${r.endSeconds}`)
+      .sort(),
   };
   return createHash("sha256").update(JSON.stringify(payload), "utf8").digest("hex");
 }
