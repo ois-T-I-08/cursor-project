@@ -153,7 +153,7 @@ model ExternalApiCache {
   updatedAt  DateTime @updatedAt
 }
 
-/// gcsimを含むおすすめ編成生成Job。HoYoLABのUID/Cookie/未加工レスポンスは保存しない。
+/// おすすめ編成生成Job（AZA.GG + ルール）。HoYoLABのUID/Cookie/未加工レスポンスは保存しない。
 model TeamSimulationJob {
   id           String   @id
   requestHash  String
@@ -166,20 +166,6 @@ model TeamSimulationJob {
   expiresAt    DateTime
 
   @@index([requestHash, status])
-  @@index([expiresAt])
-}
-
-/// 同一の正規化済み戦闘入力に対する最終正常結果。
-model TeamSimulationCache {
-  cacheKey      String   @id
-  gcsimVersion  String
-  attackerId    String
-  payload       String
-  createdAt     DateTime @default(now())
-  expiresAt     DateTime
-  updatedAt     DateTime @updatedAt
-
-  @@index([attackerId])
   @@index([expiresAt])
 }
 
