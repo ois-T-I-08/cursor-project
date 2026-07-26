@@ -5,9 +5,9 @@ import 'package:genshin_builder_mobile/application/daily_plan_notifications/dail
 
 void main() {
   test('notification strings contain no cookie/token/uid/db path', () {
-    final title = DailyPlanNotificationIds.incompleteTitle;
+    const title = DailyPlanNotificationIds.incompleteTitle;
     final body = DailyPlanNotificationIds.incompleteBody(3);
-    final payload = DailyPlanNotificationIds.incompletePayload;
+    const payload = DailyPlanNotificationIds.incompletePayload;
     final combined = '$title|$body|$payload';
 
     for (final forbidden in [

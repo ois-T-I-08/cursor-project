@@ -1,6 +1,6 @@
 # Pre-release validation checklist
 
-Target branch: `release/pre-release-validation`  
+Target branch: `main` (via `salvage/daily-plan-completion-notifications`)
 Base: `main`
 
 Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, or device account credentials in this file.

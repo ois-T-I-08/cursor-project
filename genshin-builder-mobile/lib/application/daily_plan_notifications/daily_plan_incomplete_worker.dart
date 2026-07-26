@@ -56,7 +56,7 @@ class DailyPlanIncompleteWorker {
         AppDatabaseSettingsStore(db),
       );
       final scheduler = DailyPlanIncompleteScheduler();
-      final notifier = const DailyPlanIncompleteNotifier();
+      const notifier = DailyPlanIncompleteNotifier();
       final evalRepo = DriftDailyPlanEvalHistoryRepository(db);
       final completionRepo = DriftDailyPlanCompletionRepository(db);
 
