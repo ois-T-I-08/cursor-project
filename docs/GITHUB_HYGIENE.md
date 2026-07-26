@@ -20,9 +20,9 @@ Close / Merge は所有者が実行する（本ファイルは判断結果のみ
 | **#16** | **継続・機能凍結** | Neon + YShelper 基盤。外部許可まで merge / 本番収集しない |
 | **#17** | **Merged** | team-rec / 日本語 UI。完了 |
 | **#1** | **Closed (Obsolete)** | 初期静的 Web 向け。既に Close 済み |
-| **#4** | **salvage 後 Close** | 直接 merge しない。代替: sync lease renewal + daily plan notifications |
-| **#5** | **salvage 後 Close** | #4 依存のまま merge しない。代替: ley-line domain (+ UI は別) |
-| **#6** | **salvage 後 Close** | 未統合 hardening のみ。代替: remote JSON HTTPS/redirect/credential |
+| **#4** | **salvage 後 Close** | 代替: [#20](https://github.com/ois-T-I-08/cursor-project/pull/20) lease / [#22](https://github.com/ois-T-I-08/cursor-project/pull/22) daily plan |
+| **#5** | **salvage 後 Close** | 代替: [#23](https://github.com/ois-T-I-08/cursor-project/pull/23) domain。UI/calendar は別途 |
+| **#6** | **salvage 後 Close** | 代替: [#21](https://github.com/ois-T-I-08/cursor-project/pull/21) remote JSON URL hardening |
 | **#19** | **継続** | 所有者確定判断（LICENSE / SQLCipher / consent / Data Safety） |
 | #13–#15 | **main 統合済み** | 参照のみ |
 

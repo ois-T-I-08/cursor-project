@@ -18,15 +18,6 @@ Do **not** rebase or merge stacked PRs #4–#6 onto main. Close only after repla
 | PostCSS / CI validate_config | **Present** on main | do not reintroduce |
 | last-known-good (ley-line repo) | Tied to #5 configs | ship with ley-line domain PR |
 
-## Replacement PR order
-
-1. `salvage/sync-lease-renewal` (web)
-2. `salvage/remote-json-url-hardening` (mobile security)
-3. `salvage/daily-plan-completion-notifications` (mobile)
-4. `salvage/ley-line-resin-domain` then UI / calendar
-
-Close comments: `docs/PR_CLOSE_COMMENTS.md` (fill replacement links after PRs open).
-
 ## Replacement PRs (opened)
 
 1. [#20](https://github.com/ois-T-I-08/cursor-project/pull/20) sync lease renewal (web)
