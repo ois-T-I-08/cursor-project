@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "teams": [
+    {
+      "source": "local",
+      "sourceTeamId": "fixture-team",
+      "name": "テスト編成",
+      "archetype": "test",
+      "characters": [
+        { "characterId": "10000089", "sourceRole": "Main DPS", "slotIndex": 0 },
+        { "characterId": "10000052", "sourceRole": "Sub DPS", "slotIndex": 1 },
+        { "characterId": "10000071", "sourceRole": "Support", "slotIndex": 2 },
+        { "characterId": "10000058", "sourceRole": "Healer", "slotIndex": 3 }
+      ],
+      "fetchedAt": "2026-07-26T00:00:00.000Z",
+      "dataVersion": "test-v1"
+    }
+  ]
+}
