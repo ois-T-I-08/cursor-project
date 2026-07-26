@@ -22,6 +22,25 @@ type UpdateWhere = {
   expiresAt?: { lte?: Date; gt?: Date };
 };
 
+type LeaseDbMock = {
+  syncLease: {
+    findUnique: (args: {
+      where: { lockKey: string };
+    }) => Promise<LeaseRow | null>;
+    create: (args: { data: LeaseRow }) => Promise<void>;
+    updateMany: (args: {
+      where: UpdateWhere;
+      data: Partial<LeaseRow>;
+    }) => Promise<{ count: number }>;
+    deleteMany: (args: {
+      where: { lockKey: string; ownerToken: string };
+    }) => Promise<{ count: number }>;
+  };
+  $transaction: <T>(
+    callback: (tx: LeaseDbMock) => Promise<T>,
+  ) => Promise<T>;
+};
+
 function createLeaseDb() {
   const rows = new Map<string, LeaseRow>();
 
@@ -39,56 +58,46 @@ function createLeaseDb() {
     return true;
   };
 
-  const db = {
-    syncLease: {
-      findUnique: async ({ where }: { where: { lockKey: string } }) =>
-        rows.get(where.lockKey) ?? null,
-      create: async ({
-        data,
-      }: {
-        data: LeaseRow;
-      }) => {
-        if (rows.has(data.lockKey)) {
-          throw new Error("unique violation");
-        }
-        rows.set(data.lockKey, { ...data });
-      },
-      updateMany: async ({
-        where,
-        data,
-      }: {
-        where: UpdateWhere;
-        data: Partial<LeaseRow>;
-      }) => {
-        const current = rows.get(where.lockKey);
-        if (!current || !matchesWhere(current, where)) {
-          return { count: 0 };
-        }
-        rows.set(where.lockKey, {
-          ...current,
-          ...data,
-          lockKey: current.lockKey,
-        } as LeaseRow);
-        return { count: 1 };
-      },
-      deleteMany: async ({
-        where,
-      }: {
-        where: { lockKey: string; ownerToken: string };
-      }) => {
-        const current = rows.get(where.lockKey);
-        if (!current || current.ownerToken !== where.ownerToken) {
-          return { count: 0 };
-        }
-        rows.delete(where.lockKey);
-        return { count: 1 };
-      },
+  const syncLease: LeaseDbMock["syncLease"] = {
+    findUnique: async ({ where }) => rows.get(where.lockKey) ?? null,
+    create: async ({ data }) => {
+      if (rows.has(data.lockKey)) {
+        throw new Error("unique violation");
+      }
+      rows.set(data.lockKey, { ...data });
     },
-    $transaction: async <T>(callback: (tx: typeof db) => Promise<T>) =>
+    updateMany: async ({ where, data }) => {
+      const current = rows.get(where.lockKey);
+      if (!current || !matchesWhere(current, where)) {
+        return { count: 0 };
+      }
+      rows.set(where.lockKey, {
+        ...current,
+        ...data,
+        lockKey: current.lockKey,
+      } as LeaseRow);
+      return { count: 1 };
+    },
+    deleteMany: async ({ where }) => {
+      const current = rows.get(where.lockKey);
+      if (!current || current.ownerToken !== where.ownerToken) {
+        return { count: 0 };
+      }
+      rows.delete(where.lockKey);
+      return { count: 1 };
+    },
+  };
+
+  const db: LeaseDbMock = {
+    syncLease,
+    $transaction: async <T>(callback: (tx: LeaseDbMock) => Promise<T>) =>
       callback(db),
   };
 
-  return { db, rows };
+  return {
+    db: db as unknown as Parameters<typeof tryAcquireSyncLease>[4],
+    rows,
+  };
 }
 
 describe("sync distributed lease", () => {

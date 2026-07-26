@@ -103,7 +103,7 @@ describe("runSyncExclusive", () => {
         },
       });
       return id as unknown as ReturnType<typeof setInterval>;
-    }) as typeof setInterval;
+    }) as unknown as typeof setInterval;
     const clearIntervalFn = vi.fn();
 
     let resolveRunner!: (value: SyncResult) => void;
@@ -146,7 +146,7 @@ describe("runSyncExclusive", () => {
         if (typeof handler === "function") handler();
       });
       return 1 as unknown as ReturnType<typeof setInterval>;
-    }) as typeof setInterval;
+    }) as unknown as typeof setInterval;
 
     let sawAbort = false;
     const pending = runSyncExclusive(
