@@ -192,6 +192,17 @@ class AppDatabase {
   Future<void> setSetting(String key, String value) =>
       _inner.progressDao.setSetting(key, value);
 
+  Future<void> deleteSetting(String key) =>
+      _inner.progressDao.deleteSetting(key);
+
+  Future<void> clearAllSettings() => _inner.progressDao.clearAllSettings();
+
+  Future<void> deleteAllProgressForUser(String userId) =>
+      _inner.progressDao.deleteAllProgressForUser(userId);
+
+  Future<void> clearAllPlanningDataForUser(String userId) =>
+      _inner.growthDao.clearAllPlanningDataForUser(userId);
+
   Future<DateTime?> getLastSyncTime() => _inner.progressDao.getLastSyncTime();
 
   Future<SyncStatus> getSyncStatus() async {

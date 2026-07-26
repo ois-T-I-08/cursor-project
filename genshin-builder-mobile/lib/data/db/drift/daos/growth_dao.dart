@@ -70,6 +70,25 @@ class GrowthDao extends DatabaseAccessor<DriftAppDatabase>
   Future<void> goalDelete(String id) =>
       (delete(growthGoals)..where((t) => t.id.equals(id))).go();
 
+  Future<void> goalsDeleteAllForUser(String userId) =>
+      (delete(growthGoals)..where((t) => t.userId.equals(userId))).go();
+
+  Future<void> inventoryDeleteAllForUser(String userId) =>
+      (delete(userMaterialInventory)..where((t) => t.userId.equals(userId))).go();
+
+  Future<void> teamsDeleteAllForUser(String userId) =>
+      (delete(savedTeams)..where((t) => t.userId.equals(userId))).go();
+
+  Future<void> eventsDeleteAllForUser(String userId) =>
+      (delete(growthEvents)..where((t) => t.userId.equals(userId))).go();
+
+  Future<void> clearAllPlanningDataForUser(String userId) async {
+    await goalsDeleteAllForUser(userId);
+    await inventoryDeleteAllForUser(userId);
+    await teamsDeleteAllForUser(userId);
+    await eventsDeleteAllForUser(userId);
+  }
+
   Future<void> goalDeleteByCharacter(String userId, String characterId) =>
       (delete(growthGoals)
             ..where((t) => t.userId.equals(userId) & t.characterId.equals(characterId)))
