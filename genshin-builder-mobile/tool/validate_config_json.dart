@@ -12,16 +12,25 @@ import 'package:genshin_builder_mobile/data/config/config_validators.dart';
 /// ```
 void main(List<String> args) {
   final root = Directory.current.path;
-  final checks = <({String path, void Function(Map<String, dynamic>) validate})>[
-    (
-      path: 'assets/config/artifact_score_weights.json',
-      validate: validateArtifactScoreWeightsJson,
-    ),
-    (
-      path: 'assets/config/daily_material_schedule.json',
-      validate: validateDailyMaterialScheduleJson,
-    ),
-  ];
+  final checks =
+      <({String path, void Function(Map<String, dynamic>) validate})>[
+        (
+          path: 'assets/config/artifact_score_weights.json',
+          validate: validateArtifactScoreWeightsJson,
+        ),
+        (
+          path: 'assets/config/daily_material_schedule.json',
+          validate: validateDailyMaterialScheduleJson,
+        ),
+        (
+          path: 'assets/config/resin_farm_costs.json',
+          validate: validateResinFarmCostsJson,
+        ),
+        (
+          path: 'assets/config/ley_line_overflow_events.json',
+          validate: validateLeyLineOverflowEventsJson,
+        ),
+      ];
 
   var failed = false;
   for (final check in checks) {
@@ -32,7 +41,8 @@ void main(List<String> args) {
       continue;
     }
     try {
-      final decoded = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+      final decoded =
+          jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
       check.validate(decoded);
       stdout.writeln('OK ${check.path}');
     } catch (e) {

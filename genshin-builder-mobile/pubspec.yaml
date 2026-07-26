@@ -1,5 +1,5 @@
 name: genshin_builder_mobile
-description: 原神キャラ育成管理アプリ（非公式ファンツール）
+description: 原神キャラ育成管琁E��プリ�E�非公式ファンチE�Eル�E�E
 publish_to: "none"
 version: 0.1.0+1
 
@@ -14,10 +14,10 @@ dependencies:
   go_router: ^14.8.1
   http: ^1.3.0
   url_launcher: ^6.3.2
-  # Drift（sqflite は削除済み — DB パスは database_path.dart）
+  # Drift�E�Eqflite は削除済み  EDB パスは database_path.dart�E�E
   drift: ^2.22.1
-  # sqlite3_flutter_libs と同時依存不可（同一 Android namespace）。SQLCipher 単体で平文も開ける。
-  # drift_flutter は sqlite3_flutter_libs を引き込むため未使用で外す（NativeDatabase 直結）。
+  # sqlite3_flutter_libs と同時依存不可�E�同一 Android namespace�E�。SQLCipher 単体で平斁E��開ける、E
+  # drift_flutter は sqlite3_flutter_libs を引き込むため未使用で外す�E�EativeDatabase 直結）、E
   sqlcipher_flutter_libs: 0.6.4
   sqlite3: 2.9.4
   path: ^1.9.1
@@ -26,7 +26,7 @@ dependencies:
   flutter_cache_manager: ^3.4.1
   intl: ^0.20.2
   uuid: ^4.5.1
-  # Phase 2 — HoYoLAB
+  # Phase 2  EHoYoLAB
   flutter_secure_storage: ^9.2.4
   webview_flutter: ^4.10.0
   crypto: ^3.0.6
@@ -46,6 +46,8 @@ flutter:
     - assets/config/artifact_score_weights.json
     - assets/config/artifact_score_type_overrides.json
     - assets/config/daily_material_schedule.json
+    - assets/config/resin_farm_costs.json
+    - assets/config/ley_line_overflow_events.json
     - assets/config/level_exp_table.json
     - assets/config/artifact_set_recommendations.json
     - assets/config/gacha_banner_history.json
