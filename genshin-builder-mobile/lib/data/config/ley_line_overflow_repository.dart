@@ -9,6 +9,7 @@ import '../../domain/planning/ley_line_overflow_catalog.dart';
 import '../../domain/planning/ley_line_overflow_resolve.dart';
 import '../config/config_load_log.dart';
 import '../config/config_validators.dart';
+import '../config/remote_json_fetch.dart';
 import '../gacha/gacha_calendar_api.dart';
 
 const _configKind = 'ley_line_overflow_events';
@@ -87,15 +88,13 @@ class RemoteLeyLineOverflowCatalogSource
 
   @override
   Future<LeyLineOverflowCatalog> load() async {
-    final response = await _client.get(Uri.parse(url)).timeout(timeout);
-    if (response.statusCode != 200) {
-      throw Exception('ley_line_overflow remote HTTP ${response.statusCode}');
-    }
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map) {
-      throw const FormatException('ley_line_overflow remote: root must be object');
-    }
-    final map = Map<String, dynamic>.from(decoded);
+    final map = await fetchRemoteJsonMap(
+      client: _client,
+      url: url,
+      kind: _configKind,
+      timeout: timeout,
+      maxBytes: kRemoteJsonMaxBytesLeyLineOverflow,
+    );
     validateLeyLineOverflowEventsJson(map);
     return LeyLineOverflowCatalog.fromJson(map);
   }
@@ -106,24 +105,33 @@ class CompositeLeyLineOverflowCatalogSource
   CompositeLeyLineOverflowCatalogSource({
     required LeyLineOverflowCatalogSource localSource,
     LeyLineOverflowCatalogSource? remoteSource,
-  })  : _local = localSource,
-        _remote = remoteSource;
+  }) : _local = localSource,
+       _remote = remoteSource;
 
   final LeyLineOverflowCatalogSource _local;
   final LeyLineOverflowCatalogSource? _remote;
+  LeyLineOverflowCatalog? _lastKnownGoodRemote;
 
   @override
   Future<LeyLineOverflowCatalog> load() async {
     final local = await _local.load();
     final remote = _remote;
     if (remote == null) return local;
+    final cachedRemote = _lastKnownGoodRemote;
+    final fallback =
+        cachedRemote != null && cachedRemote.version >= local.version
+            ? cachedRemote
+            : local;
     try {
       final remoteCatalog = await remote.load();
-      if (remoteCatalog.version >= local.version) return remoteCatalog;
+      if (remoteCatalog.version >= fallback.version) {
+        _lastKnownGoodRemote = remoteCatalog;
+        return remoteCatalog;
+      }
     } catch (e) {
       logRemoteFallback(kind: _configKind, error: e);
     }
-    return local;
+    return fallback;
   }
 }
 
@@ -133,9 +141,9 @@ class LeyLineOverflowRepository {
     GachaCalendarApi? calendarApi,
     Clock? clock,
     this.bonusUsedTodayProvider,
-  })  : _catalogSource = catalogSource,
-        _calendarApi = calendarApi,
-        _clock = clock ?? (() => DateTime.now().toUtc());
+  }) : _catalogSource = catalogSource,
+       _calendarApi = calendarApi,
+       _clock = clock ?? (() => DateTime.now().toUtc());
 
   final LeyLineOverflowCatalogSource _catalogSource;
   final GachaCalendarApi? _calendarApi;
@@ -144,18 +152,13 @@ class LeyLineOverflowRepository {
   /// 当日のボーナス使用済み回数。取得不可なら null。
   final Future<int?> Function()? bonusUsedTodayProvider;
 
-  Future<LeyLineOverflowStatus> resolveStatus({
-    DateTime? nowUtc,
-  }) async {
+  Future<LeyLineOverflowStatus> resolveStatus({DateTime? nowUtc}) async {
     final now = (nowUtc ?? _clock()).toUtc();
     LeyLineOverflowCatalog catalog;
     try {
       catalog = await _catalogSource.load();
     } catch (_) {
-      return const LeyLineOverflowStatus(
-        isActive: false,
-        resolveFailed: true,
-      );
+      return const LeyLineOverflowStatus(isActive: false, resolveFailed: true);
     }
 
     List<CalendarEvent> calendarEvents = const [];

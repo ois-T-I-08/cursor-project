@@ -22,6 +22,9 @@ class OptimizeGrowthRouteUseCase {
     required DateTime startDate,
     required int startWeekday, // 1=Mon..7=Sun
     int? dailyResinBudget,
+
+    /// When false (default for UI), budget is display-only and does not cut actions.
+    bool enforceDailyResinBudget = false,
     int dayCount = defaultDayCount,
     Map<String, Set<int>>? weekdayMap,
   }) {
@@ -29,6 +32,7 @@ class OptimizeGrowthRouteUseCase {
     final remaining = List<UpgradeOption>.from(options);
     final unresolved = <String>[];
     final wkMap = weekdayMap ?? const {};
+    final budgetForEnforce = enforceDailyResinBudget ? dailyResinBudget : null;
 
     _sortRemaining(remaining);
 
@@ -42,18 +46,20 @@ class OptimizeGrowthRouteUseCase {
       // - Non-weekday-limited: always included
       // - Weekday-limited + matches today: included
       // - Weekday-limited + does NOT match: excluded (stays in remaining)
-      final candidatesForToday = remaining.where((opt) {
-        if (!_isWeekdayLimited(opt)) return true;
-        return _matchesDay(opt, weekday, wkMap);
-      }).toList();
+      final candidatesForToday =
+          remaining.where((opt) {
+            if (!_isWeekdayLimited(opt)) return true;
+            return _matchesDay(opt, weekday, wkMap);
+          }).toList();
       candidatesForToday.sort((a, b) => _compareOption(a, b));
 
       for (final opt in candidatesForToday) {
         if (actions.length >= 6) break;
-        if (!_withinBudget(dailyResinBudget, dayResin, opt)) continue;
-        final at = _isWeekdayLimited(opt) && _matchesDay(opt, weekday, wkMap)
-            ? 'weekdayMaterial'
-            : 'generalMaterial';
+        if (!_withinBudget(budgetForEnforce, dayResin, opt)) continue;
+        final at =
+            _isWeekdayLimited(opt) && _matchesDay(opt, weekday, wkMap)
+                ? 'weekdayMaterial'
+                : 'generalMaterial';
         actions.add(_toAction(opt, at));
         dayResin += opt.estimatedResinCost ?? 0;
         remaining.remove(opt);
@@ -61,20 +67,30 @@ class OptimizeGrowthRouteUseCase {
 
       if (actions.isEmpty && remaining.isEmpty) break;
 
-      days.add(GrowthRouteDay(
-        date: date,
-        weekday: weekday,
-        actions: actions,
-        estimatedResinUsed: dayResin,
-      ));
+      days.add(
+        GrowthRouteDay(
+          date: date,
+          weekday: weekday,
+          actions: actions,
+          estimatedResinUsed: dayResin,
+        ),
+      );
     }
 
     for (final opt in remaining) {
       unresolved.add(opt.optionId);
     }
 
-    final hasInv = options.any((o) => o.inventoryStatus == InventoryStatus.ownedSufficient ||
-        o.inventoryStatus == InventoryStatus.ownedInsufficient);
+    final hasInv = options.any(
+      (o) =>
+          o.inventoryStatus == InventoryStatus.ownedSufficient ||
+          o.inventoryStatus == InventoryStatus.ownedInsufficient,
+    );
+
+    final totalResin = days.fold<int>(
+      0,
+      (sum, day) => sum + (day.estimatedResinUsed ?? 0),
+    );
 
     return GrowthRoute(
       userId: userId,
@@ -82,9 +98,13 @@ class OptimizeGrowthRouteUseCase {
       endDate: startDate.add(Duration(days: dayCount - 1)),
       days: days,
       goals: options.map((o) => o.relatedGoalId ?? o.optionId).toSet().toList(),
+      totalEstimatedResin: totalResin,
+      dailyResinBudget: dailyResinBudget,
       unresolvedCosts: unresolved,
-      confidence: hasInv ? RecommendationConfidence.high : RecommendationConfidence.low,
-      completeness: hasInv ? DataCompleteness.partial : DataCompleteness.minimal,
+      confidence:
+          hasInv ? RecommendationConfidence.high : RecommendationConfidence.low,
+      completeness:
+          hasInv ? DataCompleteness.partial : DataCompleteness.minimal,
       missingData: hasInv ? [] : [MissingData.materialInventory],
       usedDataSources: options.isNotEmpty ? ['upgradeOptions'] : [],
       generatedAt: startDate,
@@ -128,7 +148,11 @@ class OptimizeGrowthRouteUseCase {
 
   /// Returns true if at least one of [o]'s materials is available on [weekday].
   /// If [weekdayMap] is empty, all days are treated as valid (conservative fallback).
-  static bool _matchesDay(UpgradeOption o, int weekday, Map<String, Set<int>> weekdayMap) {
+  static bool _matchesDay(
+    UpgradeOption o,
+    int weekday,
+    Map<String, Set<int>> weekdayMap,
+  ) {
     if (o.materialsCost.isEmpty) return false;
     if (weekdayMap.isEmpty) return true; // no data → assume all days (fallback)
     for (final matId in o.materialsCost.keys) {
