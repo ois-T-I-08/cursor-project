@@ -60,4 +60,6 @@ Android エミュレーターでローカル Web 版へ接続する場合は、�
 
 ## ライセンス
 
-MIT（ゲームアセット・データの権利は原権利者に帰属）
+運営者の自作コード・文書はリポジトリルートの [MIT License](../LICENSE)（`Copyright (c) 2026 ois-T-I-08`）です。
+
+原神 / HoYoverse の名称・画像・ゲームデータ、Project Amber / AZA.GG / HoYoLAB / YShelper 等の第三者データ・素材は MIT の対象外です。詳細は [THIRD_PARTY_NOTICES.md](../genshin-builder-app/THIRD_PARTY_NOTICES.md) およびルート [README.md](../README.md) を参照してください。

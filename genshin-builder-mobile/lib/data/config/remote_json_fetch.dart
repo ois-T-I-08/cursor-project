@@ -17,7 +17,17 @@ const int kRemoteJsonMaxBytesDailyMaterialSchedule = 256 * 1024;
 /// Local asset is ~99 KiB (~210 banners); allow growth toward ~1 MiB.
 const int kRemoteJsonMaxBytesGachaBannerHistory = 1024 * 1024;
 
+/// Live calendar response cap. The payload is expected to stay well below 1 MiB.
+const int kRemoteJsonMaxBytesGachaCalendar = 1024 * 1024;
+
+/// Akasha builds page cap. A page contains at most 50 builds by default.
+const int kRemoteJsonMaxBytesAkashaBuilds = 4 * 1024 * 1024;
+
+/// Ley Line Overflow catalog cap. The bundled catalog is under 1 KiB.
+const int kRemoteJsonMaxBytesLeyLineOverflow = 256 * 1024;
+
 enum RemoteJsonFailureKind {
+  invalidUrl,
   timeout,
   networkError,
   httpStatus,
@@ -65,6 +75,7 @@ Future<Map<String, dynamic>> fetchRemoteJsonMap({
   required String kind,
   required Duration timeout,
   required int maxBytes,
+  Map<String, String>? headers,
 }) async {
   late final Uri uri;
   try {
@@ -72,13 +83,25 @@ Future<Map<String, dynamic>> fetchRemoteJsonMap({
   } catch (_) {
     throw RemoteJsonFetchException(
       kind: kind,
-      failure: RemoteJsonFailureKind.unexpected,
+      failure: RemoteJsonFailureKind.invalidUrl,
+    );
+  }
+  if (uri.scheme != 'https' ||
+      uri.host.isEmpty ||
+      uri.userInfo.isNotEmpty ||
+      uri.hasFragment) {
+    throw RemoteJsonFetchException(
+      kind: kind,
+      failure: RemoteJsonFailureKind.invalidUrl,
     );
   }
 
   http.StreamedResponse streamed;
   try {
-    final request = http.Request('GET', uri);
+    final request =
+        http.Request('GET', uri)
+          ..followRedirects = false
+          ..headers.addAll(headers ?? const {});
     streamed = await client.send(request).timeout(timeout);
   } on TimeoutException {
     throw RemoteJsonFetchException(
