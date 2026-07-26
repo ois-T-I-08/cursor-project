@@ -32,7 +32,7 @@ SOFTWARE.
 ## 所有者判断が必要な項目
 
 - 著作権者の正式名称（個人名 / 組織名）
-- 第三者コード・データの NOTICE 一覧（Amber、HoYoLAB、gcsim、AZA 等は権利表記を別途維持）
+- 第三者コード・データの NOTICE 一覧（Amber、HoYoLAB、AZA 等は権利表記を別途維持）
 - ゲームアセット・データの非再配布方針を LICENSE と README でどう併記するか
 
 この草案をルート `LICENSE` に昇格するまでは Issue #7 をオープンのままにする。
