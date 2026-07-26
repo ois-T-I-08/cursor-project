@@ -151,10 +151,16 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
     evidence.add(
       BuildRecommendationEvidence(
         fieldPath: _string(map['fieldPath']),
-        snippet: _string(map['snippet']),
+        exactVisibleText: _string(
+          map['exactVisibleText'] ?? map['snippet'],
+        ),
         videoId: _string(map['videoId']),
-        startMs: _optionalInt(map['startMs']),
-        endMs: _optionalInt(map['endMs']),
+        startSeconds:
+            _optionalDouble(map['startSeconds']) ??
+            ((_optionalInt(map['startMs']) ?? 0) / 1000),
+        endSeconds:
+            _optionalDouble(map['endSeconds']) ??
+            ((_optionalInt(map['endMs']) ?? 0) / 1000),
       ),
     );
   }

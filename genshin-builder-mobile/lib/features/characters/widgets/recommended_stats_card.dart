@@ -27,11 +27,8 @@ class RecommendedStatsCard extends ConsumerWidget {
       ),
       error: (error, _) {
         if (error is BuildRecommendationException &&
-            error.failure == BuildRecommendationFailure.notConfigured) {
-          return const SizedBox.shrink();
-        }
-        if (error is BuildRecommendationException &&
-            error.failure == BuildRecommendationFailure.notFound) {
+            (error.failure == BuildRecommendationFailure.notConfigured ||
+                error.failure == BuildRecommendationFailure.notFound)) {
           return const SizedBox.shrink();
         }
         return Card(
@@ -94,20 +91,12 @@ class _RecommendationBody extends StatelessWidget {
               ],
             ),
             Text(
-              '攻略動画内で言及された目安です。公式推奨や最適値ではありません。'
+              '攻略動画の画面内で確認された目安です。公式推奨や最適値ではありません。'
               '条件付き効果・編成バフは含みません。',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            if (recommendation.role != null && recommendation.role!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  '役割目安: ${recommendation.role}',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ),
             const SizedBox(height: 8),
             ...recommendation.targets.map((target) {
               final current = currentStats[target.stat] ?? 0;
@@ -116,13 +105,7 @@ class _RecommendationBody extends StatelessWidget {
                   : current;
               final verdict = compareStatToTarget(
                 current: displayCurrent,
-                target: BuildStatTarget(
-                  stat: target.stat,
-                  recommended: target.recommended,
-                  min: target.min,
-                  max: target.max,
-                  unit: target.unit,
-                ),
+                target: target,
               );
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
@@ -133,6 +116,8 @@ class _RecommendationBody extends StatelessWidget {
                         '${statLabels[target.stat] ?? target.stat.name}'
                         '${_rangeLabel(target)}',
                         style: theme.textTheme.bodyMedium,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Text(
@@ -145,22 +130,19 @@ class _RecommendationBody extends StatelessWidget {
                 ),
               );
             }),
-            if (recommendation.substatPriority.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'サブ優先: ${recommendation.substatPriority.map((s) => statLabels[s] ?? s.name).join(' > ')}',
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
             const SizedBox(height: 8),
+            Text('根拠動画', style: theme.textTheme.labelMedium),
             ...recommendation.sources.map(
               (source) => ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                title: Text(source.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                title: Text(
+                  source.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 subtitle: Text(
                   '${source.channelTitle}'
-                  '${recommendation.publishedAt != null ? ' · 公開 ${recommendation.publishedAt!.toLocal().toIso8601String().split('T').first}' : ''}'
                   '${recommendation.lastVerifiedAt != null ? ' · 確認 ${recommendation.lastVerifiedAt!.toLocal().toIso8601String().split('T').first}' : ''}'
                   ' · 管理者確認済み',
                   maxLines: 3,
@@ -172,38 +154,31 @@ class _RecommendationBody extends StatelessWidget {
             ),
             if (recommendation.evidence.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text('根拠（抜粋）', style: theme.textTheme.labelMedium),
-              ...recommendation.evidence.take(3).map(
-                (e) {
-                  final stamp = e.startMs != null
-                      ? ' (${_formatTimestamp(e.startMs!)})'
-                      : '';
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: InkWell(
-                      onTap: e.startMs == null
-                          ? null
-                          : () {
-                              BuildRecommendationSource? source;
-                              for (final item in recommendation.sources) {
-                                if (item.videoId == e.videoId) {
-                                  source = item;
-                                  break;
-                                }
-                              }
-                              if (source == null) return;
-                              _openUrl(_youtubeAt(source.sourceUrl, e.startMs!));
-                            },
-                      child: Text(
-                        '「${e.snippet}」$stamp',
-                        style: theme.textTheme.bodySmall,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+              Text('動画内で確認', style: theme.textTheme.labelMedium),
+              ...recommendation.evidence.take(3).map((e) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: InkWell(
+                    onTap: () {
+                      BuildRecommendationSource? source;
+                      for (final item in recommendation.sources) {
+                        if (item.videoId == e.videoId) {
+                          source = item;
+                          break;
+                        }
+                      }
+                      if (source == null) return;
+                      _openUrl(_youtubeAt(source.sourceUrl, e.startSeconds));
+                    },
+                    child: Text(
+                      '${_formatTimestamp(e.startSeconds)} 画面表示「${e.exactVisibleText}」',
+                      style: theme.textTheme.bodySmall,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              }),
             ],
             for (final caveat in recommendation.caveats)
               Padding(
@@ -218,9 +193,11 @@ class _RecommendationBody extends StatelessWidget {
 
   String _rangeLabel(BuildStatTarget target) {
     final parts = <String>[];
-    if (target.min != null) parts.add('min ${target.min}');
+    if (target.min != null) parts.add('${target.min}以上');
     if (target.recommended != null) parts.add('目安 ${target.recommended}');
-    if (target.max != null) parts.add('max ${target.max}');
+    if (target.max != null && target.min != null) {
+      return ' (${target.min}～${target.max})';
+    }
     if (parts.isEmpty) return '';
     return ' (${parts.join(' / ')})';
   }
@@ -258,8 +235,8 @@ class _RecommendationBody extends StatelessWidget {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  String _youtubeAt(String sourceUrl, int startMs) {
-    final seconds = (startMs / 1000).floor();
+  String _youtubeAt(String sourceUrl, double startSeconds) {
+    final seconds = startSeconds.floor();
     final uri = Uri.tryParse(sourceUrl);
     if (uri == null) return sourceUrl;
     final params = Map<String, String>.from(uri.queryParameters);
@@ -267,8 +244,8 @@ class _RecommendationBody extends StatelessWidget {
     return uri.replace(queryParameters: params).toString();
   }
 
-  String _formatTimestamp(int startMs) {
-    final total = (startMs / 1000).floor();
+  String _formatTimestamp(double startSeconds) {
+    final total = startSeconds.floor();
     final m = total ~/ 60;
     final s = total % 60;
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';

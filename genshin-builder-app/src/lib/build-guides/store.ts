@@ -1,17 +1,19 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
-import { YoutubeGuideClient, YoutubeError } from "./youtube-client";
-import { mergeGuidePayloads } from "./merge-service";
 import { buildManifestHash } from "./cache-key";
+import { assertKnownCharacterId } from "./character-match";
 import {
+  mergeVisualRecommendationsDeterministic,
+  mergeVisualRecommendationsWithDeepSeek,
+} from "./deepseek-visual-merge";
+import {
+  permissionStatusSchema,
   publicBuildRecommendationSchema,
   type PublicBuildRecommendation,
-  type ValidatedGuidePayload,
-  permissionStatusSchema,
-} from "./schemas";
-import { assertKnownCharacterId } from "./character-match";
+} from "./visual-schemas";
+import { YoutubeGuideClient, YoutubeError } from "./youtube-client";
+import { GUIDE_GAME_DATA_VERSION } from "./versions";
 
 async function audit(action: string, status: string, detail: unknown): Promise<void> {
   await prisma.guideAdminAuditLog.create({
@@ -23,30 +25,48 @@ async function audit(action: string, status: string, detail: unknown): Promise<v
   });
 }
 
+function safeJson<T>(raw: string, fallback: T): T {
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function getGuideAdminOverview() {
-  const [channels, videos, jobs, recommendations, audits] = await Promise.all([
-    prisma.guideChannel.findMany({ orderBy: { updatedAt: "desc" }, take: 100 }),
-    prisma.guideVideo.findMany({
-      orderBy: { updatedAt: "desc" },
-      take: 200,
-      include: { channel: { select: { title: true, permissionStatus: true } } },
-    }),
-    prisma.guideAnalysisJob.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
-    prisma.characterBuildRecommendation.findMany({
-      orderBy: { updatedAt: "desc" },
-      take: 100,
-      include: {
-        evidence: true,
-        contributions: true,
-        revisions: { orderBy: { createdAt: "desc" }, take: 5 },
-      },
-    }),
-    prisma.guideAdminAuditLog.findMany({ orderBy: { createdAt: "desc" }, take: 40 }),
-  ]);
+  const [channels, videos, jobs, evidences, recommendations, audits] =
+    await Promise.all([
+      prisma.guideChannel.findMany({ orderBy: { updatedAt: "desc" }, take: 100 }),
+      prisma.guideVideo.findMany({
+        orderBy: { updatedAt: "desc" },
+        take: 200,
+        include: { channel: { select: { title: true, permissionStatus: true } } },
+      }),
+      prisma.guideVisualAnalysisJob.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
+      prisma.guideVisualEvidence.findMany({
+        orderBy: [{ videoId: "asc" }, { startSeconds: "asc" }],
+        take: 300,
+        include: { visibleTexts: { take: 5 } },
+      }),
+      prisma.characterBuildRecommendation.findMany({
+        orderBy: { updatedAt: "desc" },
+        take: 100,
+        include: {
+          contributions: true,
+          revisions: { orderBy: { createdAt: "desc" }, take: 5 },
+        },
+      }),
+      prisma.guideAdminAuditLog.findMany({ orderBy: { createdAt: "desc" }, take: 40 }),
+    ]);
+
   return {
     channels,
     videos,
     jobs,
+    evidences,
     recommendations: recommendations.map((row) => ({
       id: row.id,
       characterId: row.characterId,
@@ -63,19 +83,10 @@ export async function getGuideAdminOverview() {
       substatPriority: safeJson(row.priorityPayload, []),
       targets: safeJson(row.targetsPayload, []),
       contributions: row.contributions,
-      evidence: row.evidence,
       revisions: row.revisions,
     })),
     audits,
   };
-}
-
-function safeJson<T>(raw: string, fallback: T): T {
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
 }
 
 export async function registerGuideChannel(input: {
@@ -141,6 +152,15 @@ export async function updateGuideChannel(input: {
     where: { channelId: input.channelId },
     data,
   });
+  if (data.permissionStatus && data.permissionStatus !== "approved_for_processing") {
+    await prisma.characterBuildRecommendation.updateMany({
+      where: {
+        status: "published",
+        contributions: { some: { video: { channelId: input.channelId } } },
+      },
+      data: { status: "approved", publishedAt: null },
+    });
+  }
   await audit("updateChannel", "ok", { channelId: row.channelId });
   return row;
 }
@@ -165,6 +185,9 @@ export async function syncChannelVideos(input: {
   let upserted = 0;
   for (const video of videos) {
     if (video.channelId !== input.channelId) continue;
+    const previous = await prisma.guideVideo.findUnique({
+      where: { videoId: video.videoId },
+    });
     await prisma.guideVideo.upsert({
       where: { videoId: video.videoId },
       create: {
@@ -174,6 +197,8 @@ export async function syncChannelVideos(input: {
         description: video.description,
         publishedAt: video.publishedAt,
         thumbnailUrl: video.thumbnailUrl,
+        durationSeconds: video.durationSeconds,
+        privacyStatus: video.privacyStatus,
         metadataHash: video.metadataHash,
         sourceUrl: video.sourceUrl,
       },
@@ -182,10 +207,25 @@ export async function syncChannelVideos(input: {
         description: video.description,
         publishedAt: video.publishedAt,
         thumbnailUrl: video.thumbnailUrl,
+        durationSeconds: video.durationSeconds,
+        privacyStatus: video.privacyStatus,
         metadataHash: video.metadataHash,
         sourceUrl: video.sourceUrl,
       },
     });
+    if (
+      previous &&
+      (previous.privacyStatus === "public") &&
+      video.privacyStatus !== "public"
+    ) {
+      await prisma.characterBuildRecommendation.updateMany({
+        where: {
+          status: "published",
+          contributions: { some: { videoId: video.videoId } },
+        },
+        data: { status: "approved", publishedAt: null },
+      });
+    }
     upserted += 1;
   }
   await prisma.guideChannel.update({
@@ -197,245 +237,36 @@ export async function syncChannelVideos(input: {
       lastFetchedAt: new Date(),
     },
   });
-  await prisma.guideImportLog.create({
-    data: {
-      source: "youtube",
-      action: "syncChannelVideos",
-      status: "ok",
-      detail: JSON.stringify({ channelId: input.channelId, upserted }),
-    },
-  });
   await audit("syncChannelVideos", "ok", { channelId: input.channelId, upserted });
   return { upserted, totalFetched: videos.length };
 }
 
-export async function upsertAnalysisJob(input: {
-  jobId?: string;
-  videoId: string;
-  transcriptHash: string;
-  inputFormat: string;
-  status: string;
-  modelIdentifier: string;
-  promptVersion: string;
-  schemaVersion: string;
-  characterDataVersion: string;
-  segmentCount: number;
-  charCount: number;
-  attempts?: number;
-  usagePayload?: string;
-  errorCode?: string;
+export async function setVisualEvidenceStatus(input: {
+  evidenceId: string;
+  approvalStatus: "approved" | "rejected" | "pending_review";
+  exclusionCode?: string;
 }) {
-  if (input.jobId) {
-    return prisma.guideAnalysisJob.update({
-      where: { id: input.jobId },
-      data: {
-        status: input.status,
-        attempts: input.attempts ?? 0,
-        usagePayload: input.usagePayload ?? "",
-        errorCode: input.errorCode ?? "",
-        completedAt: input.status === "failed" || input.status === "succeeded"
-          ? new Date()
-          : null,
-      },
-    });
-  }
-  return prisma.guideAnalysisJob.create({
+  const row = await prisma.guideVisualEvidence.update({
+    where: { id: input.evidenceId },
     data: {
-      videoId: input.videoId,
-      transcriptHash: input.transcriptHash,
-      inputFormat: input.inputFormat,
-      status: input.status,
-      modelIdentifier: input.modelIdentifier,
-      promptVersion: input.promptVersion,
-      schemaVersion: input.schemaVersion,
-      characterDataVersion: input.characterDataVersion,
-      segmentCount: input.segmentCount,
-      charCount: input.charCount,
-      attempts: input.attempts ?? 0,
-      usagePayload: input.usagePayload ?? "",
-      errorCode: input.errorCode ?? "",
+      approvalStatus: input.approvalStatus,
+      exclusionCode: input.exclusionCode ?? "",
     },
   });
+  await audit("setVisualEvidenceStatus", "ok", input);
+  return row;
 }
 
-export async function getCachedGuideResult(cacheKey: string): Promise<{
-  jobId: string;
-  recommendationId?: string;
-  characterId?: string;
-  status: string;
-} | null> {
-  const result = await prisma.guideAnalysisResult.findUnique({ where: { cacheKey } });
-  if (!result || result.status !== "validated") return null;
-  const recommendation = result.characterId
-    ? await prisma.characterBuildRecommendation.findFirst({
-        where: {
-          characterId: result.characterId,
-          status: { in: ["pending_review", "approved", "published"] },
-        },
-        orderBy: { updatedAt: "desc" },
-      })
-    : null;
-  const job = await prisma.guideAnalysisJob.findFirst({
-    where: {
-      videoId: result.videoId,
-      transcriptHash: result.transcriptHash,
-      status: { in: ["succeeded", "running"] },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  return {
-    jobId: job?.id ?? createHash("sha256").update(cacheKey).digest("hex").slice(0, 24),
-    recommendationId: recommendation?.id,
-    characterId: result.characterId || undefined,
-    status: result.status,
-  };
-}
-
-export async function saveGuideAnalysisArtifacts(input: {
-  jobId: string;
-  cacheKey: string;
-  videoId: string;
-  transcriptHash: string;
-  characterId: string;
-  modelIdentifier: string;
-  promptVersion: string;
-  schemaVersion: string;
-  characterDataVersion: string;
-  rawAiOutput: string;
-  validated: ValidatedGuidePayload;
-  usagePayload: string;
-  attempts: number;
+export async function overrideVisualEvidencePurpose(input: {
+  evidenceId: string;
+  purposeSummary: string;
 }) {
-  const result = await prisma.guideAnalysisResult.upsert({
-    where: { cacheKey: input.cacheKey },
-    create: {
-      cacheKey: input.cacheKey,
-      videoId: input.videoId,
-      transcriptHash: input.transcriptHash,
-      characterId: input.characterId,
-      modelIdentifier: input.modelIdentifier,
-      promptVersion: input.promptVersion,
-      schemaVersion: input.schemaVersion,
-      characterDataVersion: input.characterDataVersion,
-      status: "validated",
-      rawAiOutput: input.rawAiOutput.slice(0, 200_000),
-      validatedPayload: JSON.stringify(input.validated),
-      generatedAt: new Date(),
-    },
-    update: {
-      characterId: input.characterId,
-      status: "validated",
-      rawAiOutput: input.rawAiOutput.slice(0, 200_000),
-      validatedPayload: JSON.stringify(input.validated),
-      errorCode: "",
-      generatedAt: new Date(),
-    },
+  const row = await prisma.guideVisualEvidence.update({
+    where: { id: input.evidenceId },
+    data: { purposeSummary: input.purposeSummary.slice(0, 500) },
   });
-
-  await prisma.guideExtractedClaim.deleteMany({
-    where: { videoId: input.videoId, characterId: input.characterId },
-  });
-  for (const target of input.validated.targets) {
-    await prisma.guideExtractedClaim.create({
-      data: {
-        videoId: input.videoId,
-        characterId: input.characterId,
-        claimKey: `target.${target.stat}`,
-        claimPayload: JSON.stringify(target),
-        confidence: target.confidence ?? input.validated.overallConfidence,
-        evidencePayload: JSON.stringify(target.evidence ?? {}),
-      },
-    });
-  }
-
-  await prisma.guideAnalysisJob.update({
-    where: { id: input.jobId },
-    data: {
-      status: "succeeded",
-      attempts: input.attempts,
-      usagePayload: input.usagePayload,
-      errorCode: "",
-      completedAt: new Date(),
-    },
-  });
-  await prisma.guideVideo.update({
-    where: { videoId: input.videoId },
-    data: { analysisStatus: "analyzed" },
-  });
-  return result;
-}
-
-export async function createPendingRecommendationFromPayload(input: {
-  characterId: string;
-  videoId: string;
-  payload: ValidatedGuidePayload;
-  origin: "single_video" | "merged";
-  manifestId?: string;
-}): Promise<string> {
-  if (!(await assertKnownCharacterId(input.characterId))) {
-    throw new Error("unknownCharacterId");
-  }
-  const video = await prisma.guideVideo.findUnique({
-    where: { videoId: input.videoId },
-    include: { channel: true },
-  });
-  if (!video) throw new Error("videoNotFound");
-
-  const recommendation = await prisma.characterBuildRecommendation.create({
-    data: {
-      characterId: input.characterId,
-      status: "pending_review",
-      origin: input.origin,
-      manifestId: input.manifestId,
-      contextPayload: JSON.stringify(input.payload.context),
-      mainStatsPayload: JSON.stringify(input.payload.mainStats),
-      priorityPayload: JSON.stringify(input.payload.substatPriority),
-      targetsPayload: JSON.stringify(input.payload.targets),
-      overallConfidence: input.payload.overallConfidence,
-      notes: (input.payload.caveats ?? []).join("\n"),
-    },
-  });
-
-  await prisma.recommendationSourceContribution.create({
-    data: {
-      recommendationId: recommendation.id,
-      videoId: input.videoId,
-      fieldPath: "*",
-      valuePayload: JSON.stringify(input.payload),
-      inclusion: "included",
-    },
-  });
-
-  for (const target of input.payload.targets) {
-    if (!target.evidence?.snippet) continue;
-    await prisma.characterBuildRecommendationEvidence.create({
-      data: {
-        recommendationId: recommendation.id,
-        videoId: input.videoId,
-        fieldPath: `targets.${target.stat}`,
-        snippet: target.evidence.snippet.slice(0, 200),
-        startMs: target.evidence.startMs ?? null,
-        endMs: target.evidence.endMs ?? null,
-        segmentIndex: target.evidence.segmentIndex ?? null,
-      },
-    });
-  }
-
-  await prisma.guideRecommendationRevision.create({
-    data: {
-      recommendationId: recommendation.id,
-      action: "created",
-      afterPayload: JSON.stringify({
-        status: "pending_review",
-        characterId: input.characterId,
-      }),
-    },
-  });
-  await audit("createRecommendation", "ok", {
-    recommendationId: recommendation.id,
-    characterId: input.characterId,
-  });
-  return recommendation.id;
+  await audit("overrideVisualEvidencePurpose", "ok", input);
+  return row;
 }
 
 export async function setRecommendationStatus(input: {
@@ -446,7 +277,7 @@ export async function setRecommendationStatus(input: {
   const existing = await prisma.characterBuildRecommendation.findUnique({
     where: { id: input.recommendationId },
     include: {
-      contributions: { include: { video: { include: { channel: true } } } },
+      contributions: { include: { video: { include: { channel: true } }, evidence: true } },
     },
   });
   if (!existing) throw new Error("recommendationNotFound");
@@ -455,6 +286,12 @@ export async function setRecommendationStatus(input: {
     for (const contribution of existing.contributions) {
       if (contribution.video.channel.permissionStatus !== "approved_for_processing") {
         throw new Error("permissionNotApproved");
+      }
+      if (contribution.video.privacyStatus !== "public") {
+        throw new Error("videoNotPublic");
+      }
+      if (contribution.evidence.approvalStatus === "rejected") {
+        throw new Error("rejectedEvidencePresent");
       }
     }
     if (existing.status !== "approved" && existing.status !== "published") {
@@ -474,6 +311,23 @@ export async function setRecommendationStatus(input: {
           : existing.lastVerifiedAt,
     },
   });
+
+  if (input.status === "published") {
+    await prisma.recommendationVisualContribution.updateMany({
+      where: {
+        recommendationId: row.id,
+        decision: { in: ["adopted", "partially_adopted"] },
+      },
+      data: { usedInPublishedResult: true },
+    });
+  }
+  if (input.status !== "published") {
+    await prisma.recommendationVisualContribution.updateMany({
+      where: { recommendationId: row.id },
+      data: { usedInPublishedResult: false },
+    });
+  }
+
   await prisma.guideRecommendationRevision.create({
     data: {
       recommendationId: row.id,
@@ -491,7 +345,10 @@ export async function setRecommendationStatus(input: {
 
 export async function overrideRecommendation(input: {
   recommendationId: string;
-  payload: ValidatedGuidePayload;
+  targetsPayload: unknown;
+  mainStatsPayload?: unknown;
+  priorityPayload?: unknown;
+  contextPayload?: unknown;
   adminNotes?: string;
 }) {
   const existing = await prisma.characterBuildRecommendation.findUnique({
@@ -501,12 +358,10 @@ export async function overrideRecommendation(input: {
   const row = await prisma.characterBuildRecommendation.update({
     where: { id: input.recommendationId },
     data: {
-      contextPayload: JSON.stringify(input.payload.context),
-      mainStatsPayload: JSON.stringify(input.payload.mainStats),
-      priorityPayload: JSON.stringify(input.payload.substatPriority),
-      targetsPayload: JSON.stringify(input.payload.targets),
-      overallConfidence: input.payload.overallConfidence,
-      notes: input.payload.caveats.join("\n"),
+      targetsPayload: JSON.stringify(input.targetsPayload),
+      mainStatsPayload: JSON.stringify(input.mainStatsPayload ?? safeJson(existing.mainStatsPayload, [])),
+      priorityPayload: JSON.stringify(input.priorityPayload ?? safeJson(existing.priorityPayload, [])),
+      contextPayload: JSON.stringify(input.contextPayload ?? safeJson(existing.contextPayload, {})),
       adminNotes: input.adminNotes ?? existing.adminNotes,
       status: "pending_review",
       publishedAt: null,
@@ -516,116 +371,117 @@ export async function overrideRecommendation(input: {
     data: {
       recommendationId: row.id,
       action: "override",
-      beforePayload: JSON.stringify({
-        targets: safeJson(existing.targetsPayload, []),
-      }),
-      afterPayload: JSON.stringify(input.payload),
+      beforePayload: existing.targetsPayload,
+      afterPayload: JSON.stringify(input.targetsPayload),
     },
   });
   await audit("overrideRecommendation", "ok", { recommendationId: row.id });
   return row;
 }
 
-export async function mergeVideoRecommendations(input: {
+export async function mergeVisualRecommendations(input: {
   characterId: string;
-  videoIds: string[];
+  evidenceIds: string[];
 }) {
   if (!(await assertKnownCharacterId(input.characterId))) {
     throw new Error("unknownCharacterId");
   }
-  const results = await prisma.guideAnalysisResult.findMany({
+  const evidences = await prisma.guideVisualEvidence.findMany({
     where: {
-      characterId: input.characterId,
-      videoId: { in: input.videoIds },
-      status: "validated",
+      id: { in: input.evidenceIds },
+      validationStatus: "validated",
+      approvalStatus: { in: ["approved", "pending_review"] },
     },
   });
-  if (results.length === 0) throw new Error("noValidatedResults");
+  if (evidences.length === 0) throw new Error("noValidatedEvidence");
 
-  const sources = results.map((row) => ({
-    videoId: row.videoId,
-    payload: safeJson(row.validatedPayload, null) as ValidatedGuidePayload | null,
-  }));
-  if (sources.some((s) => !s.payload)) throw new Error("invalidStoredPayload");
+  const mergeInput = {
+    characterId: input.characterId,
+    visualEvidences: evidences.map((evidence) => {
+      const payload = safeJson<{
+        publishableStatValues?: unknown[];
+        recommendedMainStats?: unknown;
+        statPriority?: string[];
+      }>(evidence.normalizedPayload, {});
+      return {
+        evidenceId: evidence.id,
+        videoId: evidence.videoId,
+        startSeconds: evidence.startSeconds,
+        endSeconds: evidence.endSeconds,
+        evidenceType: evidence.evidenceType,
+        visibleTexts: [evidence.exactVisibleText],
+        statValues: payload.publishableStatValues ?? [],
+        mainStats: payload.recommendedMainStats ?? null,
+        statPriority: payload.statPriority ?? [],
+        confidence: evidence.confidence,
+      };
+    }),
+    allowedVideoIds: [...new Set(evidences.map((e) => e.videoId))],
+    allowedCharacterIds: [input.characterId],
+    gameDataVersion: GUIDE_GAME_DATA_VERSION,
+  };
 
-  const merged = mergeGuidePayloads(
-    input.characterId,
-    sources.map((s) => ({ videoId: s.videoId, payload: s.payload! })),
-  );
-  const manifestHash = buildManifestHash(input.characterId, merged.sourceVideoIds);
+  let merged;
+  try {
+    merged = await mergeVisualRecommendationsWithDeepSeek(mergeInput);
+  } catch {
+    merged = mergeVisualRecommendationsDeterministic(mergeInput);
+  }
+
+  const videoIds = [...new Set(evidences.map((e) => e.videoId))];
+  const manifestHash = buildManifestHash(input.characterId, videoIds);
   const manifest = await prisma.guideAnalysisSourceManifest.upsert({
     where: { manifestHash },
     create: {
       characterId: input.characterId,
-      videoIdsPayload: JSON.stringify(merged.sourceVideoIds),
+      videoIdsPayload: JSON.stringify(videoIds),
       manifestHash,
       status: "draft",
-      mergePayload: JSON.stringify(merged.payload),
-      conflictPayload: JSON.stringify(merged.conflicts),
+      mergePayload: JSON.stringify(merged),
+      conflictPayload: "[]",
     },
     update: {
-      mergePayload: JSON.stringify(merged.payload),
-      conflictPayload: JSON.stringify(merged.conflicts),
+      mergePayload: JSON.stringify(merged),
       status: "draft",
     },
   });
-  await prisma.guideAnalysisSourceVideo.deleteMany({ where: { manifestId: manifest.id } });
-  await prisma.guideAnalysisSourceVideo.createMany({
-    data: merged.sourceVideoIds.map((videoId, sortOrder) => ({
+
+  const recommendation = await prisma.characterBuildRecommendation.create({
+    data: {
+      characterId: input.characterId,
+      status: "pending_review",
+      origin: "merged",
       manifestId: manifest.id,
-      videoId,
-      sortOrder,
-    })),
+      contextPayload: JSON.stringify(merged.context),
+      mainStatsPayload: JSON.stringify(merged.mainStats),
+      priorityPayload: JSON.stringify(merged.substatPriority),
+      targetsPayload: JSON.stringify(merged.targets),
+      overallConfidence: merged.overallConfidence,
+      notes: merged.caveats.join("\n"),
+    },
   });
 
-  const recommendationId = await createPendingRecommendationFromPayload({
-    characterId: input.characterId,
-    videoId: merged.sourceVideoIds[0]!,
-    payload: merged.payload,
-    origin: "merged",
-    manifestId: manifest.id,
-  });
-  for (const videoId of merged.sourceVideoIds.slice(1)) {
-    await prisma.recommendationSourceContribution.create({
+  for (const evidence of evidences) {
+    await prisma.recommendationVisualContribution.create({
       data: {
-        recommendationId,
-        videoId,
-        fieldPath: "*",
-        valuePayload: "{}",
-        inclusion: "included",
+        recommendationId: recommendation.id,
+        evidenceId: evidence.id,
+        videoId: evidence.videoId,
+        startSeconds: evidence.startSeconds,
+        endSeconds: evidence.endSeconds,
+        exactVisibleText: evidence.exactVisibleText.slice(0, 200),
+        contributionRole: "primary",
+        decision: "adopted",
+        decisionSummary: "merged visual evidences",
+        usedInPublishedResult: false,
       },
     });
   }
-  return { recommendationId, manifestId: manifest.id, conflicts: merged.conflicts };
-}
-
-export async function setContributionInclusion(input: {
-  contributionId: string;
-  inclusion: "included" | "excluded";
-  reason?: string;
-}) {
-  const row = await prisma.recommendationSourceContribution.update({
-    where: { id: input.contributionId },
-    data: {
-      inclusion: input.inclusion,
-      reason: input.reason ?? "",
-    },
+  await audit("mergeVisualRecommendations", "ok", {
+    recommendationId: recommendation.id,
+    characterId: input.characterId,
   });
-  await audit("setContributionInclusion", "ok", input);
-  return row;
-}
-
-export async function deleteTranscriptArtifacts(videoId: string) {
-  await prisma.guideAnalysisResult.updateMany({
-    where: { videoId },
-    data: { rawAiOutput: "" },
-  });
-  await prisma.guideAnalysisJob.updateMany({
-    where: { videoId },
-    data: { status: "transcript_cleared" },
-  });
-  await audit("deleteTranscriptData", "ok", { videoId });
-  return { ok: true };
+  return { recommendationId: recommendation.id, manifestId: manifest.id, merged };
 }
 
 export async function getPublishedBuildRecommendation(
@@ -635,9 +491,8 @@ export async function getPublishedBuildRecommendation(
     where: { characterId, status: "published" },
     orderBy: { publishedAt: "desc" },
     include: {
-      evidence: true,
       contributions: {
-        where: { inclusion: "included" },
+        where: { usedInPublishedResult: true, decision: { in: ["adopted", "partially_adopted"] } },
         include: { video: { include: { channel: true } } },
       },
     },
@@ -651,17 +506,14 @@ export async function getPublishedBuildRecommendation(
       min?: number;
       max?: number;
       unit?: "flat" | "percent";
-      inferred?: boolean;
     }>
-  )
-    .filter((t) => !t.inferred)
-    .map((t) => ({
-      stat: t.stat,
-      recommended: t.recommended,
-      min: t.min,
-      max: t.max,
-      unit: t.unit,
-    }));
+  ).map((t) => ({
+    stat: t.stat,
+    recommended: t.recommended,
+    min: t.min,
+    max: t.max,
+    unit: t.unit,
+  }));
 
   const dto = {
     characterId: row.characterId,
@@ -675,7 +527,7 @@ export async function getPublishedBuildRecommendation(
     targets,
     caveats: row.notes
       ? row.notes.split("\n").filter(Boolean)
-      : ["条件付き効果・編成バフは含みません。動画内の目安です。"],
+      : ["条件付き効果・編成バフは含みません。動画画面内で確認した目安です。"],
     lastVerifiedAt: row.lastVerifiedAt?.toISOString() ?? null,
     publishedAt: row.publishedAt?.toISOString() ?? null,
     sources: row.contributions.map((c) => ({
@@ -685,12 +537,12 @@ export async function getPublishedBuildRecommendation(
       sourceUrl: c.video.sourceUrl,
       publishedAt: c.video.publishedAt?.toISOString() ?? null,
     })),
-    evidence: row.evidence.map((e) => ({
-      fieldPath: e.fieldPath,
-      snippet: e.snippet.slice(0, 200),
-      startMs: e.startMs,
-      endMs: e.endMs,
-      videoId: e.videoId,
+    evidence: row.contributions.map((c) => ({
+      fieldPath: "visual",
+      exactVisibleText: c.exactVisibleText.slice(0, 200),
+      startSeconds: c.startSeconds,
+      endSeconds: c.endSeconds,
+      videoId: c.videoId,
     })),
   };
 

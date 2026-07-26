@@ -21,7 +21,7 @@ export async function GET(
         { status: 404, headers: { "Cache-Control": "public, max-age=60" } },
       );
     }
-    // Never expose raw AI / admin notes / transcript
+    // Never expose raw AI / admin notes / internal hashes
     return NextResponse.json(
       { ok: true, data },
       { headers: { "Cache-Control": "public, max-age=300" } },

@@ -21,17 +21,17 @@ class BuildRecommendationSource {
 class BuildRecommendationEvidence {
   const BuildRecommendationEvidence({
     required this.fieldPath,
-    required this.snippet,
+    required this.exactVisibleText,
     required this.videoId,
-    this.startMs,
-    this.endMs,
+    required this.startSeconds,
+    required this.endSeconds,
   });
 
   final String fieldPath;
-  final String snippet;
+  final String exactVisibleText;
   final String videoId;
-  final int? startMs;
-  final int? endMs;
+  final double startSeconds;
+  final double endSeconds;
 }
 
 class BuildStatTarget {

@@ -2,12 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-type ModuleId =
-  | "channels"
-  | "videos"
-  | "analyze"
-  | "recommendations"
-  | "conflicts";
+type ModuleId = "channels" | "videos" | "evidence" | "recommendations" | "merge";
 
 interface Overview {
   channels: Array<{
@@ -16,8 +11,8 @@ interface Overview {
     title: string;
     enabled: boolean;
     permissionStatus: string;
-    notes: string;
     lastFetchedAt: string | null;
+    dailyAnalysisLimit: number;
   }>;
   videos: Array<{
     id: string;
@@ -25,7 +20,11 @@ interface Overview {
     channelId: string;
     title: string;
     analysisStatus: string;
+    durationSeconds: number | null;
+    privacyStatus: string;
+    thumbnailUrl: string;
     sourceUrl: string;
+    lastAnalyzedAt: string | null;
     channel?: { title: string; permissionStatus: string };
   }>;
   jobs: Array<{
@@ -33,7 +32,21 @@ interface Overview {
     videoId: string;
     status: string;
     errorCode: string;
+    tokenUsage: string;
     createdAt: string;
+  }>;
+  evidences: Array<{
+    id: string;
+    videoId: string;
+    startSeconds: number;
+    endSeconds: number;
+    evidenceType: string;
+    exactVisibleText: string;
+    confidence: number;
+    validationStatus: string;
+    approvalStatus: string;
+    exclusionCode: string;
+    purposeSummary: string;
   }>;
   recommendations: Array<{
     id: string;
@@ -45,22 +58,31 @@ interface Overview {
     contributions: Array<{
       id: string;
       videoId: string;
-      inclusion: string;
-      fieldPath: string;
+      startSeconds: number;
+      endSeconds: number;
+      exactVisibleText: string;
+      contributionRole: string;
+      decision: string;
     }>;
-    evidence: Array<{ snippet: string; fieldPath: string; videoId: string }>;
     adminNotes: string;
   }>;
-  audits: Array<{ id: number; action: string; status: string; detail: string; createdAt: string }>;
+  audits: Array<{ id: number; action: string; status: string; detail: string }>;
 }
 
 const MODULES: Array<{ id: ModuleId; label: string }> = [
   { id: "channels", label: "チャンネル" },
   { id: "videos", label: "動画" },
-  { id: "analyze", label: "解析実行" },
+  { id: "evidence", label: "映像証拠" },
   { id: "recommendations", label: "推奨詳細" },
-  { id: "conflicts", label: "動画比較・矛盾" },
+  { id: "merge", label: "統合・矛盾" },
 ];
+
+function formatTime(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
 
 export default function GuideAdminWorkbench() {
   const [secret, setSecret] = useState("");
@@ -71,11 +93,11 @@ export default function GuideAdminWorkbench() {
   const [channelId, setChannelId] = useState("");
   const [permissionStatus, setPermissionStatus] = useState("unknown");
   const [selectedVideoId, setSelectedVideoId] = useState("");
-  const [transcript, setTranscript] = useState("");
-  const [format, setFormat] = useState<"txt" | "vtt" | "srt" | "">("");
+  const [rangeStart, setRangeStart] = useState("0");
+  const [rangeEnd, setRangeEnd] = useState("60");
   const [mergeCharacterId, setMergeCharacterId] = useState("");
-  const [mergeVideoIds, setMergeVideoIds] = useState("");
-  const [lastResult, setLastResult] = useState<string>("");
+  const [mergeEvidenceIds, setMergeEvidenceIds] = useState("");
+  const [lastResult, setLastResult] = useState("");
 
   const authHeaders = useMemo(
     () => ({
@@ -135,13 +157,17 @@ export default function GuideAdminWorkbench() {
     [authHeaders, refresh],
   );
 
+  const evidencesForVideo = (overview?.evidences ?? []).filter(
+    (e) => !selectedVideoId || e.videoId === selectedVideoId,
+  );
+
   return (
     <div className="space-y-4">
       <header className="rounded-xl border border-white/10 bg-[#1e2a3a] p-5">
-        <h1 className="text-xl font-bold">Build Guide 管理</h1>
+        <h1 className="text-xl font-bold">Build Guide 管理（映像OCR）</h1>
         <p className="mt-1 text-sm text-gray-400">
-          YouTube メタデータ取得・手動字幕解析・推奨承認/公開。字幕全文はサーバに保存しません。
-          公開表現は「動画内推奨目安」です（公式/理想/最適の断定禁止）。
+          YouTube Data API はメタデータ同期のみ。推奨値は Gemini による画面内文字/表の認識結果を、通常コード検証と管理者承認後に公開します。
+          動画本体はダウンロード・保存しません。
         </p>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
           <label className="flex-1 text-sm">
@@ -175,7 +201,7 @@ export default function GuideAdminWorkbench() {
             className={`rounded-lg px-3 py-1.5 text-sm ${
               module === item.id
                 ? "bg-accent text-black"
-                : "bg-[#1e2a3a] text-gray-200 border border-white/10"
+                : "border border-white/10 bg-[#1e2a3a] text-gray-200"
             }`}
           >
             {item.label}
@@ -228,37 +254,18 @@ export default function GuideAdminWorkbench() {
               type="button"
               disabled={!secret || !channelId || busy}
               className="rounded-lg border border-white/20 px-3 py-2 text-sm disabled:opacity-40"
-              onClick={() =>
-                void postAction({ action: "syncChannelVideos", channelId })
-              }
+              onClick={() => void postAction({ action: "syncChannelVideos", channelId })}
             >
               動画同期
-            </button>
-            <button
-              type="button"
-              disabled={!secret || !channelId || busy}
-              className="rounded-lg border border-white/20 px-3 py-2 text-sm disabled:opacity-40"
-              onClick={() =>
-                void postAction({
-                  action: "updateChannel",
-                  channelId,
-                  permissionStatus,
-                })
-              }
-            >
-              権限のみ更新
             </button>
           </div>
           <ul className="space-y-2 text-sm">
             {(overview?.channels ?? []).map((channel) => (
-              <li
-                key={channel.id}
-                className="rounded-lg bg-[#151d2a] p-3"
-              >
+              <li key={channel.id} className="rounded-lg bg-[#151d2a] p-3">
                 <div className="font-medium">{channel.title}</div>
                 <div className="text-gray-400">
-                  {channel.channelId} / {channel.permissionStatus} /{" "}
-                  {channel.enabled ? "enabled" : "disabled"}
+                  {channel.channelId} / {channel.permissionStatus} / 日次上限{" "}
+                  {channel.dailyAnalysisLimit}
                 </div>
               </li>
             ))}
@@ -268,41 +275,7 @@ export default function GuideAdminWorkbench() {
 
       {module === "videos" ? (
         <section className="space-y-3 rounded-xl border border-white/10 bg-[#1e2a3a] p-5">
-          <h2 className="font-bold">動画一覧</h2>
-          <ul className="max-h-[28rem] space-y-2 overflow-auto text-sm">
-            {(overview?.videos ?? []).map((video) => (
-              <li key={video.id} className="rounded-lg bg-[#151d2a] p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <div className="font-medium">{video.title}</div>
-                    <div className="text-gray-400">
-                      {video.videoId} / {video.analysisStatus} /{" "}
-                      {video.channel?.title ?? video.channelId}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded border border-white/20 px-2 py-1 text-xs"
-                    onClick={() => {
-                      setSelectedVideoId(video.videoId);
-                      setModule("analyze");
-                    }}
-                  >
-                    解析へ
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {module === "analyze" ? (
-        <section className="space-y-3 rounded-xl border border-white/10 bg-[#1e2a3a] p-5">
-          <h2 className="font-bold">字幕貼り付け解析</h2>
-          <p className="text-sm text-gray-400">
-            TXT / VTT / SRT を手動貼り付け。自動字幕取得・スクレイピングは行いません。
-          </p>
+          <h2 className="font-bold">動画一覧 / 映像解析</h2>
           <label className="block text-sm">
             videoId
             <input
@@ -311,55 +284,46 @@ export default function GuideAdminWorkbench() {
               onChange={(e) => setSelectedVideoId(e.target.value.trim())}
             />
           </label>
-          <label className="block text-sm">
-            format（空なら自動判定）
-            <select
-              className="mt-1 w-full rounded-lg border border-white/10 bg-[#151d2a] px-3 py-2"
-              value={format}
-              onChange={(e) =>
-                setFormat(e.target.value as "txt" | "vtt" | "srt" | "")
-              }
-            >
-              <option value="">auto</option>
-              <option value="txt">txt</option>
-              <option value="vtt">vtt</option>
-              <option value="srt">srt</option>
-            </select>
-          </label>
-          <label className="block text-sm">
-            transcript
-            <textarea
-              className="mt-1 h-48 w-full rounded-lg border border-white/10 bg-[#151d2a] px-3 py-2 font-mono text-xs"
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-            />
-          </label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="text-sm">
+              range start (sec)
+              <input
+                className="mt-1 w-full rounded-lg border border-white/10 bg-[#151d2a] px-3 py-2"
+                value={rangeStart}
+                onChange={(e) => setRangeStart(e.target.value)}
+              />
+            </label>
+            <label className="text-sm">
+              range end (sec)
+              <input
+                className="mt-1 w-full rounded-lg border border-white/10 bg-[#151d2a] px-3 py-2"
+                value={rangeEnd}
+                onChange={(e) => setRangeEnd(e.target.value)}
+              />
+            </label>
+          </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={!secret || !selectedVideoId || !transcript || busy}
+              disabled={!secret || !selectedVideoId || busy}
               className="rounded-lg bg-accent px-3 py-2 text-sm text-black disabled:opacity-40"
               onClick={() =>
                 void postAction({
-                  action: "analyzeTranscript",
+                  action: "analyzeVideoVisuals",
                   videoId: selectedVideoId,
-                  transcript,
-                  ...(format ? { format } : {}),
                 })
               }
             >
-              解析実行
+              映像解析
             </button>
             <button
               type="button"
-              disabled={!secret || !selectedVideoId || !transcript || busy}
+              disabled={!secret || !selectedVideoId || busy}
               className="rounded-lg border border-white/20 px-3 py-2 text-sm disabled:opacity-40"
               onClick={() =>
                 void postAction({
-                  action: "reanalyze",
+                  action: "reanalyzeVideoVisuals",
                   videoId: selectedVideoId,
-                  transcript,
-                  ...(format ? { format } : {}),
                 })
               }
             >
@@ -368,28 +332,116 @@ export default function GuideAdminWorkbench() {
             <button
               type="button"
               disabled={!secret || !selectedVideoId || busy}
-              className="rounded-lg border border-red-400/40 px-3 py-2 text-sm text-red-300 disabled:opacity-40"
+              className="rounded-lg border border-white/20 px-3 py-2 text-sm disabled:opacity-40"
               onClick={() =>
                 void postAction({
-                  action: "deleteTranscriptData",
+                  action: "analyzeSelectedRanges",
                   videoId: selectedVideoId,
+                  ranges: [
+                    {
+                      startSeconds: Number(rangeStart) || 0,
+                      endSeconds: Number(rangeEnd) || 0,
+                      reason: "admin-selected",
+                    },
+                  ],
                 })
               }
             >
-              解析成果物クリア
+              指定時間帯を解析
             </button>
           </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-300">直近 Job</h3>
-            <ul className="mt-2 space-y-1 text-xs text-gray-400">
-              {(overview?.jobs ?? []).slice(0, 10).map((job) => (
-                <li key={job.id}>
-                  {job.videoId} · {job.status}
-                  {job.errorCode ? ` · ${job.errorCode}` : ""}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <ul className="max-h-[28rem] space-y-2 overflow-auto text-sm">
+            {(overview?.videos ?? []).map((video) => (
+              <li key={video.id} className="rounded-lg bg-[#151d2a] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="font-medium">{video.title}</div>
+                    <div className="text-gray-400">
+                      {video.videoId} · {video.privacyStatus} ·{" "}
+                      {video.durationSeconds != null
+                        ? formatTime(video.durationSeconds)
+                        : "?:??"}{" "}
+                      · {video.analysisStatus}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded border border-white/20 px-2 py-1 text-xs"
+                    onClick={() => {
+                      setSelectedVideoId(video.videoId);
+                      setModule("evidence");
+                    }}
+                  >
+                    証拠へ
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {module === "evidence" ? (
+        <section className="space-y-3 rounded-xl border border-white/10 bg-[#1e2a3a] p-5">
+          <h2 className="font-bold">映像証拠タイムライン</h2>
+          <p className="text-sm text-gray-400">
+            選択 videoId: {selectedVideoId || "（全件）"}
+          </p>
+          <ul className="space-y-2 text-sm">
+            {evidencesForVideo.map((evidence) => (
+              <li key={evidence.id} className="rounded-lg bg-[#151d2a] p-3">
+                <div className="font-medium">
+                  {formatTime(evidence.startSeconds)} {evidence.evidenceType}
+                </div>
+                <div className="text-gray-300">
+                  画面表示「{evidence.exactVisibleText}」
+                </div>
+                <div className="text-xs text-gray-500">
+                  conf {evidence.confidence.toFixed(2)} · {evidence.validationStatus} ·{" "}
+                  {evidence.approvalStatus}
+                  {evidence.exclusionCode ? ` · ${evidence.exclusionCode}` : ""}
+                  {evidence.purposeSummary ? ` · ${evidence.purposeSummary}` : ""}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <a
+                    className="rounded border border-white/20 px-2 py-1 text-xs underline"
+                    href={`https://www.youtube.com/watch?v=${evidence.videoId}&t=${Math.floor(evidence.startSeconds)}s`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    YouTubeで該当時刻
+                  </a>
+                  <button
+                    type="button"
+                    className="rounded border border-white/20 px-2 py-1 text-xs"
+                    disabled={busy}
+                    onClick={() =>
+                      void postAction({
+                        action: "approveVisualEvidence",
+                        evidenceId: evidence.id,
+                      })
+                    }
+                  >
+                    採用
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border border-white/20 px-2 py-1 text-xs"
+                    disabled={busy}
+                    onClick={() =>
+                      void postAction({
+                        action: "rejectVisualEvidence",
+                        evidenceId: evidence.id,
+                        exclusionCode: "adminRejected",
+                      })
+                    }
+                  >
+                    却下
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 
@@ -402,16 +454,13 @@ export default function GuideAdminWorkbench() {
                 <div className="font-medium">
                   {rec.characterId} · {rec.status} · {rec.origin}
                 </div>
-                <div className="text-gray-400">
-                  confidence {rec.overallConfidence.toFixed(2)} · targets{" "}
-                  {Array.isArray(rec.targets) ? rec.targets.length : 0}
-                </div>
-                <div className="mt-2 text-xs text-gray-500">
-                  evidence:{" "}
-                  {rec.evidence
-                    .slice(0, 3)
-                    .map((e) => e.snippet)
-                    .join(" / ") || "—"}
+                <div className="mt-2 space-y-1 text-xs text-gray-400">
+                  {rec.contributions.map((c) => (
+                    <div key={c.id}>
+                      {c.contributionRole}: {c.videoId} {formatTime(c.startSeconds)} 「
+                      {c.exactVisibleText}」 ({c.decision})
+                    </div>
+                  ))}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
@@ -467,38 +516,15 @@ export default function GuideAdminWorkbench() {
                     非公開
                   </button>
                 </div>
-                <div className="mt-2 space-y-1 text-xs text-gray-400">
-                  {rec.contributions.map((c) => (
-                    <div key={c.id} className="flex flex-wrap items-center gap-2">
-                      <span>
-                        {c.videoId} · {c.inclusion}
-                      </span>
-                      <button
-                        type="button"
-                        className="underline"
-                        onClick={() =>
-                          void postAction({
-                            action: "setContributionInclusion",
-                            contributionId: c.id,
-                            inclusion:
-                              c.inclusion === "included" ? "excluded" : "included",
-                          })
-                        }
-                      >
-                        出典トグル
-                      </button>
-                    </div>
-                  ))}
-                </div>
               </li>
             ))}
           </ul>
         </section>
       ) : null}
 
-      {module === "conflicts" ? (
+      {module === "merge" ? (
         <section className="space-y-3 rounded-xl border border-white/10 bg-[#1e2a3a] p-5">
-          <h2 className="font-bold">複数動画マージ / 矛盾確認</h2>
+          <h2 className="font-bold">複数証拠の統合</h2>
           <label className="block text-sm">
             characterId
             <input
@@ -508,22 +534,22 @@ export default function GuideAdminWorkbench() {
             />
           </label>
           <label className="block text-sm">
-            videoIds（カンマ区切り）
+            evidenceIds（カンマ区切り）
             <input
               className="mt-1 w-full rounded-lg border border-white/10 bg-[#151d2a] px-3 py-2"
-              value={mergeVideoIds}
-              onChange={(e) => setMergeVideoIds(e.target.value)}
+              value={mergeEvidenceIds}
+              onChange={(e) => setMergeEvidenceIds(e.target.value)}
             />
           </label>
           <button
             type="button"
-            disabled={!secret || !mergeCharacterId || !mergeVideoIds || busy}
+            disabled={!secret || !mergeCharacterId || !mergeEvidenceIds || busy}
             className="rounded-lg bg-accent px-3 py-2 text-sm text-black disabled:opacity-40"
             onClick={() =>
               void postAction({
-                action: "mergeRecommendations",
+                action: "mergeVisualRecommendations",
                 characterId: mergeCharacterId,
-                videoIds: mergeVideoIds
+                evidenceIds: mergeEvidenceIds
                   .split(",")
                   .map((v) => v.trim())
                   .filter(Boolean),
@@ -532,10 +558,6 @@ export default function GuideAdminWorkbench() {
           >
             統合候補を作成
           </button>
-          <p className="text-xs text-gray-400">
-            矛盾がある場合は API 応答の conflicts を確認し、推奨詳細で出典除外・override
-            後に承認してください。approved_for_processing 以外のチャンネルは公開できません。
-          </p>
         </section>
       ) : null}
 
@@ -548,13 +570,15 @@ export default function GuideAdminWorkbench() {
         </section>
       ) : null}
 
-      {(overview?.audits?.length ?? 0) > 0 ? (
+      {(overview?.jobs?.length ?? 0) > 0 ? (
         <section className="rounded-xl border border-white/10 bg-[#1e2a3a] p-4">
-          <h2 className="text-sm font-bold">監査ログ</h2>
+          <h2 className="text-sm font-bold">解析 Job / usage</h2>
           <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-xs text-gray-400">
-            {overview!.audits.map((audit) => (
-              <li key={audit.id}>
-                {audit.action} · {audit.status} · {audit.detail.slice(0, 120)}
+            {overview!.jobs.map((job) => (
+              <li key={job.id}>
+                {job.videoId} · {job.status}
+                {job.errorCode ? ` · ${job.errorCode}` : ""}
+                {job.tokenUsage ? ` · usage ${job.tokenUsage.slice(0, 80)}` : ""}
               </li>
             ))}
           </ul>

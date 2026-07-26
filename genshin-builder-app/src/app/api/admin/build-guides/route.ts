@@ -1,21 +1,24 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { analyzeVideoTranscript, GuideAnalysisError } from "@/lib/build-guides/analysis-service";
 import {
   allowBuildGuideAdminRequest,
   authorizeBuildGuideAdminRequest,
   authorizationHttpStatus,
 } from "@/lib/build-guides/admin-auth";
-import { validatedGuidePayloadSchema, permissionStatusSchema } from "@/lib/build-guides/schemas";
 import {
-  deleteTranscriptArtifacts,
+  analyzeVideoVisuals,
+  GuideVisualAnalysisError,
+} from "@/lib/build-guides/visual-analysis-service";
+import { permissionStatusSchema } from "@/lib/build-guides/visual-schemas";
+import {
   getGuideAdminOverview,
   mapYoutubeError,
-  mergeVideoRecommendations,
+  mergeVisualRecommendations,
   overrideRecommendation,
+  overrideVisualEvidencePurpose,
   registerGuideChannel,
-  setContributionInclusion,
   setRecommendationStatus,
+  setVisualEvidenceStatus,
   syncChannelVideos,
   updateGuideChannel,
 } from "@/lib/build-guides/store";
@@ -27,6 +30,12 @@ export const maxDuration = 300;
 const channelId = z.string().regex(/^UC[\w-]{20,24}$/);
 const videoId = z.string().regex(/^[\w-]{11}$/);
 const cuid = z.string().regex(/^[a-z0-9_-]{20,40}$/i);
+
+const rangeSchema = z.strictObject({
+  startSeconds: z.number().nonnegative(),
+  endSeconds: z.number().nonnegative(),
+  reason: z.string().max(200),
+});
 
 const actionSchema = z.discriminatedUnion("action", [
   z.strictObject({
@@ -51,15 +60,40 @@ const actionSchema = z.discriminatedUnion("action", [
     maxPages: z.number().int().min(1).max(10).optional(),
   }),
   z.strictObject({
-    action: z.literal("analyzeTranscript"),
+    action: z.literal("analyzeVideoVisuals"),
     videoId,
-    transcript: z.string().min(1).max(2_000_000),
-    format: z.enum(["txt", "vtt", "srt"]).optional(),
+    force: z.boolean().optional(),
+    targetCharacterIds: z.array(z.string().max(64)).max(20).optional(),
+  }),
+  z.strictObject({
+    action: z.literal("reanalyzeVideoVisuals"),
+    videoId,
+    targetCharacterIds: z.array(z.string().max(64)).max(20).optional(),
+  }),
+  z.strictObject({
+    action: z.literal("analyzeSelectedRanges"),
+    videoId,
+    ranges: z.array(rangeSchema).min(1).max(10),
     force: z.boolean().optional(),
   }),
   z.strictObject({
-    action: z.literal("analyzeDescription"),
-    videoId,
+    action: z.literal("approveVisualEvidence"),
+    evidenceId: cuid,
+  }),
+  z.strictObject({
+    action: z.literal("rejectVisualEvidence"),
+    evidenceId: cuid,
+    exclusionCode: z.string().max(100).optional(),
+  }),
+  z.strictObject({
+    action: z.literal("overrideVisualEvidencePurpose"),
+    evidenceId: cuid,
+    purposeSummary: z.string().max(500),
+  }),
+  z.strictObject({
+    action: z.literal("mergeVisualRecommendations"),
+    characterId: z.string().min(1).max(64),
+    evidenceIds: z.array(cuid).min(1).max(40),
   }),
   z.strictObject({
     action: z.literal("approveRecommendation"),
@@ -82,29 +116,11 @@ const actionSchema = z.discriminatedUnion("action", [
   z.strictObject({
     action: z.literal("overrideRecommendation"),
     recommendationId: cuid,
-    payload: validatedGuidePayloadSchema,
+    targetsPayload: z.unknown(),
+    mainStatsPayload: z.unknown().optional(),
+    priorityPayload: z.unknown().optional(),
+    contextPayload: z.unknown().optional(),
     adminNotes: z.string().max(2_000).optional(),
-  }),
-  z.strictObject({
-    action: z.literal("mergeRecommendations"),
-    characterId: z.string().min(1).max(64),
-    videoIds: z.array(videoId).min(2).max(10),
-  }),
-  z.strictObject({
-    action: z.literal("setContributionInclusion"),
-    contributionId: cuid,
-    inclusion: z.enum(["included", "excluded"]),
-    reason: z.string().max(500).optional(),
-  }),
-  z.strictObject({
-    action: z.literal("reanalyze"),
-    videoId,
-    transcript: z.string().min(1).max(2_000_000),
-    format: z.enum(["txt", "vtt", "srt"]).optional(),
-  }),
-  z.strictObject({
-    action: z.literal("deleteTranscriptData"),
-    videoId,
   }),
 ]);
 
@@ -124,12 +140,12 @@ export async function POST(request: Request): Promise<Response> {
   const denied = authorize(request);
   if (denied) return denied;
   const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > 2_100_000) {
+  if (contentLength > 65_536) {
     return NextResponse.json({ error: "requestTooLarge" }, { status: 413 });
   }
   try {
     const text = await request.text();
-    if (Buffer.byteLength(text, "utf8") > 2_100_000) {
+    if (Buffer.byteLength(text, "utf8") > 65_536) {
       return NextResponse.json({ error: "requestTooLarge" }, { status: 413 });
     }
     const input = actionSchema.parse(JSON.parse(text) as unknown);
@@ -140,33 +156,51 @@ export async function POST(request: Request): Promise<Response> {
         return NextResponse.json({ channel: await updateGuideChannel(input) });
       case "syncChannelVideos":
         return NextResponse.json(await syncChannelVideos(input));
-      case "analyzeDescription": {
-        const video = await prisma.guideVideo.findUnique({ where: { videoId: input.videoId } });
-        if (!video) {
-          return NextResponse.json({ error: "videoNotFound" }, { status: 404 });
-        }
+      case "analyzeVideoVisuals":
+        return NextResponse.json(
+          await analyzeVideoVisuals({
+            videoId: input.videoId,
+            force: input.force,
+            targetCharacterIds: input.targetCharacterIds,
+          }),
+        );
+      case "reanalyzeVideoVisuals":
+        return NextResponse.json(
+          await analyzeVideoVisuals({
+            videoId: input.videoId,
+            force: true,
+            targetCharacterIds: input.targetCharacterIds,
+          }),
+        );
+      case "analyzeSelectedRanges":
+        return NextResponse.json(
+          await analyzeVideoVisuals({
+            videoId: input.videoId,
+            force: input.force ?? true,
+            requestedRanges: input.ranges,
+          }),
+        );
+      case "approveVisualEvidence":
         return NextResponse.json({
-          videoId: video.videoId,
-          title: video.title,
-          description: video.description.slice(0, 4_000),
+          evidence: await setVisualEvidenceStatus({
+            evidenceId: input.evidenceId,
+            approvalStatus: "approved",
+          }),
         });
-      }
-      case "analyzeTranscript":
-      case "reanalyze": {
-        const video = await prisma.guideVideo.findUnique({ where: { videoId: input.videoId } });
-        if (!video) {
-          return NextResponse.json({ error: "videoNotFound" }, { status: 404 });
-        }
-        const result = await analyzeVideoTranscript({
-          videoId: video.videoId,
-          title: video.title,
-          description: video.description,
-          transcriptRaw: input.transcript,
-          format: input.format,
-          force: input.action === "reanalyze" || input.force,
+      case "rejectVisualEvidence":
+        return NextResponse.json({
+          evidence: await setVisualEvidenceStatus({
+            evidenceId: input.evidenceId,
+            approvalStatus: "rejected",
+            exclusionCode: input.exclusionCode ?? "adminRejected",
+          }),
         });
-        return NextResponse.json(result);
-      }
+      case "overrideVisualEvidencePurpose":
+        return NextResponse.json({
+          evidence: await overrideVisualEvidencePurpose(input),
+        });
+      case "mergeVisualRecommendations":
+        return NextResponse.json(await mergeVisualRecommendations(input));
       case "approveRecommendation":
         return NextResponse.json({
           recommendation: await setRecommendationStatus({
@@ -201,26 +235,22 @@ export async function POST(request: Request): Promise<Response> {
           where: { id: input.recommendationId },
           data: { status: "approved", publishedAt: null },
         });
+        await prisma.recommendationVisualContribution.updateMany({
+          where: { recommendationId: row.id },
+          data: { usedInPublishedResult: false },
+        });
         return NextResponse.json({ recommendation: row });
       }
       case "overrideRecommendation":
         return NextResponse.json({
           recommendation: await overrideRecommendation(input),
         });
-      case "mergeRecommendations":
-        return NextResponse.json(await mergeVideoRecommendations(input));
-      case "setContributionInclusion":
-        return NextResponse.json({
-          contribution: await setContributionInclusion(input),
-        });
-      case "deleteTranscriptData":
-        return NextResponse.json(await deleteTranscriptArtifacts(input.videoId));
     }
   } catch (error) {
     if (error instanceof z.ZodError || error instanceof SyntaxError) {
       return NextResponse.json({ error: "invalidRequest" }, { status: 400 });
     }
-    if (error instanceof GuideAnalysisError) {
+    if (error instanceof GuideVisualAnalysisError) {
       return NextResponse.json({ error: error.code }, { status: 422 });
     }
     const youtubeCode = mapYoutubeError(error);
