@@ -8,6 +8,7 @@ import '../../../domain/level_progression.dart';
 import '../../../domain/models/calculation_models.dart';
 import '../../../domain/models/character_build_snapshot.dart';
 import '../../../providers/character_detail_providers.dart';
+import 'recommended_stats_card.dart';
 
 /// 想定ステータス: 現在（取得情報基準）と変更後（編集状態）を比較表示する
 class SimulatedStatsSection extends ConsumerWidget {
@@ -156,6 +157,10 @@ class SimulatedStatsSection extends ConsumerWidget {
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
+        ),
+        RecommendedStatsCard(
+          characterId: character.id,
+          currentStats: current,
         ),
       ],
     );

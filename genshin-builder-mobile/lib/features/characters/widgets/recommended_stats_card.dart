@@ -1,0 +1,276 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../../domain/build_recommendations/build_recommendation.dart';
+import '../../../domain/character_stats.dart';
+import '../../../providers/build_recommendation_providers.dart';
+
+/// 「動画内推奨目安」カード。公式/理想/最適の断定はしない。
+class RecommendedStatsCard extends ConsumerWidget {
+  const RecommendedStatsCard({
+    super.key,
+    required this.characterId,
+    required this.currentStats,
+  });
+
+  final String characterId;
+  final StatValues currentStats;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(buildRecommendationProvider(characterId));
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.only(top: 16),
+        child: LinearProgressIndicator(minHeight: 2),
+      ),
+      error: (error, _) {
+        if (error is BuildRecommendationException &&
+            error.failure == BuildRecommendationFailure.notConfigured) {
+          return const SizedBox.shrink();
+        }
+        if (error is BuildRecommendationException &&
+            error.failure == BuildRecommendationFailure.notFound) {
+          return const SizedBox.shrink();
+        }
+        return Card(
+          margin: const EdgeInsets.only(top: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              '動画内推奨目安を取得できませんでした。',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        );
+      },
+      data: (recommendation) {
+        if (recommendation == null) return const SizedBox.shrink();
+        return _RecommendationBody(
+          recommendation: recommendation,
+          currentStats: currentStats,
+          onRetry: () => ref.invalidate(buildRecommendationProvider(characterId)),
+        );
+      },
+    );
+  }
+}
+
+class _RecommendationBody extends StatelessWidget {
+  const _RecommendationBody({
+    required this.recommendation,
+    required this.currentStats,
+    required this.onRetry,
+  });
+
+  final CharacterBuildRecommendation recommendation;
+  final StatValues currentStats;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(top: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    recommendation.label,
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+                IconButton(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  tooltip: '再読込',
+                ),
+              ],
+            ),
+            Text(
+              '攻略動画内で言及された目安です。公式推奨や最適値ではありません。'
+              '条件付き効果・編成バフは含みません。',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (recommendation.role != null && recommendation.role!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  '役割目安: ${recommendation.role}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+            const SizedBox(height: 8),
+            ...recommendation.targets.map((target) {
+              final current = currentStats[target.stat] ?? 0;
+              final displayCurrent = percentStatKeys.contains(target.stat)
+                  ? current * 100
+                  : current;
+              final verdict = compareStatToTarget(
+                current: displayCurrent,
+                target: BuildStatTarget(
+                  stat: target.stat,
+                  recommended: target.recommended,
+                  min: target.min,
+                  max: target.max,
+                  unit: target.unit,
+                ),
+              );
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${statLabels[target.stat] ?? target.stat.name}'
+                        '${_rangeLabel(target)}',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                    Text(
+                      _verdictLabel(verdict),
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: _verdictColor(theme, verdict),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            if (recommendation.substatPriority.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'サブ優先: ${recommendation.substatPriority.map((s) => statLabels[s] ?? s.name).join(' > ')}',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+            const SizedBox(height: 8),
+            ...recommendation.sources.map(
+              (source) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: Text(source.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                subtitle: Text(
+                  '${source.channelTitle}'
+                  '${recommendation.publishedAt != null ? ' · 公開 ${recommendation.publishedAt!.toLocal().toIso8601String().split('T').first}' : ''}'
+                  '${recommendation.lastVerifiedAt != null ? ' · 確認 ${recommendation.lastVerifiedAt!.toLocal().toIso8601String().split('T').first}' : ''}'
+                  ' · 管理者確認済み',
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: const Icon(Icons.open_in_new, size: 18),
+                onTap: () => _openUrl(source.sourceUrl),
+              ),
+            ),
+            if (recommendation.evidence.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text('根拠（抜粋）', style: theme.textTheme.labelMedium),
+              ...recommendation.evidence.take(3).map(
+                (e) {
+                  final stamp = e.startMs != null
+                      ? ' (${_formatTimestamp(e.startMs!)})'
+                      : '';
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: InkWell(
+                      onTap: e.startMs == null
+                          ? null
+                          : () {
+                              BuildRecommendationSource? source;
+                              for (final item in recommendation.sources) {
+                                if (item.videoId == e.videoId) {
+                                  source = item;
+                                  break;
+                                }
+                              }
+                              if (source == null) return;
+                              _openUrl(_youtubeAt(source.sourceUrl, e.startMs!));
+                            },
+                      child: Text(
+                        '「${e.snippet}」$stamp',
+                        style: theme.textTheme.bodySmall,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+            for (final caveat in recommendation.caveats)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('・$caveat', style: theme.textTheme.bodySmall),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _rangeLabel(BuildStatTarget target) {
+    final parts = <String>[];
+    if (target.min != null) parts.add('min ${target.min}');
+    if (target.recommended != null) parts.add('目安 ${target.recommended}');
+    if (target.max != null) parts.add('max ${target.max}');
+    if (parts.isEmpty) return '';
+    return ' (${parts.join(' / ')})';
+  }
+
+  String _verdictLabel(StatCompareVerdict verdict) {
+    switch (verdict) {
+      case StatCompareVerdict.below:
+        return '不足気味';
+      case StatCompareVerdict.within:
+        return '目安内';
+      case StatCompareVerdict.above:
+        return '超過気味';
+      case StatCompareVerdict.unknown:
+        return '—';
+    }
+  }
+
+  Color _verdictColor(ThemeData theme, StatCompareVerdict verdict) {
+    switch (verdict) {
+      case StatCompareVerdict.within:
+        return theme.colorScheme.primary;
+      case StatCompareVerdict.below:
+        return theme.colorScheme.tertiary;
+      case StatCompareVerdict.above:
+        return theme.colorScheme.error;
+      case StatCompareVerdict.unknown:
+        return theme.colorScheme.onSurfaceVariant;
+    }
+  }
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    if (!await canLaunchUrl(uri)) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  String _youtubeAt(String sourceUrl, int startMs) {
+    final seconds = (startMs / 1000).floor();
+    final uri = Uri.tryParse(sourceUrl);
+    if (uri == null) return sourceUrl;
+    final params = Map<String, String>.from(uri.queryParameters);
+    params['t'] = '${seconds}s';
+    return uri.replace(queryParameters: params).toString();
+  }
+
+  String _formatTimestamp(int startMs) {
+    final total = (startMs / 1000).floor();
+    final m = total ~/ 60;
+    final s = total % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+}
