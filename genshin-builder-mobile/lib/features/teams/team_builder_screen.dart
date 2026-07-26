@@ -7,6 +7,7 @@ import '../../application/element_colors.dart';
 import '../../domain/game_display.dart';
 import '../../domain/models/master_models.dart';
 import '../../domain/team/team_models.dart';
+import '../../domain/team_recommendation/team_template_replacement.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/growth_providers.dart';
 import '../../core/errors/user_facing_error.dart';
@@ -47,6 +48,15 @@ extension TeamRoleLabel on TeamRole {
 
 /// Default roles for slots 0-3.
 const _defaultRoles = [TeamRole.mainDps, TeamRole.subDps, TeamRole.support, TeamRole.healer];
+
+TeamRole _roleFromTemplate(String role) => switch (role) {
+  'main_dps' => TeamRole.mainDps,
+  'sub_dps' => TeamRole.subDps,
+  'support' => TeamRole.support,
+  'healer' => TeamRole.healer,
+  'shielder' => TeamRole.shielder,
+  _ => TeamRole.flex,
+};
 
 // ---------------------------------------------------------------------------
 // TeamBuilderSlot (UI state)
@@ -224,7 +234,10 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
   Widget _buildFutureHint(ThemeData theme) {
     final attackerId = _slots.first.characterId;
     if (attackerId != null) {
-      return TeamRecommendationPanel(attackerId: attackerId);
+      return TeamRecommendationPanel(
+        attackerId: attackerId,
+        onApplyTeam: _applyRecommendedTeam,
+      );
     }
     return Card(
       child: Padding(
@@ -244,6 +257,24 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
         ),
       ),
     );
+  }
+
+  void _applyRecommendedTeam(List<TeamTemplateMember> members) {
+    if (members.length != 4 ||
+        members.map((member) => member.characterId).toSet().length != 4 ||
+        members.map((member) => member.slotIndex).toSet().length != 4) {
+      return;
+    }
+    final ordered = [...members]
+      ..sort((a, b) => a.slotIndex.compareTo(b.slotIndex));
+    setState(() {
+      for (var index = 0; index < 4; index++) {
+        _slots[index] = TeamBuilderSlot(
+          characterId: ordered[index].characterId,
+          role: _roleFromTemplate(ordered[index].role),
+        );
+      }
+    });
   }
 
   // ── Build ─────────────────────────────────────────────────────────

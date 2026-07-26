@@ -4,12 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/team_recommendations/backend_team_recommendation_api.dart';
 import '../../domain/models/master_models.dart';
 import '../../domain/team_recommendation/team_recommendation.dart';
+import '../../domain/team_recommendation/team_template_replacement.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/team_recommendation_providers.dart';
+import 'team_template_replacements.dart';
 
 class TeamRecommendationPanel extends ConsumerStatefulWidget {
-  const TeamRecommendationPanel({required this.attackerId, super.key});
+  const TeamRecommendationPanel({
+    required this.attackerId,
+    this.onApplyTeam,
+    super.key,
+  });
   final String attackerId;
+  final ValueChanged<List<TeamTemplateMember>>? onApplyTeam;
 
   @override
   ConsumerState<TeamRecommendationPanel> createState() =>
@@ -112,6 +119,12 @@ class _TeamRecommendationPanelState
                                 .retry(),
                   ),
               data: (job) => _jobContent(job, names),
+            ),
+            const Divider(height: 24),
+            Text('承認済み編成テンプレート', style: theme.textTheme.titleSmall),
+            PublishedTeamTemplatesSection(
+              attackerId: widget.attackerId,
+              onApplyTeam: widget.onApplyTeam,
             ),
             const Divider(height: 24),
             Text(

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:genshin_builder_mobile/data/team_recommendations/backend_team_recommendation_api.dart';
 import 'package:genshin_builder_mobile/domain/team_recommendation/team_recommendation.dart';
+import 'package:genshin_builder_mobile/domain/team_recommendation/team_template_replacement.dart';
 
 void main() {
   const id = '123e4567-e89b-42d3-a456-426614174000';
@@ -96,5 +97,124 @@ void main() {
     expect(job.result?.recommendations.single.alternatives['10000054'], [
       '10000032',
     ]);
+  });
+
+  test('GET parses approved templates without exposing admin data', () async {
+    final api = BackendTeamRecommendationApi(
+      baseUrl: 'https://builder.example.com',
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/team-templates');
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'templates': [
+                {
+                  'id': 'template-12345',
+                  'name': '承認済み編成',
+                  'archetype': 'reaction',
+                  'members': [
+                    {
+                      'characterId': '10000058',
+                      'role': 'healer',
+                      'slotIndex': 3,
+                    },
+                    {
+                      'characterId': '10000089',
+                      'role': 'main_dps',
+                      'slotIndex': 0,
+                    },
+                    {
+                      'characterId': '10000071',
+                      'role': 'support',
+                      'slotIndex': 2,
+                    },
+                    {
+                      'characterId': '10000052',
+                      'role': 'sub_dps',
+                      'slotIndex': 1,
+                    },
+                  ],
+                  'source': 'local',
+                  'sourceUrl': null,
+                  'dataVersion': 'v1',
+                  'updatedAt': '2026-07-26T00:00:00.000Z',
+                },
+              ],
+            }),
+          ),
+          200,
+        );
+      }),
+    );
+    final templates = await api.getTemplates();
+    expect(templates.single.name, '承認済み編成');
+    expect(templates.single.members, hasLength(4));
+    expect(templates.single.members.map((member) => member.slotIndex), [
+      0,
+      1,
+      2,
+      3,
+    ]);
+    expect(templates.single.members.last.role, 'healer');
+  });
+
+  test('GET parses pre-generated replacement candidates', () async {
+    final api = BackendTeamRecommendationApi(
+      baseUrl: 'https://builder.example.com',
+      client: MockClient((request) async {
+        expect(
+          request.url.path,
+          '/api/team-templates/template-12345/replacements/10000052',
+        );
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'templateId': 'template-12345',
+              'replacedCharacterId': '10000052',
+              'generatedAt': '2026-07-26T00:00:00.000Z',
+              'dataVersion': 'v1',
+              'isStale': false,
+              'source': 'deepseek',
+              'slotAnalysis': {
+                'requiredFunctions': ['hydro_applier'],
+                'preferredFunctions': [],
+                'dependencies': [],
+                'replacementRisks': [],
+              },
+              'candidates': [
+                {
+                  'characterId': '10000031',
+                  'element': 'hydro',
+                  'roles': ['sub_dps'],
+                  'tags': ['off_field_dps'],
+                  'compatibilityScore': 88,
+                  'category': 'optimal',
+                  'confidence': 0.9,
+                  'reasons': ['役割を維持'],
+                  'tradeoffs': [],
+                  'requiredChanges': [],
+                  'teamEvaluation': {
+                    'reactionViability': 90,
+                    'damageBalance': 85,
+                    'sustain': 70,
+                    'energy': 80,
+                    'fieldTimeBalance': 90,
+                  },
+                  'deterministicPenalty': 0,
+                  'finalScore': 88,
+                },
+              ],
+            }),
+          ),
+          200,
+        );
+      }),
+    );
+    final result = await api.getReplacement(
+      templateId: 'template-12345',
+      characterId: '10000052',
+    );
+    expect(result.candidates.single.category, ReplacementCategory.optimal);
+    expect(result.candidates.single.finalScore, 88);
   });
 }

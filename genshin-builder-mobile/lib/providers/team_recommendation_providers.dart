@@ -5,8 +5,10 @@ import '../application/team_recommendations/normalize_simulation_builds.dart';
 import '../application/team_recommendations/poll_team_recommendation_job.dart';
 import '../data/team_recommendations/backend_team_recommendation_api.dart';
 import '../data/team_recommendations/http_team_recommendation_repository.dart';
+import '../data/hoyolab/models/game_record.dart';
 import '../domain/repositories/team_recommendation_repository.dart';
 import '../domain/team_recommendation/team_recommendation.dart';
+import '../domain/team_recommendation/team_template_replacement.dart';
 import 'app_providers.dart';
 import 'hoyolab_game_providers.dart';
 
@@ -25,6 +27,81 @@ final teamRecommendationRepositoryProvider =
     Provider<TeamRecommendationRepository>((ref) {
       return HttpTeamRecommendationRepository(
         ref.watch(backendTeamRecommendationApiProvider),
+      );
+    });
+
+final teamTemplateReplacementRepositoryProvider =
+    Provider<TeamTemplateReplacementRepository>((ref) {
+      return HttpTeamRecommendationRepository(
+        ref.watch(backendTeamRecommendationApiProvider),
+      );
+    });
+
+final teamTemplatesProvider =
+    FutureProvider.autoDispose<List<PublishedTeamTemplate>>((ref) {
+      return ref
+          .watch(teamTemplateReplacementRepositoryProvider)
+          .getTemplates();
+    });
+
+final teamReplacementScoreWeightsProvider = Provider<ReplacementScoreWeights>((
+  ref,
+) {
+  return const ReplacementScoreWeights();
+});
+
+class TeamReplacementKey {
+  const TeamReplacementKey(this.templateId, this.characterId);
+  final String templateId;
+  final String characterId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TeamReplacementKey &&
+      other.templateId == templateId &&
+      other.characterId == characterId;
+
+  @override
+  int get hashCode => Object.hash(templateId, characterId);
+}
+
+final teamReplacementDisplayProvider = FutureProvider.autoDispose
+    .family<TeamReplacementDisplayResult, TeamReplacementKey>((ref, key) async {
+      final repository = ref.watch(teamTemplateReplacementRepositoryProvider);
+      final result = await repository.getReplacement(
+        templateId: key.templateId,
+        characterId: key.characterId,
+      );
+      final characters = await ref.read(charactersProvider.future);
+      var builds = const <String, HoyolabCharacterBuild>{};
+      var readinessLimited = false;
+      try {
+        final gameRepository = await ref.read(
+          hoyolabGameDataRepositoryProvider.future,
+        );
+        builds = await gameRepository.fetchOwnedCharacterBuilds();
+      } catch (_) {
+        // 保存済み候補の表示は維持し、HoYoLAB未接続時はローカル育成だけで準備度を出す。
+        readinessLimited = true;
+      }
+      final userId = await ref.read(localUserIdProvider.future);
+      final progressRepository = await ref.read(
+        progressRepositoryProvider.future,
+      );
+      final progress = await progressRepository.getAll(userId);
+      final snapshots = normalizeSimulationBuilds(
+        characters: characters,
+        hoyolabBuilds: builds,
+        localProgress: {for (final value in progress) value.characterId: value},
+      );
+      return TeamReplacementDisplayResult(
+        result: result,
+        readinessLimited: readinessLimited,
+        candidates: rankReplacementCandidates(
+          result: result,
+          builds: snapshots,
+          weights: ref.read(teamReplacementScoreWeightsProvider),
+        ),
       );
     });
 
