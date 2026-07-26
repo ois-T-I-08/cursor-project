@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../application/element_colors.dart';
+import '../../application/team_recommendations/candidates_for_slot.dart';
 import '../../domain/game_display.dart';
 import '../../domain/models/master_models.dart';
 import '../../domain/team/team_models.dart';
+import '../../domain/team_recommendation/team_recommendation.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/growth_providers.dart';
+import '../../providers/team_recommendation_providers.dart';
 import '../../core/errors/user_facing_error.dart';
 import '../shared/game_icon_image.dart';
 import 'team_recommendation_panel.dart';
@@ -112,11 +115,15 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
 
     setState(() => _isPickerOpen = true);
 
+    final slotIds = [for (final slot in _slots) slot.characterId];
     final selectedId = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       builder: (_) => _TeamCharacterPicker(
         selectedIds: _selectedIds,
+        slotIndex: slotIndex,
+        slotCharacterIds: slotIds,
+        attackerId: _slots.first.characterId,
         onSelected: (id) => Navigator.of(context).pop(id),
       ),
     );
@@ -185,6 +192,21 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
     });
   }
 
+  void _applyRecommendation(List<String> members) {
+    setState(() {
+      final next = applyRecommendationToEmptySlots(
+        current: [for (final slot in _slots) slot.characterId],
+        members: members,
+      );
+      for (var i = 0; i < _slots.length; i++) {
+        _slots[i] = TeamBuilderSlot(
+          characterId: next[i],
+          role: _slots[i].role,
+        );
+      }
+    });
+  }
+
   void _dismissKeyboard() => FocusScope.of(context).unfocus();
 
   // ── Future hint ────────────────────────────────────────────────────────
@@ -224,7 +246,10 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
   Widget _buildFutureHint(ThemeData theme) {
     final attackerId = _slots.first.characterId;
     if (attackerId != null) {
-      return TeamRecommendationPanel(attackerId: attackerId);
+      return TeamRecommendationPanel(
+        attackerId: attackerId,
+        onApplyRecommendation: _applyRecommendation,
+      );
     }
     return Card(
       child: Padding(
@@ -836,10 +861,16 @@ class _RolePickerSheet extends StatelessWidget {
 class _TeamCharacterPicker extends ConsumerWidget {
   const _TeamCharacterPicker({
     required this.selectedIds,
+    required this.slotIndex,
+    required this.slotCharacterIds,
+    required this.attackerId,
     required this.onSelected,
   });
 
   final Set<String> selectedIds;
+  final int slotIndex;
+  final List<String?> slotCharacterIds;
+  final String? attackerId;
   final ValueChanged<String> onSelected;
 
   static bool _isTravelerId(String id) {
@@ -857,6 +888,25 @@ class _TeamCharacterPicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final charsAsync = ref.watch(charactersProvider);
+    final recommendationAsync =
+        attackerId == null
+            ? null
+            : ref.watch(teamRecommendationControllerProvider(attackerId!));
+    final candidateIds =
+        attackerId == null
+            ? const <String>[]
+            : candidatesForSlot(
+              job: recommendationAsync?.valueOrNull,
+              slotCharacterIds: slotCharacterIds,
+              slotIndex: slotIndex,
+            );
+    final candidatesLoading =
+        recommendationAsync != null &&
+        (recommendationAsync.isLoading ||
+            recommendationAsync.valueOrNull?.status ==
+                TeamSimulationJobStatus.queued ||
+            recommendationAsync.valueOrNull?.status ==
+                TeamSimulationJobStatus.running);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -866,6 +916,8 @@ class _TeamCharacterPicker extends ConsumerWidget {
       builder: (context, scrollController) => charsAsync.when(
         data: (characters) => _CharacterPickerContent(
           characters: characters,
+          candidateIds: candidateIds,
+          candidatesLoading: candidatesLoading && slotIndex > 0,
           isExcluded: _isExcluded,
           onSelected: onSelected,
           scrollController: scrollController,
@@ -880,12 +932,16 @@ class _TeamCharacterPicker extends ConsumerWidget {
 class _CharacterPickerContent extends StatefulWidget {
   const _CharacterPickerContent({
     required this.characters,
+    required this.candidateIds,
+    required this.candidatesLoading,
     required this.isExcluded,
     required this.onSelected,
     required this.scrollController,
   });
 
   final List<MasterCharacter> characters;
+  final List<String> candidateIds;
+  final bool candidatesLoading;
   final bool Function(String characterId) isExcluded;
   final ValueChanged<String> onSelected;
   final ScrollController scrollController;
@@ -900,9 +956,14 @@ class _CharacterPickerContentState extends State<_CharacterPickerContent> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final byId = {for (final c in widget.characters) c.id: c};
     final available = widget.characters
         .where((c) => !widget.isExcluded(c.id))
         .toList();
+    final candidates = <MasterCharacter>[
+      for (final id in widget.candidateIds)
+        if (byId[id] != null && !widget.isExcluded(id)) byId[id]!,
+    ];
 
     final filtered = _query.isEmpty
         ? available
@@ -931,6 +992,51 @@ class _CharacterPickerContentState extends State<_CharacterPickerContent> {
             ],
           ),
         ),
+        if (widget.candidatesLoading || candidates.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '\u3053\u306e\u67a0\u306e\u5019\u88dc',
+                  style: theme.textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                if (widget.candidatesLoading && candidates.isEmpty)
+                  const Row(
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(child: Text('\u5019\u88dc\u3092\u6e96\u5099\u4e2d\u2026')),
+                    ],
+                  )
+                else
+                  SizedBox(
+                    height: 108,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: candidates.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final c = candidates[index];
+                        return SizedBox(
+                          width: 76,
+                          child: _PickerCharacterTile(
+                            character: c,
+                            onTap: () => widget.onSelected(c.id),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
         Expanded(
           child: filtered.isEmpty
               ? Center(
@@ -951,65 +1057,85 @@ class _CharacterPickerContentState extends State<_CharacterPickerContent> {
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final c = filtered[index];
-                    final elementLabel = elementLabelMap[c.element] ?? c.element;
-                    return Material(
-                      color: theme.colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(10),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(10),
-                        onTap: () => widget.onSelected(c.id),
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Center(
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final size = constraints.biggest.shortestSide
-                                          .clamp(32.0, 56.0);
-                                      return GameIconImage(
-                                        iconUrl: c.iconUrl,
-                                        size: size,
-                                        borderRadius: 8,
-                                        borderColor: c.element.elementColor,
-                                        fallback: Text(
-                                          c.name.isNotEmpty ? c.name[0] : '?',
-                                          style: theme.textTheme.titleMedium,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                c.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.labelSmall,
-                              ),
-                              Text(
-                                '$elementLabel \u00b7 ${c.rarity}\u2605',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    return _PickerCharacterTile(
+                      character: c,
+                      onTap: () => widget.onSelected(c.id),
                     );
                   },
                 ),
         ),
       ],
+    );
+  }
+}
+
+class _PickerCharacterTile extends StatelessWidget {
+  const _PickerCharacterTile({
+    required this.character,
+    required this.onTap,
+  });
+
+  final MasterCharacter character;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final elementLabel =
+        elementLabelMap[character.element] ?? character.element;
+    return Material(
+      color: theme.colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Center(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final size = constraints.biggest.shortestSide
+                          .clamp(32.0, 56.0);
+                      return GameIconImage(
+                        iconUrl: character.iconUrl,
+                        size: size,
+                        borderRadius: 8,
+                        borderColor: character.element.elementColor,
+                        fallback: Text(
+                          character.name.isNotEmpty ? character.name[0] : '?',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                character.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall,
+              ),
+              Text(
+                '$elementLabel \u00b7 ${character.rarity}\u2605',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
