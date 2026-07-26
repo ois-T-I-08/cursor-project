@@ -26,3 +26,14 @@ Do **not** rebase or merge stacked PRs #4–#6 onto main. Close only after repla
 4. `salvage/ley-line-resin-domain` then UI / calendar
 
 Close comments: `docs/PR_CLOSE_COMMENTS.md` (fill replacement links after PRs open).
+
+## Replacement PRs (opened)
+
+1. [#20](https://github.com/ois-T-I-08/cursor-project/pull/20) sync lease renewal (web)
+2. [#21](https://github.com/ois-T-I-08/cursor-project/pull/21) remote JSON URL hardening
+3. [#22](https://github.com/ois-T-I-08/cursor-project/pull/22) Daily Plan completion / notifications
+4. [#23](https://github.com/ois-T-I-08/cursor-project/pull/23) ley-line / resin domain (UI/calendar follow-up still needed)
+
+Legal / consent: [#19](https://github.com/ois-T-I-08/cursor-project/pull/19)
+
+Close comments: docs/PR_CLOSE_COMMENTS.md. Owner must approve before Close of #4-#6.

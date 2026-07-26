@@ -23,6 +23,7 @@ Close / Merge は所有者が実行する（本ファイルは判断結果のみ
 | **#4** | **salvage 後 Close** | 直接 merge しない。代替: sync lease renewal + daily plan notifications |
 | **#5** | **salvage 後 Close** | #4 依存のまま merge しない。代替: ley-line domain (+ UI は別) |
 | **#6** | **salvage 後 Close** | 未統合 hardening のみ。代替: remote JSON HTTPS/redirect/credential |
+| **#19** | **継続** | 所有者確定判断（LICENSE / SQLCipher / consent / Data Safety） |
 | #13–#15 | **main 統合済み** | 参照のみ |
 
 推奨順: #17 → #16（Draft 維持・外部ゲート）→ #4〜#6 salvage 新 PR → 旧 PR Close。
