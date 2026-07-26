@@ -1,74 +1,74 @@
-# Build Guide Recommendations（YouTube 攻略動画推奨ステータス）
+# Build Guide Recommendations（YouTube 映像OCR）
 
-管理者が許可した YouTube チャンネルの動画メタデータを取得し、**手動貼り付けの字幕**を DeepSeek V4 Pro で抽出・検証したうえで、承認後に Flutter へ「動画内推奨目安」として公開する機能です。
+管理者が許可した YouTube チャンネルの動画メタデータを取得し、**公開 YouTube URL を Gemini で映像解析**して画面内の文字・表・ステータスを抽出します。通常コードで検証したあと、DeepSeek V4 Pro で整理し、管理者承認後に Flutter へ「動画内推奨目安」として公開します。
+
+## 役割分担
+
+| 層 | 役割 |
+|----|------|
+| YouTube Data API | チャンネル/動画メタデータ同期のみ |
+| Gemini Video Understanding | 公開 YouTube URL を直接解析し画面内情報を抽出 |
+| 通常コード | ID・時刻・数値・用途・マスター整合の検証 |
+| DeepSeek V4 Pro | 検証済み映像証拠の統合・矛盾整理（動画本体は見ない） |
+| 管理者 | 該当時刻確認・採用/却下・公開 |
 
 ## データフロー
 
-1. `/admin/guides` でチャンネル登録（`permissionStatus` を設定）
-2. YouTube Data API（`youtube.googleapis.com` 固定）で動画一覧を同期
-3. 管理者が動画を選び、TXT / VTT / SRT 字幕を貼り付けて解析
-4. DeepSeek（`deepseek-v4-pro` 既定、`thinking: disabled`）がチャンク抽出 → 統合
-5. 決定論的検証（キャラ ID・evidence snippet・min≤rec≤max・inferred 除外）
-6. `pending_review` → 承認 → 公開（`approved_for_processing` 以外は公開不可）
-7. Flutter は `GET /api/build-recommendations/:characterId` のみ参照（DeepSeek 非呼び出し）
+1. `/admin/guides` でチャンネル登録（`permissionStatus=approved_for_processing`）
+2. YouTube Data API で動画一覧同期（タイトル・公開日・時間・privacy 等）
+3. `analyzeVideoVisuals` で Gemini に公開 URL を渡し画面認識
+4. Zod + 決定論的検証（用途分類、timestamp、数値、マスター ID）
+5. DeepSeek で候補構造化 → `pending_review`
+6. 管理者が映像証拠を確認し承認・公開
+7. Flutter は公開 API のみ参照（Gemini/DeepSeek 非呼び出し）
 
-```text
-Admin UI → /api/admin/build-guides → YouTube / transcript / DeepSeek → SQLite
-Flutter  → /api/build-recommendations/[characterId] → 公開済みのみ
-```
+## 禁止事項
 
-## 字幕を自動取得しない理由
-
-- 非公式キャプションスクレイピング・音声認識・OCR は本機能の範囲外
-- 著作・利用許諾・利用規約リスクを管理者が制御できるようにする
-- 字幕全文は **DB に保存しない**（実行中メモリのみ）。保存するのは `transcriptHash`・形式・件数・短い evidence（≤200 文字）
-
-再解析時は管理者が字幕を再貼り付けするか、hash 不一致で新規 Job になります。
+* 動画ダウンロード / フレーム・音声の長期保存
+* 概要欄を推奨根拠として AI に渡す / 採用する
+* 字幕 TXT/VTT/SRT の手動入力・解析
+* 投稿者本人の現在ビルド / ダメージ検証 / 比較画面を自動推奨化
+* API キーを Flutter に含める
 
 ## 環境変数
 
 | 変数 | 説明 |
 |------|------|
-| `BUILD_GUIDE_ADMIN_SECRET` | 管理 API Bearer。未設定は 503 fail-closed |
-| `YOUTUBE_GUIDE_ENABLED` | 既定 `false`。`true` のときのみ YouTube 呼び出し |
-| `YOUTUBE_API_KEY` | YouTube Data API キー（サーバのみ） |
-| `YOUTUBE_TIMEOUT_MS` | タイムアウト |
-| `DEEPSEEK_GUIDE_ANALYSIS_ENABLED` | 既定は有効化しない。`true` で解析可 |
-| `DEEPSEEK_GUIDE_ANALYSIS_API_KEY` | 未設定時は `DEEPSEEK_API_KEY` にフォールバック |
-| `DEEPSEEK_GUIDE_ANALYSIS_MODEL` | 既定 `deepseek-v4-pro` |
-| `GUIDE_TRANSCRIPT_MAX_BYTES` | 字幕入力上限（既定 500000） |
+| `BUILD_GUIDE_ADMIN_SECRET` | 管理 API Bearer。未設定は 503 |
+| `YOUTUBE_GUIDE_ENABLED` | 既定 `false` |
+| `YOUTUBE_API_KEY` | YouTube Data API（サーバのみ） |
+| `GEMINI_VIDEO_ANALYSIS_ENABLED` | 既定 `false` |
+| `GEMINI_API_KEY` | Gemini API キー |
+| `GEMINI_VIDEO_ANALYSIS_MODEL` | 許可モデルのみ（例: `gemini-3.6-flash` / `gemini-2.5-flash`） |
+| `GEMINI_VIDEO_ANALYSIS_TIMEOUT_MS` | 既定 180000 |
+| `GEMINI_VIDEO_ANALYSIS_MAX_ATTEMPTS` | 既定 2 |
+| `GEMINI_VIDEO_MAX_DURATION_SECONDS` | 動画時間上限 |
+| `DEEPSEEK_GUIDE_ANALYSIS_*` | 検証済み証拠の統合用（動画解析ではない） |
 
-編成テンプレート用の `DEEPSEEK_*` / `TEAM_TEMPLATE_ADMIN_SECRET` は変更しません。
+## 採用 Gemini モデル
 
-## 公開表現
+公式 Video understanding ドキュメントの YouTube URL 例に合わせ、許可リストは次を fail-closed で受け付けます。
 
-- UI ラベルは「動画内推奨目安」
-- 公式 / 理想 / 最適の断定禁止
-- 条件付き効果・編成バフ非含有の注意を維持
+* `gemini-3.6-flash`（公式例で使用）
+* `gemini-2.5-flash`
+* `gemini-2.5-pro`
+* `gemini-2.0-flash`
 
-## 削除・クリア
+モデル未設定・許可外は解析不可です。
 
-- 管理 action `deleteTranscriptData`: `rawAiOutput` を空にし Job を `transcript_cleared` に更新
-- 公開取り下げ: `unpublishRecommendation`（status を `approved` に戻し `publishedAt` を null）
+## コスト対策
 
-## 将来境界（未実装）
+* 既定 OFF（kill switch）
+* requestHash キャッシュ（force のみ再解析）
+* チャンネル日次解析上限
+* 同時実行は videoId 単位で排他
+* 指定時間帯再解析
+* 失敗時の無限再試行禁止
 
-- 字幕公式 API からの自動取得
-- 音声認識 / OCR
-- ダメージ計算や最適ビルド生成
+## 障害時
 
-## Neon / PostgreSQL への移行メモ
+`GEMINI_VIDEO_ANALYSIS_ENABLED=false` または `YOUTUBE_GUIDE_ENABLED=false` にすると新規解析を停止できます。公開済みデータは公開 API から引き続き取得できます。
 
-現行 datasource は **SQLite**（`provider = "sqlite"`）です。将来 Neon 等へ移す場合:
+## Neon / PostgreSQL
 
-1. `prisma/schema.prisma` の `datasource db.provider` を `"postgresql"` に変更
-2. `DATABASE_URL` を Postgres 接続文字列へ
-3. **既存 SQLite 用 migration を流用せず**、`prisma migrate diff` 等で Postgres 向け migration を再生成する
-4. JSON は当面 `String` カラムのままでも可。必要なら段階的に `Json` 型へ
-
-Draft PR #16（Neon）の内容はこの機能ブランチでは取り込みません。
-
-## 管理 UI
-
-- URL: `/admin/guides`
-- モジュール: チャンネル / 動画 / 解析実行 / 推奨詳細 / 動画比較・矛盾
+現行は SQLite。Neon 移行時は provider 変更後に migration を再生成してください。
