@@ -4,7 +4,7 @@ import 'package:genshin_builder_mobile/domain/build_recommendations/build_recomm
 import 'package:genshin_builder_mobile/domain/character_stats.dart';
 
 void main() {
-  test('parses public recommendation payload', () {
+  test('parses visual recommendation payload', () {
     final parsed = parseBuildRecommendation({
       'characterId': 'hu-tao',
       'label': '動画内推奨目安',
@@ -36,17 +36,19 @@ void main() {
       ],
       'evidence': <Object?>[
         {
-          'fieldPath': 'targets.critRate',
-          'snippet': '会心率70',
+          'fieldPath': 'visual',
+          'exactVisibleText': 'ER 150～160%',
           'videoId': 'abcdefghijk',
+          'startSeconds': 530,
+          'endSeconds': 545,
         },
       ],
     });
 
     expect(parsed.characterId, 'hu-tao');
     expect(parsed.label, '動画内推奨目安');
-    expect(parsed.targets.single.stat, StatKey.critRate);
-    expect(parsed.substatPriority.first, StatKey.critRate);
+    expect(parsed.evidence.single.exactVisibleText, 'ER 150～160%');
+    expect(parsed.evidence.single.startSeconds, 530);
   });
 
   test('compareStatToTarget classifies ranges', () {

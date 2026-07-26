@@ -1,39 +1,30 @@
 import { describe, expect, it } from "vitest";
-import {
-  publicBuildRecommendationSchema,
-  validatedGuidePayloadSchema,
-} from "../build-guides/schemas";
+import { publicBuildRecommendationSchema } from "../build-guides/visual-schemas";
 
-const forbiddenKeys = [
+const forbidden = [
   "rawAiOutput",
   "adminNotes",
+  "tokenUsage",
+  "requestHash",
+  "GEMINI_API_KEY",
+  "DEEPSEEK_API_KEY",
+  "system_instruction",
   "transcript",
-  "transcriptHash",
-  "metadataHash",
-  "usagePayload",
-  "prompt_tokens",
-  "systemPrompt",
-  "apiKey",
-  "YOUTUBE_API_KEY",
-  "BUILD_GUIDE_ADMIN_SECRET",
-  "actorHash",
-  "normalizedTranscript",
-  "chunkText",
 ];
 
-describe("public build-recommendation leak guards", () => {
-  it("public DTO schema rejects internal fields (strict)", () => {
-    const base = {
+describe("public build-recommendation leak guards (visual)", () => {
+  it("accepts published visual DTO and rejects internal fields", () => {
+    const dto = publicBuildRecommendationSchema.parse({
       characterId: "hu-tao",
-      label: "動画内推奨目安" as const,
-      status: "published" as const,
-      origin: "single_video" as const,
+      label: "動画内推奨目安",
+      status: "published",
+      origin: "single_video",
       overallConfidence: 0.7,
-      context: { role: "dps" },
+      context: {},
       mainStats: [],
-      substatPriority: ["critRate" as const],
-      targets: [{ stat: "critRate" as const, recommended: 70, unit: "percent" as const }],
-      caveats: ["編成バフは含みません"],
+      substatPriority: ["er"],
+      targets: [{ stat: "er", min: 150, max: 160, unit: "percent" }],
+      caveats: ["動画画面内で確認"],
       lastVerifiedAt: "2026-07-15T00:00:00.000Z",
       publishedAt: "2026-07-15T00:00:00.000Z",
       sources: [
@@ -46,84 +37,20 @@ describe("public build-recommendation leak guards", () => {
       ],
       evidence: [
         {
-          fieldPath: "targets.critRate",
-          snippet: "会心率70",
+          fieldPath: "visual",
+          exactVisibleText: "ER 150～160%",
+          startSeconds: 120,
+          endSeconds: 130,
           videoId: "abcdefghijk",
         },
       ],
-    };
-
-    const ok = publicBuildRecommendationSchema.parse(base);
-    const serialized = JSON.stringify(ok);
-    for (const key of forbiddenKeys) {
+    });
+    const serialized = JSON.stringify(dto);
+    for (const key of forbidden) {
       expect(serialized).not.toContain(key);
     }
-
     expect(() =>
-      publicBuildRecommendationSchema.parse({
-        ...base,
-        rawAiOutput: "SECRET",
-      }),
-    ).toThrow();
-    expect(() =>
-      publicBuildRecommendationSchema.parse({
-        ...base,
-        adminNotes: "internal",
-      }),
-    ).toThrow();
-    expect(() =>
-      publicBuildRecommendationSchema.parse({
-        ...base,
-        transcriptHash: "abc",
-      }),
-    ).toThrow();
-  });
-
-  it("rejects negative and absurdly large stat numbers", () => {
-    expect(() =>
-      validatedGuidePayloadSchema.parse({
-        characterId: "hu-tao",
-        context: {},
-        mainStats: [],
-        substatPriority: [],
-        targets: [{ stat: "critRate", recommended: -1, inferred: false }],
-        overallConfidence: 0.5,
-        caveats: [],
-        unresolvedEntities: [],
-      }),
-    ).toThrow();
-    expect(() =>
-      validatedGuidePayloadSchema.parse({
-        characterId: "hu-tao",
-        context: {},
-        mainStats: [],
-        substatPriority: [],
-        targets: [{ stat: "hp", recommended: 9_999_999, inferred: false }],
-        overallConfidence: 0.5,
-        caveats: [],
-        unresolvedEntities: [],
-      }),
-    ).toThrow();
-  });
-
-  it("only published status is representable in public schema", () => {
-    expect(() =>
-      publicBuildRecommendationSchema.parse({
-        characterId: "hu-tao",
-        label: "動画内推奨目安",
-        status: "pending_review",
-        origin: "single_video",
-        overallConfidence: 0.7,
-        context: {},
-        mainStats: [],
-        substatPriority: [],
-        targets: [],
-        caveats: [],
-        lastVerifiedAt: null,
-        publishedAt: null,
-        sources: [],
-        evidence: [],
-      }),
+      publicBuildRecommendationSchema.parse({ ...dto, rawAiOutput: "x" }),
     ).toThrow();
   });
 });

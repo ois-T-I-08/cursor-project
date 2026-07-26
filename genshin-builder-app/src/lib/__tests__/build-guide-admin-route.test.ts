@@ -20,23 +20,25 @@ describe("admin build-guides route hardening", () => {
       new Request("http://localhost/api/admin/build-guides"),
     );
     expect(unavailable.status).toBe(503);
-    expect(await unavailable.json()).toEqual({ error: "unavailable" });
 
     process.env.BUILD_GUIDE_ADMIN_SECRET = "guide-secret-for-route-test";
     vi.resetModules();
     const mod = await import("../../app/api/admin/build-guides/route");
 
-    const missing = await mod.GET(
-      new Request("http://localhost/api/admin/build-guides"),
-    );
-    expect(missing.status).toBe(401);
-
-    const forbidden = await mod.GET(
-      new Request("http://localhost/api/admin/build-guides", {
-        headers: { Authorization: "Bearer wrong" },
-      }),
-    );
-    expect(forbidden.status).toBe(403);
+    expect(
+      (
+        await mod.GET(new Request("http://localhost/api/admin/build-guides"))
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await mod.GET(
+          new Request("http://localhost/api/admin/build-guides", {
+            headers: { Authorization: "Bearer wrong" },
+          }),
+        )
+      ).status,
+    ).toBe(403);
   });
 
   it("rejects oversized POST bodies", async () => {

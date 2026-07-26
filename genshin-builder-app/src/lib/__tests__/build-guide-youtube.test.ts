@@ -39,6 +39,7 @@ describe("YoutubeGuideClient", () => {
         });
       }
       if (url.includes("/videos?")) {
+        expect(url).toContain("contentDetails");
         return Response.json({
           items: [
             {
@@ -50,6 +51,8 @@ describe("YoutubeGuideClient", () => {
                 channelId: "UCxxxxxxxxxxxxxxxxxxxxxx",
                 thumbnails: { default: { url: "https://example.com/v.jpg" } },
               },
+              contentDetails: { duration: "PT12M34S" },
+              status: { privacyStatus: "public" },
             },
           ],
         });
@@ -68,6 +71,8 @@ describe("YoutubeGuideClient", () => {
     const videos = await client.fetchVideos(ids);
     expect(videos[0]?.sourceUrl).toContain("youtube.com/watch");
     expect(videos[0]?.metadataHash).toHaveLength(64);
+    expect(videos[0]?.durationSeconds).toBe(12 * 60 + 34);
+    expect(videos[0]?.privacyStatus).toBe("public");
   });
 
   it("fails closed when disabled", async () => {
