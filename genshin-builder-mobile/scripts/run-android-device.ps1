@@ -35,4 +35,14 @@ if (-not $android) {
 
 $deviceId = $android[0].id
 Write-Host "Running on: $($android[0].name) ($deviceId)" -ForegroundColor Green
-flutter run -d $deviceId
+
+# Team recommendations / abyss APIs need the Next.js backend origin.
+# Prefer env GENSHIN_BUILDER_API_BASE_URL; otherwise local Next via adb reverse.
+$apiBase = $env:GENSHIN_BUILDER_API_BASE_URL
+if ([string]::IsNullOrWhiteSpace($apiBase)) {
+  $apiBase = "http://127.0.0.1:3000"
+  Write-Host "GENSHIN_BUILDER_API_BASE_URL unset; using $apiBase (run adb reverse tcp:3000 tcp:3000)" -ForegroundColor Yellow
+  adb -s $deviceId reverse tcp:3000 tcp:3000 | Out-Null
+}
+
+flutter run -d $deviceId --dart-define=GENSHIN_BUILDER_API_BASE_URL=$apiBase
