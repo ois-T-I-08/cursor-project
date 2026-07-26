@@ -1,0 +1,103 @@
+name: YShelper Battle Statistics Collector
+
+# Collection runs in this workflow via Node CLI → Neon.
+# Next.js request handlers must not fetch YShelper.
+#
+# schedule is intentionally disabled until written usage permission, rate
+# limits, and SLA are confirmed. Do not enable kill switches here.
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yshelper-battle-statistics-collector
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: genshin-builder-app
+    env:
+      # Neon (dev/staging only until production enablement is approved).
+      DATABASE_URL: ${{ secrets.YSHELPER_COLLECT_DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.YSHELPER_COLLECT_DIRECT_URL }}
+      YSHELPER_API_BASE_URL: ${{ secrets.YSHELPER_API_BASE_URL }}
+      YSHELPER_ABYSS_ENDPOINT: ${{ secrets.YSHELPER_ABYSS_ENDPOINT }}
+      YSHELPER_STYGIAN_ENDPOINT: ${{ secrets.YSHELPER_STYGIAN_ENDPOINT }}
+      YSHELPER_ADAPTER_MODE: ${{ vars.YSHELPER_ADAPTER_MODE }}
+      YSHELPER_API_TOKEN: ${{ secrets.YSHELPER_API_TOKEN }}
+      # Kill switches: repository Variables. Keep false / unset until approved.
+      YSHELPER_ABYSS_ENABLED: ${{ vars.YSHELPER_ABYSS_ENABLED }}
+      YSHELPER_STYGIAN_ENABLED: ${{ vars.YSHELPER_STYGIAN_ENABLED }}
+      YSHELPER_SYNC_INTERVAL_DAYS: ${{ vars.YSHELPER_SYNC_INTERVAL_DAYS }}
+      YSHELPER_REQUEST_TIMEOUT_MS: ${{ vars.YSHELPER_REQUEST_TIMEOUT_MS }}
+      YSHELPER_MAX_RESPONSE_BYTES: ${{ vars.YSHELPER_MAX_RESPONSE_BYTES }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: genshin-builder-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Skip when kill switches are off
+        id: gate
+        run: |
+          node -e '
+            const abyss = (process.env.YSHELPER_ABYSS_ENABLED ?? "").trim().toLowerCase() === "true";
+            const stygian = (process.env.YSHELPER_STYGIAN_ENABLED ?? "").trim().toLowerCase() === "true";
+            const enabled = abyss || stygian;
+            console.log("yshelper_collect_gate", { abyss, stygian, enabled });
+            if (!enabled) {
+              require("fs").appendFileSync(process.env.GITHUB_OUTPUT, "skip=true\n");
+              process.exit(0);
+            }
+            require("fs").appendFileSync(process.env.GITHUB_OUTPUT, "skip=false\n");
+          '
+
+      - name: Validate Neon configuration
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          node -e '
+            const raw = process.env.DATABASE_URL ?? "";
+            let url;
+            try { url = new URL(raw); } catch { console.error("database_url_invalid"); process.exit(1); }
+            const host = url.hostname.toLowerCase();
+            if (host === "localhost" || host === "127.0.0.1") {
+              console.error("database_url_localhost_rejected");
+              process.exit(1);
+            }
+            if (!host.endsWith(".neon.tech")) {
+              console.error("database_url_host_rejected");
+              process.exit(1);
+            }
+            console.log("database_url_ok", { kind: host.includes("-pooler") ? "neon-pooler" : "neon-non-pooler" });
+          '
+
+      - name: Collect battle statistics
+        if: steps.gate.outputs.skip != 'true'
+        run: npm run yshelper:collect
+
+      - name: Summary when skipped
+        if: steps.gate.outputs.skip == 'true'
+        run: |
+          echo "Collector skipped: kill switches are not true (default-safe)."

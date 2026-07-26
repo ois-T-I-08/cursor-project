@@ -10,8 +10,8 @@
 ```bash
 cd genshin-builder-app
 npm install
-cp .env.example .env          # DATABASE_URL="file:./dev.db"
-npx prisma migrate dev
+cp .env.example .env          # Neon development branchのpooled/direct URLを設定
+npx prisma migrate deploy
 npx prisma generate
 npm run dev                     # http://localhost:3000
 ```
@@ -173,13 +173,16 @@ Client からは `fetch("/api/...")` のみ。外部 URL を Client から直接
 ### マイグレーション
 
 ```bash
-# スキーマ変更後
-npx prisma migrate dev --name describe_change
+# 空のNeon development branchへ適用
+npx prisma migrate deploy
+npx prisma migrate status
 npx prisma generate
 ```
 
-- SQLite 固有型は使わない（PostgreSQL 移行前提）
-- JSON は `String` フィールド + `JSON.stringify` / `parse`
+- 既存JSON文字列フィールドは互換性のため`String`を維持する
+- 新規YShelperメタデータは`Json`を使用し、検索項目は正規化テーブルへ分ける
+- `prisma/migrations-sqlite-archive`は履歴専用。PostgreSQLへ適用しない
+- `migrate reset`、既存Migrationの再作成、運用DBの初期化は禁止
 
 ### 書き込み経路（厳守）
 

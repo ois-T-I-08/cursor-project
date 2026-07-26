@@ -47,7 +47,7 @@ void main() {
     expect(body.toLowerCase(), isNot(contains('uid')));
   });
 
-  test('GET parses completed stale recommendation', () async {
+  test('GET parses completed observed recommendation', () async {
     final api = BackendTeamRecommendationApi(
       baseUrl: 'https://builder.example.com',
       client: MockClient((request) async {
@@ -59,25 +59,18 @@ void main() {
               'result': {
                 'attackerId': '10000089',
                 'generatedAt': '2026-07-20T00:00:00Z',
-                'gcsim': {
-                  'version': 'v2.43.4',
-                  'iterations': 1000,
-                  'enabled': true,
-                },
-                'warning': 'staleSimulation',
+                'engine': 'aza+rules',
+                'warning': 'abyssUnavailable',
                 'recommendations': [
                   {
                     'members': ['10000089', '10000087', '10000025', '10000054'],
                     'score': 0.92,
-                    'estimatedDps': 78543.2,
-                    'simulationStatus': 'simulated',
-                    'sourceTypes': ['aza', 'gcsim'],
+                    'simulationStatus': 'observed',
+                    'sourceTypes': ['aza'],
                     'rotationConfidence': 'medium',
                     'observedByAza': true,
-                    'isCached': true,
-                    'isStale': true,
                     'inputQuality': 'partial',
-                    'reasons': ['前回の正常値'],
+                    'reasons': ['AZA.GGの深境螺旋で使用実績があります'],
                     'alternatives': {
                       '10000054': ['10000032'],
                     },
@@ -91,8 +84,9 @@ void main() {
       }),
     );
     final job = await api.getJob(id);
-    expect(job.result?.warning, 'staleSimulation');
-    expect(job.result?.recommendations.single.isStale, isTrue);
+    expect(job.result?.engine, 'aza+rules');
+    expect(job.result?.warning, 'abyssUnavailable');
+    expect(job.result?.recommendations.single.observedByAza, isTrue);
     expect(job.result?.recommendations.single.alternatives['10000054'], [
       '10000032',
     ]);

@@ -4,14 +4,40 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
-## 2026-07-20 — gcsimおすすめ編成バックエンド
+## 2026-07-25 — YShelper公開IDを開発用Neonと照合
 
-- gcsimは`v2.43.4` / commit `24042de8ba3243693e97cd7efe22292762b08331` / 公式release SHA-256へ固定。macOS 2 assetを含めGitHub release digestと再照合済み。既定`GCSIM_ENABLED=false`。
+- `yshelper:dry-run:db`（`--require-db`）でlive公開キャラクターIDを開発用Neon `Character`と照合。書き込み0。
+- Character 122件、abyss/stygian/union 欠損0。シェルの古いlocalhost `DATABASE_URL`上書きに注意。
+- kill switchはfalse。利用許可・再配布・レート制限・SLAは未確認。
+
+## 2026-07-25 — YShelper native-v1 Adapter
+
+- 確認済み`getAbyssRank.php` / `getAbyssRank2.php?star=only_nandu6`生JSONを`native-v1`で`canonical-v1`へ変換。`canonical-v1` bridgeは維持。
+- `Ambor`→Amber、`Traveler`未解決、1〜3人編成除外、side件数整合、query付き相対endpoint許可。
+- kill switch既定`false`。利用許可・再配布・レート制限・SLAは未確認のまま本番有効化しない。
+- 小型fixtureのみコミット。生レスポンス全文は保存しない。
+
+## 2026-07-24 — Neon PostgreSQL / YShelper編成統計基盤
+
+- Prisma datasourceをNeon PostgreSQLのpooled/direct URLへ変更。SQLite migrationは`migrations-sqlite-archive`へ保持し、空DB用PostgreSQL baselineを新設。`dev.db`と匿名UserProgress 2件は削除・自動移行していない。
+- 初期は確認済み`canonical-v1` bridgeのみ。後続で`native-v1`を追加（2026-07-25エントリ）。
+- `BattleStatsSyncRun/Snapshot/TeamUsage/TeamMember/CharacterUsage/Manifest`を追加。14日server gate、SyncLease、検証、安定SHA-256、重複防止、valid時だけManifest更新。
+- 公開APIはManifest(ETag/304)、500件Bundle、cursor付きteams/characters。失敗・suspicious・invalid時は最終正常Manifestを維持。
+- FlutterはDrift v9へ追加テーブルをmigrationし、起動非ブロッキングで変更種類だけ全ページ取得、hash/ID検証後にtransaction切替。所持・育成判定は統計使用率と分離。
+- 詳細なNeon/Secrets/deploy/rollback/実仕様確認事項は`docs/YSHELPER_BATTLE_STATISTICS.md`。
+
+## 2026-07-26 — gcsim廃止（AZA + ルールおすすめ）
+
+- 戦闘シミュレータ gcsim を廃止。おすすめ編成は AZA.GG 実績 + 共起 + ルール候補のみ。
+- 削除: runner / config / mappers / output-parser / rotation-templates / `TeamSimulationCache` / `GCSIM_*` env / `docs/GCSIM_INTEGRATION.md`。
+- APIレスポンスは `engine: "aza+rules"`。`estimatedDps` / `simulated` / `gcsimUnavailable` は廃止。
+- Job API（`TeamSimulationJob`）と Flutter おすすめ UI は維持。
+
+## 2026-07-20 — おすすめ編成バックエンド（履歴）
+
+- 当初は gcsim v2.43.4 を任意スコア層として統合していたが、2026-07-26 に廃止。
 - APIは正規化済み戦闘DTOだけを受け、未知キーを拒否する。Cookie、UID、HoYoLAB本文、任意Config/command/pathは受けない。
-- `team-recommendations/`を候補生成、ID mapper、Config、rotation、Runner、parser、score、store/serviceへ分割。Runnerはshellなし・固定path/checksum・temp cleanup・timeout/output/concurrency制限・環境変数除去。
-- Prisma migration `20260720120000_add_team_simulation_jobs`は`TeamSimulationJob`と`TeamSimulationCache`の追加のみ。本番未適用。
-- gcsim未対応/失敗時もAZA.GG・ルール候補を返す。成功値だけcache更新し、失敗時はstale最終成功値を使う。
-- process-localバックグラウンド実行は初期実装。同一request enqueueのsingle-flight、既定8 active Job上限、期限切れcache purgeを適用し、複数instance/production有効化前にdurable queue/workerを再評価する。
+- process-localバックグラウンド実行、同一request enqueueのsingle-flight、既定8 active Job上限を適用。
 
 ---
 
@@ -71,7 +97,7 @@
 
 - **目的:** Agent ターン終了時に Memory 追記を手動依頼なしでトリガー
 - **決定事項:**
-  - `c:\cursor project\.cursor\hooks.json`（ワークスペースルート）
+  - `.cursor/hooks.json`（ワークスペースルート）
   - `afterFileEdit`（Write）→ `genshin-builder-app/.cursor/.memory-pending` フラグ
   - `stop`（completed, loop_count=0）→ `followup_message` で AGENT_MEMORY 追記を自動実行
   - loop_count≥1 でフラグ削除・ループ終了（`loop_limit: 2`）

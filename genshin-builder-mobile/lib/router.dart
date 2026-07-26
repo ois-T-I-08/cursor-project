@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'domain/team/main_tab.dart';
 import 'features/abyss/abyss_statistics_screen.dart';
+import 'features/battle_statistics/battle_statistics_screen.dart';
 import 'features/artifacts/artifact_sets_screen.dart';
 import 'features/bootstrap/initial_sync_screen.dart';
 import 'features/bookmarks/bookmarks_screen.dart';
@@ -73,6 +74,10 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/abyss',
               builder: (context, state) => const AbyssStatisticsScreen(),
+            ),
+            GoRoute(
+              path: '/battle-statistics',
+              builder: (context, state) => const BattleStatisticsScreen(),
             ),
             GoRoute(
               path: '/artifacts',
@@ -324,6 +329,12 @@ final _drawerDestinations = <_DrawerDestination>[
     label: '\u8a2d\u5b9a',
     icon: Icons.settings_outlined,
     path: '/settings',
+    branchIndex: MainTab.home.index,
+  ),
+  _DrawerDestination.route(
+    label: '\u7de8\u6210\u4f7f\u7528\u7387\u7d71\u8a08',
+    icon: Icons.query_stats_outlined,
+    path: '/battle-statistics',
     branchIndex: MainTab.home.index,
   ),
 ];

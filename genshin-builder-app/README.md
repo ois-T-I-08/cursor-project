@@ -7,7 +7,7 @@
 - **Next.js**（App Router）
 - **TypeScript**
 - **Tailwind CSS**
-- PostgreSQL（予定 / 開発初期はSQLite）
+- Neon PostgreSQL（Prisma、pooled/direct接続を分離）
 - Vercelでデプロイ予定
 
 ## 開発の始め方
@@ -16,7 +16,7 @@
 npm install
 cp .env.example .env.local
 npx prisma generate
-npx prisma migrate dev    # DB作成・マイグレーション（初回のみ）
+npx prisma migrate deploy # 空のdevelopment branchへ初期Migrationを適用
 npm run dev
 ```
 
@@ -26,7 +26,7 @@ npm run dev
 npm install
 Copy-Item .env.example .env.local
 npx prisma generate
-npx prisma migrate dev
+npx prisma migrate deploy
 npm run dev
 ```
 
@@ -34,12 +34,15 @@ npm run dev
 
 | 変数 | 必須 | 説明 |
 |------|------|------|
-| `DATABASE_URL` | はい | Prisma の接続先（開発: `file:./dev.db`） |
+| `DATABASE_URL` | はい | Neon pooled connection。Next.jsの通常実行用 |
+| `DIRECT_URL` | はい | Neon direct connection。Prisma Migration用 |
 | `SYNC_API_SECRET` | 本番のみ | `/api/sync` と設定画面の手動同期で共用する認証トークン。手動同期時は画面へ同じ値を入力 |
 | `AZA_API_BASE_URL` | 統計機能のみ | AZA.GG 公開 API の HTTPS origin。既定例は `https://c1-api.aza.gg` |
 | `AZA_ABYSS_ENABLED` | いいえ | `false` で深境螺旋統計の upstream 更新を停止する kill switch（キャッシュがあれば stale で返却） |
 | `AZA_CACHE_TTL_SECONDS` | いいえ | 統計の DB キャッシュ TTL。300〜86400 秒、既定 21600 秒（6時間） |
 | `AZA_REQUEST_TIMEOUT_MS` | いいえ | AZA.GG へのタイムアウト。1000〜30000 ms、既定 10000 ms |
+| `YSHELPER_COLLECT_SECRET` | Collectorのみ | 手動GitHub Actionsから内部Collector APIを呼ぶBearer secret |
+| `YSHELPER_ADAPTER_MODE` | YShelper有効化時 | 生JSONは`native-v1`、bridgeは`canonical-v1`。未設定時は外部通信しない |
 
 `DATABASE_URL` が未設定の状態で起動すると、Prisma Client の初期化時にエラーが表示されます。
 
@@ -67,7 +70,7 @@ http://localhost:3000 を開き、「設定」→「ゲームデータを同期�
     ↓ lib/api（プロバイダー分離・正規化）
 Next.js サーバー（POST /api/sync）
     ↓ lib/sync（必要な項目だけ upsert）
-データベース（Prisma / SQLite → 本番はPostgreSQL）
+データベース（Prisma / Neon PostgreSQL）
     ↓ lib/repository（DB読み取り・空ならダミーへフォールバック）
 ブラウザ（Server Componentで表示）
 ```
@@ -91,6 +94,12 @@ GET /api/abyss/statistics（Flutter 向け安全な同一-origin DTO）
 - 現在確認できる公開 KV API は API キー不要。未確認の認証ヘッダーは送信しない
 - 原神ゲームバージョンや編成使用回数は upstream に存在しないため生成しない
 - migration、kill switch、stale fallback、staging 確認手順は [`docs/AZA_ABYSS_OPERATIONS.md`](./docs/AZA_ABYSS_OPERATIONS.md) を参照
+
+### YShelper編成統計
+
+GitHub Actionsは手動実行時だけ認証済み内部APIを起動し、定期取得は無効です。サーバーが前回成功から14日以上かを判定し、期限前は外部APIを呼びません。検証済みSnapshotだけがManifestから公開され、Flutterはrevision/hashが変わった種類だけを同期します。
+
+YShelperのHTTPS endpointと生JSON構造は`native-v1` Adapterで確認済みです（深境螺旋 / 幽境の激戦・難度6）。kill switchは既定`false`のままにし、利用許可・再配布条件・レート制限・SLAが確認できるまで本番収集を有効化しません。Neon、Migration、Secrets、障害時、rollbackの手順は [`docs/YSHELPER_BATTLE_STATISTICS.md`](./docs/YSHELPER_BATTLE_STATISTICS.md) を参照してください。
 
 ## ディレクトリ構成
 
@@ -130,6 +139,7 @@ src/
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | アーキテクチャ・データフロー |
 | [`DEVELOPMENT_GUIDE.md`](./DEVELOPMENT_GUIDE.md) | 開発ガイド・命名規則 |
 | [`docs/AZA_ABYSS_OPERATIONS.md`](./docs/AZA_ABYSS_OPERATIONS.md) | AZA.GG 深境螺旋統計の運用・障害対応 |
+| [`docs/YSHELPER_BATTLE_STATISTICS.md`](./docs/YSHELPER_BATTLE_STATISTICS.md) | Neon・YShelper統計同期・公開APIの運用 |
 | [`AGENTS.md`](./AGENTS.md) | エントリポイント（Next.js 16 注意含む） |
 
 ## 今後追加予定

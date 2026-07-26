@@ -18,8 +18,7 @@
 | UI | React 19, Tailwind CSS v4 |
 | Language | TypeScript 5（strict） |
 | ORM | Prisma 6 |
-| DB（開発） | SQLite（`prisma/dev.db`） |
-| DB（本番予定） | PostgreSQL |
+| DB | Neon PostgreSQL（runtime=pooled、Migration=direct） |
 | 外部 API | Project Amber — `https://gi.yatta.moe`、AZA.GG（深境螺旋統計） |
 | デプロイ（予定） | Vercel |
 
@@ -45,7 +44,7 @@
 │  └──────┬───────────────────────────────┬───────────────────┘ │
 │         │                               │                     │
 │  ┌──────▼──────┐                 ┌──────▼──────┐              │
-│  │ Prisma/SQLite│                 │ lib/api     │              │
+│  │ Prisma/Neon │                 │ lib/api     │              │
 │  │ Master+User  │                 │ fetch+norm  │              │
 │  └──────────────┘                 └──────┬──────┘              │
 └──────────────────────────────────────────┼──────────────────────┘
@@ -169,8 +168,12 @@
 |-------|------|
 | `SyncLog` | 同期結果 JSON |
 | `ExternalApiCache` | 外部統計の最終成功スナップショット、取得時刻、失効時刻、版、サンプル数 |
-| `TeamSimulationJob` | 正規化済み戦闘入力の非同期Job状態。Cookie・UID・HoYoLAB本文は保存しない |
-| `TeamSimulationCache` | gcsim固定版・入力hash単位の最終正常結果。失敗値では上書きしない |
+| `TeamSimulationJob` | おすすめ編成の非同期Job状態。Cookie・UID・HoYoLAB本文は保存しない |
+| `BattleStatsSyncRun` | YShelper収集履歴。本文・token・URLは保存しない |
+| `BattleStatsSnapshot` | abyss/stygian別の検証結果付き履歴 |
+| `BattleTeamUsage` / `BattleTeamMember` | 編成使用率とキャラ検索用の正規化メンバー |
+| `BattleCharacterUsage` | キャラクター使用率 |
+| `BattleStatsManifest` | 検証済みSnapshotだけを指す公開revision |
 
 ---
 
@@ -268,13 +271,17 @@ Flutter → GET /api/abyss/statistics
 | `POST /api/team-recommendations` | 正規化済み戦闘DTOから推薦Jobを作成 | 同一request hashを再利用 |
 | `GET /api/team-recommendations/jobs/{jobId}` | Job状態・推薦結果 | `no-store` |
 
-### 6. 編成推薦とgcsim
+### 6. 編成推薦（AZA.GG + ルール）
 
-FlutterはHoYoLAB情報を端末内で`SimulationBuildSnapshot`へ縮約し、Cookie、UID、アカウント情報、未加工レスポンスを送信しない。Next.jsは`TeamCandidateGenerator`でAZA.GG実績、共起、元素・役割ルールを統合し、最大20候補だけを評価する。
+FlutterはHoYoLAB情報を端末内で`SimulationBuildSnapshot`へ縮約し、Cookie、UID、アカウント情報、未加工レスポンスを送信しない。Next.jsは`TeamCandidateGenerator`でAZA.GG実績、共起、元素・役割ルールを統合し、最大20候補だけを評価してスコアリングする。戦闘シミュレータ（旧gcsim）は廃止済み。詳細は`docs/TEAM_RECOMMENDATION.md`を参照。
 
-`GcsimConfigGenerator`は数値IDの許可リストと信頼済み`RotationTemplateRepository`だけからConfigを生成する。クライアントConfig、command、pathはAPI検証で拒否する。`GcsimRunner`は固定チェックサムのバイナリを`spawn`の引数配列で起動し、専用一時ディレクトリ、削除、timeout、stdout/stderr/結果上限、同時実行上限、最小環境変数を適用する。実行層はinterfaceのため、専用worker/containerへ交換可能である。
+### 7. YShelper編成統計
 
-gcsim失敗時は期限切れを含む最終正常cache、AZA候補、ルール候補の順にフォールバックする。`GCSIM_ENABLED=false`でも既存AZA画面とルール推薦は動作する。詳細は`docs/GCSIM_INTEGRATION.md`と`docs/TEAM_RECOMMENDATION.md`を参照。
+収集はGitHub Actions上の`npm run yshelper:collect`（Node CLI → Neon）が担当する。Next.jsのリクエスト処理中にYShelperへアクセスしない。`POST /api/internal/yshelper/collect`は410 Gone。定期実行（schedule）は利用許可と検証が揃うまで無効。kill switch既定は無効。CLIはprocess-local排他と`SyncLease`を使い、最終成功から14日未満なら`not_due`で終了する。
+
+YShelper固有境界は`src/lib/yshelper`に分離する。生JSONは`YSHELPER_ADAPTER_MODE=native-v1`、bridgeは`canonical-v1`。未設定またはkill switch無効では通信しない。`native-v1`は確認済み`getAbyssRank*.php`構造を`canonical-v1`へ変換し、正規化後に構造・既知Character・急減・使用率変動を検証する。`suspicious`/`invalid`は履歴だけ残してManifestを更新しない。
+
+公開APIは`/api/v1/battle-statistics/{manifest,bundle,teams,characters}`（旧パスも互換公開）。ManifestはETag/304対応、一覧はcursor pagination、Bundleは公開revisionだけを返す。秘密情報、upstream URL、レスポンス本文は返さない。Flutterは公開APIのみを呼び、Neon/YShelperへ直接接続しない。
 
 ---
 

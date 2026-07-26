@@ -12,10 +12,12 @@ import '../../secure/secure_storage_service.dart';
 import '../database_open_exception.dart';
 import '../database_path.dart';
 import 'daos/bookmark_dao.dart';
+import 'daos/battle_statistics_dao.dart';
 import 'daos/character_dao.dart';
 import 'daos/growth_dao.dart';
 import 'daos/progress_dao.dart';
 import 'tables/growth_tables.dart';
+import 'tables/battle_statistics_tables.dart';
 import 'tables/master_tables.dart';
 import 'tables/user_tables.dart';
 
@@ -62,8 +64,19 @@ typedef DatabaseMigrationFaultHook =
     UserMaterialInventory,
     SavedTeams,
     GrowthEvents,
+    RemoteBattleStatsManifests,
+    RemoteBattleTeams,
+    RemoteBattleTeamMembers,
+    RemoteBattleCharacterUsages,
+    RemoteBattleSyncStates,
   ],
-  daos: [CharacterDao, BookmarkDao, ProgressDao, GrowthDao],
+  daos: [
+    CharacterDao,
+    BookmarkDao,
+    ProgressDao,
+    GrowthDao,
+    BattleStatisticsDao,
+  ],
 )
 class DriftAppDatabase extends _$DriftAppDatabase {
   DriftAppDatabase(
@@ -80,7 +93,7 @@ class DriftAppDatabase extends _$DriftAppDatabase {
   final Duration _busyTimeout;
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -88,6 +101,7 @@ class DriftAppDatabase extends _$DriftAppDatabase {
       await m.createAll();
       await _createIndexes(m);
       await _createGrowthIndexes(m.database);
+      await _createBattleStatisticsIndexes(m.database);
     },
     onUpgrade: (m, from, to) async {
       if (from > to) {
@@ -124,6 +138,14 @@ class DriftAppDatabase extends _$DriftAppDatabase {
           }
           if (from < 8) {
             await _migrateLegacyLocalUserIds(m.database);
+          }
+          if (from < 9) {
+            await m.createTable(remoteBattleStatsManifests);
+            await m.createTable(remoteBattleTeams);
+            await m.createTable(remoteBattleTeamMembers);
+            await m.createTable(remoteBattleCharacterUsages);
+            await m.createTable(remoteBattleSyncStates);
+            await _createBattleStatisticsIndexes(m.database);
           }
           await _migrationCheckpoint(DatabaseMigrationPoint.beforeCommit);
         });
@@ -289,6 +311,21 @@ class DriftAppDatabase extends _$DriftAppDatabase {
       'CREATE INDEX IF NOT EXISTS idx_events_user_char ON growth_events (user_id, character_id)',
     ];
     for (final sql in indexes) {
+      await db.customStatement(sql);
+    }
+  }
+
+  static Future<void> _createBattleStatisticsIndexes(
+    GeneratedDatabase db,
+  ) async {
+    for (final sql in [
+      'CREATE INDEX IF NOT EXISTS idx_remote_battle_teams_type_usage '
+          'ON remote_battle_teams (content_type, usage_rate)',
+      'CREATE INDEX IF NOT EXISTS idx_remote_battle_members_character '
+          'ON remote_battle_team_members (character_id, team_id)',
+      'CREATE INDEX IF NOT EXISTS idx_remote_battle_characters_type_usage '
+          'ON remote_battle_character_usages (content_type, usage_rate)',
+    ]) {
       await db.customStatement(sql);
     }
   }

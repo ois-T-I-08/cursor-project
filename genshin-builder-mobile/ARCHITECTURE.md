@@ -245,6 +245,14 @@ sequenceDiagram
 - 比率の内部単位は 0〜1。UI だけで百分率へ変換する
 - upstream に存在しないゲームバージョンと編成使用回数はモデル化しない。`sourceApiVersion` は AZA API 仕様版である
 
+### 4.5 YShelper編成統計（Next.js配信）
+
+起動後にUIをブロックせずManifest APIを確認し、ETagが同一なら304で終了する。revisionまたはpayloadHashが変わったcontentTypeだけページ分割Bundleを取得し、全ページ、schemaVersion、Character ID、編成人数、重複、0〜1使用率、SHA-256を検証してからDrift transactionで切り替える。
+
+Drift schema v9は`RemoteBattleStatsManifest`、編成、メンバー、キャラクター使用率、同期状態を追加する。更新失敗時はtransaction rollbackにより旧revisionを維持する。API originは既存`GENSHIN_BUILDER_API_BASE_URL`だけを使い、Neon接続文字列、YShelper token、Cookie、UIDを型にも保存先にも含めない。
+
+`BattleTeamAvailabilityEvaluator`は統計上の使用率と端末の所持・育成状態を分離し、メンバーを`ready / owned / underbuilt / missing / unknown`、編成を`ready / needsBuild / missingOne / partial / unavailable`へ分類する。
+
 ---
 
 ## 5. ドメイン & ブックマーク仕様（Web 完全準拠）
@@ -348,4 +356,4 @@ pigeon                   # dev — ネイティブ Cookie 取得
 
 `application/team_recommendations/normalize_simulation_builds.dart`がHoYoLAB detailを端末内で戦闘DTOへ縮約する。Cookie、UID、アカウント情報、未加工レスポンスは型に存在せず、`BackendTeamRecommendationApi`へ渡らない。聖遺物の安定したsetIdをGame Recordから取得できない場合はセット名から推測せず、空のsetsと`partial` / `artifactSets`を送る。
 
-`TeamRecommendationController`はPOSTでJobを作成し、GETを2秒間隔・最大6分の有限回pollingする。画面破棄後または新しい計算開始後は古いresponseをstateへ反映せず、次のpollingを行わない。queued/running中は計算ボタンを無効化する。UIはqueued/running/completed/failed/expired、再試行、stale、所持キャラ、上半/下半、単体/複数、評価方針、入力品質、ローテーション信頼度、gcsim/AZA.GGクレジットを表示する。gcsimが無効・失敗でもAZA/ルール推薦を表示でき、既存の編成保存や深境螺旋画面とは独立する。
+`TeamRecommendationController`はPOSTでJobを作成し、GETを2秒間隔・最大6分の有限回pollingする。画面破棄後または新しい計算開始後は古いresponseをstateへ反映せず、次のpollingを行わない。queued/running中は計算ボタンを無効化する。UIはqueued/running/completed/failed/expired、再試行、所持キャラ、上半/下半、単体/複数、評価方針、入力品質、ローテーション信頼度、AZA.GGクレジットを表示する。推薦はAZA実績とルール候補のみで、既存の編成保存や深境螺旋画面とは独立する。

@@ -80,4 +80,59 @@ void main() {
       containsAll(['talents', 'weapon', 'artifacts']),
     );
   });
+
+  test('skips non-numeric ids and drops invalid weapons', () {
+    const traveler = MasterCharacter(
+      id: '10000005-anemo',
+      name: '旅人',
+      element: 'anemo',
+      weaponType: 'sword',
+      rarity: 5,
+      region: 'Mondstadt',
+      iconUrl: '',
+    );
+    const build = HoyolabCharacterBuild(
+      id: '10000089',
+      isOwned: true,
+      level: 90,
+      promoteLevel: 6,
+      constellation: 0,
+      weapon: GameRecordWeapon(
+        id: 'not-a-weapon-id',
+        name: 'x',
+        level: 90,
+        refinement: 0,
+        promoteLevel: 6,
+      ),
+    );
+    final result = normalizeSimulationBuilds(
+      characters: const [character, traveler],
+      hoyolabBuilds: const {'10000089': build},
+      localProgress: const {},
+    );
+    expect(result.map((value) => value.characterId), ['10000089']);
+    expect(result.single.weapon?['weaponId'], '11401');
+    expect(result.single.defaultedFields, contains('weapon'));
+    expect(result.single.inputQuality, SimulationInputQuality.defaulted);
+  });
+
+  test('owned incomplete builds get documented talent/weapon defaults', () {
+    const build = HoyolabCharacterBuild(
+      id: '10000089',
+      isOwned: true,
+      level: 90,
+      promoteLevel: 6,
+      constellation: 0,
+    );
+    final snapshot =
+        normalizeSimulationBuilds(
+          characters: const [character],
+          hoyolabBuilds: const {'10000089': build},
+          localProgress: const {},
+        ).single;
+    expect(snapshot.talents, {'normal': 1, 'skill': 1, 'burst': 1});
+    expect(snapshot.weapon?['weaponId'], '11401');
+    expect(snapshot.defaultedFields, containsAll(['talents', 'weapon']));
+    expect(snapshot.inputQuality, SimulationInputQuality.defaulted);
+  });
 }

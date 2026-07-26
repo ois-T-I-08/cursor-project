@@ -133,6 +133,83 @@ describe("fetchJsonObject", () => {
       code: "bodyTooLarge",
     });
   });
+
+  it("requires an explicit JSON content type when requested", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response('{"ok":true}', {
+            status: 200,
+            headers: { "content-type": "text/plain" },
+          }),
+      ),
+    );
+
+    await expect(
+      fetchJsonObject("https://example.test/data", {
+        timeoutMs: 1_000,
+        maxBytes: 1_024,
+        retries: 0,
+        requireJsonContentType: true,
+      }),
+    ).rejects.toMatchObject({ code: "invalidData" });
+  });
+
+  it("disables automatic redirect following", async () => {
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError("unexpected redirect");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchSafe()).rejects.toMatchObject({ code: "network" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://example.test/data",
+      expect.objectContaining({ redirect: "error" }),
+    );
+  });
+
+  it("rejects HTTP 429 without leaking status body text", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response("rate limited secret-token=abc", {
+            status: 429,
+            headers: { "retry-after": "1" },
+          }),
+      ),
+    );
+
+    const rejection = fetchSafe();
+    await expect(rejection).rejects.toMatchObject({
+      code: "httpStatus",
+      status: 429,
+    });
+    await expect(rejection).rejects.toSatisfy((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      return (
+        !message.includes("secret-token") &&
+        !message.includes("https://example.test")
+      );
+    });
+  });
+
+  it("aborts in-flight fetch via AbortSignal on timeout", async () => {
+    let observedSignal: AbortSignal | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(((_url: string, init?: RequestInit) => {
+        observedSignal = init?.signal ?? undefined;
+        return new Promise<Response>(() => {});
+      }) as typeof fetch),
+    );
+
+    await expect(fetchSafe({ timeoutMs: 15 })).rejects.toMatchObject({
+      code: "timeout",
+    });
+    expect(observedSignal?.aborted).toBe(true);
+  });
 });
 
 function fetchSafe(

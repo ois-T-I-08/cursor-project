@@ -2,13 +2,24 @@
 
 セッションごとの設計判断ログ。重要な決定のみ追記する。
 
-## 2026-07-20 — おすすめ編成とgcsim連携
+## 2026-07-24 — YShelper編成統計の端末同期基盤
+
+- FlutterはYShelper/Neonへ直接接続せず、既存`GENSHIN_BUILDER_API_BASE_URL`のManifest/Bundleだけを呼ぶ。
+- 起動時確認はUI非ブロッキング。ETag 304またはrevision/hash同一ならBundleを取得しない。
+- Drift schema v9へManifest、編成、メンバー、キャラ使用率、同期状態を追加。全ページ・schema・hash・Character ID検証後だけtransactionで切替し、失敗時は旧revisionを維持。
+- `BattleTeamAvailabilityEvaluator`で統計使用率と所持・育成を分離し、ready/underbuilt/missing/unknown等を判定。
+- 設定画面の状態表示は日本語。Neon URL、YShelper token、Collector secret、Cookie、UIDはFlutter型・DB・ログに含めない。
+
+## 2026-07-26 — gcsim廃止（おすすめはAZA + ルール）
+
+- 戦闘シミュレータ連携を廃止。UIは AZA.GG クレジットと参考情報の免責のみ表示。
+- APIレスポンスの `gcsim` / `estimatedDps` / `simulated` を受け取らない。`engine: aza+rules` を表示契約とする。
+
+## 2026-07-20 — おすすめ編成連携（履歴）
 
 - `SimulationBuildSnapshot`はHoYoLAB Cookie/UID/未加工レスポンスを型に持たず、正規化済み戦闘値だけをNext.jsへ送る。
 - Game Record relicには安定setIdがないため名前から推測しない。空sets + `partial` / `artifactSets`で明示する。
-- 編成画面の1人目をアタッカーとしてJobを作成し、2秒間隔・最大6分の有限polling、dispose/新規計算後の旧response無視、処理中の多重開始防止、retry、stale/kill-switch fallback、所持/半/敵数/評価方針を表示する。
-- 理論値注意文とgcsim (MIT) / AZA.GGクレジットは常時表示する。
-- 既存`domain_golden_test.dart`、`artifact_completion_test.dart`、`artifact_score_test.dart`と編成保存は変更しない。
+- 編成画面の1人目をアタッカーとしてJobを作成し、2秒間隔・最大6分の有限polling、dispose/新規計算後の旧response無視、処理中の多重開始防止、retry、所持/半/敵数/評価方針を表示する。
 
 ---
 
