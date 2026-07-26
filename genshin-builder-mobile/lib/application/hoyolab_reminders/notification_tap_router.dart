@@ -3,9 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../daily_plan_notifications/daily_plan_notification_ids.dart';
 import 'reminder_models.dart';
 
-/// Routes notification taps to Home without holding BuildContext statically.
+/// Routes notification taps without holding BuildContext statically.
 class NotificationTapRouter {
   NotificationTapRouter._();
 
@@ -46,7 +47,7 @@ class NotificationTapRouter {
       _pendingPayload = payload;
       return;
     }
-    _goHome(router);
+    _goForPayload(router, payload);
   }
 
   static void _consumePending() {
@@ -55,26 +56,35 @@ class NotificationTapRouter {
     _pendingPayload = null;
     final router = _router;
     if (router == null) return;
-    _goHome(router);
+    _goForPayload(router, pending);
   }
 
-  static void _goHome(GoRouter router) {
+  static void _goForPayload(GoRouter router, String payload) {
+    if (payload == DailyPlanNotificationIds.incompletePayload) {
+      _goPath(router, '/daily-plan');
+      return;
+    }
+    _goPath(router, '/');
+  }
+
+  static void _goPath(GoRouter router, String path) {
     try {
       final loc = router.routerDelegate.currentConfiguration.uri.path;
-      if (loc == '/') return;
-      router.go('/');
+      if (loc == path) return;
+      router.go(path);
     } catch (_) {
       try {
-        router.go('/');
+        router.go(path);
       } catch (_) {
-        debugPrint('notifications: home navigation failed');
+        debugPrint('notifications: navigation failed');
       }
     }
   }
 
   static bool _isAllowedPayload(String? payload) {
     return payload == ReminderNotificationIds.resinPayload ||
-        payload == ReminderNotificationIds.expeditionPayload;
+        payload == ReminderNotificationIds.expeditionPayload ||
+        payload == DailyPlanNotificationIds.incompletePayload;
   }
 
   @visibleForTesting
