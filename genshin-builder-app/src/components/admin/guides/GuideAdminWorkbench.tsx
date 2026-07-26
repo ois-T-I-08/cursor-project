@@ -67,6 +67,14 @@ interface Overview {
     adminNotes: string;
   }>;
   audits: Array<{ id: number; action: string; status: string; detail: string }>;
+  geminiCost?: {
+    primaryModel: string;
+    discoveryFps: number;
+    detailFps: number;
+    maxDetailFps: number;
+    estimatedDetailCostMultiplier: number;
+    note: string;
+  };
 }
 
 const MODULES: Array<{ id: ModuleId; label: string }> = [
@@ -276,6 +284,14 @@ export default function GuideAdminWorkbench() {
       {module === "videos" ? (
         <section className="space-y-3 rounded-xl border border-white/10 bg-[#1e2a3a] p-5">
           <h2 className="font-bold">動画一覧 / 映像解析</h2>
+          {overview?.geminiCost ? (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+              コスト目安: {overview.geminiCost.note} 主モデル{" "}
+              {overview.geminiCost.primaryModel}。詳細解析は一次探索の約{" "}
+              {overview.geminiCost.estimatedDetailCostMultiplier}{" "}
+              倍のフレーム量になります。
+            </p>
+          ) : null}
           <label className="block text-sm">
             videoId
             <input
@@ -314,7 +330,7 @@ export default function GuideAdminWorkbench() {
                 })
               }
             >
-              映像解析
+              映像解析（全体・低FPS）
             </button>
             <button
               type="button"
@@ -327,12 +343,12 @@ export default function GuideAdminWorkbench() {
                 })
               }
             >
-              強制再解析
+              強制再解析（全体）
             </button>
             <button
               type="button"
               disabled={!secret || !selectedVideoId || busy}
-              className="rounded-lg border border-white/20 px-3 py-2 text-sm disabled:opacity-40"
+              className="rounded-lg border border-amber-400/40 px-3 py-2 text-sm disabled:opacity-40"
               onClick={() =>
                 void postAction({
                   action: "analyzeSelectedRanges",
@@ -347,7 +363,7 @@ export default function GuideAdminWorkbench() {
                 })
               }
             >
-              指定時間帯を解析
+              指定時間帯を詳細解析（高FPS・コスト増）
             </button>
           </div>
           <ul className="max-h-[28rem] space-y-2 overflow-auto text-sm">

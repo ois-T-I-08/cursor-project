@@ -7,6 +7,7 @@ import {
   mergeVisualRecommendationsDeterministic,
   mergeVisualRecommendationsWithDeepSeek,
 } from "./deepseek-visual-merge";
+import { geminiVideoCostHints } from "./gemini-settings";
 import {
   permissionStatusSchema,
   publicBuildRecommendationSchema,
@@ -86,6 +87,7 @@ export async function getGuideAdminOverview() {
       revisions: row.revisions,
     })),
     audits,
+    geminiCost: geminiVideoCostHints(),
   };
 }
 

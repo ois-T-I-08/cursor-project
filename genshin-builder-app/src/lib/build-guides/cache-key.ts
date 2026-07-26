@@ -10,6 +10,8 @@ export function buildVisualRequestHash(input: {
   visualPromptVersion: string;
   visualSchemaVersion: string;
   gameDataVersion: string;
+  analysisMode: "full_discovery" | "clipped_detail";
+  fps: number;
   requestedRanges?: Array<{ startSeconds: number; endSeconds: number }>;
 }): string {
   const payload = {
@@ -22,6 +24,8 @@ export function buildVisualRequestHash(input: {
     visualPromptVersion: input.visualPromptVersion,
     visualSchemaVersion: input.visualSchemaVersion,
     gameDataVersion: input.gameDataVersion,
+    analysisMode: input.analysisMode,
+    fps: input.fps,
     requestedRanges: (input.requestedRanges ?? [])
       .map((r) => `${r.startSeconds}-${r.endSeconds}`)
       .sort(),

@@ -69,6 +69,8 @@ const actionSchema = z.discriminatedUnion("action", [
     action: z.literal("reanalyzeVideoVisuals"),
     videoId,
     targetCharacterIds: z.array(z.string().max(64)).max(20).optional(),
+    /** When set, clips via Gemini video_metadata (detail FPS). */
+    ranges: z.array(rangeSchema).min(1).max(10).optional(),
   }),
   z.strictObject({
     action: z.literal("analyzeSelectedRanges"),
@@ -170,6 +172,7 @@ export async function POST(request: Request): Promise<Response> {
             videoId: input.videoId,
             force: true,
             targetCharacterIds: input.targetCharacterIds,
+            requestedRanges: input.ranges,
           }),
         );
       case "analyzeSelectedRanges":

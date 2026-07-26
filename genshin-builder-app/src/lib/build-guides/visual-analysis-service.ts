@@ -7,9 +7,12 @@ import {
   mergeVisualRecommendationsDeterministic,
   mergeVisualRecommendationsWithDeepSeek,
 } from "./deepseek-visual-merge";
-import { GeminiError } from "./gemini-settings";
+import {
+  AnalysisRangeError,
+  normalizeAnalysisRanges,
+} from "./analysis-ranges";
+import { GeminiError, geminiVideoSettings } from "./gemini-settings";
 import { GeminiYouTubeVisualAnalysisProvider } from "./gemini-youtube-provider";
-import { geminiVideoSettings } from "./gemini-settings";
 import type { VideoVisualAnalysisProvider } from "./visual-provider";
 import { validateVisualAnalysisResult } from "./visual-validator";
 import {
@@ -44,6 +47,8 @@ export async function analyzeVideoVisuals(input: {
   status: string;
   evidenceCount: number;
   recommendationIds: string[];
+  analysisMode: "full_discovery" | "clipped_detail";
+  fps: number;
 }> {
   const video = await prisma.guideVideo.findUnique({
     where: { videoId: input.videoId },
@@ -59,6 +64,28 @@ export async function analyzeVideoVisuals(input: {
   }
 
   const settings = geminiVideoSettings();
+  const clipped =
+    input.requestedRanges != null && input.requestedRanges.length > 0;
+  let requestedRanges = input.requestedRanges;
+  if (clipped) {
+    try {
+      requestedRanges = normalizeAnalysisRanges({
+        ranges: input.requestedRanges!,
+        durationSeconds: video.durationSeconds,
+        maxRangeSeconds: settings.maxRangeSeconds,
+        maxRanges: settings.maxRangesPerRequest,
+      });
+    } catch (error) {
+      if (error instanceof AnalysisRangeError) {
+        throw new GuideVisualAnalysisError(error.code);
+      }
+      throw error;
+    }
+  }
+
+  const analysisMode = clipped ? "clipped_detail" : "full_discovery";
+  const fps = clipped ? settings.detailFps : settings.discoveryFps;
+
   const requestHash = buildVisualRequestHash({
     videoId: video.videoId,
     videoMetadataHash: video.metadataHash,
@@ -69,7 +96,9 @@ export async function analyzeVideoVisuals(input: {
     visualPromptVersion: VISUAL_PROMPT_VERSION,
     visualSchemaVersion: VISUAL_SCHEMA_VERSION,
     gameDataVersion: GUIDE_GAME_DATA_VERSION,
-    requestedRanges: input.requestedRanges,
+    analysisMode,
+    fps,
+    requestedRanges,
   });
 
   if (!input.force) {
@@ -84,6 +113,8 @@ export async function analyzeVideoVisuals(input: {
         status: "cache_hit",
         evidenceCount: cached.evidences.length,
         recommendationIds: [],
+        analysisMode,
+        fps,
       };
     }
   }
@@ -112,7 +143,11 @@ export async function analyzeVideoVisuals(input: {
       promptVersion: VISUAL_PROMPT_VERSION,
       schemaVersion: VISUAL_SCHEMA_VERSION,
       gameDataVersion: GUIDE_GAME_DATA_VERSION,
-      rangesPayload: JSON.stringify(input.requestedRanges ?? []),
+      rangesPayload: JSON.stringify({
+        analysisMode,
+        fps,
+        ranges: requestedRanges ?? [],
+      }),
       startedAt: new Date(),
     },
   });
@@ -134,7 +169,9 @@ export async function analyzeVideoVisuals(input: {
       publishedAt: video.publishedAt?.toISOString() ?? null,
       durationSeconds: video.durationSeconds,
       targetCharacterIds,
-      requestedRanges: input.requestedRanges,
+      requestedRanges,
+      analysisMode,
+      fps,
       gameDataVersion: GUIDE_GAME_DATA_VERSION,
     });
 
@@ -144,6 +181,7 @@ export async function analyzeVideoVisuals(input: {
       allowedCharacterIds: new Set(targetCharacterIds),
       knownCharacterIds: known,
       result: analysis.result,
+      allowedWindows: clipped ? requestedRanges : undefined,
     });
 
     const result = await prisma.guideVisualAnalysisResult.upsert({
@@ -258,10 +296,13 @@ export async function analyzeVideoVisuals(input: {
       status: "validated",
       evidenceCount: validated.length,
       recommendationIds,
+      analysisMode,
+      fps,
     };
   } catch (error) {
     const code =
       error instanceof GuideVisualAnalysisError ||
+      error instanceof AnalysisRangeError ||
       error instanceof GeminiError ||
       (error instanceof Error && /^[a-zA-Z][a-zA-Z0-9]{0,63}$/.test(error.message))
         ? (error as Error).message

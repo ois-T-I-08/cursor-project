@@ -41,6 +41,8 @@ export function validateVisualAnalysisResult(input: {
   allowedCharacterIds: Set<string>;
   knownCharacterIds: Set<string>;
   result: VideoVisualAnalysisResult;
+  /** When set (clipped analysis), reject evidences outside these windows. */
+  allowedWindows?: Array<{ startSeconds: number; endSeconds: number }>;
 }): ValidatedVisualEvidence[] {
   if (input.result.videoId !== input.expectedVideoId) {
     throw new VisualValidationError("videoIdMismatch");
@@ -62,6 +64,18 @@ export function validateVisualAnalysisResult(input: {
         evidence.startSeconds > input.durationSeconds + 1)
     ) {
       out.push(reject(evidence, "timestampBeyondDuration"));
+      continue;
+    }
+    if (
+      input.allowedWindows &&
+      input.allowedWindows.length > 0 &&
+      !input.allowedWindows.some(
+        (window) =>
+          evidence.startSeconds >= window.startSeconds - 1 &&
+          evidence.endSeconds <= window.endSeconds + 1,
+      )
+    ) {
+      out.push(reject(evidence, "timestampOutsideRequestedRange"));
       continue;
     }
     if (!evidence.readable || evidence.evidenceType === "unreadable") {

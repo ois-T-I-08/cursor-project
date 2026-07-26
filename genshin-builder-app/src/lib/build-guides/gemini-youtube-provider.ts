@@ -11,7 +11,10 @@ import type {
   VideoVisualAnalysisInput,
   VideoVisualAnalysisProvider,
 } from "./visual-provider";
-import { videoVisualAnalysisResultSchema } from "./visual-schemas";
+import {
+  videoVisualAnalysisResultSchema,
+  type VideoVisualAnalysisResult,
+} from "./visual-schemas";
 
 const GEMINI_HOST = "https://generativelanguage.googleapis.com";
 
@@ -39,6 +42,12 @@ const envelopeSchema = z.object({
     .optional(),
 });
 
+type ClipWindow = {
+  startSeconds: number;
+  endSeconds: number;
+  reason: string;
+};
+
 export class GeminiYouTubeVisualAnalysisProvider
   implements VideoVisualAnalysisProvider
 {
@@ -62,53 +71,89 @@ export class GeminiYouTubeVisualAnalysisProvider
       throw new GeminiError("videoTooLong", false);
     }
 
+    const clips: Array<ClipWindow | null> =
+      input.analysisMode === "clipped_detail" &&
+      input.requestedRanges &&
+      input.requestedRanges.length > 0
+        ? input.requestedRanges
+        : [null];
+
     const fetchImpl = this.options.fetchImpl ?? fetch;
     const sleep =
       this.options.sleep ??
       ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     const random = this.options.random ?? Math.random;
 
-    let lastError = new GeminiError("requestFailed", true);
-    for (let attempt = 1; attempt <= settings.maxAttempts; attempt++) {
-      try {
-        const completion = await this.request(fetchImpl, settings, input);
-        if (!completion.content.trim()) throw new GeminiError("emptyResponse", true);
-        let decoded: unknown;
+    const partialResults: VideoVisualAnalysisResult[] = [];
+    const rawParts: string[] = [];
+    const usageTotals: Record<string, number> = {};
+    let attemptsUsed = 0;
+
+    for (const clip of clips) {
+      let lastError = new GeminiError("requestFailed", true);
+      let succeeded = false;
+      for (let attempt = 1; attempt <= settings.maxAttempts; attempt++) {
+        attemptsUsed = Math.max(attemptsUsed, attempt);
         try {
-          decoded = JSON.parse(stripJsonFence(completion.content)) as unknown;
-        } catch {
-          throw new GeminiError("invalidJson", false);
+          const completion = await this.request(fetchImpl, settings, input, clip);
+          if (!completion.content.trim()) {
+            throw new GeminiError("emptyResponse", true);
+          }
+          let decoded: unknown;
+          try {
+            decoded = JSON.parse(stripJsonFence(completion.content)) as unknown;
+          } catch {
+            throw new GeminiError("invalidJson", false);
+          }
+          const result = videoVisualAnalysisResultSchema.parse(decoded);
+          partialResults.push(result);
+          rawParts.push(completion.content);
+          for (const [key, value] of Object.entries(completion.usage)) {
+            usageTotals[key] = (usageTotals[key] ?? 0) + value;
+          }
+          succeeded = true;
+          break;
+        } catch (error) {
+          lastError =
+            error instanceof GeminiError
+              ? error
+              : error instanceof z.ZodError
+                ? new GeminiError("invalidResult", false)
+                : new GeminiError("requestFailed", true);
+          if (!lastError.retryable || attempt === settings.maxAttempts) break;
+          await sleep(
+            Math.min(8_000, 500 * 2 ** (attempt - 1)) +
+              Math.floor(random() * 100),
+          );
         }
-        const result = videoVisualAnalysisResultSchema.parse(decoded);
-        return {
-          result,
-          rawContent: completion.content,
-          modelIdentifier: settings.model,
-          usage: completion.usage,
-          attempts: attempt,
-        };
-      } catch (error) {
-        lastError =
-          error instanceof GeminiError
-            ? error
-            : error instanceof z.ZodError
-              ? new GeminiError("invalidResult", false)
-              : new GeminiError("requestFailed", true);
-        if (!lastError.retryable || attempt === settings.maxAttempts) break;
-        await sleep(Math.min(8_000, 500 * 2 ** (attempt - 1)) + Math.floor(random() * 100));
       }
+      if (!succeeded) throw lastError;
     }
-    throw lastError;
+
+    return {
+      result: mergeVisualResults(input.videoId, partialResults),
+      rawContent: rawParts.join("\n---\n").slice(0, 200_000),
+      modelIdentifier: settings.model,
+      usage: usageTotals,
+      attempts: attemptsUsed,
+    };
   }
 
   private async request(
     fetchImpl: typeof fetch,
     settings: ReturnType<typeof geminiVideoSettings>,
     input: VideoVisualAnalysisInput,
+    clip: ClipWindow | null,
   ): Promise<{ content: string; usage: Record<string, number> }> {
     const endpoint = `${GEMINI_HOST}/v1beta/models/${encodeURIComponent(settings.model)}:generateContent`;
     const url = new URL(endpoint);
     if (url.origin !== GEMINI_HOST) throw new GeminiError("invalidGeminiHost", false);
+
+    const videoPart = buildVideoPart({
+      youtubeUrl: input.youtubeUrl,
+      fps: input.fps,
+      clip,
+    });
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), settings.timeoutMs);
@@ -129,26 +174,25 @@ export class GeminiYouTubeVisualAnalysisProvider
             {
               role: "user",
               parts: [
-                {
-                  file_data: {
-                    file_uri: input.youtubeUrl,
-                  },
-                },
+                videoPart,
                 {
                   text: buildVisualUserPrompt({
                     videoId: input.videoId,
                     title: input.title,
                     targetCharacterIds: input.targetCharacterIds,
                     durationSeconds: input.durationSeconds,
-                    requestedRanges: input.requestedRanges,
+                    requestedRanges: clip
+                      ? [clip]
+                      : input.requestedRanges,
                   }),
                 },
               ],
             },
           ],
+          // Gemini 3.6 Flash: do not send deprecated sampling params
+          // (temperature / top_p / top_k / candidate_count / thinking_budget).
           generationConfig: {
             responseMimeType: "application/json",
-            temperature: 0.1,
           },
         }),
         signal: controller.signal,
@@ -191,6 +235,52 @@ export class GeminiYouTubeVisualAnalysisProvider
   }
 }
 
+/** Exported for unit tests — builds the Gemini Part for YouTube video input. */
+export function buildVideoPart(input: {
+  youtubeUrl: string;
+  fps: number;
+  clip: ClipWindow | null;
+}): Record<string, unknown> {
+  const videoMetadata: Record<string, unknown> = {
+    fps: input.fps,
+  };
+  if (input.clip) {
+    videoMetadata.start_offset = `${input.clip.startSeconds}s`;
+    videoMetadata.end_offset = `${input.clip.endSeconds}s`;
+  }
+  return {
+    file_data: {
+      file_uri: input.youtubeUrl,
+      mime_type: "video/*",
+    },
+    video_metadata: videoMetadata,
+  };
+}
+
+function mergeVisualResults(
+  videoId: string,
+  results: VideoVisualAnalysisResult[],
+): VideoVisualAnalysisResult {
+  if (results.length === 1) return results[0]!;
+  const evidences = results.flatMap((r) => r.evidences);
+  const unresolved = results.flatMap((r) => r.unresolvedEntities);
+  const characters = [
+    ...new Set(results.flatMap((r) => r.detectedCharacterIds)),
+  ];
+  return videoVisualAnalysisResultSchema.parse({
+    videoId,
+    relevant: results.some((r) => r.relevant) || evidences.length > 0,
+    detectedCharacterIds: characters,
+    evidences,
+    unresolvedEntities: unresolved.slice(0, 50),
+    analysisSummary: results
+      .map((r) => r.analysisSummary)
+      .filter(Boolean)
+      .join(" | ")
+      .slice(0, 1000),
+  });
+}
+
 function assertSafeYoutubeUrl(youtubeUrl: string, videoId: string): void {
   let parsed: URL;
   try {
@@ -203,8 +293,7 @@ function assertSafeYoutubeUrl(youtubeUrl: string, videoId: string): void {
   if (host !== "www.youtube.com" && host !== "youtube.com" && host !== "youtu.be") {
     throw new GeminiError("invalidYoutubeHost", false);
   }
-  const expected = `https://www.youtube.com/watch?v=${videoId}`;
-  if (youtubeUrl !== expected && !youtubeUrl.includes(`v=${videoId}`)) {
+  if (youtubeUrl !== `https://www.youtube.com/watch?v=${videoId}` && !youtubeUrl.includes(`v=${videoId}`)) {
     throw new GeminiError("youtubeUrlMismatch", false);
   }
 }
