@@ -4,6 +4,15 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-07-26 — 承認済み編成テンプレートと事前生成入れ替え候補
+
+- `team-recommendations/replacements/`へTeamSource、ローカルJSON、正規化、Prisma永続化、10〜20件の一次絞り込み、DeepSeek JSON評価、Zod＋決定論的最終検証、版付きキャッシュを追加。GenshinBuilds接続は公開API許可待ちで意図的に未実装。
+- 管理APIはBearer認証・fail closed・10回/分制限。DeepSeekは管理者の事前生成だけで呼び、Flutter公開GETは検証済みキャッシュだけを返す。
+- Flutterは既存おすすめ編成に承認テンプレートを統合し、編成適性／端末計算の育成準備度／重み付き総合点、フィルター、確認後の編成反映を追加。
+- Next.jsは既知アドバイザリ対応で16.2.12へ更新。npm auditはNext内包postcss/sharpのhigh 3件が残り、非破壊修正版待ち（`--force`はNext 9.3.3へdowngradeするため禁止）。
+- DBモデルは現行Prismaへ追加済み。mainはSQLiteで、Neon/PostgreSQL基盤のPR #16はDraft・競合中・本番未適用のため、この機能のproduction Neon migrationは同PR統合後に再生成・staging検証が必要。
+- 詳細と運用手順は`docs/TEAM_TEMPLATE_REPLACEMENTS.md`。
+
 ## 2026-07-20 — おすすめ編成: リクエスト正規化 + gcsim IDマップ拡充
 
 - Flutterは旅人複合ID等を除外し、APIの`^\d{5,12}$`/元素/レアリティ制約に合うスナップショットだけ送る。attackerが落ちた場合は`attackerUnavailable`。

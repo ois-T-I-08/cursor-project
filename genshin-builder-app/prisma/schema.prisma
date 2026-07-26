@@ -182,3 +182,172 @@ model TeamSimulationCache {
   @@index([attackerId])
   @@index([expiresAt])
 }
+
+// ============================================================
+// 承認済み編成テンプレートと事前生成済み入れ替え候補
+// ============================================================
+
+/// 取得元の原本と正規化結果。外部データを公開用データから分離する。
+model ImportedTeam {
+  id                String    @id @default(cuid())
+  source            String
+  sourceTeamId      String
+  name              String
+  archetype         String    @default("")
+  teamHash          String
+  sourceUrl         String    @default("")
+  sourceUpdatedAt   DateTime?
+  fetchedAt         DateTime
+  rawPayload        String
+  normalizedPayload String
+  dataVersion       String
+  approvalStatus    String    @default("pending")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  members  ImportedTeamMember[]
+  template TeamTemplate?
+
+  @@unique([source, sourceTeamId])
+  @@index([teamHash])
+  @@index([approvalStatus])
+}
+
+model ImportedTeamMember {
+  id             String       @id @default(cuid())
+  importedTeamId String
+  importedTeam   ImportedTeam @relation(fields: [importedTeamId], references: [id], onDelete: Cascade)
+  characterId    String
+  sourceRole     String       @default("")
+  normalizedRole String
+  slotIndex      Int
+
+  @@unique([importedTeamId, slotIndex])
+  @@index([characterId])
+}
+
+/// 管理者が承認し、Flutterへ公開できる加工済みテンプレート。
+model TeamTemplate {
+  id             String       @id @default(cuid())
+  importedTeamId String       @unique
+  importedTeam   ImportedTeam @relation(fields: [importedTeamId], references: [id], onDelete: Restrict)
+  name           String
+  archetype      String       @default("")
+  teamHash       String
+  dataVersion    String
+  status         String       @default("draft")
+  sourceUrl      String       @default("")
+  manualOverride String       @default("")
+  publishedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  members            TeamTemplateMember[]
+  replacementJobs    TeamReplacementJob[]
+  replacementResults TeamReplacementResult[]
+
+  @@unique([teamHash])
+  @@index([status, updatedAt])
+}
+
+model TeamTemplateMember {
+  id             String       @id @default(cuid())
+  templateId     String
+  template       TeamTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  characterId    String
+  sourceRole     String       @default("")
+  normalizedRole String
+  slotIndex      Int
+
+  @@unique([templateId, slotIndex])
+  @@index([characterId])
+}
+
+/// 編成判断専用の承認済み構造化プロフィール。
+model CharacterTeamProfile {
+  characterId String   @id
+  payload     String
+  dataVersion String
+  gameVersion String
+  isLeak      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([dataVersion])
+}
+
+model TeamReplacementJob {
+  id           String       @id
+  templateId   String
+  template     TeamTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  status       String
+  attempts     Int          @default(0)
+  cacheHits    Int          @default(0)
+  successCount Int          @default(0)
+  failureCount Int          @default(0)
+  usagePayload String       @default("")
+  errorCode    String       @default("")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  completedAt  DateTime?
+
+  @@index([templateId, status])
+  @@index([createdAt])
+}
+
+/// キャッシュキーに全バージョンを含む、最後に検証を通過した結果。
+model TeamReplacementResult {
+  cacheKey             String       @id
+  templateId           String
+  template             TeamTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  replacedCharacterId  String
+  teamHash             String
+  gameDataVersion      String
+  characterDataVersion String
+  promptVersion        String
+  rulesVersion         String
+  modelIdentifier      String
+  status               String
+  slotAnalysis         String
+  rawAiOutput          String       @default("")
+  validatedPayload     String
+  errorCode            String       @default("")
+  generatedAt          DateTime
+  updatedAt            DateTime     @updatedAt
+
+  candidates TeamReplacementCandidate[]
+
+  @@index([templateId, replacedCharacterId, generatedAt])
+  @@index([status])
+}
+
+model TeamReplacementCandidate {
+  id                   String                @id @default(cuid())
+  resultKey            String
+  result               TeamReplacementResult @relation(fields: [resultKey], references: [cacheKey], onDelete: Cascade)
+  characterId          String
+  compatibilityScore   Int
+  category             String
+  confidence           Float
+  reasons              String
+  tradeoffs            String
+  requiredChanges      String
+  teamEvaluation       String
+  deterministicPenalty Int                   @default(0)
+  finalScore           Int
+  sortOrder            Int
+
+  @@unique([resultKey, characterId])
+  @@index([resultKey, sortOrder])
+}
+
+model TeamImportLog {
+  id        Int      @id @default(autoincrement())
+  source    String
+  action    String
+  status    String
+  detail    String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
