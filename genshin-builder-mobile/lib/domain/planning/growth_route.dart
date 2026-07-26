@@ -55,6 +55,7 @@ class GrowthRoute {
     this.days = const [],
     this.goals = const [],
     this.totalEstimatedResin,
+    this.dailyResinBudget,
     this.unresolvedCosts = const [],
     this.confidence = RecommendationConfidence.unknown,
     this.completeness = DataCompleteness.unavailable,
@@ -70,6 +71,8 @@ class GrowthRoute {
   final List<GrowthRouteDay> days;
   final List<String> goals;
   final int? totalEstimatedResin;
+  /// Display-only budget (does not constrain scheduling).
+  final int? dailyResinBudget;
   final List<String> unresolvedCosts;
   final RecommendationConfidence confidence;
   final DataCompleteness completeness;
