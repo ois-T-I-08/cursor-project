@@ -82,6 +82,14 @@ class NotificationBootstrap {
             importance: Importance.defaultImportance,
           ),
         );
+        await androidPlugin?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'daily_plan_incomplete',
+            'デイリー育成タスク',
+            description: '23時時点で未完了の育成タスクがあるときの通知',
+            importance: Importance.defaultImportance,
+          ),
+        );
       }
 
       await NotificationTapRouter.captureLaunchDetails(plugin);

@@ -132,6 +132,19 @@ describe("POST /api/sync", () => {
     expect(JSON.stringify(log.mock.calls)).not.toContain("secret");
   });
 
+  it("maps lease ownership loss to 409 without exposing tokens", async () => {
+    const { SyncLeaseOwnershipLostError } = await import(
+      "@/lib/sync-distributed-lock"
+    );
+    runSyncExclusive.mockRejectedValueOnce(new SyncLeaseOwnershipLostError());
+    const response = await POST(request({ body: "{}" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.ok).toBe(false);
+    expect(JSON.stringify(body)).not.toMatch(/ownerToken|uuid|abort/i);
+  });
+
   it("rate limits repeated authorized requests", async () => {
     for (let index = 0; index < 5; index++) {
       expect((await POST(request({ body: "{}" }))).status).toBe(200);

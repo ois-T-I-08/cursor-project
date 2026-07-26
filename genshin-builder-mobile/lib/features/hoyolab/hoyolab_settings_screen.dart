@@ -7,6 +7,7 @@ import '../../core/errors/user_facing_error.dart';
 import '../../data/hoyolab/models/daily_note.dart';
 import '../../data/legal/legal_consent_store.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/daily_plan_notification_providers.dart';
 import '../../providers/hoyolab_game_refresh.dart';
 import '../../providers/hoyolab_home_providers.dart';
 import '../../providers/hoyolab_game_providers.dart';
@@ -124,6 +125,14 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
       } catch (_) {
         // Cookie 削除は成功済み。通知側失敗はログのみ。
       }
+      try {
+        final userId = await ref.read(localUserIdProvider.future);
+        final dailyCoordinator =
+            await ref.read(dailyPlanNotificationCoordinatorProvider.future);
+        await dailyCoordinator.cancelForLogoutOrUserSwitch(userId);
+      } catch (_) {
+        // P1-8C cancel is best-effort; do not block disconnect.
+      }
       await _refreshProviders();
       setState(() => _message = '連携を解除しました');
     } finally {
@@ -168,6 +177,14 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
         await coordinator.cancelAllAndResetAccount();
       } catch (_) {
         // ロール切替は成功済み。通知側失敗はログのみ。
+      }
+      try {
+        final userId = await ref.read(localUserIdProvider.future);
+        final dailyCoordinator =
+            await ref.read(dailyPlanNotificationCoordinatorProvider.future);
+        await dailyCoordinator.cancelForLogoutOrUserSwitch(userId);
+      } catch (_) {
+        // P1-8C cancel is best-effort; do not block role switch.
       }
       await _refreshProviders();
       setState(() => _message = '${selected.nickname} を選択しました');

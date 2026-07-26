@@ -11,6 +11,10 @@
 import { gameDataProvider } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { UpstreamFetchError } from "@/lib/api/safe-json-fetch";
+import {
+  SyncLeaseOwnershipLostError,
+  throwIfSyncAborted,
+} from "@/lib/sync-distributed-lock";
 import { syncUpgradeData, type UpgradeSyncOptions } from "@/lib/sync-upgrade";
 import {
   forEachBatch,
@@ -39,6 +43,9 @@ export interface SyncResult {
 export async function syncMasterData(
   options: SyncOptions = {},
 ): Promise<SyncResult> {
+  const signal = options.signal;
+  throwIfSyncAborted(signal);
+
   const result: SyncResult = {
     provider: gameDataProvider.name,
     characters: 0,
@@ -61,13 +68,17 @@ export async function syncMasterData(
     gameDataProvider.fetchMaterials(),
   ]);
 
+  throwIfSyncAborted(signal);
+
   if (charactersRes.status === "fulfilled") {
+    throwIfSyncAborted(signal);
     await prisma.$transaction(
       async (tx) => {
         await forEachBatch(
           charactersRes.value,
           UPSERT_BATCH_SIZE,
           async (batch) => {
+            throwIfSyncAborted(signal);
             await Promise.all(
               batch.map((c) =>
                 tx.character.upsert({
@@ -82,6 +93,7 @@ export async function syncMasterData(
         const characterIds = charactersRes.value.map((c) => c.id);
         const excludeIds = idsForNotIn(characterIds);
         if (excludeIds) {
+          throwIfSyncAborted(signal);
           await tx.character.deleteMany({
             where: {
               id: { notIn: excludeIds },
@@ -97,13 +109,17 @@ export async function syncMasterData(
     result.errors.push(syncErrorCode("characters", charactersRes.reason));
   }
 
+  throwIfSyncAborted(signal);
+
   if (weaponsRes.status === "fulfilled") {
+    throwIfSyncAborted(signal);
     await prisma.$transaction(
       async (tx) => {
         await forEachBatch(
           weaponsRes.value,
           UPSERT_BATCH_SIZE,
           async (batch) => {
+            throwIfSyncAborted(signal);
             await Promise.all(
               batch.map((weapon) =>
                 tx.weapon.upsert({
@@ -128,6 +144,7 @@ export async function syncMasterData(
         ];
         const excludeWeaponIds = idsForNotIn(keepWeaponIds);
         if (excludeWeaponIds) {
+          throwIfSyncAborted(signal);
           await tx.weapon.deleteMany({
             where: { id: { notIn: excludeWeaponIds } },
           });
@@ -140,13 +157,17 @@ export async function syncMasterData(
     result.errors.push(syncErrorCode("weapons", weaponsRes.reason));
   }
 
+  throwIfSyncAborted(signal);
+
   if (materialsRes.status === "fulfilled") {
+    throwIfSyncAborted(signal);
     await prisma.$transaction(
       async (tx) => {
         await forEachBatch(
           materialsRes.value,
           UPSERT_BATCH_SIZE,
           async (batch) => {
+            throwIfSyncAborted(signal);
             await Promise.all(
               batch.map((material) =>
                 tx.material.upsert({
@@ -161,6 +182,7 @@ export async function syncMasterData(
         const materialIds = materialsRes.value.map((material) => material.id);
         const excludeMaterialIds = idsForNotIn(materialIds);
         if (excludeMaterialIds) {
+          throwIfSyncAborted(signal);
           await tx.material.deleteMany({
             where: { id: { notIn: excludeMaterialIds } },
           });
@@ -173,6 +195,8 @@ export async function syncMasterData(
     result.errors.push(syncErrorCode("materials", materialsRes.reason));
   }
 
+  throwIfSyncAborted(signal);
+
   // 突破・天賦・EXP（差分同期。fullUpgrade で全件再取得）
   const upgradeRes = await syncUpgradeData(options);
   result.characterUpgrades = upgradeRes.characterUpgrades;
@@ -183,6 +207,8 @@ export async function syncMasterData(
   result.skippedCharacterUpgrades = upgradeRes.skippedCharacterUpgrades;
   result.skippedWeaponUpgrades = upgradeRes.skippedWeaponUpgrades;
   result.errors.push(...upgradeRes.errors);
+
+  throwIfSyncAborted(signal);
 
   // 同期履歴を残す（Cron監視・デバッグ用）
   await prisma.syncLog.create({
@@ -196,6 +222,9 @@ export async function syncMasterData(
 }
 
 function syncErrorCode(phase: string, error: unknown): string {
+  if (error instanceof SyncLeaseOwnershipLostError) {
+    throw error;
+  }
   const code =
     error instanceof UpstreamFetchError ? error.code : "unavailable";
   return `${phase}:${code}`;
