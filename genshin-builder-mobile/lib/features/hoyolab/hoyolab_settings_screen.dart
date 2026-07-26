@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../config/feature_flags.dart';
 import '../../core/errors/user_facing_error.dart';
 import '../../data/hoyolab/models/daily_note.dart';
+import '../../data/legal/legal_consent_store.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/hoyolab_game_refresh.dart';
 import '../../providers/hoyolab_home_providers.dart';
 import '../../providers/hoyolab_game_providers.dart';
 import '../../providers/hoyolab_providers.dart';
 import '../../providers/hoyolab_reminder_providers.dart';
+import '../../providers/legal_url_launcher_provider.dart';
+import 'hoyolab_link_disclosure_screen.dart';
 import 'hoyolab_login_screen.dart';
 import 'widgets/hoyolab_disclaimer_banner.dart';
 
@@ -34,6 +38,23 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
   }
 
   Future<void> _startLogin() async {
+    final db = await ref.read(appDatabaseProvider.future);
+    final consent = LegalConsentStore(db);
+    if (await consent.needsHoyolabDisclosure()) {
+      if (!mounted) return;
+      final accepted = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder:
+              (_) => HoyolabLinkDisclosureScreen(
+                launcher: ref.read(legalUrlLauncherProvider),
+              ),
+        ),
+      );
+      if (accepted != true) return;
+      await consent.acceptHoyolabDisclosure();
+    }
+    if (!mounted) return;
+
     final ok = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const HoyolabLoginScreen()),
     );
@@ -91,6 +112,11 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
       }
       final repo = await ref.read(hoyolabRepositoryProvider.future);
       await repo.disconnect();
+      try {
+        await WebViewCookieManager().clearCookies();
+      } catch (_) {
+        // Secure Storage 側は削除済み。WebView Cookie 失敗はログのみ。
+      }
       try {
         final coordinator =
             await ref.read(notificationScheduleCoordinatorProvider.future);

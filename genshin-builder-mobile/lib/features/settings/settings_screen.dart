@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../data/models/sync_status.dart';
 import '../../core/errors/user_facing_error.dart';
@@ -9,7 +10,10 @@ import '../../data/sync/master_sync_runner.dart';
 import '../../platform/app_notification_settings_channel.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/background_master_repair_provider.dart';
+import '../../providers/hoyolab_game_providers.dart';
+import '../../providers/hoyolab_game_refresh.dart';
 import '../../providers/hoyolab_home_providers.dart';
+import '../../providers/hoyolab_providers.dart';
 import '../../providers/hoyolab_reminder_providers.dart';
 import '../../providers/legal_url_launcher_provider.dart';
 import '../shared/shell_menu_button.dart';
@@ -198,6 +202,119 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _syncProgress = null;
         });
       }
+    }
+  }
+
+  Future<void> _deleteLocalProgress() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('ローカル育成データを削除'),
+            content: const Text(
+              'キャラクター育成進捗、ブックマーク、目標・在庫・保存編成などの端末内データを削除します。'
+              'マスターデータと HoYoLAB 連携状態は残ります。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('削除'),
+              ),
+            ],
+          ),
+    );
+    if (ok != true) return;
+    final db = await ref.read(appDatabaseProvider.future);
+    final userId = await ref.read(localUserIdProvider.future);
+    await db.deleteAllProgressForUser(userId);
+    await db.clearAllBookmarks();
+    await db.clearAllPlanningDataForUser(userId);
+    if (mounted) {
+      setState(() => _lastMessage = 'ローカル育成データを削除しました');
+    }
+  }
+
+  Future<void> _resetAppSettings() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('アプリ設定を初期化'),
+            content: const Text(
+              '機能フラグや同意記録を含むアプリ設定を初期化します。'
+              'HoYoLAB を再度連携する場合は、説明画面での再確認が必要です。'
+              '育成データは削除しません。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('初期化'),
+              ),
+            ],
+          ),
+    );
+    if (ok != true) return;
+    final db = await ref.read(appDatabaseProvider.future);
+    await db.clearAllSettings();
+    ref.invalidate(featureFlagsProvider);
+    ref.invalidate(reminderSettingsStoreProvider);
+    if (mounted) {
+      setState(() => _lastMessage = 'アプリ設定を初期化しました');
+    }
+  }
+
+  Future<void> _unlinkHoyolabFromSettings() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('HoYoLAB 連携を解除'),
+            content: const Text('端末内の Cookie と認証情報を削除します。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('解除'),
+              ),
+            ],
+          ),
+    );
+    if (ok != true) return;
+    final session = await ref.read(hoyolabSessionProvider.future);
+    if (session.uid != null && session.uid!.isNotEmpty) {
+      final diskCache = await ref.read(hoyolabHomeDiskCacheProvider.future);
+      await diskCache.clearForUid(session.uid!);
+      final discoveryStore =
+          await ref.read(hoyolabCharacterDiscoveryStoreProvider.future);
+      await discoveryStore.clearForUid(session.uid!);
+    }
+    final repo = await ref.read(hoyolabRepositoryProvider.future);
+    await repo.disconnect();
+    try {
+      await WebViewCookieManager().clearCookies();
+    } catch (_) {
+      // Secure Storage 側は削除済み。WebView Cookie 失敗は無視。
+    }
+    try {
+      final coordinator =
+          await ref.read(notificationScheduleCoordinatorProvider.future);
+      await coordinator.cancelAllAndResetAccount();
+    } catch (_) {}
+    ref.invalidate(hoyolabSessionProvider);
+    refreshAllHoyolabGameData(ref);
+    if (mounted) {
+      setState(() => _lastMessage = 'HoYoLAB 連携を解除しました');
     }
   }
 
@@ -405,6 +522,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: Text('通知設定を読み込めませんでした'),
                 ),
               ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.delete_outline),
+                  title: Text(
+                    'データの削除',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  title: const Text('HoYoLAB 連携解除'),
+                  subtitle: const Text('Cookie と認証情報を端末から削除'),
+                  onTap: _unlinkHoyolabFromSettings,
+                ),
+                ListTile(
+                  title: const Text('ローカル育成データを削除'),
+                  subtitle: const Text('進捗・ブックマーク・目標など'),
+                  onTap: _deleteLocalProgress,
+                ),
+                ListTile(
+                  title: const Text('アプリ設定を初期化'),
+                  subtitle: const Text('同意記録を含む設定。育成データは残します'),
+                  onTap: _resetAppSettings,
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),

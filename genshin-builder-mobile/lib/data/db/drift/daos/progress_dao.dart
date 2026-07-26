@@ -93,6 +93,18 @@ class ProgressDao extends DatabaseAccessor<DriftAppDatabase>
     );
   }
 
+  Future<void> deleteSetting(String key) async {
+    await (delete(appSettings)..where((t) => t.key.equals(key))).go();
+  }
+
+  Future<void> clearAllSettings() async {
+    await delete(appSettings).go();
+  }
+
+  Future<void> deleteAllProgressForUser(String userId) async {
+    await (delete(userProgressTable)..where((t) => t.userId.equals(userId))).go();
+  }
+
   Future<void> insertSyncLog(String status, String detail) async {
     await into(syncLogs).insert(
       SyncLogsCompanion.insert(
