@@ -416,6 +416,7 @@ export default function StructuredRecommendationEditor({
   const [focusPath, setFocusPath] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const isHydrating = useRef(false);
 
   const selected = useMemo(
     () => recommendations.find((r) => r.id === selectedId) ?? null,
@@ -450,13 +451,9 @@ export default function StructuredRecommendationEditor({
     }
   }, [postAction]);
 
-  useEffect(() => {
-    void loadMasters();
-  }, [loadMasters]);
-
-  useEffect(() => {
-    if (!selected) return;
-    const structured = selected.structuredPayload ?? {};
+  const hydrateRecommendation = useCallback((nextSelected: RecommendationRow) => {
+    isHydrating.current = true;
+    const structured = nextSelected.structuredPayload ?? {};
     setInvestmentPriority(
       typeof structured.investmentPriority === "string"
         ? structured.investmentPriority
@@ -465,7 +462,7 @@ export default function StructuredRecommendationEditor({
     setGameVersion(
       typeof structured.gameVersion === "string" ? structured.gameVersion : "",
     );
-    setAdminNotes(selected.adminNotes ?? "");
+    setAdminNotes(nextSelected.adminNotes ?? "");
 
     setWeapons(
       asArray(structured.weapons).map((item, index) => {
@@ -525,7 +522,7 @@ export default function StructuredRecommendationEditor({
 
     setMainStats(
       (["sands", "goblet", "circlet"] as const).map((slot) => {
-        const found = asArray(selected.mainStats).find(
+        const found = asArray(nextSelected.mainStats).find(
           (m) => asRecord(m).slot === slot,
         );
         const map = asRecord(found);
@@ -548,18 +545,44 @@ export default function StructuredRecommendationEditor({
     const fromRecommended = asArray(structured.recommendedStats);
     setTargets(
       payloadToTargetDrafts(
-        fromRecommended.length > 0 ? fromRecommended : selected.targets,
+        fromRecommended.length > 0 ? fromRecommended : nextSelected.targets,
       ),
     );
-    setPendingWeapons(asArray(selected.pendingMentions?.weapons));
-    setPendingArtifacts(asArray(selected.pendingMentions?.artifactSets));
-    setKeepPublished(selected.status === "published");
+    setPendingWeapons(asArray(nextSelected.pendingMentions?.weapons));
+    setPendingArtifacts(asArray(nextSelected.pendingMentions?.artifactSets));
+    setKeepPublished(nextSelected.status === "published");
+    setWeaponQuery("");
+    setSetQueryA({});
+    setSetQueryB({});
     setPreviewJson("");
     setValidationJson("");
     setLocalError(null);
     setLocalOk(null);
     setDirty(false);
-  }, [selected]);
+    window.setTimeout(() => {
+      isHydrating.current = false;
+    }, 0);
+  }, []);
+
+  const handleRecommendationChange = (nextId: string) => {
+    if (nextId === selectedId) return;
+    if (
+      dirty &&
+      !window.confirm("未保存の変更があります。破棄して別の推奨レコードへ移動しますか？")
+    ) {
+      return;
+    }
+    setSelectedId(nextId);
+    const nextSelected = recommendations.find((row) => row.id === nextId);
+    if (!nextSelected) {
+      setDirty(false);
+      return;
+    }
+    hydrateRecommendation(nextSelected);
+    if (!masters && !mastersLoading) {
+      void loadMasters();
+    }
+  };
 
   useEffect(() => {
     if (!focusPath) return;
@@ -580,19 +603,11 @@ export default function StructuredRecommendationEditor({
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [dirty]);
 
-  const isHydrating = useRef(false);
   useEffect(() => {
-    isHydrating.current = true;
-    const t = window.setTimeout(() => {
-      isHydrating.current = false;
-    }, 0);
-    return () => window.clearTimeout(t);
-  }, [selected]);
-  useEffect(() => {
-    if (isHydrating.current || !selected) return;
+    if (isHydrating.current || !selectedId) return;
     setDirty(true);
   }, [
-    selected,
+    selectedId,
     weapons,
     artifacts,
     targets,
@@ -834,7 +849,7 @@ export default function StructuredRecommendationEditor({
         <select
           className="mt-1 w-full rounded-lg border border-white/10 bg-[#151d2a] px-3 py-2"
           value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
+          onChange={(e) => handleRecommendationChange(e.target.value)}
         >
           <option value="">選択してください</option>
           {recommendations.map((r) => (
