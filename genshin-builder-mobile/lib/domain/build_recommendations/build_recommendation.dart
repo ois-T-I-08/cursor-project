@@ -5,6 +5,20 @@ export 'guide_insight.dart';
 
 enum BuildRecommendationOrigin { singleVideo, merged }
 
+bool isSafeYoutubeGuideUrl(String raw) {
+  final uri = Uri.tryParse(raw.trim());
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      !uri.hasAuthority ||
+      uri.userInfo.isNotEmpty) {
+    return false;
+  }
+  final host = uri.host.toLowerCase();
+  return host == 'youtube.com' ||
+      host.endsWith('.youtube.com') ||
+      host == 'youtu.be';
+}
+
 class BuildRecommendationSource {
   const BuildRecommendationSource({
     required this.videoId,

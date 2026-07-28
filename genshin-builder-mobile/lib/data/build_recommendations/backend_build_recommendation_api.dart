@@ -152,21 +152,25 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
   final sources = <BuildRecommendationSource>[];
   for (final item in _list(json['sources'], maxLength: 20)) {
     final map = _object(item);
+    final sourceUrl = _string(map['sourceUrl']);
+    if (!isSafeYoutubeGuideUrl(sourceUrl)) continue;
     sources.add(
       BuildRecommendationSource(
         id: _nullableString(map['id']),
         videoId: _string(map['videoId']),
         title: _string(map['title'] ?? map['videoTitle']),
         channelTitle: _string(map['channelTitle'] ?? map['channelName']),
-        sourceUrl: _string(map['sourceUrl']),
+        sourceUrl: sourceUrl,
         publishedAt: _optionalDate(map['publishedAt']),
-        channelId: map['channelId'] is String
-            ? (map['channelId'] as String).trim()
-            : null,
+        channelId:
+            map['channelId'] is String
+                ? (map['channelId'] as String).trim()
+                : null,
         reviewedAt: _optionalDate(map['reviewedAt']),
-        gameVersion: map['gameVersion'] is String
-            ? (map['gameVersion'] as String).trim()
-            : null,
+        gameVersion:
+            map['gameVersion'] is String
+                ? (map['gameVersion'] as String).trim()
+                : null,
       ),
     );
   }
