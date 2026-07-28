@@ -70,6 +70,40 @@ describe("validateStructuredForPublish", () => {
     ).toBe(true);
   });
 
+  it("requires explicit item confirmation and a completed structured review", () => {
+    const issues = validateStructuredForPublish({
+      characterId: "hu-tao",
+      structured: {
+        structuredReviewStatus: "draft",
+        pendingMentions: { weapons: [], artifactSets: [] },
+        weapons: [{ weaponId: "13501" }],
+        artifactRecommendations: [
+          { sets: [{ setId: "15020", pieces: 4 }] },
+        ],
+      },
+      sources: [],
+      knownWeaponIds,
+      knownSetIds: new Set(["15020"]),
+      artifactMasterAvailable: true,
+    });
+
+    expect(
+      issues.some((i) => i.path === "weapons[0]" && i.level === "error"),
+    ).toBe(true);
+    expect(
+      issues.some(
+        (i) =>
+          i.path === "artifactRecommendations[0]" && i.level === "error",
+      ),
+    ).toBe(true);
+    expect(
+      issues.some(
+        (i) =>
+          i.path === "structuredReviewStatus" && i.level === "error",
+      ),
+    ).toBe(true);
+  });
+
   it("blocks unresolved citationId, unknown weapon, and unknown setId", () => {
     const issues = validateStructuredForPublish({
       characterId: "hu-tao",
@@ -105,7 +139,7 @@ describe("validateStructuredForPublish", () => {
     const issues = validateStructuredForPublish({
       characterId: "hu-tao",
       structured: {
-        structuredReviewStatus: "draft",
+        structuredReviewStatus: "admin_confirmed",
         pendingMentions: { weapons: [], artifactSets: [] },
         weapons: [],
         artifactRecommendations: [
@@ -129,7 +163,7 @@ describe("validateStructuredForPublish", () => {
     const issues = validateStructuredForPublish({
       characterId: "hu-tao",
       structured: {
-        structuredReviewStatus: "draft",
+        structuredReviewStatus: "admin_confirmed",
         pendingMentions: { weapons: [], artifactSets: [] },
         weapons: [
           {

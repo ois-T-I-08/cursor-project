@@ -479,7 +479,7 @@ export default function StructuredRecommendationEditor({
           role: String(map.role ?? ""),
           citationId: String(map.citationId ?? ""),
           dataOrigin: String(map.dataOrigin ?? "manual"),
-          adminConfirmed: map.adminConfirmed !== false,
+          adminConfirmed: map.adminConfirmed === true,
         } satisfies WeaponDraft;
       }),
     );
@@ -515,7 +515,7 @@ export default function StructuredRecommendationEditor({
           isAlternative: map.isAlternative === true,
           citationId: String(map.citationId ?? ""),
           dataOrigin: String(map.dataOrigin ?? "manual"),
-          adminConfirmed: map.adminConfirmed !== false,
+          adminConfirmed: map.adminConfirmed === true,
         } satisfies ArtifactDraft;
       }),
     );

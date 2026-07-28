@@ -120,7 +120,7 @@ export function validateStructuredDraft(input: {
 
   asArray(input.structured.weapons).forEach((item, index) => {
     const map = asRecord(item);
-    if (map.dataOrigin === "evidence_mention" || map.adminConfirmed === false) {
+    if (map.dataOrigin === "evidence_mention" || map.adminConfirmed !== true) {
       issues.push({
         level: "warning",
         path: `weapons[${index}]`,
@@ -154,7 +154,7 @@ export function validateStructuredDraft(input: {
           "聖遺物セットマスターを取得できないため、setId の存在を確認できません",
       });
     }
-    if (map.dataOrigin === "evidence_mention" || map.adminConfirmed === false) {
+    if (map.dataOrigin === "evidence_mention" || map.adminConfirmed !== true) {
       issues.push({
         level: "warning",
         path: `artifactRecommendations[${index}]`,
@@ -325,7 +325,7 @@ export function validateStructuredForPublish(input: {
 
   asArray(input.structured.weapons).forEach((item, index) => {
     const map = asRecord(item);
-    if (map.dataOrigin === "evidence_mention" || map.adminConfirmed === false) {
+    if (map.dataOrigin === "evidence_mention" || map.adminConfirmed !== true) {
       issues.push({
         level: "error",
         path: `weapons[${index}]`,
@@ -352,7 +352,7 @@ export function validateStructuredForPublish(input: {
           "聖遺物セットマスターを取得できないため、安全に公開できません",
       });
     }
-    if (map.dataOrigin === "evidence_mention" || map.adminConfirmed === false) {
+    if (map.dataOrigin === "evidence_mention" || map.adminConfirmed !== true) {
       issues.push({
         level: "error",
         path: `artifactRecommendations[${index}]`,
@@ -444,7 +444,7 @@ export function validateStructuredForPublish(input: {
     checkCitation(asRecord(stat).citationId, `mainStats[${i}].citationId`);
   }
 
-  if (input.structured.structuredReviewStatus === "review_required") {
+  if (input.structured.structuredReviewStatus !== "admin_confirmed") {
     issues.push({
       level: "error",
       path: "structuredReviewStatus",

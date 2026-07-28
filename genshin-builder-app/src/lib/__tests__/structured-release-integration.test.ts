@@ -314,8 +314,26 @@ describe("release: publish rejection matrix", () => {
       "未確認の武器候補",
     ],
     [
+      "adminConfirmed missing",
+      {
+        ...base,
+        weapons: base.weapons.map((w, i) => {
+          if (i !== 0) return w;
+          const withoutConfirmation: Record<string, unknown> = { ...w };
+          delete withoutConfirmation.adminConfirmed;
+          return withoutConfirmation;
+        }),
+      },
+      "未確認の武器候補",
+    ],
+    [
       "review_required",
       { ...base, structuredReviewStatus: "review_required" },
+      "構造化レビューが未完了",
+    ],
+    [
+      "draft review status",
+      { ...base, structuredReviewStatus: "draft" },
       "構造化レビューが未完了",
     ],
     [
@@ -523,6 +541,16 @@ describe("release: keepPublished isolation", () => {
     expect(buildPublicRecommendationEtag(FIXTURE_CHARACTER, publishedChanged)).not.toBe(
       etag1,
     );
+
+    const sourceMetadataChanged = publicBuildRecommendationSchema.parse({
+      ...dto,
+      sources: dto.sources.map((source, index) =>
+        index === 0 ? { ...source, title: "changed source title" } : source,
+      ),
+    });
+    expect(
+      buildPublicRecommendationEtag(FIXTURE_CHARACTER, sourceMetadataChanged),
+    ).not.toBe(etag1);
   });
 });
 
@@ -563,6 +591,22 @@ describe("release: ETag / 304 route behavior", () => {
     expect(hit.headers.get("etag")).toBe(etag);
     expect(hit.headers.get("cache-control")).toContain("max-age=60");
     expect(hit.headers.get("cache-control")).toContain("stale-while-revalidate=300");
+
+    const weakHit = await GET(
+      new Request(`http://localhost/api/build-recommendations/${FIXTURE_CHARACTER}`, {
+        headers: { "if-none-match": `W/${etag}` },
+      }),
+      { params: Promise.resolve({ characterId: FIXTURE_CHARACTER }) },
+    );
+    expect(weakHit.status).toBe(304);
+
+    const listHit = await GET(
+      new Request(`http://localhost/api/build-recommendations/${FIXTURE_CHARACTER}`, {
+        headers: { "if-none-match": `"stale", ${etag}` },
+      }),
+      { params: Promise.resolve({ characterId: FIXTURE_CHARACTER }) },
+    );
+    expect(listHit.status).toBe(304);
 
     const miss = await GET(
       new Request(`http://localhost/api/build-recommendations/${FIXTURE_CHARACTER}`),

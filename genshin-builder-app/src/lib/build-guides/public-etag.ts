@@ -12,20 +12,24 @@ export function buildPublicRecommendationEtag(
   const fingerprint = createHash("sha256")
     .update(
       JSON.stringify({
-        schemaVersion: data.schemaVersion,
-        investmentPriority: data.investmentPriority ?? null,
-        gameVersion: data.gameVersion ?? null,
-        weapons: data.weapons,
-        artifactRecommendations: data.artifactRecommendations,
-        mainStats: data.mainStats,
-        recommendedStats: data.recommendedStats,
-        targets: data.targets,
-        sources: data.sources.map((s) => s.id),
-        publishedAt: data.publishedAt,
-        updatedAt: data.updatedAt,
+        characterId,
+        data,
       }),
     )
     .digest("hex")
     .slice(0, 20);
   return `"br-${characterId}-${fingerprint}"`;
+}
+
+/** GET の If-None-Match は weak comparison とリスト形式を受け付ける。 */
+export function matchesPublicRecommendationEtag(
+  ifNoneMatch: string | null,
+  etag: string,
+): boolean {
+  if (!ifNoneMatch) return false;
+  const expected = etag.replace(/^W\//, "");
+  return ifNoneMatch.split(",").some((candidate) => {
+    const value = candidate.trim();
+    return value === "*" || value.replace(/^W\//, "") === expected;
+  });
 }
