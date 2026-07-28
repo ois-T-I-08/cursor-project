@@ -93,6 +93,7 @@ export function validateStructuredDraft(input: {
   targets?: unknown;
   knownWeaponIds?: Set<string>;
   knownSetIds?: Set<string>;
+  artifactMasterAvailable?: boolean;
 }): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   if (!asString(input.characterId)) {
@@ -145,6 +146,14 @@ export function validateStructuredDraft(input: {
 
   asArray(input.structured.artifactRecommendations).forEach((item, index) => {
     const map = asRecord(item);
+    if (input.artifactMasterAvailable === false) {
+      issues.push({
+        level: "warning",
+        path: `artifactRecommendations[${index}].sets`,
+        message:
+          "聖遺物セットマスターを取得できないため、setId の存在を確認できません",
+      });
+    }
     if (map.dataOrigin === "evidence_mention" || map.adminConfirmed === false) {
       issues.push({
         level: "warning",
@@ -302,6 +311,7 @@ export function validateStructuredForPublish(input: {
   sources?: unknown;
   knownWeaponIds?: Set<string>;
   knownSetIds?: Set<string>;
+  artifactMasterAvailable?: boolean;
 }): ValidationIssue[] {
   const issues = validateStructuredDraft(input);
   const pending = asRecord(input.structured.pendingMentions);
@@ -334,6 +344,14 @@ export function validateStructuredForPublish(input: {
 
   asArray(input.structured.artifactRecommendations).forEach((item, index) => {
     const map = asRecord(item);
+    if (input.artifactMasterAvailable === false) {
+      issues.push({
+        level: "error",
+        path: `artifactRecommendations[${index}].sets`,
+        message:
+          "聖遺物セットマスターを取得できないため、安全に公開できません",
+      });
+    }
     if (map.dataOrigin === "evidence_mention" || map.adminConfirmed === false) {
       issues.push({
         level: "error",
@@ -405,7 +423,7 @@ export function validateStructuredForPublish(input: {
   const checkCitation = (raw: unknown, path: string) => {
     const id = asString(raw);
     if (!id) return;
-    if (citationIds.size > 0 && !citationIds.has(id)) {
+    if (!citationIds.has(id)) {
       issues.push({
         level: "error",
         path,
@@ -418,6 +436,12 @@ export function validateStructuredForPublish(input: {
   }
   for (const [i, a] of asArray(input.structured.artifactRecommendations).entries()) {
     checkCitation(asRecord(a).citationId, `artifactRecommendations[${i}].citationId`);
+  }
+  for (const [i, stat] of asArray(input.structured.recommendedStats).entries()) {
+    checkCitation(asRecord(stat).citationId, `recommendedStats[${i}].citationId`);
+  }
+  for (const [i, stat] of asArray(input.mainStats).entries()) {
+    checkCitation(asRecord(stat).citationId, `mainStats[${i}].citationId`);
   }
 
   if (input.structured.structuredReviewStatus === "review_required") {

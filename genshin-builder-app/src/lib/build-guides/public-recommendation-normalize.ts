@@ -265,6 +265,21 @@ function sourceKey(videoId: string, index: number): string {
   return `source-${safe}`;
 }
 
+export function isSafeYoutubeSourceUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:" || url.username || url.password) return false;
+    const host = url.hostname.toLowerCase().replace(/\.$/, "");
+    return (
+      host === "youtube.com" ||
+      host.endsWith(".youtube.com") ||
+      host === "youtu.be"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function collectSources(
   rawSources: unknown,
   warnings: string[],
@@ -281,12 +296,8 @@ function collectSources(
       warn(warnings, `sources[${index}] skipped: missing videoId or sourceUrl`);
       return;
     }
-    try {
-      // URL 形式の軽い検証
-      // eslint-disable-next-line no-new
-      new URL(sourceUrl);
-    } catch {
-      warn(warnings, `sources[${index}] skipped: invalid sourceUrl`);
+    if (!isSafeYoutubeSourceUrl(sourceUrl)) {
+      warn(warnings, `sources[${index}] skipped: unsafe sourceUrl`);
       return;
     }
     const id =
@@ -677,8 +688,6 @@ function normalizeRecommendedStats(
 function topLevelGameVersion(
   explicit: unknown,
   sources: PublicSource[],
-  weapons: PublicWeapon[],
-  artifacts: PublicArtifactRecommendation[],
 ): string | null {
   const top = asString(explicit, 32);
   const versions = new Set<string>();
@@ -740,8 +749,6 @@ export function normalizePublicBuildRecommendation(input: NormalizeInput): Norma
   const gameVersion = topLevelGameVersion(
     input.gameVersion ?? structured.gameVersion ?? context.gameVersion,
     sources,
-    weapons,
-    artifactRecommendations,
   );
 
   const substatPriority = asArray(input.substatPriority)
