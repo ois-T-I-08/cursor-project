@@ -11,7 +11,7 @@ Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, or devic
 
 | Field | Value |
 |-------|--------|
-| Target commit | *(fill after push)* |
+| Target commit | `b3e54e673bd71e510b7c47faf8ed3cd3e0848586` |
 | applicationId | `io.github.oisti08.genshinbuilder` |
 | versionCode / versionName | from `pubspec.yaml` / Flutter (unchanged by this branch) |
 | Build datetime | |
@@ -28,18 +28,18 @@ Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, or devic
 | Mobile format | passed | 436 files, 0 changed |
 | Mobile codegen | passed | build_runner |
 | Mobile tests | 756 passed | 0 failed |
-| Domain parity (3) | passed | included in full suite |
+| Domain parity (3) | passed | included in full suite; GitHub Domain Golden Parity CI also SUCCESS |
 | `flutter analyze` | passed | 0 issues |
 | Android debug APK | passed | `build/app/outputs/flutter-apk/app-debug.apk` (gitignored; not signed) |
 | Web tests | 334 passed / 2 skipped | skips are env-gated DB suites without local Postgres |
 | Web typecheck / lint | passed | 0 errors / 0 warnings |
 | Web production build | passed | Next.js 16.2.12 / Turbopack |
 | Prisma generate / validate | passed | Prisma 6.19.3 / provider postgresql |
-| Prisma migration status / deploy | **blocked locally** (no Docker/Postgres); CI `postgres:16` will deploy baseline | baseline `20260728220000_postgresql_baseline` |
+| Prisma migration status / deploy | **blocked locally** (no Docker/Postgres); **CI passed** on `postgres:16` (`migrate deploy` + DB integration) | baseline `20260728220000_postgresql_baseline` |
 | Production dependency audit | passed | `npm audit --omit=dev`: 0 vulnerabilities |
 | Secret logging guards | code + CI secret guard | |
-| Genshin Mobile CI | fill after push | |
-| Genshin Web CI | fill after push | Postgres service |
+| Genshin Mobile CI | passed | PR #27 GitHub Actions SUCCESS |
+| Genshin Web CI | passed | `postgres:16` service; `migrate deploy` success; DB integration (`RUN_*_DB_TEST`) success |
 
 ## PostgreSQL cutover
 
