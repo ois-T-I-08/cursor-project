@@ -4,23 +4,36 @@ import 'package:genshin_builder_mobile/domain/build_recommendations/build_recomm
 import 'package:genshin_builder_mobile/domain/character_stats.dart';
 
 void main() {
-  test('accepts only safe HTTPS YouTube guide URLs', () {
-    expect(
-      isSafeYoutubeGuideUrl('https://www.youtube.com/watch?v=abcdefghijk'),
-      isTrue,
-    );
-    expect(isSafeYoutubeGuideUrl('https://youtu.be/abcdefghijk'), isTrue);
-    expect(
-      isSafeYoutubeGuideUrl('http://www.youtube.com/watch?v=abcdefghijk'),
-      isFalse,
-    );
-    expect(
-      isSafeYoutubeGuideUrl(
-        'https://youtube.com.evil.example/watch?v=abcdefghijk',
-      ),
-      isFalse,
-    );
-    expect(isSafeYoutubeGuideUrl('javascript:alert(1)'), isFalse);
+  test('accepts only the explicit HTTPS YouTube guide hosts', () {
+    const allowed = [
+      'https://youtube.com/',
+      'https://www.youtube.com/',
+      'https://m.youtube.com/',
+      'https://youtu.be/',
+    ];
+    const rejected = [
+      'http://www.youtube.com/watch?v=abcdefghijk',
+      'javascript:alert(1)',
+      'data:text/plain,hello',
+      'file:///tmp/video',
+      'ftp://youtube.com/video',
+      'https://youtube.com.evil.example/watch?v=abcdefghijk',
+      'https://youtube.example/watch?v=abcdefghijk',
+      'https://user:pass@youtube.com/watch?v=abcdefghijk',
+      'https://www.youtube.com@evil.example/watch?v=abcdefghijk',
+      'https://music.youtube.com/watch?v=abcdefghijk',
+      'https://www.youtube.com./watch?v=abcdefghijk',
+      'https://xn--.com/',
+      '',
+      '/watch?v=abcdefghijk',
+    ];
+
+    for (final url in allowed) {
+      expect(isSafeYoutubeGuideUrl(url), isTrue, reason: url);
+    }
+    for (final url in rejected) {
+      expect(isSafeYoutubeGuideUrl(url), isFalse, reason: url);
+    }
   });
 
   test('parses visual recommendation payload', () {

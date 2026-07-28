@@ -14,9 +14,12 @@ bool isSafeYoutubeGuideUrl(String raw) {
     return false;
   }
   final host = uri.host.toLowerCase();
-  return host == 'youtube.com' ||
-      host.endsWith('.youtube.com') ||
-      host == 'youtu.be';
+  return const {
+    'youtube.com',
+    'www.youtube.com',
+    'm.youtube.com',
+    'youtu.be',
+  }.contains(host);
 }
 
 class BuildRecommendationSource {

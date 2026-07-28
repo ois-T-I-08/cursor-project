@@ -47,17 +47,32 @@ describe("compareGameVersions", () => {
 });
 
 describe("isSafeYoutubeSourceUrl", () => {
-  it("allows only HTTPS YouTube sources without user info", () => {
-    expect(isSafeYoutubeSourceUrl("https://www.youtube.com/watch?v=abc")).toBe(true);
-    expect(isSafeYoutubeSourceUrl("https://youtu.be/abc")).toBe(true);
-    expect(isSafeYoutubeSourceUrl("http://www.youtube.com/watch?v=abc")).toBe(false);
-    expect(isSafeYoutubeSourceUrl("https://youtube.com.evil.example/watch?v=abc")).toBe(
-      false,
-    );
-    expect(isSafeYoutubeSourceUrl("javascript:alert(1)")).toBe(false);
-    expect(isSafeYoutubeSourceUrl("https://user:pass@youtube.com/watch?v=abc")).toBe(
-      false,
-    );
+  it.each([
+    "https://youtube.com/",
+    "https://www.youtube.com/",
+    "https://m.youtube.com/",
+    "https://youtu.be/",
+  ])("allows %s", (url) => {
+    expect(isSafeYoutubeSourceUrl(url)).toBe(true);
+  });
+
+  it.each([
+    "http://www.youtube.com/watch?v=abc",
+    "javascript:alert(1)",
+    "data:text/plain,hello",
+    "file:///tmp/video",
+    "ftp://youtube.com/video",
+    "https://youtube.com.evil.example/watch?v=abc",
+    "https://youtube.example/watch?v=abc",
+    "https://user:pass@youtube.com/watch?v=abc",
+    "https://www.youtube.com@evil.example/watch?v=abc",
+    "https://music.youtube.com/watch?v=abc",
+    "https://www.youtube.com./watch?v=abc",
+    "https://xn--.com/",
+    "",
+    "/watch?v=abc",
+  ])("rejects %s", (url) => {
+    expect(isSafeYoutubeSourceUrl(url)).toBe(false);
   });
 });
 

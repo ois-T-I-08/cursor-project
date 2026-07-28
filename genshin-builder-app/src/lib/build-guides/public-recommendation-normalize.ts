@@ -269,11 +269,9 @@ export function isSafeYoutubeSourceUrl(raw: string): boolean {
   try {
     const url = new URL(raw);
     if (url.protocol !== "https:" || url.username || url.password) return false;
-    const host = url.hostname.toLowerCase().replace(/\.$/, "");
-    return (
-      host === "youtube.com" ||
-      host.endsWith(".youtube.com") ||
-      host === "youtu.be"
+    const host = url.hostname.toLowerCase();
+    return ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"].includes(
+      host,
     );
   } catch {
     return false;
