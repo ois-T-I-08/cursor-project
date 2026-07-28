@@ -49,16 +49,17 @@ class MarkSlider extends StatelessWidget {
         ),
         Wrap(
           spacing: 8,
-          children: marks
-              .where((m) => m <= max)
-              .map(
-                (m) => ChoiceChip(
-                  label: Text('$m'),
-                  selected: m == value,
-                  onSelected: (_) => onChanged(m),
-                ),
-              )
-              .toList(),
+          children:
+              marks
+                  .where((m) => m <= max)
+                  .map(
+                    (m) => ChoiceChip(
+                      label: Text('$m'),
+                      selected: m == value,
+                      onSelected: (_) => onChanged(m),
+                    ),
+                  )
+                  .toList(),
         ),
       ],
     );

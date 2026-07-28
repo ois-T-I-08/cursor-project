@@ -43,17 +43,16 @@ class CharacterBuildSnapshot {
     int? weaponRarity,
     int? weaponLevel,
     ArtifactState? artifacts,
-  }) =>
-      CharacterBuildSnapshot(
-        level: level ?? this.level,
-        constellation: constellation ?? this.constellation,
-        talentNormal: talentNormal ?? this.talentNormal,
-        talentSkill: talentSkill ?? this.talentSkill,
-        talentBurst: talentBurst ?? this.talentBurst,
-        weaponId: weaponId ?? this.weaponId,
-        weaponName: weaponName ?? this.weaponName,
-        weaponRarity: weaponRarity ?? this.weaponRarity,
-        weaponLevel: weaponLevel ?? this.weaponLevel,
-        artifacts: artifacts ?? this.artifacts,
-      );
+  }) => CharacterBuildSnapshot(
+    level: level ?? this.level,
+    constellation: constellation ?? this.constellation,
+    talentNormal: talentNormal ?? this.talentNormal,
+    talentSkill: talentSkill ?? this.talentSkill,
+    talentBurst: talentBurst ?? this.talentBurst,
+    weaponId: weaponId ?? this.weaponId,
+    weaponName: weaponName ?? this.weaponName,
+    weaponRarity: weaponRarity ?? this.weaponRarity,
+    weaponLevel: weaponLevel ?? this.weaponLevel,
+    artifacts: artifacts ?? this.artifacts,
+  );
 }

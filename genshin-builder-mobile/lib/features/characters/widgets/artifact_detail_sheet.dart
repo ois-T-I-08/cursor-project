@@ -25,20 +25,22 @@ Future<void> showArtifactDetailSheet({
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (context) => DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) => ArtifactDetailSheet(
-        characterId: characterId,
-        slot: slot,
-        piece: piece,
-        scoreType: scoreType,
-        weights: weights,
-        scrollController: scrollController,
-      ),
-    ),
+    builder:
+        (context) => DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.65,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          builder:
+              (context, scrollController) => ArtifactDetailSheet(
+                characterId: characterId,
+                slot: slot,
+                piece: piece,
+                scoreType: scoreType,
+                weights: weights,
+                scrollController: scrollController,
+              ),
+        ),
   );
 }
 
@@ -74,12 +76,14 @@ class ArtifactDetailSheet extends ConsumerWidget {
 
     final theme = Theme.of(context);
     final slotLabel = artifactSlotLabels[slot] ?? slot.name;
-    final score = weights == null
-        ? calcArtifactPieceScore(piece, scoreType)
-        : calcArtifactPieceScoreWithWeights(piece, weights!);
-    final mainValue = piece.mainStat.isEmpty
-        ? null
-        : artifactMainStatValue(piece.mainStat, piece.level);
+    final score =
+        weights == null
+            ? calcArtifactPieceScore(piece, scoreType)
+            : calcArtifactPieceScoreWithWeights(piece, weights!);
+    final mainValue =
+        piece.mainStat.isEmpty
+            ? null
+            : artifactMainStatValue(piece.mainStat, piece.level);
     final guideSlot = guideSlotFromArtifactSlotKey(slot);
 
     return ListView(
@@ -143,10 +147,7 @@ class ArtifactDetailSheet extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '動画内メイン目安',
-                    style: theme.textTheme.titleSmall,
-                  ),
+                  Text('動画内メイン目安', style: theme.textTheme.titleSmall),
                   const SizedBox(height: 4),
                   GuideMainStatsPanel(
                     mainStats: forSlot,
@@ -198,9 +199,7 @@ class ArtifactDetailSheet extends ConsumerWidget {
           )
         else if (matched == null || matched.effects.isEmpty)
           Text(
-            piece.setName.isEmpty
-                ? 'セット未設定'
-                : 'セット効果を取得できませんでした',
+            piece.setName.isEmpty ? 'セット未設定' : 'セット効果を取得できませんでした',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

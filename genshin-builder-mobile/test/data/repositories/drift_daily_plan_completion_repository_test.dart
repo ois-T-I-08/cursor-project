@@ -20,87 +20,90 @@ void main() {
     await db.close();
   });
 
-  test('mark / unmark / unique upsert / date isolation / user isolation', () async {
-    final now = DateTime(2026, 7, 15, 12);
-    await completionRepo.markCompleted(
-      DailyPlanCompletionRecord(
+  test(
+    'mark / unmark / unique upsert / date isolation / user isolation',
+    () async {
+      final now = DateTime(2026, 7, 15, 12);
+      await completionRepo.markCompleted(
+        DailyPlanCompletionRecord(
+          userId: 'u1',
+          localDate: '2026-07-15',
+          itemKey: 'k1',
+          completedAt: now,
+        ),
+      );
+      await completionRepo.markCompleted(
+        DailyPlanCompletionRecord(
+          userId: 'u1',
+          localDate: '2026-07-15',
+          itemKey: 'k1',
+          completedAt: now.add(const Duration(minutes: 1)),
+        ),
+      );
+      await completionRepo.markCompleted(
+        DailyPlanCompletionRecord(
+          userId: 'u1',
+          localDate: '2026-07-16',
+          itemKey: 'k1',
+          completedAt: now,
+        ),
+      );
+      await completionRepo.markCompleted(
+        DailyPlanCompletionRecord(
+          userId: 'u2',
+          localDate: '2026-07-15',
+          itemKey: 'k1',
+          completedAt: now,
+        ),
+      );
+
+      final u1today = await completionRepo.getCompletedItemKeys(
         userId: 'u1',
         localDate: '2026-07-15',
-        itemKey: 'k1',
-        completedAt: now,
-      ),
-    );
-    await completionRepo.markCompleted(
-      DailyPlanCompletionRecord(
-        userId: 'u1',
-        localDate: '2026-07-15',
-        itemKey: 'k1',
-        completedAt: now.add(const Duration(minutes: 1)),
-      ),
-    );
-    await completionRepo.markCompleted(
-      DailyPlanCompletionRecord(
+      );
+      expect(u1today, {'k1'});
+      expect(
+        await completionRepo.isCompleted(
+          userId: 'u1',
+          localDate: '2026-07-15',
+          itemKey: 'k1',
+        ),
+        isTrue,
+      );
+
+      final u1tomorrow = await completionRepo.getCompletedItemKeys(
         userId: 'u1',
         localDate: '2026-07-16',
-        itemKey: 'k1',
-        completedAt: now,
-      ),
-    );
-    await completionRepo.markCompleted(
-      DailyPlanCompletionRecord(
+      );
+      expect(u1tomorrow, {'k1'});
+
+      final u2 = await completionRepo.getCompletedItemKeys(
         userId: 'u2',
         localDate: '2026-07-15',
-        itemKey: 'k1',
-        completedAt: now,
-      ),
-    );
+      );
+      expect(u2, {'k1'});
 
-    final u1today = await completionRepo.getCompletedItemKeys(
-      userId: 'u1',
-      localDate: '2026-07-15',
-    );
-    expect(u1today, {'k1'});
-    expect(
-      await completionRepo.isCompleted(
+      await completionRepo.unmarkCompleted(
         userId: 'u1',
         localDate: '2026-07-15',
         itemKey: 'k1',
-      ),
-      isTrue,
-    );
-
-    final u1tomorrow = await completionRepo.getCompletedItemKeys(
-      userId: 'u1',
-      localDate: '2026-07-16',
-    );
-    expect(u1tomorrow, {'k1'});
-
-    final u2 = await completionRepo.getCompletedItemKeys(
-      userId: 'u2',
-      localDate: '2026-07-15',
-    );
-    expect(u2, {'k1'});
-
-    await completionRepo.unmarkCompleted(
-      userId: 'u1',
-      localDate: '2026-07-15',
-      itemKey: 'k1',
-    );
-    expect(
-      await completionRepo.getCompletedItemKeys(
-        userId: 'u1',
-        localDate: '2026-07-15',
-      ),
-      isEmpty,
-    );
-    expect(
-      await completionRepo.getCompletedItemKeys(
-        userId: 'u2',
-        localDate: '2026-07-15',
-      ),
-      {'k1'},
-    );
-  });
+      );
+      expect(
+        await completionRepo.getCompletedItemKeys(
+          userId: 'u1',
+          localDate: '2026-07-15',
+        ),
+        isEmpty,
+      );
+      expect(
+        await completionRepo.getCompletedItemKeys(
+          userId: 'u2',
+          localDate: '2026-07-15',
+        ),
+        {'k1'},
+      );
+    },
+  );
 
   test('eval history unique per user+date and prune', () async {
     await evalRepo.upsert(
@@ -124,8 +127,14 @@ void main() {
     expect(row, isNotNull);
     expect(row!.incompleteCount, 1);
     expect(row.wasNotified, isTrue);
-    expect(await evalRepo.hasEvaluated(userId: 'u1', localDate: '2026-07-15'), isTrue);
-    expect(await evalRepo.hasEvaluated(userId: 'u1', localDate: '2026-07-16'), isFalse);
+    expect(
+      await evalRepo.hasEvaluated(userId: 'u1', localDate: '2026-07-15'),
+      isTrue,
+    );
+    expect(
+      await evalRepo.hasEvaluated(userId: 'u1', localDate: '2026-07-16'),
+      isFalse,
+    );
 
     await completionRepo.markCompleted(
       DailyPlanCompletionRecord(

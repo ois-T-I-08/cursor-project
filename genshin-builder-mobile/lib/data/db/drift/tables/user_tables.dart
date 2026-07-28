@@ -28,8 +28,8 @@ class UserProgressTable extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {userId, characterId},
-      ];
+    {userId, characterId},
+  ];
 }
 
 class MaterialBookmarks extends Table {

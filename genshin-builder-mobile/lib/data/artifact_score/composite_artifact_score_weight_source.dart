@@ -10,8 +10,8 @@ class CompositeArtifactScoreWeightSource
     required ArtifactScoreWeightSource localSource,
     RefreshableArtifactScoreWeightSource? remoteSource,
     this.refreshInterval = const Duration(hours: 12),
-  })  : _localSource = localSource,
-        _remoteSource = remoteSource;
+  }) : _localSource = localSource,
+       _remoteSource = remoteSource;
 
   final ArtifactScoreWeightSource _localSource;
   final RefreshableArtifactScoreWeightSource? _remoteSource;
@@ -61,16 +61,15 @@ class CompositeArtifactScoreWeightSource
       logLocalConfigFailed(kind: _configKind, error: e);
       rethrow;
     }
-    final byId = {
-      for (final p in local) p.characterId: p,
-    };
+    final byId = {for (final p in local) p.characterId: p};
 
     final remote = _remoteSource;
     if (remote != null) {
       try {
-        final remoteProfiles = forceRemote
-            ? await remote.refreshProfiles()
-            : await remote.loadProfiles();
+        final remoteProfiles =
+            forceRemote
+                ? await remote.refreshProfiles()
+                : await remote.loadProfiles();
         for (final p in remoteProfiles) {
           byId[p.characterId] = p;
         }

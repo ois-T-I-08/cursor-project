@@ -7,7 +7,8 @@ String buildTalentSummaryText({
   required int talentSkill,
   required int talentBurst,
 }) {
-  final allMax = talentNormal >= talentLevelMax &&
+  final allMax =
+      talentNormal >= talentLevelMax &&
       talentSkill >= talentLevelMax &&
       talentBurst >= talentLevelMax;
   if (allMax) {

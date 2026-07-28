@@ -45,8 +45,7 @@ class LevelExpTableBuilder {
       for (final e in characterRaw.entries) e.key: (e.value as num).toInt(),
     };
 
-    final weaponRaw =
-        json['weaponExpByRarity'] as Map<String, dynamic>? ?? {};
+    final weaponRaw = json['weaponExpByRarity'] as Map<String, dynamic>? ?? {};
     final weaponExpByRarity = <int, Map<String, int>>{};
     for (final e in weaponRaw.entries) {
       final rarity = int.tryParse(e.key) ?? 0;
@@ -57,9 +56,10 @@ class LevelExpTableBuilder {
     }
 
     final marksRaw = json['levelMarks'] as List<dynamic>?;
-    final marks = marksRaw == null
-        ? levelMarks
-        : marksRaw.map((e) => (e as num).toInt()).toList(growable: false);
+    final marks =
+        marksRaw == null
+            ? levelMarks
+            : marksRaw.map((e) => (e as num).toInt()).toList(growable: false);
 
     return buildFromMaps(
       characterExp: characterExp,

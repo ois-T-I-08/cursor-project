@@ -17,21 +17,23 @@ class CharacterRecommendedArtifactSetsPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async =
-        ref.watch(characterRecommendedArtifactSetsProvider(characterId));
+    final async = ref.watch(
+      characterRecommendedArtifactSetsProvider(characterId),
+    );
     final theme = Theme.of(context);
 
     return async.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Center(
-          child: SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
+      loading:
+          () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
           ),
-        ),
-      ),
       error: (_, __) => const SizedBox.shrink(),
       data: (items) {
         if (items.isEmpty) return const SizedBox.shrink();
@@ -72,9 +74,8 @@ class _RecommendedSetTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final set = item.set;
-    final rateLabel = item.usageRate == null
-        ? null
-        : '${(item.usageRate! * 100).round()}%';
+    final rateLabel =
+        item.usageRate == null ? null : '${(item.usageRate! * 100).round()}%';
     final effectPreview = set.effects.isNotEmpty ? set.effects.first : null;
 
     return Card(
@@ -145,57 +146,58 @@ class _RecommendedSetTile extends StatelessWidget {
     final theme = Theme.of(context);
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            GameIconImage(
-              iconUrl: set.iconUrl,
-              size: 36,
-              borderRadius: 6,
-              fallback: Text(set.name.isNotEmpty ? set.name[0] : '?'),
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Text(set.name)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (rateLabel != null) ...[
-              Text(
-                '使用率 $rateLabel',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
+      builder:
+          (context) => AlertDialog(
+            title: Row(
+              children: [
+                GameIconImage(
+                  iconUrl: set.iconUrl,
+                  size: 36,
+                  borderRadius: 6,
+                  fallback: Text(set.name.isNotEmpty ? set.name[0] : '?'),
                 ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (set.effects.isEmpty)
-              Text(
-                'セット効果なし',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              )
-            else
-              for (var i = 0; i < set.effects.length; i++) ...[
-                if (i > 0) const SizedBox(height: 8),
-                Text(
-                  '${i == 0 ? '2セット' : '4セット'}: ${set.effects[i]}',
-                  style: theme.textTheme.bodyMedium,
-                ),
+                const SizedBox(width: 10),
+                Expanded(child: Text(set.name)),
               ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('閉じる'),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (rateLabel != null) ...[
+                  Text(
+                    '使用率 $rateLabel',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (set.effects.isEmpty)
+                  Text(
+                    'セット効果なし',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  )
+                else
+                  for (var i = 0; i < set.effects.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 8),
+                    Text(
+                      '${i == 0 ? '2セット' : '4セット'}: ${set.effects[i]}',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('閉じる'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 }

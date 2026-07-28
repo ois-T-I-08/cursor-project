@@ -29,14 +29,14 @@ class ArtifactStatWeights {
       );
 
   Map<String, dynamic> toJson() => {
-        'critRate': critRate,
-        'critDamage': critDamage,
-        'atkPercent': atkPercent,
-        'hpPercent': hpPercent,
-        'defPercent': defPercent,
-        'elementalMastery': elementalMastery,
-        'energyRecharge': energyRecharge,
-      };
+    'critRate': critRate,
+    'critDamage': critDamage,
+    'atkPercent': atkPercent,
+    'hpPercent': hpPercent,
+    'defPercent': defPercent,
+    'elementalMastery': elementalMastery,
+    'energyRecharge': energyRecharge,
+  };
 }
 
 class ArtifactScoreWeightProfile {

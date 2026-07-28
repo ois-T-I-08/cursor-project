@@ -1,16 +1,8 @@
 /// 攻略情報の出典区分（表示・データ双方で混同しない）
-enum GuideInsightSource {
-  akasha,
-  youtube,
-}
+enum GuideInsightSource { akasha, youtube }
 
 /// YouTube 由来の育成優先度（明示値のみ。信頼度からの推定はしない）
-enum InvestmentPriority {
-  high,
-  medium,
-  low,
-  none,
-}
+enum InvestmentPriority { high, medium, low, none }
 
 extension InvestmentPriorityLabel on InvestmentPriority {
   String get label {
@@ -152,10 +144,7 @@ class GuideCitation {
 }
 
 /// 武器候補の由来（構造化 API vs 旧文字列）
-enum GuideWeaponDataOrigin {
-  structured,
-  legacyPreference,
-}
+enum GuideWeaponDataOrigin { structured, legacyPreference }
 
 /// YouTube おすすめ武器（可能な限り weaponId 基準）
 class GuideWeaponRecommendation {
@@ -188,10 +177,7 @@ class GuideWeaponRecommendation {
 
 /// 聖遺物セット構成の1パート（例: 2セット / 4セット）
 class GuideArtifactSetPart {
-  const GuideArtifactSetPart({
-    required this.setId,
-    required this.pieces,
-  });
+  const GuideArtifactSetPart({required this.setId, required this.pieces});
 
   final String setId;
 

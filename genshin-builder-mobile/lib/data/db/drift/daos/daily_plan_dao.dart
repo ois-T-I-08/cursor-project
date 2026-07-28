@@ -14,11 +14,9 @@ class DailyPlanDao extends DatabaseAccessor<DriftAppDatabase>
     required String userId,
     required String localDate,
   }) {
-    return (select(dailyPlanCompletions)
-          ..where(
-            (t) => t.userId.equals(userId) & t.localDate.equals(localDate),
-          ))
-        .get();
+    return (select(dailyPlanCompletions)..where(
+      (t) => t.userId.equals(userId) & t.localDate.equals(localDate),
+    )).get();
   }
 
   Future<DailyPlanCompletion?> completionGet({
@@ -26,14 +24,12 @@ class DailyPlanDao extends DatabaseAccessor<DriftAppDatabase>
     required String localDate,
     required String itemKey,
   }) {
-    return (select(dailyPlanCompletions)
-          ..where(
-            (t) =>
-                t.userId.equals(userId) &
-                t.localDate.equals(localDate) &
-                t.itemKey.equals(itemKey),
-          ))
-        .getSingleOrNull();
+    return (select(dailyPlanCompletions)..where(
+      (t) =>
+          t.userId.equals(userId) &
+          t.localDate.equals(localDate) &
+          t.itemKey.equals(itemKey),
+    )).getSingleOrNull();
   }
 
   Future<void> completionUpsert({
@@ -57,38 +53,32 @@ class DailyPlanDao extends DatabaseAccessor<DriftAppDatabase>
     required String localDate,
     required String itemKey,
   }) {
-    return (delete(dailyPlanCompletions)
-          ..where(
-            (t) =>
-                t.userId.equals(userId) &
-                t.localDate.equals(localDate) &
-                t.itemKey.equals(itemKey),
-          ))
-        .go();
+    return (delete(dailyPlanCompletions)..where(
+      (t) =>
+          t.userId.equals(userId) &
+          t.localDate.equals(localDate) &
+          t.itemKey.equals(itemKey),
+    )).go();
   }
 
   Future<int> completionsPruneOlderThan({
     required String userId,
     required String olderThanLocalDate,
   }) {
-    return (delete(dailyPlanCompletions)
-          ..where(
-            (t) =>
-                t.userId.equals(userId) &
-                t.localDate.isSmallerThanValue(olderThanLocalDate),
-          ))
-        .go();
+    return (delete(dailyPlanCompletions)..where(
+      (t) =>
+          t.userId.equals(userId) &
+          t.localDate.isSmallerThanValue(olderThanLocalDate),
+    )).go();
   }
 
   Future<DailyPlanEvalHistoryData?> evalGet({
     required String userId,
     required String localDate,
   }) {
-    return (select(dailyPlanEvalHistory)
-          ..where(
-            (t) => t.userId.equals(userId) & t.localDate.equals(localDate),
-          ))
-        .getSingleOrNull();
+    return (select(dailyPlanEvalHistory)..where(
+      (t) => t.userId.equals(userId) & t.localDate.equals(localDate),
+    )).getSingleOrNull();
   }
 
   Future<void> evalUpsert({
@@ -113,12 +103,10 @@ class DailyPlanDao extends DatabaseAccessor<DriftAppDatabase>
     required String userId,
     required String olderThanLocalDate,
   }) {
-    return (delete(dailyPlanEvalHistory)
-          ..where(
-            (t) =>
-                t.userId.equals(userId) &
-                t.localDate.isSmallerThanValue(olderThanLocalDate),
-          ))
-        .go();
+    return (delete(dailyPlanEvalHistory)..where(
+      (t) =>
+          t.userId.equals(userId) &
+          t.localDate.isSmallerThanValue(olderThanLocalDate),
+    )).go();
   }
 }

@@ -304,9 +304,7 @@ void main() {
       final report = const GenerateAccountHealthReportUseCase()(
         snapshot: snapshot,
       );
-      final levelCat = report.categories.firstWhere(
-        (c) => c.name == 'キャラレベル',
-      );
+      final levelCat = report.categories.firstWhere((c) => c.name == 'キャラレベル');
       expect(levelCat.evaluated, isTrue);
     });
 

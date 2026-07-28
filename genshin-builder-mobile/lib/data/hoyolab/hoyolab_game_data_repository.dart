@@ -9,8 +9,8 @@ class HoyolabGameDataRepository {
   HoyolabGameDataRepository({
     required HoyolabRepository sessionRepository,
     HoyolabGameDataCache? cache,
-  })  : _session = sessionRepository,
-        _cache = cache ?? HoyolabGameDataCache();
+  }) : _session = sessionRepository,
+       _cache = cache ?? HoyolabGameDataCache();
 
   final HoyolabRepository _session;
   final HoyolabGameDataCache _cache;
@@ -32,10 +32,7 @@ class HoyolabGameDataRepository {
 
     final api = await _session.tryApi();
     if (api == null) {
-      return const OwnedCharactersFetchResult(
-        characters: {},
-        notLinked: true,
-      );
+      return const OwnedCharactersFetchResult(characters: {}, notLinked: true);
     }
 
     try {
@@ -86,9 +83,10 @@ class HoyolabGameDataRepository {
 
     try {
       final detail = await api.getCharacterBuild(characterId);
-      final build = detail == null
-          ? _buildFromSummary(summary)
-          : detail.mergeSummary(summary);
+      final build =
+          detail == null
+              ? _buildFromSummary(summary)
+              : detail.mergeSummary(summary);
       _cache.setCharacterBuild(characterId, build);
       return build;
     } on HoyolabApiException {
@@ -141,8 +139,7 @@ class HoyolabGameDataRepository {
       final builds = await api.getCharacterBuilds(missing);
       for (final build in builds) {
         final summary = lookupOwnedCharacter(owned, build.id);
-        final merged =
-            summary == null ? build : build.mergeSummary(summary);
+        final merged = summary == null ? build : build.mergeSummary(summary);
         _cache.setCharacterBuild(merged.id, merged);
         result[merged.id] = merged;
       }
@@ -169,7 +166,9 @@ class HoyolabGameDataRepository {
     return result;
   }
 
-  Future<AdventureStatus?> fetchAdventureStatus({bool forceRefresh = false}) async {
+  Future<AdventureStatus?> fetchAdventureStatus({
+    bool forceRefresh = false,
+  }) async {
     if (!forceRefresh) {
       final cached = _cache.getAdventure<AdventureStatus>(
         HoyolabConstants.adventureStatusCacheTtl,

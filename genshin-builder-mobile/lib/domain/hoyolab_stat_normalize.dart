@@ -121,17 +121,11 @@ String? _aliasToAppLabel(String label) {
 String? labelFromFilterName(String? filterName) {
   if (filterName == null || filterName.isEmpty) return null;
   return switch (filterName) {
-    'FIGHT_PROP_HP' ||
-    'FIGHT_PROP_BASE_HP' =>
-      'HP',
+    'FIGHT_PROP_HP' || 'FIGHT_PROP_BASE_HP' => 'HP',
     'FIGHT_PROP_HP_PERCENT' => 'HP%',
-    'FIGHT_PROP_ATTACK' ||
-    'FIGHT_PROP_BASE_ATTACK' =>
-      '攻撃力',
+    'FIGHT_PROP_ATTACK' || 'FIGHT_PROP_BASE_ATTACK' => '攻撃力',
     'FIGHT_PROP_ATTACK_PERCENT' => '攻撃力%',
-    'FIGHT_PROP_DEFENSE' ||
-    'FIGHT_PROP_BASE_DEFENSE' =>
-      '防御力',
+    'FIGHT_PROP_DEFENSE' || 'FIGHT_PROP_BASE_DEFENSE' => '防御力',
     'FIGHT_PROP_DEFENSE_PERCENT' => '防御力%',
     'FIGHT_PROP_ELEMENT_MASTERY' => '元素熟知',
     'FIGHT_PROP_CRITICAL' => '会心率',

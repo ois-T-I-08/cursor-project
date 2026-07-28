@@ -48,7 +48,10 @@ void main() {
         scoreType: ArtifactScoreType.atk,
       );
       expect(report.bySlot[ArtifactSlotKey.flower], greaterThan(0));
-      expect(report.overallPercent, lessThan(report.bySlot[ArtifactSlotKey.flower]!));
+      expect(
+        report.overallPercent,
+        lessThan(report.bySlot[ArtifactSlotKey.flower]!),
+      );
     });
   });
 
@@ -154,16 +157,21 @@ void main() {
 
       // 1部位のみの香菱は除外、4セット雷電と2セット鍾離のみ
       expect(grouped['15020']!.length, 2);
-      expect(grouped['15020']!.any((e) => e.character.id == xiangling.id), isFalse);
+      expect(
+        grouped['15020']!.any((e) => e.character.id == xiangling.id),
+        isFalse,
+      );
 
-      final four = grouped['15020']!
-          .firstWhere((e) => e.character.id == raiden.id);
+      final four = grouped['15020']!.firstWhere(
+        (e) => e.character.id == raiden.id,
+      );
       expect(four.isFourSet, isTrue);
       expect(four.companionSets, isEmpty);
       expect(four.artifactCompleted, isTrue);
 
-      final two = grouped['15020']!
-          .firstWhere((e) => e.character.id == zhongli.id);
+      final two = grouped['15020']!.firstWhere(
+        (e) => e.character.id == zhongli.id,
+      );
       expect(two.isTwoSet, isTrue);
       expect(two.companionSets.length, 2);
       expect(two.companionSets.map((s) => s.setName), contains('剣闘士のフィナーレ'));
@@ -202,8 +210,7 @@ void main() {
             // HoYoLAB 等が別言語名でも icon で解決できる
             ArtifactSlotKey.flower: const ArtifactPiece(
               setName: 'Scroll of the Hero of Cinder City',
-              iconUrl:
-                  'https://enka.network/ui/UI_RelicIcon_15037_4.png',
+              iconUrl: 'https://enka.network/ui/UI_RelicIcon_15037_4.png',
             ),
             ArtifactSlotKey.plume: const ArtifactPiece(
               setName: '未知の名前',
@@ -341,10 +348,7 @@ void main() {
         sets: [set],
         equippedBySetId: const {},
         charactersById: {raiden.id: raiden, xiangling.id: xiangling},
-        charactersByName: {
-          raiden.name: raiden,
-          xiangling.name: xiangling,
-        },
+        charactersByName: {raiden.name: raiden, xiangling.name: xiangling},
         akashaByEnglishSet: {
           'Emblem of Severed Fate': [
             const ArtifactSetRecommendationHit(
@@ -365,4 +369,3 @@ void main() {
     });
   });
 }
-

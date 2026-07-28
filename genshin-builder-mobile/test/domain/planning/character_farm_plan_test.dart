@@ -5,73 +5,73 @@ import 'package:genshin_builder_mobile/domain/planning/resin_farm_cost_table.dar
 import 'package:genshin_builder_mobile/domain/planning/upgrade_option.dart';
 
 ResinFarmCostTable _table() => ResinFarmCostTable.fromJson({
-      'version': 2,
-      'meta': {
-        'naturalResinPerDay': 180,
-        'condensedResinValue': 40,
-        'synthesisRatio': 3,
-        'weekdayLabels': ['月', '火', '水', '木', '金', '土', '日'],
-      },
-      'kinds': {
-        'talentDomain': {
-          'resinPerRun': 20,
-          'assumedDropsPerRun': 2.2,
-          'contentLabel': '熟知秘境',
-        },
-        'weaponDomain': {
-          'resinPerRun': 20,
-          'assumedDropsPerRun': 2.2,
-          'contentLabel': '煉武秘境',
-        },
-        'artifactDomain': {
-          'resinPerRun': 20,
-          'assumedDropsPerRun': 1,
-          'contentLabel': '聖遺物秘境',
-        },
-        'weeklyBoss': {
-          'resinPerRun': 30,
-          'assumedDropsPerRun': 1,
-          'assumedDropsPerRunMin': 1,
-          'assumedDropsPerRunMax': 2,
-          'challengesPerWeek': 3,
-          'contentLabel': '週ボス',
-        },
-        'worldBoss': {
-          'resinPerRun': 40,
-          'assumedDropsPerRun': 2,
-          'assumedDropsPerRunMin': 1.5,
-          'assumedDropsPerRunMax': 2.5,
-          'contentLabel': 'フィールドボス',
-        },
-        'leyLineExp': {
-          'resinPerRun': 20,
-          'assumedHeroWitEquivalentPerRun': 2.5,
-          'contentLabel': '地脈の花（経験値）',
-        },
-        'leyLineMora': {
-          'resinPerRun': 20,
-          'assumedMoraPerRun': 60000,
-          'contentLabel': 'モラ地脈',
-        },
-      },
-      'zeroResinCategories': [
-        'localSpecialtyLiyue',
-        'characterandWeaponEnhancementMaterial',
-      ],
-    });
+  'version': 2,
+  'meta': {
+    'naturalResinPerDay': 180,
+    'condensedResinValue': 40,
+    'synthesisRatio': 3,
+    'weekdayLabels': ['月', '火', '水', '木', '金', '土', '日'],
+  },
+  'kinds': {
+    'talentDomain': {
+      'resinPerRun': 20,
+      'assumedDropsPerRun': 2.2,
+      'contentLabel': '熟知秘境',
+    },
+    'weaponDomain': {
+      'resinPerRun': 20,
+      'assumedDropsPerRun': 2.2,
+      'contentLabel': '煉武秘境',
+    },
+    'artifactDomain': {
+      'resinPerRun': 20,
+      'assumedDropsPerRun': 1,
+      'contentLabel': '聖遺物秘境',
+    },
+    'weeklyBoss': {
+      'resinPerRun': 30,
+      'assumedDropsPerRun': 1,
+      'assumedDropsPerRunMin': 1,
+      'assumedDropsPerRunMax': 2,
+      'challengesPerWeek': 3,
+      'contentLabel': '週ボス',
+    },
+    'worldBoss': {
+      'resinPerRun': 40,
+      'assumedDropsPerRun': 2,
+      'assumedDropsPerRunMin': 1.5,
+      'assumedDropsPerRunMax': 2.5,
+      'contentLabel': 'フィールドボス',
+    },
+    'leyLineExp': {
+      'resinPerRun': 20,
+      'assumedHeroWitEquivalentPerRun': 2.5,
+      'contentLabel': '地脈の花（経験値）',
+    },
+    'leyLineMora': {
+      'resinPerRun': 20,
+      'assumedMoraPerRun': 60000,
+      'contentLabel': 'モラ地脈',
+    },
+  },
+  'zeroResinCategories': [
+    'localSpecialtyLiyue',
+    'characterandWeaponEnhancementMaterial',
+  ],
+});
 
 DailyMaterialSeries _prosperity() => const DailyMaterialSeries(
-      id: 'prosperity',
-      name: '繁栄',
-      region: '璃月',
-      kind: DailyMaterialKind.talentBook,
-      days: [1, 4],
-      materialIds: ['104311', '104312', '104313'], // 教え・導き・哲学
-    );
+  id: 'prosperity',
+  name: '繁栄',
+  region: '璃月',
+  kind: DailyMaterialKind.talentBook,
+  days: [1, 4],
+  materialIds: ['104311', '104312', '104313'], // 教え・導き・哲学
+);
 
 Map<String, DailyMaterialSeries> _index(DailyMaterialSeries s) => {
-      for (final id in s.materialIds) id: s,
-    };
+  for (final id in s.materialIds) id: s,
+};
 
 final _now = DateTime.utc(2026, 1, 1);
 
@@ -95,7 +95,9 @@ void main() {
         table: table,
         nowUtc: _now,
       );
-      final exp = plan.sections.singleWhere((s) => s.kind == ResinFarmKind.leyLineExp);
+      final exp = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.leyLineExp,
+      );
       expect(exp.runsExpected, 72);
       expect(exp.resinTotal, 1440);
       expect(exp.materials.single.shortage, 180);
@@ -117,7 +119,9 @@ void main() {
         table: table,
         nowUtc: _now,
       );
-      final exp = plan.sections.singleWhere((s) => s.kind == ResinFarmKind.leyLineExp);
+      final exp = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.leyLineExp,
+      );
       expect(exp.runsExpected, 1);
       expect(exp.resinTotal, 20);
     });
@@ -137,7 +141,9 @@ void main() {
         table: table,
         nowUtc: _now,
       );
-      final mora = plan.sections.singleWhere((s) => s.kind == ResinFarmKind.leyLineMora);
+      final mora = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.leyLineMora,
+      );
       expect(mora.runsExpected, 12);
       expect(mora.resinTotal, 240);
     });
@@ -160,8 +166,9 @@ void main() {
         materialIndex: _index(series),
         nowUtc: _now,
       );
-      final talent =
-          plan.sections.singleWhere((s) => s.kind == ResinFarmKind.talentDomain);
+      final talent = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.talentDomain,
+      );
       expect(talent.runsExpected, 7);
       expect(talent.resinTotal, 140);
       expect(talent.openWeekdayLabels, containsAll(['月', '木', '日']));
@@ -188,8 +195,9 @@ void main() {
         materialIndex: _index(series),
         nowUtc: _now,
       );
-      final talent =
-          plan.sections.singleWhere((s) => s.kind == ResinFarmKind.talentDomain);
+      final talent = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.talentDomain,
+      );
       expect(talent.runsExpected, 1);
       expect(talent.resinTotal, 20);
     });
@@ -210,7 +218,9 @@ void main() {
         table: table,
         nowUtc: _now,
       );
-      final exp = plan.sections.singleWhere((s) => s.kind == ResinFarmKind.leyLineExp);
+      final exp = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.leyLineExp,
+      );
       final line = exp.materials.single;
       expect(line.needed, 46);
       expect(line.owned, 18);
@@ -256,7 +266,9 @@ void main() {
         table: table,
         nowUtc: _now,
       );
-      final mora = plan.sections.singleWhere((s) => s.kind == ResinFarmKind.leyLineMora);
+      final mora = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.leyLineMora,
+      );
       expect(mora.runsExpected, 2);
       expect(mora.resinTotal, 40);
     });
@@ -273,14 +285,13 @@ void main() {
           ),
         ],
         table: table,
-        materialCategories: {
-          'boss_mat': 'characterLevelUpMaterial',
-        },
+        materialCategories: {'boss_mat': 'characterLevelUpMaterial'},
         materialNames: {'boss_mat': 'ボス素材'},
         nowUtc: _now,
       );
-      final boss =
-          plan.sections.singleWhere((s) => s.kind == ResinFarmKind.worldBoss);
+      final boss = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.worldBoss,
+      );
       expect(boss.estimateMode, FarmEstimateMode.range);
       // expected: ceil(16/2)=8; min drops 2.5 → ceil(16/2.5)=7; max runs ceil(16/1.5)=11
       expect(boss.runsExpected, 8);
@@ -316,8 +327,9 @@ void main() {
         materialNames: {'weekly_mat': '週ボス素材'},
         nowUtc: _now,
       );
-      final weekly =
-          plan.sections.singleWhere((s) => s.kind == ResinFarmKind.weeklyBoss);
+      final weekly = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.weeklyBoss,
+      );
       expect(weekly.estimateMode, FarmEstimateMode.range);
       // ceil(4/1)=4 max runs, ceil(4/2)=2 min runs
       expect(weekly.runsMin, 2);
@@ -338,17 +350,12 @@ void main() {
             optionId: 'o1',
             characterId: 'c1',
             optionType: 'ascension',
-            materialsCost: {
-              'qingxin': 42,
-              '104003': 5,
-            },
+            materialsCost: {'qingxin': 42, '104003': 5},
             moraCost: 60000,
           ),
         ],
         table: table,
-        materialCategories: {
-          'qingxin': 'localSpecialtyLiyue',
-        },
+        materialCategories: {'qingxin': 'localSpecialtyLiyue'},
         materialNames: {'qingxin': '清心'},
         nowUtc: _now,
       );
@@ -358,7 +365,10 @@ void main() {
       final resinKinds = plan.sections.map((s) => s.kind).toSet();
       expect(resinKinds, isNot(contains(ResinFarmKind.zeroResin)));
       // only exp + mora
-      expect(plan.totalResin, plan.sections.fold<int>(0, (s, x) => s + x.resinTotal));
+      expect(
+        plan.totalResin,
+        plan.sections.fold<int>(0, (s, x) => s + x.resinTotal),
+      );
       expect(
         plan.sections.every((s) => s.kind != ResinFarmKind.zeroResin),
         isTrue,
@@ -389,7 +399,9 @@ void main() {
         table: table,
         nowUtc: _now,
       );
-      final exp = plan.sections.singleWhere((s) => s.kind == ResinFarmKind.leyLineExp);
+      final exp = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.leyLineExp,
+      );
       final line = exp.materials.single;
       expect(line.needed, 35);
       expect(line.owned, 10); // max, not 20

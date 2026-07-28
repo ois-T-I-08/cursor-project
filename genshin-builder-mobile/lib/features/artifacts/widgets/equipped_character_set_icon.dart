@@ -23,7 +23,8 @@ class EquippedCharacterSetIcon extends StatelessWidget {
     final pad = setIconSize * 0.55;
     final total = size + pad * 2;
 
-    final companions = entry.isTwoSet ? entry.companionSets : const <ArtifactSetPieceCount>[];
+    final companions =
+        entry.isTwoSet ? entry.companionSets : const <ArtifactSetPieceCount>[];
     // 右上は✓用に空け、上・左・下・右下へ配置
     final slots = <Alignment>[
       Alignment.topCenter,
@@ -78,10 +79,7 @@ class EquippedCharacterSetIcon extends StatelessWidget {
               for (var i = 0; i < companions.length && i < slots.length; i++)
                 Align(
                   alignment: slots[i],
-                  child: _SetBadge(
-                    set: companions[i],
-                    size: setIconSize,
-                  ),
+                  child: _SetBadge(set: companions[i], size: setIconSize),
                 ),
             ],
           ),

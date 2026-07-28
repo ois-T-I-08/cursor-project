@@ -31,7 +31,8 @@ void main() {
             coinCost: 12500,
           ),
         ],
-        resolveIcon: (id) => id == '200001' ? 'https://example.com/icon.png' : null,
+        resolveIcon:
+            (id) => id == '200001' ? 'https://example.com/icon.png' : null,
       );
 
       final mat = lines.firstWhere((l) => l.materialId == '200001');

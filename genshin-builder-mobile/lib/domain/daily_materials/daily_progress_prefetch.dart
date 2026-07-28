@@ -6,7 +6,8 @@ import 'daily_material_planner.dart';
 Set<String> characterIdsNeedingTalentMaterialsOnDay({
   required DailyMaterialSchedule schedule,
   required int weekday,
-  required Map<String, Map<String, List<TalentLevelUpgrade>>> talentsByCharacterId,
+  required Map<String, Map<String, List<TalentLevelUpgrade>>>
+  talentsByCharacterId,
 }) {
   final todayIds = <String>{};
   for (final series in schedule.seriesForDay(

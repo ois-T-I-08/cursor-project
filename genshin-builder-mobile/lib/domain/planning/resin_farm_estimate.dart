@@ -55,9 +55,8 @@ int estimateResinCostForUpgradeOption({
     final cost = table.costFor(ResinFarmKind.leyLineExp);
     if (cost != null) {
       final heroExp = expBooks.firstWhere((b) => b.id == '104003').exp;
-      final perRun = cost.assumedHeroWitEquivalentPerRun ??
-          cost.assumedDropsPerRun ??
-          1.0;
+      final perRun =
+          cost.assumedHeroWitEquivalentPerRun ?? cost.assumedDropsPerRun ?? 1.0;
       if (perRun > 0) {
         final runs = ((expShortage / heroExp) / perRun).ceil();
         resin += runs * cost.resinPerRun;
@@ -65,9 +64,7 @@ int estimateResinCostForUpgradeOption({
     }
   }
 
-  final moraNeeded = useRemaining
-      ? _remainingMora(option)
-      : option.moraCost;
+  final moraNeeded = useRemaining ? _remainingMora(option) : option.moraCost;
   if (moraNeeded > 0) {
     resin += _resinForMora(moraNeeded, table);
   }

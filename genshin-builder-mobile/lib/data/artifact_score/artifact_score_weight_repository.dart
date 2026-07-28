@@ -12,7 +12,9 @@ class ArtifactScoreWeightRepository {
     return _source.loadProfiles();
   }
 
-  Future<ArtifactScoreWeightProfile?> findByCharacterId(String characterId) async {
+  Future<ArtifactScoreWeightProfile?> findByCharacterId(
+    String characterId,
+  ) async {
     final profiles = await loadProfiles();
     for (final profile in profiles) {
       if (profile.characterId == characterId) return profile;
@@ -32,8 +34,7 @@ class ArtifactScoreWeightRepository {
         .toList(growable: false);
 
     if (missing.isNotEmpty && _source is RefreshableArtifactScoreWeightSource) {
-      profiles =
-          await _source.refreshProfiles();
+      profiles = await _source.refreshProfiles();
       profileIds = profiles.map((e) => e.characterId).toSet();
       missing = characters
           .where((c) => !profileIds.contains(c.id))

@@ -8,8 +8,8 @@ class SaveCharacterProgressUseCase {
   const SaveCharacterProgressUseCase({
     required ProgressRepository progress,
     ProgressMutationRepository? mutation,
-  })  : _progress = progress,
-        _mutation = mutation;
+  }) : _progress = progress,
+       _mutation = mutation;
 
   final ProgressRepository _progress;
   final ProgressMutationRepository? _mutation;

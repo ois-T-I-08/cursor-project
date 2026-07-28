@@ -21,15 +21,13 @@ class SyncStatus {
   int get missingCharacterUpgrades =>
       (characters - characterUpgrades).clamp(0, characters);
 
-  int get missingWeaponUpgrades =>
-      (weapons - weaponUpgrades).clamp(0, weapons);
+  int get missingWeaponUpgrades => (weapons - weaponUpgrades).clamp(0, weapons);
 
   bool get expTableReady => levelExpSegments >= 32;
 
   bool get isUnsynced => characters == 0;
 
-  bool get needsInitialUpgradeSync =>
-      characters > 0 && characterUpgrades == 0;
+  bool get needsInitialUpgradeSync => characters > 0 && characterUpgrades == 0;
 
   /// ローカルにマスタはあるが突破データが不足（新キャラ追加後など）
   bool get hasMissingUpgrades =>
@@ -74,8 +72,7 @@ class SyncProgress {
 
   double get fraction => total <= 0 ? 0 : (current / total).clamp(0.0, 1.0);
 
-  bool get isIndeterminate =>
-      total <= 0 && phase != SyncPhase.iconPreload;
+  bool get isIndeterminate => total <= 0 && phase != SyncPhase.iconPreload;
 }
 
 extension SyncProgressDisplay on SyncProgress {
@@ -110,12 +107,12 @@ enum SyncPhase {
 
 extension SyncPhaseLabel on SyncPhase {
   String get label => switch (this) {
-        SyncPhase.master => 'マスタ一覧',
-        SyncPhase.expMaterials => '経験値素材',
-        SyncPhase.levelExp => 'レベルEXP表',
-        SyncPhase.characterUpgrades => 'キャラ突破データ',
-        SyncPhase.weaponUpgrades => '武器突破データ',
-        SyncPhase.iconPreload => 'アイコン読み込み',
-        SyncPhase.finishing => '完了処理',
-      };
+    SyncPhase.master => 'マスタ一覧',
+    SyncPhase.expMaterials => '経験値素材',
+    SyncPhase.levelExp => 'レベルEXP表',
+    SyncPhase.characterUpgrades => 'キャラ突破データ',
+    SyncPhase.weaponUpgrades => '武器突破データ',
+    SyncPhase.iconPreload => 'アイコン読み込み',
+    SyncPhase.finishing => '完了処理',
+  };
 }

@@ -36,9 +36,7 @@ class ArtifactSetRecommendationsLoader {
               .map((x) => x.toString())
               .toList(growable: false),
       },
-      aliases: {
-        for (final e in aliasRaw.entries) e.key: e.value.toString(),
-      },
+      aliases: {for (final e in aliasRaw.entries) e.key: e.value.toString()},
     );
   }
 }

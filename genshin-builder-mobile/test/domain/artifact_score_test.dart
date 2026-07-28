@@ -90,10 +90,7 @@ void main() {
       scoreType: 'unknown',
     );
     expect(
-      resolveArtifactScoreType(
-        byName,
-        nameOverrides: _sampleNameOverrides,
-      ),
+      resolveArtifactScoreType(byName, nameOverrides: _sampleNameOverrides),
       ArtifactScoreType.em,
     );
 
@@ -108,19 +105,13 @@ void main() {
       scoreType: 'atk',
     );
     expect(
-      resolveArtifactScoreType(
-        genericAtk,
-        nameOverrides: _sampleNameOverrides,
-      ),
+      resolveArtifactScoreType(genericAtk, nameOverrides: _sampleNameOverrides),
       ArtifactScoreType.hp,
     );
   });
 
   test('user score type storage uses user prefix', () {
-    expect(
-      userArtifactScoreTypeFromStorage('user:hp'),
-      ArtifactScoreType.hp,
-    );
+    expect(userArtifactScoreTypeFromStorage('user:hp'), ArtifactScoreType.hp);
     expect(userArtifactScoreTypeFromStorage('hp'), isNull);
     expect(userArtifactScoreTypeFromStorage('atk'), isNull);
     expect(
@@ -151,7 +142,9 @@ void main() {
 
   test('infer score type from built-in weights', () {
     expect(
-      inferArtifactScoreTypeFromWeights(scoreWeightsForType(ArtifactScoreType.hp)),
+      inferArtifactScoreTypeFromWeights(
+        scoreWeightsForType(ArtifactScoreType.hp),
+      ),
       ArtifactScoreType.hp,
     );
     expect(

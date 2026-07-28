@@ -20,10 +20,10 @@ final amberDetailRepositoryProvider = Provider<AmberDetailRepository>((ref) {
 /// Akasha 公開ビルドからキャラ別武器使用率を取得
 final akashaWeaponUsageRepositoryProvider =
     Provider<AkashaWeaponUsageRepository>((ref) {
-  final repo = AkashaWeaponUsageRepository();
-  ref.onDispose(repo.dispose);
-  return repo;
-});
+      final repo = AkashaWeaponUsageRepository();
+      ref.onDispose(repo.dispose);
+      return repo;
+    });
 
 /// メタランキング（現状は Akasha 武器使用率）
 final metaRankingSourceProvider = Provider<MetaRankingSource>((ref) {
@@ -35,27 +35,33 @@ final metaRankingSourceProvider = Provider<MetaRankingSource>((ref) {
 /// キャラ別武器使用率（失敗時は heuristic 空スナップショット）
 final weaponUsageRatesProvider =
     FutureProvider.family<WeaponUsageSnapshot, String>((ref, characterId) {
-  return ref
-      .watch(akashaWeaponUsageRepositoryProvider)
-      .getUsageRates(characterId);
-});
+      return ref
+          .watch(akashaWeaponUsageRepositoryProvider)
+          .getUsageRates(characterId);
+    });
 
 /// キャラのスキル詳細 + ステータス計算用データ（失敗時 null）
-final avatarDetailProvider =
-    FutureProvider.family<AvatarDetailData?, String>((ref, characterId) {
+final avatarDetailProvider = FutureProvider.family<AvatarDetailData?, String>((
+  ref,
+  characterId,
+) {
   return ref.watch(amberDetailRepositoryProvider).getAvatarDetail(characterId);
 });
 
 /// 武器のステータス計算用データ（未装備・失敗時 null）
-final weaponStatsProvider =
-    FutureProvider.family<WeaponStatsData?, String>((ref, weaponId) {
+final weaponStatsProvider = FutureProvider.family<WeaponStatsData?, String>((
+  ref,
+  weaponId,
+) {
   if (weaponId.isEmpty) return Future.value(null);
   return ref.watch(amberDetailRepositoryProvider).getWeaponStats(weaponId);
 });
 
 /// 武器の詳細（効果・精錬含む。未装備・失敗時 null）
-final weaponDetailProvider =
-    FutureProvider.family<WeaponDetailData?, String>((ref, weaponId) {
+final weaponDetailProvider = FutureProvider.family<WeaponDetailData?, String>((
+  ref,
+  weaponId,
+) {
   if (weaponId.isEmpty) return Future.value(null);
   return ref.watch(amberDetailRepositoryProvider).getWeaponDetail(weaponId);
 });

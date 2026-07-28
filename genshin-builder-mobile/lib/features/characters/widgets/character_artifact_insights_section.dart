@@ -23,8 +23,9 @@ class CharacterArtifactInsightsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final akashaAsync =
-        ref.watch(characterRecommendedArtifactSetsProvider(characterId));
+    final akashaAsync = ref.watch(
+      characterRecommendedArtifactSetsProvider(characterId),
+    );
     final guideAsync = ref.watch(buildRecommendationProvider(characterId));
     final setsAsync = ref.watch(artifactSetsProvider);
 
@@ -32,11 +33,12 @@ class CharacterArtifactInsightsSection extends ConsumerWidget {
       akashaAsync: akashaAsync,
       guideAsync: guideAsync,
       artifactSets: setsAsync.valueOrNull ?? const [],
-      onRetryAkasha: () => ref.invalidate(
-        characterRecommendedArtifactSetsProvider(characterId),
-      ),
-      onRetryGuide: () =>
-          ref.invalidate(buildRecommendationProvider(characterId)),
+      onRetryAkasha:
+          () => ref.invalidate(
+            characterRecommendedArtifactSetsProvider(characterId),
+          ),
+      onRetryGuide:
+          () => ref.invalidate(buildRecommendationProvider(characterId)),
     );
   }
 }
@@ -81,10 +83,11 @@ class CharacterArtifactInsightsView extends StatelessWidget {
           const SizedBox(height: 8),
           akashaAsync.when(
             loading: () => const GuideSectionLoading(),
-            error: (_, __) => GuideSectionMessage(
-              message: '使用率データを取得できませんでした。',
-              onRetry: onRetryAkasha,
-            ),
+            error:
+                (_, __) => GuideSectionMessage(
+                  message: '使用率データを取得できませんでした。',
+                  onRetry: onRetryAkasha,
+                ),
             data: (items) {
               final akasha = items.where((e) => e.isFromAkasha).toList();
               final fallback = items.where((e) => !e.isFromAkasha).toList();
@@ -194,10 +197,7 @@ class CharacterArtifactInsightsView extends StatelessWidget {
 }
 
 class _AkashaSetTile extends StatelessWidget {
-  const _AkashaSetTile({
-    required this.item,
-    required this.rank,
-  });
+  const _AkashaSetTile({required this.item, required this.rank});
 
   final CharacterRecommendedArtifactSet item;
   final int rank;
@@ -206,9 +206,10 @@ class _AkashaSetTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final set = item.set;
-    final rateLabel = item.usageRate == null
-        ? 'データなし'
-        : '${(item.usageRate! * 100).round()}%';
+    final rateLabel =
+        item.usageRate == null
+            ? 'データなし'
+            : '${(item.usageRate! * 100).round()}%';
 
     return Card(
       margin: EdgeInsets.zero,
@@ -257,10 +258,7 @@ class _AkashaSetTile extends StatelessWidget {
 }
 
 class _YoutubeArtifactTile extends StatelessWidget {
-  const _YoutubeArtifactTile({
-    required this.item,
-    required this.catalog,
-  });
+  const _YoutubeArtifactTile({required this.item, required this.catalog});
 
   final GuideArtifactRecommendation item;
   final List<ArtifactSetDetail> catalog;

@@ -43,7 +43,10 @@ void main() {
   test('clearAllSettings removes consent keys (re-consent required)', () async {
     final db = await AppDatabase.openInMemory();
     addTearDown(db.close);
-    await db.setSetting(LegalConsentVersions.hoyolabDisclosureKey, '2026-07-26');
+    await db.setSetting(
+      LegalConsentVersions.hoyolabDisclosureKey,
+      '2026-07-26',
+    );
     await db.clearAllSettings();
     expect(
       await db.getSetting(LegalConsentVersions.hoyolabDisclosureKey),

@@ -41,9 +41,9 @@ class CharacterDetailState {
   });
 
   factory CharacterDetailState.initial() => CharacterDetailState(
-        artifacts: createEmptyArtifactState(),
-        artifactScoreWeights: scoreWeightsForType(ArtifactScoreType.atk),
-      );
+    artifacts: createEmptyArtifactState(),
+    artifactScoreWeights: scoreWeightsForType(ArtifactScoreType.atk),
+  );
 
   final bool loading;
   final String? error;
@@ -78,17 +78,17 @@ class CharacterDetailState {
   final bool artifactCompleted;
 
   CharacterBuildSnapshot snapshotFromCurrent() => CharacterBuildSnapshot(
-        level: level,
-        constellation: constellation,
-        talentNormal: talentNormal,
-        talentSkill: talentSkill,
-        talentBurst: talentBurst,
-        weaponId: weaponId,
-        weaponName: weaponName,
-        weaponRarity: weaponRarity,
-        weaponLevel: weaponLevel,
-        artifacts: copyArtifactState(artifacts),
-      );
+    level: level,
+    constellation: constellation,
+    talentNormal: talentNormal,
+    talentSkill: talentSkill,
+    talentBurst: talentBurst,
+    weaponId: weaponId,
+    weaponName: weaponName,
+    weaponRarity: weaponRarity,
+    weaponLevel: weaponLevel,
+    artifacts: copyArtifactState(artifacts),
+  );
 
   CharacterDetailState copyWith({
     bool? loading,
@@ -121,40 +121,37 @@ class CharacterDetailState {
     ArtifactStatWeights? artifactScoreWeights,
     bool? artifactScoreTypeUserSet,
     bool? artifactCompleted,
-  }) =>
-      CharacterDetailState(
-        loading: loading ?? this.loading,
-        error: clearError ? null : (error ?? this.error),
-        fetchedSnapshot: fetchedSnapshot ?? this.fetchedSnapshot,
-        level: level ?? this.level,
-        targetLevel: targetLevel ?? this.targetLevel,
-        constellation: constellation ?? this.constellation,
-        talentNormal: talentNormal ?? this.talentNormal,
-        talentSkill: talentSkill ?? this.talentSkill,
-        talentBurst: talentBurst ?? this.talentBurst,
-        weaponLevel: weaponLevel ?? this.weaponLevel,
-        targetWeaponLevel: targetWeaponLevel ?? this.targetWeaponLevel,
-        weaponId: weaponId ?? this.weaponId,
-        weaponName: weaponName ?? this.weaponName,
-        weaponRarity: weaponRarity ?? this.weaponRarity,
-        artifacts: artifacts ?? this.artifacts,
-        character: character ?? this.character,
-        progress: progress ?? this.progress,
-        weapons: weapons ?? this.weapons,
-        promotes: promotes ?? this.promotes,
-        weaponPromotes: weaponPromotes ?? this.weaponPromotes,
-        talents: talents ?? this.talents,
-        materials: materials ?? this.materials,
-        hoyolabSynced: hoyolabSynced ?? this.hoyolabSynced,
-        lastHoyolabFetchedAt:
-            lastHoyolabFetchedAt ?? this.lastHoyolabFetchedAt,
-        artifactScoreType: artifactScoreType ?? this.artifactScoreType,
-        resolvedArtifactScoreType:
-            resolvedArtifactScoreType ?? this.resolvedArtifactScoreType,
-        artifactScoreWeights:
-            artifactScoreWeights ?? this.artifactScoreWeights,
-        artifactScoreTypeUserSet:
-            artifactScoreTypeUserSet ?? this.artifactScoreTypeUserSet,
-        artifactCompleted: artifactCompleted ?? this.artifactCompleted,
-      );
+  }) => CharacterDetailState(
+    loading: loading ?? this.loading,
+    error: clearError ? null : (error ?? this.error),
+    fetchedSnapshot: fetchedSnapshot ?? this.fetchedSnapshot,
+    level: level ?? this.level,
+    targetLevel: targetLevel ?? this.targetLevel,
+    constellation: constellation ?? this.constellation,
+    talentNormal: talentNormal ?? this.talentNormal,
+    talentSkill: talentSkill ?? this.talentSkill,
+    talentBurst: talentBurst ?? this.talentBurst,
+    weaponLevel: weaponLevel ?? this.weaponLevel,
+    targetWeaponLevel: targetWeaponLevel ?? this.targetWeaponLevel,
+    weaponId: weaponId ?? this.weaponId,
+    weaponName: weaponName ?? this.weaponName,
+    weaponRarity: weaponRarity ?? this.weaponRarity,
+    artifacts: artifacts ?? this.artifacts,
+    character: character ?? this.character,
+    progress: progress ?? this.progress,
+    weapons: weapons ?? this.weapons,
+    promotes: promotes ?? this.promotes,
+    weaponPromotes: weaponPromotes ?? this.weaponPromotes,
+    talents: talents ?? this.talents,
+    materials: materials ?? this.materials,
+    hoyolabSynced: hoyolabSynced ?? this.hoyolabSynced,
+    lastHoyolabFetchedAt: lastHoyolabFetchedAt ?? this.lastHoyolabFetchedAt,
+    artifactScoreType: artifactScoreType ?? this.artifactScoreType,
+    resolvedArtifactScoreType:
+        resolvedArtifactScoreType ?? this.resolvedArtifactScoreType,
+    artifactScoreWeights: artifactScoreWeights ?? this.artifactScoreWeights,
+    artifactScoreTypeUserSet:
+        artifactScoreTypeUserSet ?? this.artifactScoreTypeUserSet,
+    artifactCompleted: artifactCompleted ?? this.artifactCompleted,
+  );
 }

@@ -36,12 +36,14 @@ class CharacterDetailHeader extends ConsumerWidget {
         elementLabelMap[character.element] ?? character.element;
     final weaponLabel =
         weaponTypeLabelMap[character.weaponType] ?? character.weaponType;
-    final elementColor = elementColorMap.containsKey(character.element)
-        ? Color(elementColorMap[character.element]!)
-        : theme.colorScheme.primary;
+    final elementColor =
+        elementColorMap.containsKey(character.element)
+            ? Color(elementColorMap[character.element]!)
+            : theme.colorScheme.primary;
 
     final detailAsync = ref.watch(avatarDetailProvider(character.id));
-    final constellations = detailAsync.valueOrNull?.constellations ??
+    final constellations =
+        detailAsync.valueOrNull?.constellations ??
         const <ConstellationDetailData>[];
 
     return Padding(
@@ -143,9 +145,9 @@ class _InfoChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w600,
-            ),
+          color: foreground,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

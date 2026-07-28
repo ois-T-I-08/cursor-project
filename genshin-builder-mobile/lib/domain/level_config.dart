@@ -29,7 +29,6 @@ const characterExpBetweenMarks = <String, int>{
 };
 // DB / 同期の正本は assets/config/level_exp_table.json（本マップはキャッシュ未使用時のフォールバック）
 
-
 const double weaponExpMultiplier = 1.5;
 
 const int talentLevelMax = 10;

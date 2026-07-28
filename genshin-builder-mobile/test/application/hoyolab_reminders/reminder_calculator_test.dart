@@ -49,10 +49,7 @@ void main() {
         now: now,
       );
       expect(d.type, ReminderDecisionType.scheduleAt);
-      expect(
-        d.notifyAt,
-        fetchedAt.add(const Duration(seconds: 7600)),
-      );
+      expect(d.notifyAt, fetchedAt.add(const Duration(seconds: 7600)));
     });
 
     test('current 189 schedules 1 resin worth', () {
@@ -188,7 +185,10 @@ void main() {
   });
 
   group('expedition', () {
-    List<ExpeditionReminderInput> five(List<int> secs, {String status = 'Ongoing'}) {
+    List<ExpeditionReminderInput> five(
+      List<int> secs, {
+      String status = 'Ongoing',
+    }) {
       return secs
           .map(
             (s) => ExpeditionReminderInput(

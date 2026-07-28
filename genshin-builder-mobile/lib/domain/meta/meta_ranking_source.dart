@@ -33,8 +33,8 @@ class MetaRankingSnapshot {
   final int sampleSize;
 
   Map<String, double> get scoresById => {
-        for (final e in entries) e.entityId: e.score,
-      };
+    for (final e in entries) e.entityId: e.score,
+  };
 }
 
 /// ランキング取得ポート

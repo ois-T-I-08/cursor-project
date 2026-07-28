@@ -44,18 +44,12 @@ void main() {
 
   group('formatFreshnessCaption', () {
     test('version only does not claim latest', () {
-      expect(
-        formatFreshnessCaption(gameVersion: '5.8'),
-        'Ver.5.8時点',
-      );
+      expect(formatFreshnessCaption(gameVersion: '5.8'), 'Ver.5.8時点');
     });
 
     test('marks older when current version is known', () {
       expect(
-        formatFreshnessCaption(
-          gameVersion: '5.2',
-          currentGameVersion: '5.8',
-        ),
+        formatFreshnessCaption(gameVersion: '5.2', currentGameVersion: '5.8'),
         contains('古い情報の可能性があります'),
       );
     });
@@ -64,10 +58,7 @@ void main() {
       // "9" < "10" lexically but numerically older
       expect(compareGameVersions('5.9', '5.10'), lessThan(0));
       expect(
-        formatFreshnessCaption(
-          gameVersion: '5.9',
-          currentGameVersion: '5.10',
-        ),
+        formatFreshnessCaption(gameVersion: '5.9', currentGameVersion: '5.10'),
         contains('古い情報の可能性があります'),
       );
     });
@@ -81,37 +72,43 @@ void main() {
     });
   });
 
-  test('parses structured weapons/artifacts and ignores confidence for priority', () {
-    final parsed = parseBuildRecommendation(structuredRecommendationJson());
+  test(
+    'parses structured weapons/artifacts and ignores confidence for priority',
+    () {
+      final parsed = parseBuildRecommendation(structuredRecommendationJson());
 
-    expect(parsed.investmentPriority, InvestmentPriority.high);
-    expect(parsed.overallConfidence, 0.9);
-    // confidence が高くても priority フィールドなしなら none
-    final noPriority = parseBuildRecommendation({
-      ...structuredRecommendationJson(),
-      'investmentPriority': null,
-      'context': {'role': 'dps'},
-      'overallConfidence': 0.99,
-    });
-    expect(noPriority.investmentPriority, InvestmentPriority.none);
+      expect(parsed.investmentPriority, InvestmentPriority.high);
+      expect(parsed.overallConfidence, 0.9);
+      // confidence が高くても priority フィールドなしなら none
+      final noPriority = parseBuildRecommendation({
+        ...structuredRecommendationJson(),
+        'investmentPriority': null,
+        'context': {'role': 'dps'},
+        'overallConfidence': 0.99,
+      });
+      expect(noPriority.investmentPriority, InvestmentPriority.none);
 
-    expect(parsed.weapons, hasLength(2));
-    expect(parsed.weapons.first.weaponId, 'w1');
-    expect(parsed.weapons.first.reason, contains('HP'));
-    expect(parsed.weapons.first.citation?.channelName, 'Sample Channel');
-    // structured があるので legacy 文字列は使わない
-    expect(parsed.youtubeWeapons.first.isLegacy, isFalse);
-    expect(parsed.youtubeWeapons.first.displayName, '護摩の杖');
+      expect(parsed.weapons, hasLength(2));
+      expect(parsed.weapons.first.weaponId, 'w1');
+      expect(parsed.weapons.first.reason, contains('HP'));
+      expect(parsed.weapons.first.citation?.channelName, 'Sample Channel');
+      // structured があるので legacy 文字列は使わない
+      expect(parsed.youtubeWeapons.first.isLegacy, isFalse);
+      expect(parsed.youtubeWeapons.first.displayName, '護摩の杖');
 
-    expect(parsed.artifactRecommendations, hasLength(2));
-    expect(parsed.artifactRecommendations.first.sets.single.pieces, 4);
-    expect(parsed.artifactRecommendations[1].sets, hasLength(2));
-    expect(parsed.artifactRecommendations[1].sets.map((e) => e.pieces), [2, 2]);
-    expect(parsed.artifactRecommendations[1].isAlternative, isTrue);
+      expect(parsed.artifactRecommendations, hasLength(2));
+      expect(parsed.artifactRecommendations.first.sets.single.pieces, 4);
+      expect(parsed.artifactRecommendations[1].sets, hasLength(2));
+      expect(parsed.artifactRecommendations[1].sets.map((e) => e.pieces), [
+        2,
+        2,
+      ]);
+      expect(parsed.artifactRecommendations[1].isAlternative, isTrue);
 
-    expect(parsed.mainStats, hasLength(3));
-    expect(parsed.freshnessCaption, contains('Ver.5.8'));
-  });
+      expect(parsed.mainStats, hasLength(3));
+      expect(parsed.freshnessCaption, contains('Ver.5.8'));
+    },
+  );
 
   test('ratio in recommendedStats does not crash and keeps other targets', () {
     final parsed = parseBuildRecommendation({

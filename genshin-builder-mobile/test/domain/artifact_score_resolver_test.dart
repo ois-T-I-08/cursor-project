@@ -27,7 +27,9 @@ void main() {
         weights: scoreWeightsForType(ArtifactScoreType.hp),
       ),
     ]);
-    final resolver = ArtifactScoreResolver(ArtifactScoreWeightRepository(source));
+    final resolver = ArtifactScoreResolver(
+      ArtifactScoreWeightRepository(source),
+    );
 
     final settings = await resolver.resolve(
       character: const MasterCharacter(
@@ -56,7 +58,9 @@ void main() {
         weights: scoreWeightsForType(ArtifactScoreType.recharge),
       ),
     ]);
-    final resolver = ArtifactScoreResolver(ArtifactScoreWeightRepository(source));
+    final resolver = ArtifactScoreResolver(
+      ArtifactScoreWeightRepository(source),
+    );
 
     final settings = await resolver.resolve(
       character: const MasterCharacter(

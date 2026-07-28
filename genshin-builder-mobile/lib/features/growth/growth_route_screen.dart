@@ -20,19 +20,28 @@ class GrowthRouteScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('\u80b2\u6210\u30eb\u30fc\u30c8')),
-      body: routeAsync == null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text('\u80b2\u6210\u76ee\u6a19\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093',
-                    style: theme.textTheme.bodyLarge),
+      body:
+          routeAsync == null
+              ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    '\u80b2\u6210\u76ee\u6a19\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093',
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                ),
+              )
+              : routeAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error:
+                    (_, __) => Center(
+                      child: Text(
+                        '\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                data: (route) => _buildRoute(context, route),
               ),
-            )
-          : routeAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => Center(child: Text('\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc', style: theme.textTheme.bodyMedium)),
-              data: (route) => _buildRoute(context, route),
-            ),
     );
   }
 
@@ -42,8 +51,10 @@ class GrowthRouteScreen extends ConsumerWidget {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text('\u80b2\u6210\u76ee\u6a19\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093',
-              style: theme.textTheme.bodyLarge),
+          child: Text(
+            '\u80b2\u6210\u76ee\u6a19\u304c\u8a2d\u5b9a\u3055\u308c\u3066\u3044\u307e\u305b\u3093',
+            style: theme.textTheme.bodyLarge,
+          ),
         ),
       );
     }
@@ -57,11 +68,17 @@ class GrowthRouteScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${route.startDate.month}/${route.startDate.day} \u301c ${route.endDate.month}/${route.endDate.day}',
-                    style: theme.textTheme.titleMedium),
+                Text(
+                  '${route.startDate.month}/${route.startDate.day} \u301c ${route.endDate.month}/${route.endDate.day}',
+                  style: theme.textTheme.titleMedium,
+                ),
                 if (route.unresolvedCosts.isNotEmpty)
-                  Text('\u672a\u89e3\u6c7a: ${route.unresolvedCosts.length}\u4ef6',
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.orange)),
+                  Text(
+                    '\u672a\u89e3\u6c7a: ${route.unresolvedCosts.length}\u4ef6',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.orange,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -70,15 +87,26 @@ class GrowthRouteScreen extends ConsumerWidget {
         ...route.days.map((day) => _DayCard(day: day)),
         if (route.unresolvedCosts.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Text('\u672a\u89e3\u6c7a\u30b3\u30b9\u30c8', style: theme.textTheme.titleSmall),
-          ...route.unresolvedCosts.map((id) => ListTile(dense: true, title: Text(id, style: theme.textTheme.bodySmall))),
+          Text(
+            '\u672a\u89e3\u6c7a\u30b3\u30b9\u30c8',
+            style: theme.textTheme.titleSmall,
+          ),
+          ...route.unresolvedCosts.map(
+            (id) => ListTile(
+              dense: true,
+              title: Text(id, style: theme.textTheme.bodySmall),
+            ),
+          ),
         ],
         const SizedBox(height: 16),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(8),
-            child: Text('\u30eb\u30fc\u30eb\u30d0\u30fc\u30b8\u30e7\u30f3: ${route.ruleVersion}',
-                style: theme.textTheme.labelSmall, textAlign: TextAlign.center),
+            child: Text(
+              '\u30eb\u30fc\u30eb\u30d0\u30fc\u30b8\u30e7\u30f3: ${route.ruleVersion}',
+              style: theme.textTheme.labelSmall,
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
       ],
@@ -91,7 +119,15 @@ class _DayCard extends StatelessWidget {
   final GrowthRouteDay day;
 
   String _weekdayLabel(int w) {
-    const labels = ['\u6708', '\u706b', '\u6c34', '\u6728', '\u91d1', '\u571f', '\u65e5'];
+    const labels = [
+      '\u6708',
+      '\u706b',
+      '\u6c34',
+      '\u6728',
+      '\u91d1',
+      '\u571f',
+      '\u65e5',
+    ];
     return labels[(w - 1).clamp(0, 6)];
   }
 
@@ -105,22 +141,35 @@ class _DayCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${day.date.month}/${day.date.day} ($_weekdayLabel(day.weekday))',
-                style: theme.textTheme.titleSmall),
+            Text(
+              '${day.date.month}/${day.date.day} ($_weekdayLabel(day.weekday))',
+              style: theme.textTheme.titleSmall,
+            ),
             if (day.estimatedResinUsed != null)
-              Text('\u6a39\u8102: \u2248${day.estimatedResinUsed}', style: theme.textTheme.labelSmall),
+              Text(
+                '\u6a39\u8102: \u2248${day.estimatedResinUsed}',
+                style: theme.textTheme.labelSmall,
+              ),
             const Divider(),
             if (day.actions.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text('\u4e88\u5b9a\u306a\u3057', style: theme.textTheme.bodySmall),
+                child: Text(
+                  '\u4e88\u5b9a\u306a\u3057',
+                  style: theme.textTheme.bodySmall,
+                ),
               )
             else
-              ...day.actions.map((a) => ListTile(
-                    dense: true,
-                    title: Text(_growthActionTitle(a), style: theme.textTheme.bodySmall),
-                    subtitle: Text('優先度: ${a.priority}'),
-                  )),
+              ...day.actions.map(
+                (a) => ListTile(
+                  dense: true,
+                  title: Text(
+                    _growthActionTitle(a),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  subtitle: Text('優先度: ${a.priority}'),
+                ),
+              ),
           ],
         ),
       ),

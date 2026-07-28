@@ -17,10 +17,7 @@ void main() {
         200,
       );
 
-      expect(
-        HoyolabHttpGuard.decodeJsonObject(response)['retcode'],
-        0,
-      );
+      expect(HoyolabHttpGuard.decodeJsonObject(response)['retcode'], 0);
     });
 
     for (final status in [401, 403, 429, 500, 502, 503, 504]) {
@@ -60,7 +57,10 @@ void main() {
     });
 
     test('rejects oversized bodies', () {
-      final response = http.Response('x' * (HoyolabHttpGuard.defaultMaxBytes + 1), 200);
+      final response = http.Response(
+        'x' * (HoyolabHttpGuard.defaultMaxBytes + 1),
+        200,
+      );
       expect(
         () => HoyolabHttpGuard.decodeJsonObject(response),
         throwsA(

@@ -20,9 +20,8 @@ class SpiralAbyssStatus {
         maxFloor: json['max_floor'] as String? ?? '-',
         totalStars: _asInt(json['total_star']),
         isUnlocked: json['is_unlock'] as bool? ?? false,
-        scheduleId: json['schedule_id'] == null
-            ? null
-            : _asInt(json['schedule_id']),
+        scheduleId:
+            json['schedule_id'] == null ? null : _asInt(json['schedule_id']),
         updatedAt: DateTime.tryParse(cachedAt),
       );
     }
@@ -33,19 +32,20 @@ class SpiralAbyssStatus {
       totalStars: _asInt(json['total_star']),
       isUnlocked: json['is_unlock'] as bool? ?? false,
       scheduleId: _asInt(json['schedule_id']),
-      updatedAt: start == null
-          ? null
-          : DateTime.fromMillisecondsSinceEpoch(start * 1000),
+      updatedAt:
+          start == null
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(start * 1000),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'max_floor': maxFloor,
-        'total_star': totalStars,
-        'is_unlock': isUnlocked,
-        if (scheduleId != null) 'schedule_id': scheduleId,
-        if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
-      };
+    'max_floor': maxFloor,
+    'total_star': totalStars,
+    'is_unlock': isUnlocked,
+    if (scheduleId != null) 'schedule_id': scheduleId,
+    if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+  };
 }
 
 class ImaginariumTheaterStatus {
@@ -68,13 +68,13 @@ class ImaginariumTheaterStatus {
   final List<String> highlightAvatars;
 
   String get difficultyLabel => switch (difficultyId) {
-        1 => 'イージー',
-        2 => 'ノーマル',
-        3 => 'ハード',
-        4 => 'エキスパート',
-        5 => 'アルカナ',
-        _ => '難易度 $difficultyId',
-      };
+    1 => 'イージー',
+    2 => 'ノーマル',
+    3 => 'ハード',
+    4 => 'エキスパート',
+    5 => 'アルカナ',
+    _ => '難易度 $difficultyId',
+  };
 
   factory ImaginariumTheaterStatus.fromSeasonJson(Map<String, dynamic> json) {
     final stat = json['stat'] as Map<String, dynamic>? ?? {};
@@ -83,7 +83,8 @@ class ImaginariumTheaterStatus {
     final avatars = <String>[];
     final rounds = detail?['rounds_data'] as List<dynamic>? ?? [];
     for (final round in rounds.take(2)) {
-      final list = (round as Map<String, dynamic>)['avatars'] as List<dynamic>? ?? [];
+      final list =
+          (round as Map<String, dynamic>)['avatars'] as List<dynamic>? ?? [];
       for (final avatar in list.take(4)) {
         final icon = (avatar as Map<String, dynamic>)['icon'] as String?;
         if (icon != null) avatars.add(icon);
@@ -118,23 +119,24 @@ class ImaginariumTheaterStatus {
         maxRoundId: _asInt(json['max_round_id']),
         medalNum: _asInt(json['medal_num']),
         hasData: json['has_data'] as bool? ?? false,
-        updatedAt: json['updated_at'] == null
-            ? null
-            : DateTime.tryParse(json['updated_at'] as String),
+        updatedAt:
+            json['updated_at'] == null
+                ? null
+                : DateTime.tryParse(json['updated_at'] as String),
         highlightAvatars: (json['highlight_avatars'] as List<dynamic>? ?? [])
             .map((e) => '$e')
             .toList(growable: false),
       );
 
   Map<String, dynamic> toJson() => {
-        'is_unlock': isUnlocked,
-        'difficulty_id': difficultyId,
-        'max_round_id': maxRoundId,
-        'medal_num': medalNum,
-        'has_data': hasData,
-        if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
-        'highlight_avatars': highlightAvatars,
-      };
+    'is_unlock': isUnlocked,
+    'difficulty_id': difficultyId,
+    'max_round_id': maxRoundId,
+    'medal_num': medalNum,
+    'has_data': hasData,
+    if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+    'highlight_avatars': highlightAvatars,
+  };
 }
 
 class StygianOnslaughtStatus {
@@ -155,14 +157,14 @@ class StygianOnslaughtStatus {
   final DateTime? updatedAt;
 
   String get difficultyLabel => switch (bestDifficultyId) {
-        1 => 'イージー',
-        2 => 'ノーマル',
-        3 => 'ハード',
-        4 => 'マスター',
-        5 => 'エクストラ',
-        6 => 'アルティメット',
-        _ => bestDifficultyId > 0 ? '難易度 $bestDifficultyId' : '未挑戦',
-      };
+    1 => 'イージー',
+    2 => 'ノーマル',
+    3 => 'ハード',
+    4 => 'マスター',
+    5 => 'エクストラ',
+    6 => 'アルティメット',
+    _ => bestDifficultyId > 0 ? '難易度 $bestDifficultyId' : '未挑戦',
+  };
 
   factory StygianOnslaughtStatus.fromSeasonJson(Map<String, dynamic> json) {
     final schedule = json['schedule'] as Map<String, dynamic>? ?? {};
@@ -196,19 +198,20 @@ class StygianOnslaughtStatus {
         bestTimeSeconds: _asInt(json['best_time_seconds']),
         hasData: json['has_data'] as bool? ?? false,
         seasonName: json['season_name'] as String? ?? '',
-        updatedAt: json['updated_at'] == null
-            ? null
-            : DateTime.tryParse(json['updated_at'] as String),
+        updatedAt:
+            json['updated_at'] == null
+                ? null
+                : DateTime.tryParse(json['updated_at'] as String),
       );
 
   Map<String, dynamic> toJson() => {
-        'is_unlock': isUnlocked,
-        'best_difficulty_id': bestDifficultyId,
-        'best_time_seconds': bestTimeSeconds,
-        'has_data': hasData,
-        'season_name': seasonName,
-        if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
-      };
+    'is_unlock': isUnlocked,
+    'best_difficulty_id': bestDifficultyId,
+    'best_time_seconds': bestTimeSeconds,
+    'has_data': hasData,
+    'season_name': seasonName,
+    if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+  };
 }
 
 class AdventureStatus {
@@ -225,46 +228,51 @@ class AdventureStatus {
   final DateTime? fetchedAt;
 
   DateTime? get latestUpdate {
-    final dates = [
-      spiralAbyss?.updatedAt,
-      imaginariumTheater?.updatedAt,
-      stygianOnslaught?.updatedAt,
-      fetchedAt,
-    ].whereType<DateTime>();
+    final dates =
+        [
+          spiralAbyss?.updatedAt,
+          imaginariumTheater?.updatedAt,
+          stygianOnslaught?.updatedAt,
+          fetchedAt,
+        ].whereType<DateTime>();
     if (dates.isEmpty) return fetchedAt;
     return dates.reduce((a, b) => a.isAfter(b) ? a : b);
   }
 
   factory AdventureStatus.fromCacheJson(Map<String, dynamic> json) =>
       AdventureStatus(
-        spiralAbyss: json['spiral_abyss'] == null
-            ? null
-            : SpiralAbyssStatus.fromJson(
-                json['spiral_abyss'] as Map<String, dynamic>,
-              ),
-        imaginariumTheater: json['imaginarium_theater'] == null
-            ? null
-            : ImaginariumTheaterStatus.fromCacheJson(
-                json['imaginarium_theater'] as Map<String, dynamic>,
-              ),
-        stygianOnslaught: json['stygian_onslaught'] == null
-            ? null
-            : StygianOnslaughtStatus.fromCacheJson(
-                json['stygian_onslaught'] as Map<String, dynamic>,
-              ),
-        fetchedAt: json['fetched_at'] == null
-            ? null
-            : DateTime.tryParse(json['fetched_at'] as String),
+        spiralAbyss:
+            json['spiral_abyss'] == null
+                ? null
+                : SpiralAbyssStatus.fromJson(
+                  json['spiral_abyss'] as Map<String, dynamic>,
+                ),
+        imaginariumTheater:
+            json['imaginarium_theater'] == null
+                ? null
+                : ImaginariumTheaterStatus.fromCacheJson(
+                  json['imaginarium_theater'] as Map<String, dynamic>,
+                ),
+        stygianOnslaught:
+            json['stygian_onslaught'] == null
+                ? null
+                : StygianOnslaughtStatus.fromCacheJson(
+                  json['stygian_onslaught'] as Map<String, dynamic>,
+                ),
+        fetchedAt:
+            json['fetched_at'] == null
+                ? null
+                : DateTime.tryParse(json['fetched_at'] as String),
       );
 
   Map<String, dynamic> toJson() => {
-        if (spiralAbyss != null) 'spiral_abyss': spiralAbyss!.toJson(),
-        if (imaginariumTheater != null)
-          'imaginarium_theater': imaginariumTheater!.toJson(),
-        if (stygianOnslaught != null)
-          'stygian_onslaught': stygianOnslaught!.toJson(),
-        if (fetchedAt != null) 'fetched_at': fetchedAt!.toIso8601String(),
-      };
+    if (spiralAbyss != null) 'spiral_abyss': spiralAbyss!.toJson(),
+    if (imaginariumTheater != null)
+      'imaginarium_theater': imaginariumTheater!.toJson(),
+    if (stygianOnslaught != null)
+      'stygian_onslaught': stygianOnslaught!.toJson(),
+    if (fetchedAt != null) 'fetched_at': fetchedAt!.toIso8601String(),
+  };
 }
 
 /// HoYoLAB は最高難易度の「3ボス合計クリア時間」を表示する。

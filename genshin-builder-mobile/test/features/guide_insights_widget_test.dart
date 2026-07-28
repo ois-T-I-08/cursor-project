@@ -85,9 +85,7 @@ Future<void> _pump(
             size: Size(width, 800),
             textScaler: TextScaler.linear(textScale),
           ),
-          child: Scaffold(
-            body: SingleChildScrollView(child: child),
-          ),
+          child: Scaffold(body: SingleChildScrollView(child: child)),
         ),
       ),
     ),

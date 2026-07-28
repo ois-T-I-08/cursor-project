@@ -36,7 +36,8 @@ class GrowthRouteAction {
   });
 
   final String optionId;
-  final String actionType; // weekdayMaterial, generalMaterial, mora, expBook, boss
+  final String
+  actionType; // weekdayMaterial, generalMaterial, mora, expBook, boss
   final String? characterId;
   final List<String> relatedGoalIds;
   final List<String> materialIds;
@@ -71,6 +72,7 @@ class GrowthRoute {
   final List<GrowthRouteDay> days;
   final List<String> goals;
   final int? totalEstimatedResin;
+
   /// Display-only budget (does not constrain scheduling).
   final int? dailyResinBudget;
   final List<String> unresolvedCosts;

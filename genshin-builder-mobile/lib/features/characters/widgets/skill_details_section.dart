@@ -21,21 +21,22 @@ class SkillDetailsSection extends ConsumerWidget {
   final int talentBurst;
 
   int _currentLevelFor(TalentDetailKind kind) => switch (kind) {
-        TalentDetailKind.normal => talentNormal,
-        TalentDetailKind.skill => talentSkill,
-        TalentDetailKind.burst => talentBurst,
-        TalentDetailKind.passive => 1,
-      };
+    TalentDetailKind.normal => talentNormal,
+    TalentDetailKind.skill => talentSkill,
+    TalentDetailKind.burst => talentBurst,
+    TalentDetailKind.passive => 1,
+  };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(avatarDetailProvider(characterId));
 
     return detailAsync.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: CircularProgressIndicator()),
-      ),
+      loading:
+          () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
       error: (_, __) => const _SkillDetailsUnavailable(),
       data: (detail) {
         if (detail == null || detail.talents.isEmpty) {
@@ -44,10 +45,7 @@ class SkillDetailsSection extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'スキル詳細',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('スキル詳細', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             ...detail.activeTalents.map(
               (talent) => _TalentDetailTile(
@@ -75,8 +73,8 @@ class _SkillDetailsUnavailable extends StatelessWidget {
       child: Text(
         'スキル詳細を取得できませんでした（ネットワーク接続を確認してください）',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
@@ -154,14 +152,15 @@ class _TalentDetailTileState extends State<_TalentDetailTile> {
                 DropdownButton<int>(
                   value: _selectedLevel,
                   isDense: true,
-                  items: levels
-                      .map(
-                        (lv) => DropdownMenuItem(
-                          value: lv,
-                          child: Text('Lv.$lv'),
-                        ),
-                      )
-                      .toList(),
+                  items:
+                      levels
+                          .map(
+                            (lv) => DropdownMenuItem(
+                              value: lv,
+                              child: Text('Lv.$lv'),
+                            ),
+                          )
+                          .toList(),
                   onChanged: (lv) {
                     if (lv != null) setState(() => _selectedLevel = lv);
                   },

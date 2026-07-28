@@ -16,7 +16,8 @@ class ArtifactScoreTypeOverride {
 
   factory ArtifactScoreTypeOverride.fromJson(Map<String, dynamic> json) {
     final rawType = json['scoreType'] as String? ?? 'atk';
-    final scoreType = artifactScoreTypeFromString(rawType) ?? ArtifactScoreType.atk;
+    final scoreType =
+        artifactScoreTypeFromString(rawType) ?? ArtifactScoreType.atk;
     return ArtifactScoreTypeOverride(
       characterId: json['characterId'] as String? ?? '',
       name: json['name'] as String? ?? '',
@@ -26,9 +27,9 @@ class ArtifactScoreTypeOverride {
   }
 
   Map<String, dynamic> toJson() => {
-        'characterId': characterId,
-        'name': name,
-        'scoreType': artifactScoreTypeToStorage(scoreType),
-        if (note != null && note!.isNotEmpty) 'note': note,
-      };
+    'characterId': characterId,
+    'name': name,
+    'scoreType': artifactScoreTypeToStorage(scoreType),
+    if (note != null && note!.isNotEmpty) 'note': note,
+  };
 }

@@ -10,31 +10,33 @@ abstract class CharacterRepository {
   Future<Map<String, MasterMaterial>> getMaterialsMap();
 
   Future<
+    ({
+      List<PromoteStage> promotes,
+      Map<String, List<TalentLevelUpgrade>> talents,
+    })?
+  >
+  getUpgrade(String characterId);
+
+  Future<
+    Map<
+      String,
       ({
         List<PromoteStage> promotes,
         Map<String, List<TalentLevelUpgrade>> talents,
-      })?> getUpgrade(String characterId);
-
-  Future<
-      Map<
-          String,
-          ({
-            List<PromoteStage> promotes,
-            Map<String, List<TalentLevelUpgrade>> talents,
-          })>> getAllUpgrades();
+      })
+    >
+  >
+  getAllUpgrades();
 
   Future<List<MasterWeapon>> getAllWeapons();
 
   Future<({List<PromoteStage> promotes, List<String> levelUpItemIds})?>
-      getWeaponUpgrade(String weaponId);
+  getWeaponUpgrade(String weaponId);
 
   Future<
-      Map<
-          String,
-          ({
-            List<PromoteStage> promotes,
-            List<String> levelUpItemIds,
-          })>> getAllWeaponUpgrades();
+    Map<String, ({List<PromoteStage> promotes, List<String> levelUpItemIds})>
+  >
+  getAllWeaponUpgrades();
 
   Future<MasterWeapon?> getWeapon(String id);
 }

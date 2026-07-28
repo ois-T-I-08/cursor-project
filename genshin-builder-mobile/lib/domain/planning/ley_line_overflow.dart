@@ -5,10 +5,7 @@ library;
 typedef Clock = DateTime Function();
 
 /// ボーナス対象の地脈種別。
-enum LeyLineOverflowLeyLineType {
-  exp,
-  mora,
-}
+enum LeyLineOverflowLeyLineType { exp, mora }
 
 /// 設定 / API から得た開催情報。
 class LeyLineOverflowEvent {
@@ -175,10 +172,8 @@ LeyLineOverflowBreakdown? applyLeyLineOverflowBonus({
   // ボーナス1回 = 通常報酬 × multiplier 分。
   // usefulBonus ≤ ceil(normal / multiplier) かつ remaining で上限。
   // （単純に normal - remaining とはしない）
-  final maxUsefulBonus =
-      (normalEquivalentRuns + multiplier - 1) ~/ multiplier;
-  final bonusRuns =
-      remaining < maxUsefulBonus ? remaining : maxUsefulBonus;
+  final maxUsefulBonus = (normalEquivalentRuns + multiplier - 1) ~/ multiplier;
+  final bonusRuns = remaining < maxUsefulBonus ? remaining : maxUsefulBonus;
   final coveredByBonus = bonusRuns * multiplier;
   final remainingNormal = normalEquivalentRuns - coveredByBonus;
   final normalRuns = remainingNormal < 0 ? 0 : remainingNormal;
@@ -221,9 +216,6 @@ List<LeyLineOverflowLeyLineType> parseEligibleLeyLineTypes(Object? raw) {
     if (t != null && !out.contains(t)) out.add(t);
   }
   return out.isEmpty
-      ? const [
-          LeyLineOverflowLeyLineType.exp,
-          LeyLineOverflowLeyLineType.mora,
-        ]
+      ? const [LeyLineOverflowLeyLineType.exp, LeyLineOverflowLeyLineType.mora]
       : out;
 }

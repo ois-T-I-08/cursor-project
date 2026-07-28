@@ -18,7 +18,10 @@ class GuideSourceLabel extends StatelessWidget {
     final theme = Theme.of(context);
     final (label, icon) = switch (source) {
       GuideInsightSource.akasha => ('Akasha · 使用率', Icons.bar_chart_outlined),
-      GuideInsightSource.youtube => ('攻略動画 · おすすめ', Icons.ondemand_video_outlined),
+      GuideInsightSource.youtube => (
+        '攻略動画 · おすすめ',
+        Icons.ondemand_video_outlined,
+      ),
     };
     return Semantics(
       label: label,

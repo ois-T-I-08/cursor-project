@@ -98,8 +98,17 @@ void main() {
       recommended: 70,
       max: 80,
     );
-    expect(compareStatToTarget(current: 55, target: target), StatCompareVerdict.below);
-    expect(compareStatToTarget(current: 70, target: target), StatCompareVerdict.within);
-    expect(compareStatToTarget(current: 90, target: target), StatCompareVerdict.above);
+    expect(
+      compareStatToTarget(current: 55, target: target),
+      StatCompareVerdict.below,
+    );
+    expect(
+      compareStatToTarget(current: 70, target: target),
+      StatCompareVerdict.within,
+    );
+    expect(
+      compareStatToTarget(current: 90, target: target),
+      StatCompareVerdict.above,
+    );
   });
 }

@@ -7,10 +7,7 @@ import '../../../providers/hoyolab_game_providers.dart';
 import '../../../providers/hoyolab_game_refresh.dart';
 
 class HoyolabCharacterStatusCard extends ConsumerWidget {
-  const HoyolabCharacterStatusCard({
-    super.key,
-    required this.characterId,
-  });
+  const HoyolabCharacterStatusCard({super.key, required this.characterId});
 
   final String characterId;
 
@@ -21,14 +18,15 @@ class HoyolabCharacterStatusCard extends ConsumerWidget {
     return buildAsync.when(
       data: (build) {
         if (build == null || !build.isOwned) return const SizedBox.shrink();
-        final fetchedLabel = build.fetchedAt == null
-            ? null
-            : formatRelativeUpdateTime(build.fetchedAt!);
+        final fetchedLabel =
+            build.fetchedAt == null
+                ? null
+                : formatRelativeUpdateTime(build.fetchedAt!);
 
         return Card(
-          color: Theme.of(context).colorScheme.primaryContainer.withValues(
-                alpha: 0.35,
-              ),
+          color: Theme.of(
+            context,
+          ).colorScheme.primaryContainer.withValues(alpha: 0.35),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -47,8 +45,8 @@ class HoyolabCharacterStatusCard extends ConsumerWidget {
                     IconButton(
                       icon: const Icon(Icons.refresh, size: 20),
                       tooltip: '再取得',
-                      onPressed: () =>
-                          refreshHoyolabCharacterBuild(ref, characterId),
+                      onPressed:
+                          () => refreshHoyolabCharacterBuild(ref, characterId),
                     ),
                   ],
                 ),
@@ -58,9 +56,8 @@ class HoyolabCharacterStatusCard extends ConsumerWidget {
                     child: Text(
                       '取得 $fetchedLabel',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 Wrap(
@@ -80,9 +77,9 @@ class HoyolabCharacterStatusCard extends ConsumerWidget {
                   const SizedBox(height: 12),
                   Text('ステータス', style: Theme.of(context).textTheme.labelLarge),
                   const SizedBox(height: 6),
-                  ...build.stats.take(8).map(
-                        (s) => _StatLine(label: s.label, value: s.value),
-                      ),
+                  ...build.stats
+                      .take(8)
+                      .map((s) => _StatLine(label: s.label, value: s.value)),
                 ],
                 if (build.talents.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -111,22 +108,23 @@ class HoyolabCharacterStatusCard extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+      loading:
+          () => const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 12),
+                  Text('HoYoLAB データを取得中…'),
+                ],
               ),
-              SizedBox(width: 12),
-              Text('HoYoLAB データを取得中…'),
-            ],
+            ),
           ),
-        ),
-      ),
       error: (e, _) {
         if (e is HoyolabApiException) {
           return Card(

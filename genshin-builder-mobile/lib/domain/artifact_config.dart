@@ -19,13 +19,7 @@ const artifactSlotOrder = [
 const mainStatOptions = {
   ArtifactSlotKey.flower: ['HP'],
   ArtifactSlotKey.plume: ['攻撃力'],
-  ArtifactSlotKey.sands: [
-    'HP%',
-    '攻撃力%',
-    '防御力%',
-    '元素熟知',
-    '元素チャージ効率',
-  ],
+  ArtifactSlotKey.sands: ['HP%', '攻撃力%', '防御力%', '元素熟知', '元素チャージ効率'],
   ArtifactSlotKey.goblet: [
     'HP%',
     '攻撃力%',
@@ -84,13 +78,11 @@ String buildArtifactSummary(ArtifactState artifacts) {
     }
   }
 
-  final setParts = setCounts.entries
-      .where((e) => e.value >= 2)
-      .map((e) {
+  final setParts =
+      setCounts.entries.where((e) => e.value >= 2).map((e) {
         final count = e.value >= 4 ? 4 : 2;
         return '${e.key} ×$count';
-      })
-      .toList();
+      }).toList();
 
   final levelParts = artifactSlotOrder
       .map((slot) {

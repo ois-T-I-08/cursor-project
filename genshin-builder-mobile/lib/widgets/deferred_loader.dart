@@ -3,11 +3,7 @@ import 'package:flutter/scheduler.dart';
 
 /// 初回フレーム描画後に子ウィジェットを構築し、起動時のメインスレッド負荷を分散する。
 class DeferredLoader extends StatefulWidget {
-  const DeferredLoader({
-    super.key,
-    required this.builder,
-    this.placeholder,
-  });
+  const DeferredLoader({super.key, required this.builder, this.placeholder});
 
   final WidgetBuilder builder;
   final Widget? placeholder;

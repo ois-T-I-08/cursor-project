@@ -45,9 +45,11 @@ class FlutterNotificationScheduler implements NotificationScheduler {
         // P1-8B targets Android; treat other OS as not enabled for scheduling.
         return false;
       }
-      final android = NotificationBootstrap.plugin
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final android =
+          NotificationBootstrap.plugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
       return await android?.areNotificationsEnabled() ?? false;
     } catch (_) {
       debugPrint('notifications: areNotificationsEnabled failed');
@@ -62,9 +64,11 @@ class FlutterNotificationScheduler implements NotificationScheduler {
       if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
         return false;
       }
-      final android = NotificationBootstrap.plugin
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final android =
+          NotificationBootstrap.plugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
       final granted = await android?.requestNotificationsPermission();
       return granted ?? false;
     } catch (_) {
@@ -142,8 +146,9 @@ class FlutterNotificationScheduler implements NotificationScheduler {
     try {
       await NotificationBootstrap.ensureInitializedOrThrow();
       await NotificationBootstrap.plugin.cancel(ReminderNotificationIds.resin);
-      await NotificationBootstrap.plugin
-          .cancel(ReminderNotificationIds.expedition);
+      await NotificationBootstrap.plugin.cancel(
+        ReminderNotificationIds.expedition,
+      );
     } catch (_) {
       debugPrint('notifications: cancelAll failed');
       rethrow;
@@ -151,9 +156,9 @@ class FlutterNotificationScheduler implements NotificationScheduler {
   }
 
   static int _idFor(ReminderKind kind) => switch (kind) {
-        ReminderKind.resin => ReminderNotificationIds.resin,
-        ReminderKind.expedition => ReminderNotificationIds.expedition,
-      };
+    ReminderKind.resin => ReminderNotificationIds.resin,
+    ReminderKind.expedition => ReminderNotificationIds.expedition,
+  };
 
   static NotificationDetails _detailsFor(ReminderKind kind) {
     final channelId = switch (kind) {

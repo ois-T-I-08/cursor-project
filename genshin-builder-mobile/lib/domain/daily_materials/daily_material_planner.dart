@@ -104,15 +104,16 @@ int compareDailyCharacterConsumers(
   DailyMaterialConsumer a,
   DailyMaterialConsumer b,
 ) {
-  final byOwn = _ownershipRank(isOwned: a.isOwned, isBuilding: a.isBuilding)
-      .compareTo(
-        _ownershipRank(isOwned: b.isOwned, isBuilding: b.isBuilding),
-      );
+  final byOwn = _ownershipRank(
+    isOwned: a.isOwned,
+    isBuilding: a.isBuilding,
+  ).compareTo(_ownershipRank(isOwned: b.isOwned, isBuilding: b.isBuilding));
   if (byOwn != 0) return byOwn;
 
-  final byShort = _shortageRank(a.remainingStatus, a.remainingCount).compareTo(
-    _shortageRank(b.remainingStatus, b.remainingCount),
-  );
+  final byShort = _shortageRank(
+    a.remainingStatus,
+    a.remainingCount,
+  ).compareTo(_shortageRank(b.remainingStatus, b.remainingCount));
   if (byShort != 0) return byShort;
 
   final byNeed = b.remainingCount.compareTo(a.remainingCount);
@@ -128,10 +129,10 @@ int compareDailyWeaponConsumers(
   DailyMaterialConsumer a,
   DailyMaterialConsumer b,
 ) {
-  final byOwn = _ownershipRank(isOwned: a.isOwned, isBuilding: a.isBuilding)
-      .compareTo(
-        _ownershipRank(isOwned: b.isOwned, isBuilding: b.isBuilding),
-      );
+  final byOwn = _ownershipRank(
+    isOwned: a.isOwned,
+    isBuilding: a.isBuilding,
+  ).compareTo(_ownershipRank(isOwned: b.isOwned, isBuilding: b.isBuilding));
   if (byOwn != 0) return byOwn;
 
   final byEquip = (b.isEquipped ? 1 : 0).compareTo(a.isEquipped ? 1 : 0);
@@ -140,18 +141,21 @@ int compareDailyWeaponConsumers(
   final byBuilding = (b.isBuilding ? 1 : 0).compareTo(a.isBuilding ? 1 : 0);
   if (byBuilding != 0) return byBuilding;
 
-  final aInProgress = a.hasShortage ||
+  final aInProgress =
+      a.hasShortage ||
       (a.weaponLevel != null && a.weaponLevel! < levelMax) ||
       (a.weaponRefinement != null && a.weaponRefinement! < 5);
-  final bInProgress = b.hasShortage ||
+  final bInProgress =
+      b.hasShortage ||
       (b.weaponLevel != null && b.weaponLevel! < levelMax) ||
       (b.weaponRefinement != null && b.weaponRefinement! < 5);
   final byProgress = (bInProgress ? 1 : 0).compareTo(aInProgress ? 1 : 0);
   if (byProgress != 0) return byProgress;
 
-  final byShort = _shortageRank(a.remainingStatus, a.remainingCount).compareTo(
-    _shortageRank(b.remainingStatus, b.remainingCount),
-  );
+  final byShort = _shortageRank(
+    a.remainingStatus,
+    a.remainingCount,
+  ).compareTo(_shortageRank(b.remainingStatus, b.remainingCount));
   if (byShort != 0) return byShort;
 
   final byNeed = b.remainingCount.compareTo(a.remainingCount);
@@ -167,7 +171,8 @@ int compareDailyWeaponConsumers(
   int count,
   Map<String, int> byMaterial,
   Map<String, int> nextByMaterial,
-}) _talentRemainingForSeries({
+})
+_talentRemainingForSeries({
   required String seriesId,
   required Map<String, DailyMaterialSeries> materialIndex,
   required CharacterTalentCatalogEntry entry,
@@ -206,11 +211,7 @@ int compareDailyWeaponConsumers(
       addSeriesCost(byMaterial, line.materialId, line.count);
     }
 
-    final next = getNextTalentRequirements(
-      current,
-      talentLevelMax,
-      upgrades,
-    );
+    final next = getNextTalentRequirements(current, talentLevelMax, upgrades);
     if (next == null) return;
     for (final m in next.materials) {
       addSeriesCost(nextByMaterial, m.materialId, m.count);
@@ -243,7 +244,8 @@ int compareDailyWeaponConsumers(
   int count,
   Map<String, int> byMaterial,
   Map<String, int> nextByMaterial,
-}) _weaponRemainingForSeries({
+})
+_weaponRemainingForSeries({
   required String seriesId,
   required Map<String, DailyMaterialSeries> materialIndex,
   required WeaponAscensionCatalogEntry entry,
@@ -351,7 +353,9 @@ DailyMaterialsPlan buildDailyMaterialsPlan({
         entry: entry,
         talentTargetLevel: talentTargetLevel,
       );
-      talentBySeries.putIfAbsent(seriesId, () => []).add(
+      talentBySeries
+          .putIfAbsent(seriesId, () => [])
+          .add(
             DailyMaterialConsumer(
               id: entry.character.id,
               name: entry.character.name,
@@ -373,7 +377,9 @@ DailyMaterialsPlan buildDailyMaterialsPlan({
         entry: entry,
         talentTargetLevel: talentTargetLevel,
       );
-      weeklyBySeries.putIfAbsent(seriesId, () => []).add(
+      weeklyBySeries
+          .putIfAbsent(seriesId, () => [])
+          .add(
             DailyMaterialConsumer(
               id: entry.character.id,
               name: entry.character.name,
@@ -406,7 +412,9 @@ DailyMaterialsPlan buildDailyMaterialsPlan({
         entry: entry,
         weaponTargetLevel: weaponTargetLevel,
       );
-      weaponBySeries.putIfAbsent(seriesId, () => []).add(
+      weaponBySeries
+          .putIfAbsent(seriesId, () => [])
+          .add(
             DailyMaterialConsumer(
               id: entry.weapon.id,
               name: entry.weapon.name,
@@ -510,9 +518,10 @@ DailyMaterialsPlan buildDailyMaterialsPlan({
       final consumers = List<DailyMaterialConsumer>.from(
         source[series.id] ?? const [],
       );
-      final groups = kind == DailyMaterialKind.weaponAscension
-          ? weaponGroups(consumers)
-          : talentGroups(consumers);
+      final groups =
+          kind == DailyMaterialKind.weaponAscension
+              ? weaponGroups(consumers)
+              : talentGroups(consumers);
       final byMaterial = <String, int>{};
       final nextByMaterial = <String, int>{};
       for (final c in consumers) {

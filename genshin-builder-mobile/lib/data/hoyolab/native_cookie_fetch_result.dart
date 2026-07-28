@@ -17,16 +17,16 @@ class NativeCookieFetchResult {
   const NativeCookieFetchResult._(this.status, [this.value]);
 
   const NativeCookieFetchResult.ok(String cookie)
-      : this._(NativeCookieFetchStatus.ok, cookie);
+    : this._(NativeCookieFetchStatus.ok, cookie);
 
   const NativeCookieFetchResult.absent()
-      : this._(NativeCookieFetchStatus.absent);
+    : this._(NativeCookieFetchStatus.absent);
 
   const NativeCookieFetchResult.managerError()
-      : this._(NativeCookieFetchStatus.managerError);
+    : this._(NativeCookieFetchStatus.managerError);
 
   const NativeCookieFetchResult.pluginMissing()
-      : this._(NativeCookieFetchStatus.pluginMissing);
+    : this._(NativeCookieFetchStatus.pluginMissing);
 
   final NativeCookieFetchStatus status;
   final String? value;

@@ -23,7 +23,9 @@ class BackendBuildRecommendationApi {
   static const _userAgent =
       'genshin-builder-mobile/0.1 (build-recommendations-backend)';
 
-  Future<CharacterBuildRecommendation?> fetchPublished(String characterId) async {
+  Future<CharacterBuildRecommendation?> fetchPublished(
+    String characterId,
+  ) async {
     final uri = _uri(characterId);
     http.Response response;
     try {
@@ -105,7 +107,9 @@ bool _isLocalDevelopmentHttp(Uri uri) {
   return const {'localhost', '127.0.0.1', '::1', '10.0.2.2'}.contains(uri.host);
 }
 
-CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json) {
+CharacterBuildRecommendation parseBuildRecommendation(
+  Map<String, Object?> json,
+) {
   final context = _object(json['context']);
   final targets = <BuildStatTarget>[];
   for (final item in _list(json['targets'], maxLength: 20)) {
@@ -189,9 +193,7 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
     evidence.add(
       BuildRecommendationEvidence(
         fieldPath: _string(map['fieldPath']),
-        exactVisibleText: _string(
-          map['exactVisibleText'] ?? map['snippet'],
-        ),
+        exactVisibleText: _string(map['exactVisibleText'] ?? map['snippet']),
         videoId: _string(map['videoId']),
         startSeconds:
             _optionalDouble(map['startSeconds']) ??
@@ -230,9 +232,10 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
       GuideMainStatRecommendation(
         slot: slot,
         candidates: stats,
-        condition: map['condition'] is String
-            ? (map['condition'] as String).trim()
-            : null,
+        condition:
+            map['condition'] is String
+                ? (map['condition'] as String).trim()
+                : null,
         citation: _resolveCitation(
           map['citationId'] ?? map['source'] ?? map['citation'],
           citationById,
@@ -259,16 +262,18 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
       }
     }
     final originRaw = _nullableString(map['dataOrigin']);
-    final dataOrigin = originRaw == 'legacy_preference'
-        ? GuideWeaponDataOrigin.legacyPreference
-        : GuideWeaponDataOrigin.structured;
+    final dataOrigin =
+        originRaw == 'legacy_preference'
+            ? GuideWeaponDataOrigin.legacyPreference
+            : GuideWeaponDataOrigin.structured;
     weapons.add(
       GuideWeaponRecommendation(
         weaponId: weaponId,
         displayName: displayName,
         rank: _optionalInt(map['rank']),
-        recommendationLevel:
-            parseGuideRecommendationLevel(_nullableString(map['recommendationLevel'])),
+        recommendationLevel: parseGuideRecommendationLevel(
+          _nullableString(map['recommendationLevel']),
+        ),
         reason: _nullableString(map['reason']),
         conditions: conditions,
         role: _nullableString(map['role']),
@@ -283,8 +288,7 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
   }
 
   final artifactRecommendations = <GuideArtifactRecommendation>[];
-  final artifactList =
-      json['artifactRecommendations'] ?? json['artifactSets'];
+  final artifactList = json['artifactRecommendations'] ?? json['artifactSets'];
   for (final item in _list(artifactList, maxLength: 12)) {
     final map = _object(item);
     final parts = <GuideArtifactSetPart>[];
@@ -306,8 +310,9 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
       GuideArtifactRecommendation(
         sets: parts,
         rank: _optionalInt(map['rank']),
-        recommendationLevel:
-            parseGuideRecommendationLevel(_nullableString(map['recommendationLevel'])),
+        recommendationLevel: parseGuideRecommendationLevel(
+          _nullableString(map['recommendationLevel']),
+        ),
         reason: _nullableString(map['reason']),
         conditions: conditions,
         role: _nullableString(map['role']),
@@ -322,15 +327,17 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
   }
 
   final originRaw = _string(json['origin']);
-  final origin = originRaw == 'merged'
-      ? BuildRecommendationOrigin.merged
-      : BuildRecommendationOrigin.singleVideo;
+  final origin =
+      originRaw == 'merged'
+          ? BuildRecommendationOrigin.merged
+          : BuildRecommendationOrigin.singleVideo;
 
-  final priorityRaw = context['investmentPriority'] is String
-      ? context['investmentPriority'] as String
-      : (json['investmentPriority'] is String
-          ? json['investmentPriority'] as String
-          : null);
+  final priorityRaw =
+      context['investmentPriority'] is String
+          ? context['investmentPriority'] as String
+          : (json['investmentPriority'] is String
+              ? json['investmentPriority'] as String
+              : null);
 
   return CharacterBuildRecommendation(
     characterId: _string(json['characterId']),
@@ -348,17 +355,22 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
     lastVerifiedAt: _optionalDate(json['lastVerifiedAt']),
     publishedAt: _optionalDate(json['publishedAt']),
     role: context['role'] is String ? context['role'] as String : null,
-    teamArchetype: context['teamArchetype'] is String
-        ? context['teamArchetype'] as String
-        : null,
-    weaponPreference: context['weaponPreference'] is String
-        ? context['weaponPreference'] as String
-        : null,
+    teamArchetype:
+        context['teamArchetype'] is String
+            ? context['teamArchetype'] as String
+            : null,
+    weaponPreference:
+        context['weaponPreference'] is String
+            ? context['weaponPreference'] as String
+            : null,
     notes: context['notes'] is String ? context['notes'] as String : null,
     investmentPriority: parseInvestmentPriority(priorityRaw),
-    gameVersion: context['gameVersion'] is String
-        ? context['gameVersion'] as String
-        : (json['gameVersion'] is String ? json['gameVersion'] as String : null),
+    gameVersion:
+        context['gameVersion'] is String
+            ? context['gameVersion'] as String
+            : (json['gameVersion'] is String
+                ? json['gameVersion'] as String
+                : null),
   );
 }
 
@@ -398,7 +410,8 @@ GuideCitation? _resolveCitation(
       videoId: base.videoId,
       videoTitle: _nullableString(map['videoTitle']) ?? base.videoTitle,
       channelId: _nullableString(map['channelId']) ?? base.channelId,
-      channelName: _nullableString(map['channelName'] ?? map['channelTitle']) ??
+      channelName:
+          _nullableString(map['channelName'] ?? map['channelTitle']) ??
           base.channelName,
       publishedAt: _optionalDate(map['publishedAt']) ?? base.publishedAt,
       reviewedAt: _optionalDate(map['reviewedAt']) ?? base.reviewedAt,

@@ -8,9 +8,8 @@ import 'load_character_detail_use_case.dart';
 
 /// HoYoLAB ビルドを詳細 state へ反映する（純ロジック寄り）。
 class ApplyHoyolabBuildUseCase {
-  const ApplyHoyolabBuildUseCase({
-    required CharacterRepository characters,
-  }) : _characters = characters;
+  const ApplyHoyolabBuildUseCase({required CharacterRepository characters})
+    : _characters = characters;
 
   final CharacterRepository _characters;
 
@@ -31,9 +30,10 @@ class ApplyHoyolabBuildUseCase {
       level: build.level,
       promoteLevel: build.promoteLevel,
       constellation: build.constellation,
-      talents: build.talents
-          .map((t) => HoyolabTalentInput(name: t.name, level: t.level))
-          .toList(),
+      talents:
+          build.talents
+              .map((t) => HoyolabTalentInput(name: t.name, level: t.level))
+              .toList(),
       weaponId: build.weapon?.id,
       weaponName: build.weapon?.name,
       weaponLevel: build.weapon?.level,
@@ -89,9 +89,12 @@ class ApplyHoyolabBuildUseCase {
       matched =
           state.weapons.where((w) => w.id == snapshot.weaponId).firstOrNull;
     }
-    matched ??= snapshot.weaponName == null
-        ? null
-        : state.weapons.where((w) => w.name == snapshot.weaponName).firstOrNull;
+    matched ??=
+        snapshot.weaponName == null
+            ? null
+            : state.weapons
+                .where((w) => w.name == snapshot.weaponName)
+                .firstOrNull;
 
     var next = state;
     if (matched != null) {

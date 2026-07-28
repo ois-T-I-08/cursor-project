@@ -24,9 +24,10 @@ class GuideMainStatsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final items = filterSlot == null
-        ? mainStats
-        : mainStats.where((e) => e.slot == filterSlot).toList();
+    final items =
+        filterSlot == null
+            ? mainStats
+            : mainStats.where((e) => e.slot == filterSlot).toList();
 
     if (items.isEmpty) {
       return Text(
@@ -37,13 +38,14 @@ class GuideMainStatsPanel extends StatelessWidget {
       );
     }
 
-    final slots = filterSlot != null
-        ? [filterSlot!]
-        : const [
-            GuideArtifactSlot.sands,
-            GuideArtifactSlot.goblet,
-            GuideArtifactSlot.circlet,
-          ];
+    final slots =
+        filterSlot != null
+            ? [filterSlot!]
+            : const [
+              GuideArtifactSlot.sands,
+              GuideArtifactSlot.goblet,
+              GuideArtifactSlot.circlet,
+            ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,10 +86,7 @@ class GuideMainStatsPanel extends StatelessWidget {
 }
 
 class _SlotBlock extends StatelessWidget {
-  const _SlotBlock({
-    required this.slot,
-    required this.recommendations,
-  });
+  const _SlotBlock({required this.slot, required this.recommendations});
 
   final GuideArtifactSlot slot;
   final List<GuideMainStatRecommendation> recommendations;
@@ -118,10 +117,7 @@ class _SlotBlock extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (primary != null)
-                      Text(
-                        '第一候補: $primary',
-                        style: theme.textTheme.bodyMedium,
-                      ),
+                      Text('第一候補: $primary', style: theme.textTheme.bodyMedium),
                     if (alts.isNotEmpty)
                       Text(
                         '代替候補: ${alts.join('、')}',

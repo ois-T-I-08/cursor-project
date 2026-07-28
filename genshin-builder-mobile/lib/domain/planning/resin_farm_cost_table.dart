@@ -112,14 +112,13 @@ class ResinFarmCostTable {
       final m = Map<String, dynamic>.from(metaRaw);
       final labels = m['weekdayLabels'];
       meta = ResinFarmCostMeta(
-        naturalResinPerDay:
-            (m['naturalResinPerDay'] as num?)?.toInt() ?? 180,
-        condensedResinValue:
-            (m['condensedResinValue'] as num?)?.toInt() ?? 40,
+        naturalResinPerDay: (m['naturalResinPerDay'] as num?)?.toInt() ?? 180,
+        condensedResinValue: (m['condensedResinValue'] as num?)?.toInt() ?? 40,
         synthesisRatio: (m['synthesisRatio'] as num?)?.toInt() ?? 3,
-        weekdayLabels: labels is List && labels.length == 7
-            ? [for (final e in labels) '$e']
-            : const ['月', '火', '水', '木', '金', '土', '日'],
+        weekdayLabels:
+            labels is List && labels.length == 7
+                ? [for (final e in labels) '$e']
+                : const ['月', '火', '水', '木', '金', '土', '日'],
       );
     }
 

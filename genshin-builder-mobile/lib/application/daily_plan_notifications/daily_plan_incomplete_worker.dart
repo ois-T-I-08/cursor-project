@@ -97,8 +97,7 @@ class DailyPlanIncompleteWorker {
         return;
       }
 
-      final planKeys =
-          plan.items.map(dailyPlanItemKey).toList(growable: false);
+      final planKeys = plan.items.map(dailyPlanItemKey).toList(growable: false);
       final completed = await completionRepo.getCompletedItemKeys(
         userId: userId,
         localDate: targetLocalDate,
@@ -158,14 +157,15 @@ class DailyPlanIncompleteWorker {
       if (year == null || month == null || day == null) return null;
       final date = DateTime(year, month, day);
 
-      final snapshot = await BuildAccountSnapshotUseCase(
-        characterRepo: DriftCharacterRepository(db),
-        progressRepo: DriftProgressRepository(db),
-        goalRepo: DriftGrowthGoalRepository(db),
-        inventoryRepo: DriftMaterialInventoryRepository(db),
-        teamRepo: DriftTeamRepository(db),
-        userId: userId,
-      )();
+      final snapshot =
+          await BuildAccountSnapshotUseCase(
+            characterRepo: DriftCharacterRepository(db),
+            progressRepo: DriftProgressRepository(db),
+            goalRepo: DriftGrowthGoalRepository(db),
+            inventoryRepo: DriftMaterialInventoryRepository(db),
+            teamRepo: DriftTeamRepository(db),
+            userId: userId,
+          )();
 
       return const GenerateDailyPlanUseCase()(
         userId: userId,

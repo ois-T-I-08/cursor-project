@@ -14,8 +14,8 @@ class VersioningService {
   VersioningService({
     required AppDatabase db,
     required ArtifactScoreWeightRepository weightRepository,
-  })  : _db = db,
-        _weightRepository = weightRepository;
+  }) : _db = db,
+       _weightRepository = weightRepository;
 
   final AppDatabase _db;
   final ArtifactScoreWeightRepository _weightRepository;

@@ -36,10 +36,7 @@ void main() {
   });
 
   test('safeUserScope is stable and differs across users', () {
-    expect(
-      dailyPlanSafeUserScope('user-a'),
-      dailyPlanSafeUserScope('user-a'),
-    );
+    expect(dailyPlanSafeUserScope('user-a'), dailyPlanSafeUserScope('user-a'));
     expect(
       dailyPlanSafeUserScope('user-a'),
       isNot(dailyPlanSafeUserScope('user-b')),

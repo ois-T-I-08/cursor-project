@@ -22,23 +22,21 @@ class ReminderDecision {
     required ReminderKind kind,
     required DateTime notifyAt,
     required String scheduleFingerprint,
-  }) =>
-      ReminderDecision._(
-        type: ReminderDecisionType.scheduleAt,
-        kind: kind,
-        notifyAt: notifyAt,
-        scheduleFingerprint: scheduleFingerprint,
-      );
+  }) => ReminderDecision._(
+    type: ReminderDecisionType.scheduleAt,
+    kind: kind,
+    notifyAt: notifyAt,
+    scheduleFingerprint: scheduleFingerprint,
+  );
 
   factory ReminderDecision.notifyImmediately({
     required ReminderKind kind,
     required String scheduleFingerprint,
-  }) =>
-      ReminderDecision._(
-        type: ReminderDecisionType.notifyImmediately,
-        kind: kind,
-        scheduleFingerprint: scheduleFingerprint,
-      );
+  }) => ReminderDecision._(
+    type: ReminderDecisionType.notifyImmediately,
+    kind: kind,
+    scheduleFingerprint: scheduleFingerprint,
+  );
 
   factory ReminderDecision.cancel(ReminderKind kind, {String? reasonCode}) =>
       ReminderDecision._(
@@ -48,15 +46,9 @@ class ReminderDecision {
       );
 
   factory ReminderDecision.keepExisting(ReminderKind kind) =>
-      ReminderDecision._(
-        type: ReminderDecisionType.keepExisting,
-        kind: kind,
-      );
+      ReminderDecision._(type: ReminderDecisionType.keepExisting, kind: kind);
 
-  factory ReminderDecision.skipInvalid(
-    ReminderKind kind,
-    String reasonCode,
-  ) =>
+  factory ReminderDecision.skipInvalid(ReminderKind kind, String reasonCode) =>
       ReminderDecision._(
         type: ReminderDecisionType.skipInvalid,
         kind: kind,

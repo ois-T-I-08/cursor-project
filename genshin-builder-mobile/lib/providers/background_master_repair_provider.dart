@@ -20,10 +20,8 @@ final backgroundMasterRepairProvider = Provider<BackgroundMasterRepair>((ref) {
     runMasterSync: () async {
       final db = await ref.read(appDatabaseProvider.future);
       final amber = ref.read(amberApiProvider);
-      final result = await MasterSyncService(
-        amberApi: amber,
-        db: db,
-      ).syncMasterData();
+      final result =
+          await MasterSyncService(amberApi: amber, db: db).syncMasterData();
       final versioning = await ref.read(versioningServiceProvider.future);
       await versioning.updateAndPersistVersions();
       ref.invalidate(charactersProvider);
@@ -46,8 +44,9 @@ final backgroundMasterRepairProvider = Provider<BackgroundMasterRepair>((ref) {
       final db = await ref.read(appDatabaseProvider.future);
       final weightRepo = ref.read(artifactScoreWeightRepositoryProvider);
       final characters = await db.getAllCharacters();
-      final missingWeightIds =
-          await weightRepo.syncMissingCharacterProfiles(characters);
+      final missingWeightIds = await weightRepo.syncMissingCharacterProfiles(
+        characters,
+      );
       if (missingWeightIds.isNotEmpty) {
         await db.insertSyncLog(
           'partial',

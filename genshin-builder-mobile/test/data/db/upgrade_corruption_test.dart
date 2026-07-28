@@ -18,10 +18,7 @@ void main() {
       ['bad-character', '{not-json', '{}', '', 0],
     );
 
-    expect(
-      await db.characterDao.getCharacterUpgrade('bad-character'),
-      isNull,
-    );
+    expect(await db.characterDao.getCharacterUpgrade('bad-character'), isNull);
     expect(
       await db.characterDao.getAllCharacterUpgrades(),
       isNot(contains('bad-character')),

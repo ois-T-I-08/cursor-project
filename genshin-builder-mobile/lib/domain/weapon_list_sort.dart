@@ -15,10 +15,10 @@ enum WeaponListSortMode {
 
 extension WeaponListSortModeLabel on WeaponListSortMode {
   String get label => switch (this) {
-        WeaponListSortMode.popularity => '人気順（使用率）',
-        WeaponListSortMode.rarityDesc => 'レア度順',
-        WeaponListSortMode.baseAttackDesc => '基礎攻撃力順',
-      };
+    WeaponListSortMode.popularity => '人気順（使用率）',
+    WeaponListSortMode.rarityDesc => 'レア度順',
+    WeaponListSortMode.baseAttackDesc => '基礎攻撃力順',
+  };
 }
 
 /// 一覧・ソート用の武器行データ（MasterWeapon + ソート用メタ）
@@ -62,15 +62,14 @@ class WeaponListEntry {
     String? specialProp,
     double? usageRate,
     bool? owned,
-  }) =>
-      WeaponListEntry(
-        weapon: weapon ?? this.weapon,
-        baseAttack: baseAttack ?? this.baseAttack,
-        recommendScore: recommendScore ?? this.recommendScore,
-        specialProp: specialProp ?? this.specialProp,
-        usageRate: usageRate ?? this.usageRate,
-        owned: owned ?? this.owned,
-      );
+  }) => WeaponListEntry(
+    weapon: weapon ?? this.weapon,
+    baseAttack: baseAttack ?? this.baseAttack,
+    recommendScore: recommendScore ?? this.recommendScore,
+    specialProp: specialProp ?? this.specialProp,
+    usageRate: usageRate ?? this.usageRate,
+    owned: owned ?? this.owned,
+  );
 }
 
 /// 将来のフィルター条件（未使用でもパイプラインに載せておく）
@@ -135,8 +134,7 @@ List<WeaponListEntry> filterWeaponList(
   WeaponListFilter filter,
 ) {
   return entries.where((e) {
-    if (filter.weaponType != null &&
-        e.weapon.weaponType != filter.weaponType) {
+    if (filter.weaponType != null && e.weapon.weaponType != filter.weaponType) {
       return false;
     }
     if (filter.minRarity != null && e.rarity < filter.minRarity!) {
@@ -197,9 +195,5 @@ List<WeaponListEntry> prepareWeaponList({
   String? selectedWeaponId,
 }) {
   final filtered = filterWeaponList(entries, filter);
-  return sortWeaponList(
-    filtered,
-    sortMode,
-    selectedWeaponId: selectedWeaponId,
-  );
+  return sortWeaponList(filtered, sortMode, selectedWeaponId: selectedWeaponId);
 }

@@ -43,9 +43,7 @@ Future<void> main() async {
 
     total++;
     final isTraveler = id.startsWith('10000005-');
-    final displayName = isTraveler
-        ? '旅人（${_elementLabel(elementKey)}）'
-        : name;
+    final displayName = isTraveler ? '旅人（${_elementLabel(elementKey)}）' : name;
     final sp = a['specialProp'] as String?;
 
     final inferred = inferScoreType(
@@ -84,8 +82,8 @@ Future<void> main() async {
 
   print('=== 全キャラ取得基準 検証 ($total 体) ===\n');
   print('解決結果:');
-  for (final e in summary.entries.toList()
-    ..sort((a, b) => b.value.compareTo(a.value))) {
+  for (final e
+      in summary.entries.toList()..sort((a, b) => b.value.compareTo(a.value))) {
     print('  ${e.key}: ${e.value}体');
   }
 
@@ -123,21 +121,20 @@ Future<List<ArtifactScoreWeightProfile>> _loadWeightProfilesFromJson() async {
   final profiles = decoded['profiles'] as List<dynamic>? ?? [];
   return [
     for (final raw in profiles)
-      if (raw is Map<String, dynamic>)
-        ArtifactScoreWeightProfile.fromJson(raw),
+      if (raw is Map<String, dynamic>) ArtifactScoreWeightProfile.fromJson(raw),
   ];
 }
 
 String _elementLabel(String elementKey) => switch (elementKey) {
-      'Fire' => '炎',
-      'Water' => '水',
-      'Electric' => '雷',
-      'Ice' => '氷',
-      'Wind' => '風',
-      'Rock' => '岩',
-      'Grass' => '草',
-      _ => elementKey,
-    };
+  'Fire' => '炎',
+  'Water' => '水',
+  'Electric' => '雷',
+  'Ice' => '氷',
+  'Wind' => '風',
+  'Rock' => '岩',
+  'Grass' => '草',
+  _ => elementKey,
+};
 
 class _FileWeightSource implements ArtifactScoreWeightSource {
   _FileWeightSource(this._profiles);

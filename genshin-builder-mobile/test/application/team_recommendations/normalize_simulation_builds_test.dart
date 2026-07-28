@@ -129,11 +129,12 @@ void main() {
       ),
       relics: [],
     );
-    final snapshot = normalizeSimulationBuilds(
-      characters: const [character],
-      hoyolabBuilds: const {'10000089': build},
-      localProgress: const {},
-    ).single;
+    final snapshot =
+        normalizeSimulationBuilds(
+          characters: const [character],
+          hoyolabBuilds: const {'10000089': build},
+          localProgress: const {},
+        ).single;
     expect(snapshot.weapon, isNull);
     expect(snapshot.defaultedFields, contains('weapon'));
   });

@@ -7,10 +7,10 @@ class GrowthRouteRequest {
     required this.startWeekday,
     this.dailyResinBudget,
     Map<String, Set<int>>? weekdayMap,
-  })  : goalIds = List.unmodifiable(
-          List<String>.from(goalIds.toSet())..sort(), // dedupe + sort
-        ),
-        weekdayMap = _copyWeekdayMap(weekdayMap);
+  }) : goalIds = List.unmodifiable(
+         List<String>.from(goalIds.toSet())..sort(), // dedupe + sort
+       ),
+       weekdayMap = _copyWeekdayMap(weekdayMap);
 
   /// Sorted, deduplicated list of goal IDs (immutable).
   final List<String> goalIds;
@@ -25,9 +25,7 @@ class GrowthRouteRequest {
 
   // ── Deep copy ─────────────────────────────────────────────────────
 
-  static Map<String, Set<int>>? _copyWeekdayMap(
-    Map<String, Set<int>>? source,
-  ) {
+  static Map<String, Set<int>>? _copyWeekdayMap(Map<String, Set<int>>? source) {
     if (source == null) return null;
     final keys = source.keys.toList()..sort();
     final copied = <String, Set<int>>{};
@@ -87,12 +85,12 @@ class GrowthRouteRequest {
 
   @override
   int get hashCode => Object.hash(
-        Object.hashAll(goalIds),
-        startDate,
-        startWeekday,
-        dailyResinBudget,
-        _weekdayMapHash(weekdayMap),
-      );
+    Object.hashAll(goalIds),
+    startDate,
+    startWeekday,
+    dailyResinBudget,
+    _weekdayMapHash(weekdayMap),
+  );
 
   static int _weekdayMapHash(Map<String, Set<int>>? map) {
     if (map == null) return 0; // distinct from empty map

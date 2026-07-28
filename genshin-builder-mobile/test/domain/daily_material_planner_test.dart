@@ -40,9 +40,10 @@ void main() {
       id: MasterMaterial(
         id: id,
         name: '素材$id',
-        category: id.startsWith('104')
-            ? 'characterTalentMaterial'
-            : 'weaponAscensionMaterial',
+        category:
+            id.startsWith('104')
+                ? 'characterTalentMaterial'
+                : 'weaponAscensionMaterial',
         rarity: 2,
         iconUrl: '',
       ),
@@ -136,11 +137,7 @@ void main() {
       );
 
       final consumers = plan.talentCards.single.consumers;
-      expect(consumers.map((c) => c.name).toList(), [
-        '雷電将軍',
-        '八重神子',
-        '未所持キャラ',
-      ]);
+      expect(consumers.map((c) => c.name).toList(), ['雷電将軍', '八重神子', '未所持キャラ']);
       expect(consumers[0].remainingStatus, DailyRemainingStatus.needed);
       expect(consumers[0].remainingCount, 12);
       expect(consumers[0].remainingByMaterialId, {'104328': 12});
@@ -203,18 +200,16 @@ void main() {
 
       final card = plan.weaponCards.single;
       expect(card.consumerGroups.map((g) => g.key), ['sword', 'polearm']);
-      final polearm = card.consumerGroups
-          .firstWhere((g) => g.key == 'polearm')
-          .consumers
-          .single;
+      final polearm =
+          card.consumerGroups
+              .firstWhere((g) => g.key == 'polearm')
+              .consumers
+              .single;
       expect(polearm.equippedCharacters.single.name, '雷電将軍');
       expect(polearm.isOwned, isTrue);
       expect(polearm.isEquipped, isTrue);
       // Lv 既知なら不足 or 完成のいずれか（unknown ではない）
-      expect(
-        polearm.remainingStatus,
-        isNot(DailyRemainingStatus.unknown),
-      );
+      expect(polearm.remainingStatus, isNot(DailyRemainingStatus.unknown));
     });
   });
 

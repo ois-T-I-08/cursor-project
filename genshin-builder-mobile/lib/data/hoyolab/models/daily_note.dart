@@ -51,10 +51,10 @@ class HoyolabExpedition {
   }
 
   Map<String, dynamic> toJson() => {
-        'status': status,
-        'remaining_time': remainingTime,
-        'has_remaining_time_from_api': hasRemainingTimeFromApi,
-      };
+    'status': status,
+    'remaining_time': remainingTime,
+    'has_remaining_time_from_api': hasRemainingTimeFromApi,
+  };
 }
 
 class DailyNote {
@@ -86,11 +86,9 @@ class DailyNote {
 
   bool get dailyTasksComplete => finishedTaskNum >= totalTaskNum;
 
-  int get activeExpeditions =>
-      expeditions.where((e) => !e.isFinished).length;
+  int get activeExpeditions => expeditions.where((e) => !e.isFinished).length;
 
-  int get finishedExpeditions =>
-      expeditions.where((e) => e.isFinished).length;
+  int get finishedExpeditions => expeditions.where((e) => e.isFinished).length;
 
   factory DailyNote.fromJson(Map<String, dynamic> json) =>
       DailyNote.fromJsonSource(json, fromApi: true);
@@ -121,29 +119,29 @@ class DailyNote {
       totalTaskNum: DailyNote.asInt(json['total_task_num'], fallback: 4),
       currentHomeCoin: DailyNote.asInt(json['current_home_coin']),
       maxHomeCoin: DailyNote.asInt(json['max_home_coin'], fallback: 2400),
-      expeditions: expeditionsRaw
-          .map(
-            (e) => HoyolabExpedition.fromJsonSource(
-              e as Map<String, dynamic>,
-              fromApi: fromApi,
-            ),
-          )
-          .toList(),
+      expeditions:
+          expeditionsRaw
+              .map(
+                (e) => HoyolabExpedition.fromJsonSource(
+                  e as Map<String, dynamic>,
+                  fromApi: fromApi,
+                ),
+              )
+              .toList(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'current_resin': currentResin,
-        'max_resin': maxResin,
-        'has_max_resin_from_api': hasMaxResinFromApi,
-        'resin_recovery_time': resinRecoveryTime,
-        'finished_task_num': finishedTaskNum,
-        'total_task_num': totalTaskNum,
-        'current_home_coin': currentHomeCoin,
-        'max_home_coin': maxHomeCoin,
-        'expeditions':
-            expeditions.map((e) => e.toJson()).toList(growable: false),
-      };
+    'current_resin': currentResin,
+    'max_resin': maxResin,
+    'has_max_resin_from_api': hasMaxResinFromApi,
+    'resin_recovery_time': resinRecoveryTime,
+    'finished_task_num': finishedTaskNum,
+    'total_task_num': totalTaskNum,
+    'current_home_coin': currentHomeCoin,
+    'max_home_coin': maxHomeCoin,
+    'expeditions': expeditions.map((e) => e.toJson()).toList(growable: false),
+  };
 
   static int asInt(dynamic value, {int fallback = 0}) {
     if (value is int) return value;
@@ -182,13 +180,12 @@ class HoyolabGameRole {
   factory HoyolabGameRole.fromJson(
     Map<String, dynamic> json, {
     required String region,
-  }) =>
-      HoyolabGameRole(
-        uid: '${json['game_uid'] ?? json['uid'] ?? ''}',
-        nickname: json['nickname'] as String? ?? '旅行者',
-        level: DailyNote.asInt(json['level']),
-        region: region,
-      );
+  }) => HoyolabGameRole(
+    uid: '${json['game_uid'] ?? json['uid'] ?? ''}',
+    nickname: json['nickname'] as String? ?? '旅行者',
+    level: DailyNote.asInt(json['level']),
+    region: region,
+  );
 }
 
 class HoyolabRegion {
@@ -198,9 +195,9 @@ class HoyolabRegion {
   final String name;
 
   factory HoyolabRegion.fromJson(Map<String, dynamic> json) => HoyolabRegion(
-        region: json['region'] as String? ?? '',
-        name: json['name'] as String? ?? json['region'] as String? ?? '',
-      );
+    region: json['region'] as String? ?? '',
+    name: json['name'] as String? ?? json['region'] as String? ?? '',
+  );
 }
 
 class HoyolabUserInfo {
@@ -238,14 +235,13 @@ class HoyolabSession {
     String? region,
     String? nickname,
     String? accountName,
-  }) =>
-      HoyolabSession(
-        isLinked: isLinked ?? this.isLinked,
-        uid: uid ?? this.uid,
-        region: region ?? this.region,
-        nickname: nickname ?? this.nickname,
-        accountName: accountName ?? this.accountName,
-      );
+  }) => HoyolabSession(
+    isLinked: isLinked ?? this.isLinked,
+    uid: uid ?? this.uid,
+    region: region ?? this.region,
+    nickname: nickname ?? this.nickname,
+    accountName: accountName ?? this.accountName,
+  );
 
   static const unlinked = HoyolabSession(isLinked: false);
 }

@@ -49,7 +49,5 @@ Map<String, int> countWeaponIdsFromBuilds(List<dynamic> builds) {
 Map<String, double> ratesFromCounts(Map<String, int> counts) {
   final total = counts.values.fold<int>(0, (a, b) => a + b);
   if (total <= 0) return const {};
-  return {
-    for (final e in counts.entries) e.key: e.value / total,
-  };
+  return {for (final e in counts.entries) e.key: e.value / total};
 }

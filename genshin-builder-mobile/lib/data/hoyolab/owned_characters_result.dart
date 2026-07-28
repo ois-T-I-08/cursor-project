@@ -33,13 +33,12 @@ class OwnedCharactersFetchResult {
     HoyolabApiException? error,
     bool? notLinked,
     bool? fetched,
-  }) =>
-      OwnedCharactersFetchResult(
-        characters: characters ?? this.characters,
-        error: error ?? this.error,
-        notLinked: notLinked ?? this.notLinked,
-        fetched: fetched ?? this.fetched,
-      );
+  }) => OwnedCharactersFetchResult(
+    characters: characters ?? this.characters,
+    error: error ?? this.error,
+    notLinked: notLinked ?? this.notLinked,
+    fetched: fetched ?? this.fetched,
+  );
 }
 
 /// API のキャラ ID をマスター ID に照合（旅人の元素 suffix 対応）

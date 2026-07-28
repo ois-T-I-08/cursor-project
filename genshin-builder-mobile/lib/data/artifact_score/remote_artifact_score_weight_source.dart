@@ -41,9 +41,11 @@ class RemoteArtifactScoreWeightSource
     try {
       return (decoded['profiles'] as List<dynamic>? ?? [])
           .whereType<Map>()
-          .map((e) => ArtifactScoreWeightProfile.fromJson(
-                Map<String, dynamic>.from(e),
-              ))
+          .map(
+            (e) => ArtifactScoreWeightProfile.fromJson(
+              Map<String, dynamic>.from(e),
+            ),
+          )
           .toList(growable: false);
     } catch (_) {
       throw const ConfigLoadException(

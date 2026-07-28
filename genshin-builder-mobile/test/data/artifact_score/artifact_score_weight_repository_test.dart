@@ -1,4 +1,3 @@
-
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:genshin_builder_mobile/data/artifact_score/artifact_score_weight_repository.dart';
@@ -76,41 +75,44 @@ void main() {
     expect(profile, isNull);
   });
 
-  test('syncMissingCharacterProfiles retries with refreshable source', () async {
-    final source = _FakeRefreshableSource(
-      initial: const [],
-      refreshed: const [
-        ArtifactScoreWeightProfile(
-          characterId: '10000052',
-          name: '雷電将軍',
-          weights: ArtifactStatWeights(
-            critRate: 2,
-            critDamage: 1,
-            atkPercent: 0,
-            hpPercent: 0,
-            defPercent: 0,
-            elementalMastery: 0,
-            energyRecharge: 1,
+  test(
+    'syncMissingCharacterProfiles retries with refreshable source',
+    () async {
+      final source = _FakeRefreshableSource(
+        initial: const [],
+        refreshed: const [
+          ArtifactScoreWeightProfile(
+            characterId: '10000052',
+            name: '雷電将軍',
+            weights: ArtifactStatWeights(
+              critRate: 2,
+              critDamage: 1,
+              atkPercent: 0,
+              hpPercent: 0,
+              defPercent: 0,
+              elementalMastery: 0,
+              energyRecharge: 1,
+            ),
           ),
+        ],
+      );
+      final repo = ArtifactScoreWeightRepository(source);
+      const characters = [
+        MasterCharacter(
+          id: '10000052',
+          name: '雷電将軍',
+          element: 'Electro',
+          weaponType: 'polearm',
+          rarity: 5,
+          region: 'inazuma',
+          iconUrl: '',
         ),
-      ],
-    );
-    final repo = ArtifactScoreWeightRepository(source);
-    const characters = [
-      MasterCharacter(
-        id: '10000052',
-        name: '雷電将軍',
-        element: 'Electro',
-        weaponType: 'polearm',
-        rarity: 5,
-        region: 'inazuma',
-        iconUrl: '',
-      ),
-    ];
-    final missing = await repo.syncMissingCharacterProfiles(characters);
-    expect(missing, isEmpty);
-    expect(source.refreshCalled, isTrue);
-  });
+      ];
+      final missing = await repo.syncMissingCharacterProfiles(characters);
+      expect(missing, isEmpty);
+      expect(source.refreshCalled, isTrue);
+    },
+  );
 }
 
 class _FakeRefreshableSource implements RefreshableArtifactScoreWeightSource {

@@ -69,12 +69,12 @@ class BookmarkRepository {
       }
     }
 
-    final merged = map.values.toList()
-      ..sort((a, b) {
-        if (a.isMora) return 1;
-        if (b.isMora) return -1;
-        return a.name.compareTo(b.name);
-      });
+    final merged =
+        map.values.toList()..sort((a, b) {
+          if (a.isMora) return 1;
+          if (b.isMora) return -1;
+          return a.name.compareTo(b.name);
+        });
     return merged;
   }
 

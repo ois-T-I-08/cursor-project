@@ -145,10 +145,11 @@ void main() {
         start: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
         end: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       );
-      final sorted = sortCalendarEventsForHome(
-        [none, upcoming, active],
-        now: now,
-      );
+      final sorted = sortCalendarEventsForHome([
+        none,
+        upcoming,
+        active,
+      ], now: now);
       expect(sorted.map((e) => e.id), ['a', 'u']);
     });
   });

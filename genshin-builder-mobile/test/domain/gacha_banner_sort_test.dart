@@ -38,10 +38,7 @@ void main() {
         end: DateTime.utc(2024, 6, 30),
       );
 
-      final sorted = sortGachaBanners(
-        [ended, upcoming, active],
-        now: now,
-      );
+      final sorted = sortGachaBanners([ended, upcoming, active], now: now);
       expect(sorted.map((e) => e.id), ['active', 'upcoming', 'ended']);
     });
 

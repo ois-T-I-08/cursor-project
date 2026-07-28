@@ -54,11 +54,12 @@ class DailyMaterialNeedRow extends StatelessWidget {
                             ? theme.textTheme.labelSmall
                             : theme.textTheme.labelMedium)
                         ?.copyWith(
-                      color: (remainingByMaterialId[material.id] ?? 0) > 0
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          color:
+                              (remainingByMaterialId[material.id] ?? 0) > 0
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                 ),
               ],

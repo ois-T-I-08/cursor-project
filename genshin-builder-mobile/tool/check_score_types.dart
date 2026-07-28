@@ -31,12 +31,11 @@ void main() async {
     if (id.startsWith('10000007-')) continue;
 
     final isTraveler = id.startsWith('10000005-');
-    final displayName = isTraveler
-        ? '旅人（${_elementLabel(elementKey)}）'
-        : name;
+    final displayName = isTraveler ? '旅人（${_elementLabel(elementKey)}）' : name;
     final sp = a['specialProp'] as String?;
 
-    final expected = weightProfiles[id] ??
+    final expected =
+        weightProfiles[id] ??
         _infer(sp, displayName, nameOverrides: nameOverrides);
     final current = _infer(sp, displayName, nameOverrides: nameOverrides);
 
@@ -51,7 +50,8 @@ void main() async {
 
   print('=== 全キャラ取得基準 検証 (${byType.values.fold(0, (a, b) => a + b)}体) ===\n');
   print('期待値の内訳:');
-  for (final e in byType.entries.toList()..sort((a, b) => b.value.compareTo(a.value))) {
+  for (final e
+      in byType.entries.toList()..sort((a, b) => b.value.compareTo(a.value))) {
     print('  ${e.key}: ${e.value}体');
   }
 
@@ -115,12 +115,12 @@ String _infer(
 }
 
 String _elementLabel(String elementKey) => switch (elementKey) {
-      'Fire' => '炎',
-      'Water' => '水',
-      'Electric' => '雷',
-      'Ice' => '氷',
-      'Wind' => '風',
-      'Rock' => '岩',
-      'Grass' => '草',
-      _ => elementKey,
-    };
+  'Fire' => '炎',
+  'Water' => '水',
+  'Electric' => '雷',
+  'Ice' => '氷',
+  'Wind' => '風',
+  'Rock' => '岩',
+  'Grass' => '草',
+  _ => elementKey,
+};

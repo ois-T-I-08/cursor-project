@@ -44,19 +44,18 @@ class _DetailSectionAccordionState extends State<DetailSectionAccordion> {
                       children: [
                         Text(
                           widget.title,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: colorScheme.primary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleMedium?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         DefaultTextStyle(
                           style: (Theme.of(context).textTheme.bodyMedium ??
                                   const TextStyle())
-                              .copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                              .copyWith(color: colorScheme.onSurfaceVariant),
                           child: widget.summary,
                         ),
                       ],
@@ -81,10 +80,7 @@ class _DetailSectionAccordionState extends State<DetailSectionAccordion> {
               color: colorScheme.outlineVariant.withValues(alpha: 0.5),
             ),
           if (_open)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: widget.child,
-            ),
+            Padding(padding: const EdgeInsets.all(16), child: widget.child),
         ],
       ),
     );

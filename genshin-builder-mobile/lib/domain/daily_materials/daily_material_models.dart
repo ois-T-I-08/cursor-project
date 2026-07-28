@@ -43,8 +43,7 @@ class DailyMaterialSeries {
   Set<String> get materialIdSet => materialIds.toSet();
 
   /// 表示用アイコン（最高レアの素材 ID）
-  String get displayMaterialId =>
-      materialIds.isEmpty ? '' : materialIds.last;
+  String get displayMaterialId => materialIds.isEmpty ? '' : materialIds.last;
 
   bool isAvailableOn(int isoWeekday) {
     if (isoWeekday == DateTime.sunday) return true;
@@ -119,13 +118,17 @@ class DailyMaterialSchedule {
   factory DailyMaterialSchedule.fromJson(Map<String, dynamic> json) {
     final talent = (json['talentSeries'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
-        .map((e) => DailyMaterialSeries.fromJson(e, DailyMaterialKind.talentBook))
+        .map(
+          (e) => DailyMaterialSeries.fromJson(e, DailyMaterialKind.talentBook),
+        )
         .toList(growable: false);
     final weapon = (json['weaponSeries'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(
-          (e) =>
-              DailyMaterialSeries.fromJson(e, DailyMaterialKind.weaponAscension),
+          (e) => DailyMaterialSeries.fromJson(
+            e,
+            DailyMaterialKind.weaponAscension,
+          ),
         )
         .toList(growable: false);
     final artifact = (json['artifactSeries'] as List<dynamic>? ?? const [])
@@ -156,8 +159,11 @@ DateTime genshinGameDate([DateTime? now]) {
   final utc = (now ?? DateTime.now()).toUtc();
   final jst = utc.add(const Duration(hours: 9));
   if (jst.hour < 4) {
-    return DateTime(jst.year, jst.month, jst.day)
-        .subtract(const Duration(days: 1));
+    return DateTime(
+      jst.year,
+      jst.month,
+      jst.day,
+    ).subtract(const Duration(days: 1));
   }
   return DateTime(jst.year, jst.month, jst.day);
 }
@@ -272,17 +278,15 @@ class DailyMaterialSeriesCardData {
       remainingByMaterialId.values.fold(0, (s, n) => s + n);
 
   List<DailyMaterialConsumer> get consumers => [
-        for (final g in consumerGroups) ...g.consumers,
-      ];
+    for (final g in consumerGroups) ...g.consumers,
+  ];
 
   MasterMaterial? get displayMaterial =>
       materials.isEmpty ? null : materials.last;
 
-  int remainingFor(String materialId) =>
-      remainingByMaterialId[materialId] ?? 0;
+  int remainingFor(String materialId) => remainingByMaterialId[materialId] ?? 0;
 
-  int nextStageFor(String materialId) =>
-      nextStageByMaterialId[materialId] ?? 0;
+  int nextStageFor(String materialId) => nextStageByMaterialId[materialId] ?? 0;
 }
 
 /// 曜日画面の集計結果

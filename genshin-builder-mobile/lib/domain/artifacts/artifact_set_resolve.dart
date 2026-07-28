@@ -6,8 +6,10 @@ import 'artifact_set_recommendations.dart';
 /// `UI_RelicIcon_15020_4` / URL から聖遺物セット ID を取り出す。
 String? extractReliquarySetIdFromIcon(String? iconOrUrl) {
   if (iconOrUrl == null || iconOrUrl.isEmpty) return null;
-  final match =
-      RegExp(r'UI_RelicIcon_(\d+)', caseSensitive: false).firstMatch(iconOrUrl);
+  final match = RegExp(
+    r'UI_RelicIcon_(\d+)',
+    caseSensitive: false,
+  ).firstMatch(iconOrUrl);
   return match?.group(1);
 }
 
@@ -37,9 +39,8 @@ class ArtifactSetCatalog {
     // aliases: 表記ゆれ → 正規セット名（または route）
     for (final e in aliases.entries) {
       final targetKey = normalizeArtifactSetKey(e.value);
-      final target = byNameKey[targetKey] ??
-          byRouteKey[targetKey] ??
-          byId[e.value.trim()];
+      final target =
+          byNameKey[targetKey] ?? byRouteKey[targetKey] ?? byId[e.value.trim()];
       if (target == null) continue;
       byNameKey[normalizeArtifactSetKey(e.key)] = target;
     }

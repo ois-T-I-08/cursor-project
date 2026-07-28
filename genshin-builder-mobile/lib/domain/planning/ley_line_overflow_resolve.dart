@@ -11,10 +11,7 @@ LeyLineOverflowStatus resolveLeyLineOverflowStatus({
   bool catalogLoadFailed = false,
 }) {
   if (catalogLoadFailed) {
-    return const LeyLineOverflowStatus(
-      isActive: false,
-      resolveFailed: true,
-    );
+    return const LeyLineOverflowStatus(isActive: false, resolveFailed: true);
   }
 
   final now = nowUtc.toUtc();

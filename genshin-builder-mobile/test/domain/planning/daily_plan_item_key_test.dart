@@ -76,10 +76,7 @@ void main() {
         type: DailyPlanItemType.weeklyBoss,
         title: 'boss',
       );
-      expect(
-        dailyPlanItemKey(item),
-        'v1|type=weeklyBoss|goal=|chars=|mats=',
-      );
+      expect(dailyPlanItemKey(item), 'v1|type=weeklyBoss|goal=|chars=|mats=');
     });
   });
 

@@ -12,18 +12,18 @@ class BookmarkDao extends DatabaseAccessor<DriftAppDatabase>
   BookmarkDao(super.db);
 
   Future<List<MaterialBookmarkEntry>> getAllBookmarks() async {
-    final rows = await (select(materialBookmarks)
-          ..orderBy([(t) => OrderingTerm.desc(t.addedAt)]))
-        .get();
+    final rows =
+        await (select(materialBookmarks)
+          ..orderBy([(t) => OrderingTerm.desc(t.addedAt)])).get();
     return rows.map(_bookmarkFromRow).toList();
   }
 
   Future<void> upsertBookmark(MaterialBookmarkEntry entry) async {
-    await (delete(materialBookmarks)
-          ..where((t) =>
-              t.sourceKey.equals(entry.sourceKey) &
-              t.materialId.equals(entry.materialId)))
-        .go();
+    await (delete(materialBookmarks)..where(
+      (t) =>
+          t.sourceKey.equals(entry.sourceKey) &
+          t.materialId.equals(entry.materialId),
+    )).go();
     await into(materialBookmarks).insert(_bookmarkToCompanion(entry));
   }
 
@@ -33,14 +33,12 @@ class BookmarkDao extends DatabaseAccessor<DriftAppDatabase>
 
   Future<void> removeBookmarksBySourceKey(String sourceKey) async {
     await (delete(materialBookmarks)
-          ..where((t) => t.sourceKey.equals(sourceKey)))
-        .go();
+      ..where((t) => t.sourceKey.equals(sourceKey))).go();
   }
 
   Future<void> removeBookmarksByMaterialId(String materialId) async {
     await (delete(materialBookmarks)
-          ..where((t) => t.materialId.equals(materialId)))
-        .go();
+      ..where((t) => t.materialId.equals(materialId))).go();
   }
 
   Future<void> clearAllBookmarks() async {

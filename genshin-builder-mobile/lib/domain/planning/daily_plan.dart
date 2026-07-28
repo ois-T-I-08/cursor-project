@@ -30,7 +30,12 @@ class DailyPlan {
   List<DailyPlanItem> get topItems => items.take(3).toList();
 }
 
-enum DailyPlanItemType { weekdayMaterial, weeklyBoss, growthGoal, generalMaterial }
+enum DailyPlanItemType {
+  weekdayMaterial,
+  weeklyBoss,
+  growthGoal,
+  generalMaterial,
+}
 
 class DailyPlanItem {
   const DailyPlanItem({

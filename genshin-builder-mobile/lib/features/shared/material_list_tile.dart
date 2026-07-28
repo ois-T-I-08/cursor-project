@@ -21,13 +21,14 @@ class MaterialListTile extends StatelessWidget {
     final fmt = NumberFormat('#,###');
 
     return ListTile(
-      leading: line.isMora
-          ? const CircleAvatar(child: Text('M'))
-          : GameIconImage(
-              iconUrl: line.iconUrl,
-              size: 40,
-              fallback: const Icon(Icons.inventory_2),
-            ),
+      leading:
+          line.isMora
+              ? const CircleAvatar(child: Text('M'))
+              : GameIconImage(
+                iconUrl: line.iconUrl,
+                size: 40,
+                fallback: const Icon(Icons.inventory_2),
+              ),
       title: Text(line.name),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,

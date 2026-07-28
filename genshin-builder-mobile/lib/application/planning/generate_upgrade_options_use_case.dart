@@ -41,8 +41,7 @@ class GenerateUpgradeOptionsUseCase {
           sources: sources,
           now: now,
           promotes: promotes,
-          expMaterialIds:
-              expBooks.map((item) => item.id).toSet(),
+          expMaterialIds: expBooks.map((item) => item.id).toSet(),
           materialInventory: materialInventory,
         ),
       );
@@ -142,16 +141,13 @@ class GenerateUpgradeOptionsUseCase {
         expMaterialIds,
         (value) => mora += value,
       );
-    } else if (type == 'ascension' &&
-        promotes != null &&
-        promotes.isNotEmpty) {
+    } else if (type == 'ascension' && promotes != null && promotes.isNotEmpty) {
       for (final stage in promotes) {
         if (stage.promoteLevel <= fromVal || stage.promoteLevel > toVal) {
           continue;
         }
         for (final entry in stage.costItems.entries) {
-          materials[entry.key] =
-              (materials[entry.key] ?? 0) + entry.value;
+          materials[entry.key] = (materials[entry.key] ?? 0) + entry.value;
         }
         mora += stage.coinCost;
       }
@@ -203,18 +199,16 @@ class GenerateUpgradeOptionsUseCase {
     final remaining = <String, int>{};
     final owned = <String, int>{};
     if (hasInv) {
-      for (final entry in [
-        ...materials.entries,
-        ...expItems.entries,
-      ]) {
+      for (final entry in [...materials.entries, ...expItems.entries]) {
         final quantity = materialInventory[entry.key] ?? 0;
         owned[entry.key] = quantity;
         remaining[entry.key] =
             (entry.value - quantity).clamp(0, entry.value).toInt();
       }
-      invStatus = remaining.values.any((value) => value > 0)
-          ? InventoryStatus.ownedInsufficient
-          : InventoryStatus.ownedSufficient;
+      invStatus =
+          remaining.values.any((value) => value > 0)
+              ? InventoryStatus.ownedInsufficient
+              : InventoryStatus.ownedSufficient;
     }
 
     return UpgradeOption(
@@ -236,14 +230,14 @@ class GenerateUpgradeOptionsUseCase {
           calcMode == CalculationMode.unavailable
               ? RecommendationConfidence.unknown
               : hasInv
-                  ? RecommendationConfidence.high
-                  : RecommendationConfidence.low,
+              ? RecommendationConfidence.high
+              : RecommendationConfidence.low,
       completeness:
           calcMode == CalculationMode.unavailable
               ? DataCompleteness.unavailable
               : hasInv
-                  ? DataCompleteness.partial
-                  : DataCompleteness.minimal,
+              ? DataCompleteness.partial
+              : DataCompleteness.minimal,
       missingData: missing,
       usedDataSources: sources,
       calculationMode: calcMode,

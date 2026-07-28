@@ -2,10 +2,7 @@ import 'gacha_banner.dart';
 
 /// アセット / リモートのバナー履歴スケジュール
 class GachaBannerSchedule {
-  const GachaBannerSchedule({
-    required this.version,
-    required this.banners,
-  });
+  const GachaBannerSchedule({required this.version, required this.banners});
 
   final int version;
   final List<GachaBanner> banners;
@@ -23,9 +20,9 @@ class GachaBannerSchedule {
   }
 
   Map<String, dynamic> toJson() => {
-        'version': version,
-        'banners': [for (final b in banners) gachaBannerToJson(b)],
-      };
+    'version': version,
+    'banners': [for (final b in banners) gachaBannerToJson(b)],
+  };
 }
 
 void validateGachaBannerScheduleJson(Map<String, dynamic> json) {
@@ -35,7 +32,9 @@ void validateGachaBannerScheduleJson(Map<String, dynamic> json) {
   }
   for (final item in banners) {
     if (item is! Map) {
-      throw const FormatException('gacha_banner_history: banner must be an object');
+      throw const FormatException(
+        'gacha_banner_history: banner must be an object',
+      );
     }
     final map = Map<String, dynamic>.from(item);
     for (final key in ['id', 'type', 'name', 'start', 'end']) {
@@ -69,11 +68,11 @@ GachaBannerType parseGachaBannerType(String raw) {
 }
 
 String gachaBannerTypeToJson(GachaBannerType type) => switch (type) {
-      GachaBannerType.character => 'character',
-      GachaBannerType.character2 => 'character2',
-      GachaBannerType.weapon => 'weapon',
-      GachaBannerType.chronicled => 'chronicled',
-    };
+  GachaBannerType.character => 'character',
+  GachaBannerType.character2 => 'character2',
+  GachaBannerType.weapon => 'weapon',
+  GachaBannerType.chronicled => 'chronicled',
+};
 
 GachaBanner gachaBannerFromJson(Map<String, dynamic> json) {
   List<String> ids(String key) {
@@ -110,14 +109,14 @@ GachaBanner gachaBannerFromJson(Map<String, dynamic> json) {
 }
 
 Map<String, dynamic> gachaBannerToJson(GachaBanner b) => {
-      'id': b.id,
-      'type': gachaBannerTypeToJson(b.type),
-      'name': b.name,
-      'version': b.version,
-      'start': b.start.toUtc().toIso8601String(),
-      'end': b.end.toUtc().toIso8601String(),
-      'featured5Ids': b.featured5Ids,
-      'featured4Ids': b.featured4Ids,
-      'featuredWeaponIds': b.featuredWeaponIds,
-      if (b.sourceIcons.isNotEmpty) 'sourceIcons': b.sourceIcons,
-    };
+  'id': b.id,
+  'type': gachaBannerTypeToJson(b.type),
+  'name': b.name,
+  'version': b.version,
+  'start': b.start.toUtc().toIso8601String(),
+  'end': b.end.toUtc().toIso8601String(),
+  'featured5Ids': b.featured5Ids,
+  'featured4Ids': b.featured4Ids,
+  'featuredWeaponIds': b.featuredWeaponIds,
+  if (b.sourceIcons.isNotEmpty) 'sourceIcons': b.sourceIcons,
+};

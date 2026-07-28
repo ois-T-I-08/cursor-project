@@ -21,12 +21,12 @@ List<RequirementLine> mergeRequirementLines(List<RequirementLine> lines) {
     }
   }
 
-  final merged = map.values.toList()
-    ..sort((a, b) {
-      if (a.isMora) return 1;
-      if (b.isMora) return -1;
-      return a.name.compareTo(b.name);
-    });
+  final merged =
+      map.values.toList()..sort((a, b) {
+        if (a.isMora) return 1;
+        if (b.isMora) return -1;
+        return a.name.compareTo(b.name);
+      });
   return merged;
 }
 
@@ -60,8 +60,7 @@ List<RequirementLine> getRangeLevelRequirements(
     if (stage == null || stage.toLevel > to) break;
 
     for (final m in stage.materials) {
-      materialMap[m.materialId] =
-          (materialMap[m.materialId] ?? 0) + m.count;
+      materialMap[m.materialId] = (materialMap[m.materialId] ?? 0) + m.count;
     }
     for (final item in stage.levelUpMaterials) {
       final prev = levelUpMap[item.materialId];
@@ -81,28 +80,34 @@ List<RequirementLine> getRangeLevelRequirements(
   final lines = <RequirementLine>[];
 
   for (final entry in materialMap.entries) {
-    lines.add(RequirementLine(
-      materialId: entry.key,
-      name: resolveName?.call(entry.key) ?? '素材 #${entry.key}',
-      count: entry.value,
-      iconUrl: resolveIcon?.call(entry.key),
-    ));
+    lines.add(
+      RequirementLine(
+        materialId: entry.key,
+        name: resolveName?.call(entry.key) ?? '素材 #${entry.key}',
+        count: entry.value,
+        iconUrl: resolveIcon?.call(entry.key),
+      ),
+    );
   }
   for (final entry in levelUpMap.entries) {
-    lines.add(RequirementLine(
-      materialId: entry.key,
-      name: resolveName?.call(entry.key) ?? entry.value.name,
-      count: entry.value.count,
-      iconUrl: resolveIcon?.call(entry.key),
-    ));
+    lines.add(
+      RequirementLine(
+        materialId: entry.key,
+        name: resolveName?.call(entry.key) ?? entry.value.name,
+        count: entry.value.count,
+        iconUrl: resolveIcon?.call(entry.key),
+      ),
+    );
   }
   if (mora > 0) {
-    lines.add(RequirementLine(
-      materialId: moraMaterialId,
-      name: 'モラ',
-      count: mora,
-      isMora: true,
-    ));
+    lines.add(
+      RequirementLine(
+        materialId: moraMaterialId,
+        name: 'モラ',
+        count: mora,
+        isMora: true,
+      ),
+    );
   }
 
   return mergeRequirementLines(lines);
@@ -134,20 +139,24 @@ List<RequirementLine> getRangeTalentRequirements(
 
   final lines = <RequirementLine>[];
   for (final entry in materialMap.entries) {
-    lines.add(RequirementLine(
-      materialId: entry.key,
-      name: resolveName?.call(entry.key) ?? '素材 #${entry.key}',
-      count: entry.value,
-      iconUrl: resolveIcon?.call(entry.key),
-    ));
+    lines.add(
+      RequirementLine(
+        materialId: entry.key,
+        name: resolveName?.call(entry.key) ?? '素材 #${entry.key}',
+        count: entry.value,
+        iconUrl: resolveIcon?.call(entry.key),
+      ),
+    );
   }
   if (mora > 0) {
-    lines.add(RequirementLine(
-      materialId: moraMaterialId,
-      name: 'モラ',
-      count: mora,
-      isMora: true,
-    ));
+    lines.add(
+      RequirementLine(
+        materialId: moraMaterialId,
+        name: 'モラ',
+        count: mora,
+        isMora: true,
+      ),
+    );
   }
 
   return mergeRequirementLines(lines);
@@ -163,30 +172,37 @@ List<RequirementLine> nextStageToRequirementLines(
   final lines = <RequirementLine>[];
 
   for (final m in materials) {
-    lines.add(RequirementLine(
-      materialId: m.materialId,
-      name: resolveName(m.materialId),
-      count: m.count,
-      iconUrl: resolveIcon?.call(m.materialId),
-    ));
+    lines.add(
+      RequirementLine(
+        materialId: m.materialId,
+        name: resolveName(m.materialId),
+        count: m.count,
+        iconUrl: resolveIcon?.call(m.materialId),
+      ),
+    );
   }
   for (final item in levelUpMaterials) {
-    lines.add(RequirementLine(
-      materialId: item.materialId,
-      name: resolveName(item.materialId).isNotEmpty
-          ? resolveName(item.materialId)
-          : item.name,
-      count: item.count,
-      iconUrl: resolveIcon?.call(item.materialId),
-    ));
+    lines.add(
+      RequirementLine(
+        materialId: item.materialId,
+        name:
+            resolveName(item.materialId).isNotEmpty
+                ? resolveName(item.materialId)
+                : item.name,
+        count: item.count,
+        iconUrl: resolveIcon?.call(item.materialId),
+      ),
+    );
   }
   if (mora > 0) {
-    lines.add(RequirementLine(
-      materialId: moraMaterialId,
-      name: 'モラ',
-      count: mora,
-      isMora: true,
-    ));
+    lines.add(
+      RequirementLine(
+        materialId: moraMaterialId,
+        name: 'モラ',
+        count: mora,
+        isMora: true,
+      ),
+    );
   }
 
   return lines;

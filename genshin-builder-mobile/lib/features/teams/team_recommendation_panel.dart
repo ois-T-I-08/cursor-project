@@ -240,10 +240,7 @@ class _Failure extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(
-        message ??
-            'おすすめ編成を取得できませんでした。既存の編成・螺旋統計機能は引き続き利用できます。',
-      ),
+      Text(message ?? 'おすすめ編成を取得できませんでした。既存の編成・螺旋統計機能は引き続き利用できます。'),
       TextButton.icon(
         onPressed: onRetry,
         icon: const Icon(Icons.refresh),
@@ -257,12 +254,11 @@ String _errorMessage(Object error) {
   if (error is TeamRecommendationApiException) {
     return switch (error.code) {
       'notConfigured' => 'おすすめ編成の接続先が設定されていません。',
-      'attackerUnavailable' =>
-        'このキャラではおすすめ編成を計算できません（旅人の複合IDなど未対応の場合があります）。',
+      'attackerUnavailable' => 'このキャラではおすすめ編成を計算できません（旅人の複合IDなど未対応の場合があります）。',
       'timeout' => 'おすすめ編成の取得がタイムアウトしました。再試行してください。',
       'networkError' => '通信に失敗しました。接続を確認して再試行してください。',
-      'invalidRequest' || 'requestFailed' =>
-        '送信データの形式を確認できませんでした。所持キャラ同期後に再試行してください。',
+      'invalidRequest' ||
+      'requestFailed' => '送信データの形式を確認できませんでした。所持キャラ同期後に再試行してください。',
       _ => 'おすすめ編成を取得できませんでした。既存の編成・螺旋統計機能は引き続き利用できます。',
     };
   }

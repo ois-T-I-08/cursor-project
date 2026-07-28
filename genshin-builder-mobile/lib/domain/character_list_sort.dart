@@ -37,20 +37,20 @@ enum CharacterListSortMode {
 
 extension CharacterListSortModeLabels on CharacterListSortMode {
   String get label => switch (this) {
-        CharacterListSortMode.region => '地域（聖遺物と同じ順）',
-        CharacterListSortMode.ownedDefault => '所持優先（取得推定順）',
-        CharacterListSortMode.nameAsc => '名前（あ→ん）',
-        CharacterListSortMode.nameDesc => '名前（ん→あ）',
-        CharacterListSortMode.rarityDesc => 'レアリティ（高い順）',
-        CharacterListSortMode.rarityAsc => 'レアリティ（低い順）',
-        CharacterListSortMode.element => '元素',
-        CharacterListSortMode.levelDesc => 'レベル（高い順）',
-        CharacterListSortMode.levelAsc => 'レベル（低い順）',
-        CharacterListSortMode.obtainedDesc => '取得推定（新しい順）',
-        CharacterListSortMode.obtainedAsc => '取得推定（古い順）',
-        CharacterListSortMode.constellationDesc => '命ノ星座（多い順）',
-        CharacterListSortMode.friendshipDesc => '好感度（高い順）',
-      };
+    CharacterListSortMode.region => '地域（聖遺物と同じ順）',
+    CharacterListSortMode.ownedDefault => '所持優先（取得推定順）',
+    CharacterListSortMode.nameAsc => '名前（あ→ん）',
+    CharacterListSortMode.nameDesc => '名前（ん→あ）',
+    CharacterListSortMode.rarityDesc => 'レアリティ（高い順）',
+    CharacterListSortMode.rarityAsc => 'レアリティ（低い順）',
+    CharacterListSortMode.element => '元素',
+    CharacterListSortMode.levelDesc => 'レベル（高い順）',
+    CharacterListSortMode.levelAsc => 'レベル（低い順）',
+    CharacterListSortMode.obtainedDesc => '取得推定（新しい順）',
+    CharacterListSortMode.obtainedAsc => '取得推定（古い順）',
+    CharacterListSortMode.constellationDesc => '命ノ星座（多い順）',
+    CharacterListSortMode.friendshipDesc => '好感度（高い順）',
+  };
 
   static CharacterListSortMode fromStorage(String? raw) {
     if (raw == null || raw.isEmpty) return CharacterListSortMode.region;
@@ -72,6 +72,7 @@ class CharacterListSortSettings {
 
   static const storageKeyMode = 'character_list_sort_mode';
   static const storageKeyGroup = 'character_list_group_by_ownership';
+
   /// 聖遺物と同じ地域順への移行済みフラグ（未移行端末は一度だけ region へ切替）
   static const storageKeyRegionDefaultMigration =
       'character_list_sort_region_default_v1';
@@ -79,11 +80,10 @@ class CharacterListSortSettings {
   CharacterListSortSettings copyWith({
     CharacterListSortMode? mode,
     bool? groupByOwnership,
-  }) =>
-      CharacterListSortSettings(
-        mode: mode ?? this.mode,
-        groupByOwnership: groupByOwnership ?? this.groupByOwnership,
-      );
+  }) => CharacterListSortSettings(
+    mode: mode ?? this.mode,
+    groupByOwnership: groupByOwnership ?? this.groupByOwnership,
+  );
 }
 
 class CharacterListEntry {
@@ -100,10 +100,7 @@ class CharacterListEntry {
 
 /// 地域セクション（聖遺物一覧と同じ並び）
 class CharacterRegionSection {
-  const CharacterRegionSection({
-    required this.region,
-    required this.items,
-  });
+  const CharacterRegionSection({required this.region, required this.items});
 
   final String region;
   final List<CharacterListEntry> items;
@@ -203,10 +200,7 @@ List<CharacterRegionSection> groupCharacterEntriesByRegion(
   final sections = <CharacterRegionSection>[];
   // 旅人セクションを先頭（モンドの直前）に追加
   if (travelerEntries.isNotEmpty) {
-    sections.add(CharacterRegionSection(
-      region: '旅人',
-      items: travelerEntries,
-    ));
+    sections.add(CharacterRegionSection(region: '旅人', items: travelerEntries));
   }
   final seen = <String>{};
   for (final region in regionOrder) {
@@ -215,8 +209,7 @@ List<CharacterRegionSection> groupCharacterEntriesByRegion(
     sections.add(CharacterRegionSection(region: region, items: items));
     seen.add(region);
   }
-  final extras = byRegion.keys.where((k) => !seen.contains(k)).toList()
-    ..sort();
+  final extras = byRegion.keys.where((k) => !seen.contains(k)).toList()..sort();
   for (final region in extras) {
     final items = byRegion[region];
     if (items == null || items.isEmpty) continue;
@@ -228,10 +221,12 @@ List<CharacterRegionSection> groupCharacterEntriesByRegion(
 List<CharacterListEntry> _buildOwnedDefaultSplit(
   List<CharacterListEntry> entries,
 ) {
-  final owned = entries.where((entry) => entry.isOwned).toList()
-    ..sort(_compareOwnedDefault);
-  final unowned = entries.where((entry) => !entry.isOwned).toList()
-    ..sort((a, b) => a.character.name.compareTo(b.character.name));
+  final owned =
+      entries.where((entry) => entry.isOwned).toList()
+        ..sort(_compareOwnedDefault);
+  final unowned =
+      entries.where((entry) => !entry.isOwned).toList()
+        ..sort((a, b) => a.character.name.compareTo(b.character.name));
   return [...owned, ...unowned];
 }
 
@@ -344,8 +339,10 @@ int _compareOwnedDefault(CharacterListEntry a, CharacterListEntry b) {
   final ownedCmp = _compareOwnedFirst(a, b);
   if (ownedCmp != 0) return ownedCmp;
 
-  final dateCmp =
-      _compareObtainedDateAsc(a.owned?.obtainedAt, b.owned?.obtainedAt);
+  final dateCmp = _compareObtainedDateAsc(
+    a.owned?.obtainedAt,
+    b.owned?.obtainedAt,
+  );
   if (dateCmp != 0) return dateCmp;
 
   return a.character.name.compareTo(b.character.name);

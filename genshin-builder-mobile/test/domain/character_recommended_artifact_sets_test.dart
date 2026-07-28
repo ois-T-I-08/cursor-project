@@ -24,10 +24,7 @@ void main() {
         characterId: '10000052',
         characterName: '雷電将軍',
         sets: const [emblem, golden],
-        akashaRates: {
-          'Golden Troupe': 0.12,
-          'Emblem of Severed Fate': 0.88,
-        },
+        akashaRates: {'Golden Troupe': 0.12, 'Emblem of Severed Fate': 0.88},
       );
 
       expect(list, hasLength(2));

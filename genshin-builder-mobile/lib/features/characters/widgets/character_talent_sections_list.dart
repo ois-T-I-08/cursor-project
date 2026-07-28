@@ -42,17 +42,20 @@ class CharacterTalentSectionsList extends StatelessWidget {
     CultivationBookmarkContext ctx,
     RequirementLine line,
     String scope,
-  ) onToggleBookmark;
+  )
+  onToggleBookmark;
   final Future<void> Function(
     CultivationBookmarkContext ctx,
     List<RequirementLine> lines,
     String sourceKey,
-  ) onBookmarkRange;
+  )
+  onBookmarkRange;
   final Future<void> Function(
     CultivationBookmarkContext ctx,
     RequirementLine line,
     String rangeSourceKey,
-  ) onToggleRangeLineBookmark;
+  )
+  onToggleRangeLineBookmark;
 
   static const _slots = [
     ('normal', 'skill_0', '通常攻撃', CharacterTalentSlot.normal),
@@ -64,39 +67,40 @@ class CharacterTalentSectionsList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: _slots.map((slot) {
-        final upgrades = talents[slot.$2] ?? [];
-        if (upgrades.isEmpty) return const SizedBox.shrink();
-        final level = switch (slot.$4) {
-          CharacterTalentSlot.normal => talentNormal,
-          CharacterTalentSlot.skill => talentSkill,
-          CharacterTalentSlot.burst => talentBurst,
-        };
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: TalentMaterialsSection(
-            characterId: character.id,
-            characterName: character.name,
-            characterIconUrl: character.iconUrl,
-            talentKind: slot.$1,
-            talentKey: slot.$2,
-            label: slot.$3,
-            currentLevel: level,
-            upgrades: upgrades,
-            bookmarks: bookmarks,
-            resolveName: resolveName,
-            resolveIcon: resolveIcon,
-            onLevelChanged: switch (slot.$4) {
-              CharacterTalentSlot.normal => onTalentNormalChanged,
-              CharacterTalentSlot.skill => onTalentSkillChanged,
-              CharacterTalentSlot.burst => onTalentBurstChanged,
-            },
-            onToggleBookmark: onToggleBookmark,
-            onBookmarkRange: onBookmarkRange,
-            onToggleRangeLineBookmark: onToggleRangeLineBookmark,
-          ),
-        );
-      }).toList(),
+      children:
+          _slots.map((slot) {
+            final upgrades = talents[slot.$2] ?? [];
+            if (upgrades.isEmpty) return const SizedBox.shrink();
+            final level = switch (slot.$4) {
+              CharacterTalentSlot.normal => talentNormal,
+              CharacterTalentSlot.skill => talentSkill,
+              CharacterTalentSlot.burst => talentBurst,
+            };
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: TalentMaterialsSection(
+                characterId: character.id,
+                characterName: character.name,
+                characterIconUrl: character.iconUrl,
+                talentKind: slot.$1,
+                talentKey: slot.$2,
+                label: slot.$3,
+                currentLevel: level,
+                upgrades: upgrades,
+                bookmarks: bookmarks,
+                resolveName: resolveName,
+                resolveIcon: resolveIcon,
+                onLevelChanged: switch (slot.$4) {
+                  CharacterTalentSlot.normal => onTalentNormalChanged,
+                  CharacterTalentSlot.skill => onTalentSkillChanged,
+                  CharacterTalentSlot.burst => onTalentBurstChanged,
+                },
+                onToggleBookmark: onToggleBookmark,
+                onBookmarkRange: onBookmarkRange,
+                onToggleRangeLineBookmark: onToggleRangeLineBookmark,
+              ),
+            );
+          }).toList(),
     );
   }
 }

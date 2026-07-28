@@ -28,9 +28,10 @@ class CharacterWeaponSummary extends StatelessWidget {
     }
     final weapon = weapons.where((w) => w.id == weaponId).firstOrNull;
     final name = weaponName.isEmpty ? '武器' : weaponName;
-    final levelText = weaponLevel >= levelMax
-        ? '最大強化済み Lv.$weaponLevel'
-        : 'Lv.$weaponLevel → 目標 Lv.$targetWeaponLevel';
+    final levelText =
+        weaponLevel >= levelMax
+            ? '最大強化済み Lv.$weaponLevel'
+            : 'Lv.$weaponLevel → 目標 Lv.$targetWeaponLevel';
 
     return Row(
       children: [

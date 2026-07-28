@@ -19,38 +19,39 @@ class BookmarksScreen extends ConsumerWidget {
     await repo.removeByMaterialId(materialId);
     ref.invalidate(aggregatedBookmarksProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ブックマークから削除しました')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ブックマークから削除しました')));
     }
   }
 
   Future<void> _clearAll(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('ブックマークをすべて削除'),
-        content: const Text('登録済みの素材ブックマークをすべて削除します。よろしいですか？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('キャンセル'),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('ブックマークをすべて削除'),
+            content: const Text('登録済みの素材ブックマークをすべて削除します。よろしいですか？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('削除'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('削除'),
-          ),
-        ],
-      ),
     );
     if (confirmed != true || !context.mounted) return;
     final repo = await ref.read(bookmarkRepositoryProvider.future);
     await repo.clearAll();
     ref.invalidate(aggregatedBookmarksProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('すべてのブックマークを削除しました')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('すべてのブックマークを削除しました')));
     }
   }
 
@@ -66,9 +67,10 @@ class BookmarksScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.delete_sweep_outlined),
             tooltip: 'すべて削除',
-            onPressed: bookmarksAsync.valueOrNull?.isEmpty == true
-                ? null
-                : () => _clearAll(context, ref),
+            onPressed:
+                bookmarksAsync.valueOrNull?.isEmpty == true
+                    ? null
+                    : () => _clearAll(context, ref),
           ),
           const ShellMenuButton(),
         ],
@@ -76,9 +78,7 @@ class BookmarksScreen extends ConsumerWidget {
       body: bookmarksAsync.when(
         data: (bookmarks) {
           if (bookmarks.isEmpty) {
-            return const Center(
-              child: Text('ブックマークされた素材はありません'),
-            );
+            return const Center(child: Text('ブックマークされた素材はありません'));
           }
           return ListView.separated(
             itemCount: bookmarks.length,
@@ -86,15 +86,16 @@ class BookmarksScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final b = bookmarks[index];
               return ListTile(
-                leading: b.isMora
-                    ? const CircleAvatar(child: Text('M'))
-                    : (b.iconUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: b.iconUrl!,
-                            width: 40,
-                            height: 40,
-                          )
-                        : const Icon(Icons.inventory_2)),
+                leading:
+                    b.isMora
+                        ? const CircleAvatar(child: Text('M'))
+                        : (b.iconUrl != null
+                            ? CachedNetworkImage(
+                              imageUrl: b.iconUrl!,
+                              width: 40,
+                              height: 40,
+                            )
+                            : const Icon(Icons.inventory_2)),
                 title: Text(b.name),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,22 +104,24 @@ class BookmarksScreen extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Wrap(
                       spacing: 4,
-                      children: b.characters
-                          .map(
-                            (c) => Chip(
-                              avatar: c.characterIconUrl != null
-                                  ? CircleAvatar(
-                                      backgroundImage:
-                                          CachedNetworkImageProvider(
-                                        c.characterIconUrl!,
-                                      ),
-                                    )
-                                  : null,
-                              label: Text(c.characterName),
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          )
-                          .toList(),
+                      children:
+                          b.characters
+                              .map(
+                                (c) => Chip(
+                                  avatar:
+                                      c.characterIconUrl != null
+                                          ? CircleAvatar(
+                                            backgroundImage:
+                                                CachedNetworkImageProvider(
+                                                  c.characterIconUrl!,
+                                                ),
+                                          )
+                                          : null,
+                                  label: Text(c.characterName),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              )
+                              .toList(),
                     ),
                   ],
                 ),
@@ -132,8 +135,8 @@ class BookmarksScreen extends ConsumerWidget {
                     IconButton(
                       icon: const Icon(Icons.delete_outline),
                       tooltip: '削除',
-                      onPressed: () =>
-                          _removeMaterial(context, ref, b.materialId),
+                      onPressed:
+                          () => _removeMaterial(context, ref, b.materialId),
                     ),
                   ],
                 ),
