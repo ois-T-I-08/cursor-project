@@ -1,8 +1,9 @@
 # Pre-release validation checklist
 
-Target branch: `chore/release-quality-improvements`
-Base: `main`
-Last local validation: `2026-07-28` (Windows, local SQLite; no production mutation)
+Target branch: `integration/postgres-build-guides`
+Base for integration PR: `feature/youtube-build-guide-recommendations`
+Related Draft PR to main: `#25` (remains Draft; not merged by this work)
+Last local validation: `2026-07-28` (Windows host; **no local Docker/Postgres**; no production mutation)
 
 Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, or device account credentials in this file.
 
@@ -10,132 +11,68 @@ Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, or devic
 
 | Field | Value |
 |-------|--------|
-| Target commit | |
+| Target commit | `b3e54e673bd71e510b7c47faf8ed3cd3e0848586` |
 | applicationId | `io.github.oisti08.genshinbuilder` |
-| versionCode / versionName | from `pubspec.yaml` / Flutter |
+| versionCode / versionName | from `pubspec.yaml` / Flutter (unchanged by this branch) |
 | Build datetime | |
 | APK size / SHA-256 | *blocked until local release signing exists* |
 | AAB size / SHA-256 | *blocked until local release signing exists* |
 | APK signature verify | *not run* |
-| Device / Android version | |
+| Device / Android version | *not run (no device session in this integration)* |
 | Reviewer / date | |
 
 ## Automated gates
 
 | Gate | Status | Notes |
 |------|--------|--------|
-| Mobile format | passed | 436 files, 0 changed after repository-wide formatting |
-| Mobile codegen | passed | build_runner completed; generated outputs current |
-| Mobile tests | 756 passed (local) | 0 failed / 0 skipped |
-| Domain parity (3) | passed | included in full suite |
+| Mobile format | passed | 436 files, 0 changed |
+| Mobile codegen | passed | build_runner |
+| Mobile tests | 756 passed | 0 failed |
+| Domain parity (3) | passed | included in full suite; GitHub Domain Golden Parity CI also SUCCESS |
 | `flutter analyze` | passed | 0 issues |
-| Android debug APK | passed | `build/app/outputs/flutter-apk/app-debug.apk`; not a signed release artifact |
-| Web tests | 306 passed / 1 skipped (local) | skip is the environment-gated DB integration suite |
+| Android debug APK | passed | `build/app/outputs/flutter-apk/app-debug.apk` (gitignored; not signed) |
+| Web tests | 334 passed / 2 skipped | skips are env-gated DB suites without local Postgres |
 | Web typecheck / lint | passed | 0 errors / 0 warnings |
 | Web production build | passed | Next.js 16.2.12 / Turbopack |
-| Prisma generate / validate | passed | Prisma 6.19.3 |
-| Prisma migration status / deploy | passed | local SQLite, 11 migrations, no pending migration |
+| Prisma generate / validate | passed | Prisma 6.19.3 / provider postgresql |
+| Prisma migration status / deploy | **blocked locally** (no Docker/Postgres); **CI passed** on `postgres:16` (`migrate deploy` + DB integration) | baseline `20260728220000_postgresql_baseline` |
 | Production dependency audit | passed | `npm audit --omit=dev`: 0 vulnerabilities |
-| Secret logging guards | passed | included in full Flutter/Web test suites |
-| Genshin Mobile CI | | fill after push |
-| Genshin Web CI | | fill after push |
+| Secret logging guards | code + CI secret guard | |
+| Genshin Mobile CI | passed | PR #27 GitHub Actions SUCCESS |
+| Genshin Web CI | passed | `postgres:16` service; `migrate deploy` success; DB integration (`RUN_*_DB_TEST`) success |
 
-## Feature gates
+## PostgreSQL cutover
 
-### P1-8C — 23:00 incomplete Daily Plan notification
+| Item | Value |
+|------|--------|
+| Provider | postgresql |
+| Active migrations | 1 baseline (full schema incl. build guides) |
+| SQLite archive | `prisma/migrations-sqlite-archive` |
+| Ops doc | `docs/POSTGRES_MIGRATION.md` |
+| Staging doc | `docs/STAGING_SETUP.md` |
 
-| Check | Pass? | Notes |
-|-------|-------|--------|
-| Completion persistence (per user / localDate / itemKey) | code | device E2E pending |
-| Checkbox UI complete / incomplete | code | device E2E pending |
-| WorkManager unique one-off to next local 23:00 | code | device E2E pending |
-| Catch-up after 23:00 when unevaluated | code | device E2E pending |
-| `targetLocalDate` preserved on delayed run | unit | device E2E pending |
-| Settings toggle independent of P1-8B | code | |
-| Permission request only from settings | code | |
-| Logout / OFF cancels P1-8C work only | code | device E2E pending |
-| Notification tap → Daily Plan | code | device E2E pending |
-| No secrets in notification body/payload/logs | unit | |
+## Staging / Android / device
 
-### Distributed sync lease + cooperative abort
+| Check | Status |
+|-------|--------|
+| Staging deploy | **blocked** — no identifiable non-production host/DB in-repo |
+| Signed AAB | **blocked** — no local `android/key.properties` / keystore |
+| Device fresh install / v7→v9 / v8→v9 | **blocked** — not executed |
+| Live YouTube / Gemini / DeepSeek | **OFF** (intentional) |
 
-| Check | Pass? | Notes |
-|-------|-------|--------|
-| `renewSyncLease` owner+unexpired | unit | |
-| Heartbeat ≈ TTL/3 (120s default) | unit | |
-| Ownership loss aborts shared signal | unit | |
-| Default runner checks signal before later phases / writes | unit | |
-| `fullUpgrade` does not open replacement TX after ownership loss | code | |
-| Release only matching owner token | unit | |
-| Timer cleared in `finally` | unit | |
-| API/Action map ownership loss to safe 409 | unit | |
+## Go / No-Go
 
-### Release signing & install (human)
+| Question | Answer |
+|----------|--------|
+| Merge integration PR into feature? | After CI green + owner review |
+| Merge PR #25 into main? | **No** — keep Draft |
+| Production migrate/deploy? | **No** |
+| Enable guide kill switches? | **No** until staging smoke + owner approval |
 
-| Check | Pass? | Notes |
-|-------|-------|--------|
-| `android/key.properties` present locally (not committed) | | Required for APK/AAB |
-| keystore ignored by git | yes | |
-| Signed release APK | | |
-| Signed release AAB | | |
-| Fresh install → schema v9 | | Device required |
-| Upgrade install schema v8 → v9 | | Device required |
-| Upgrade install schema v7 → v9 | | Device required |
+## Owner next actions (max 5)
 
-## Device migration paths (do not mark pass without running)
-
-### A. Fresh install → schema v9
-
-1. Uninstall any previous build.
-2. Install signed release APK.
-3. Confirm first launch, DB create, home / characters / daily plan / teams.
-4. Record Pass/Fail: ____
-
-### B. schema v8 → v9
-
-1. Prepare a v8 data set (progress, goals, teams, events, inventory, bookmarks, upgrades).
-2. Install release APK over it.
-3. Confirm: no DB wipe; tables `daily_plan_completions` / `daily_plan_eval_history` exist; user data retained; no duplicate rows; relaunch stable.
-4. Record Pass/Fail: ____
-
-### C. schema v7 → v9
-
-1. Prepare v7 DB including legacy `local` user id rows where applicable.
-2. Install release APK over it.
-3. Confirm: legacy user id → UUID; growth/progress/team/inventory/events retained; new daily-plan tables created; no DB delete on failure paths; downgrade still rejected without wiping.
-4. Record Pass/Fail: ____
-
-## 23:00 notification E2E (do not mark pass without running)
-
-| Scenario | Pass? | Observed delay | Notes |
-|----------|-------|----------------|-------|
-| Permission allowed | | | |
-| Permission denied (no dialog from worker) | | | |
-| Incomplete items → notify | | | |
-| All complete → no notify | | | |
-| Empty plan → no notify | | | |
-| Foreground | | | |
-| Background | | | |
-| Process killed | | | |
-| Device reboot | | | |
-| Doze / battery optimization | | | |
-| Logout → no further notify | | | |
-| Settings OFF → cancel | | | |
-| User switch | | | |
-| Delayed run same night (e.g. 23:30) uses target date | | | |
-| Delayed run next day 00:01 uses previous target date | | | |
-| No same-day double notify | | | |
-| Tap opens Daily Plan | | | |
-
-## Known limitations
-
-- WorkManager does not guarantee exact 23:00; delayed runs use `targetLocalDate` from registration.
-- In-flight Prisma queries cannot be forcibly cancelled; after ownership loss is observed, no new phase or replacement transaction is started. An in-flight transaction rolls back if the abort check throws inside it.
-- Completion / eval history can grow over time; optional prune (>90 days) is not mandatory in v1.
-- Android debug build reports that `workmanager_android` still applies Kotlin Gradle Plugin directly. It succeeds today, but the plugin must migrate before a future Flutter release makes Built-in Kotlin mandatory.
-- Full `npm audit` reports 9 high advisories in the development-only ESLint dependency chain. Production dependencies report 0; `npm audit fix --force` is not used because its proposed major/downgrade changes are unsafe.
-- Release APK/AAB verification remains incomplete until upload signing files exist locally.
-
-## Go / no-go
-
-Public release is **not** approved until signed APK/AAB, device install, migration paths A–C, and 23:00 notification checks above are completed and recorded.
+1. Install Docker Desktop or local Postgres 16 for local migrate/smoke.
+2. Create/identify staging Postgres + web host that is not production.
+3. Review and merge `integration/postgres-build-guides` → feature after CI.
+4. Provide release keystore only if AAB is required next.
+5. Keep PR #25 Draft until staging smoke passes.

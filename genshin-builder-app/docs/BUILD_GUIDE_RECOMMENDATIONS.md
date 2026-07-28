@@ -148,9 +148,10 @@ Gemini 3.6 Flash リクエストでは非推奨 sampling パラメータ（`temp
 * Gemini YouTube URL 入力は公式ドキュメント上 Preview。料金・レート制限の変更に追従すること。
 * `gemini-2.5-*` フォールバックは 2026-10-16 終了予定のため、期限前に許可リストから外す。
 
-## Neon / PostgreSQL
+## PostgreSQL
 
-現行は SQLite。Neon 移行時は provider 変更後に migration を再生成してください。
+Prisma provider は `postgresql`。SQLite 時代の履歴は `prisma/migrations-sqlite-archive`。
+運用手順はリポジトリの [`docs/POSTGRES_MIGRATION.md`](../../docs/POSTGRES_MIGRATION.md)。
 
 ## 公開 API（Flutter）
 
