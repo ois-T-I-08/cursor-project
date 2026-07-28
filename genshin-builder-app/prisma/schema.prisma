@@ -1,14 +1,15 @@
-// Prisma スキーマ
-// 開発初期は SQLite を使用。本番では provider を "postgresql" に変更するだけで移行できるよう、
-// SQLite 固有の機能は使わない方針。
+// Prisma schema (PostgreSQL)
+// Dev/CI/staging use PostgreSQL. SQLite history is in prisma/migrations-sqlite-archive.
+// For Neon pooled connections, set DATABASE_URL (pooler) and DIRECT_URL (direct).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================================

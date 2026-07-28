@@ -2,7 +2,7 @@
  * 同期時の API 呼び出しを抑えるヘルパー
  */
 
-/** 1 トランザクションあたりの upsert 件数（SQLite のロック時間を抑える） */
+/** 1 トランザクションあたりの upsert 件数（ロック時間を抑える） */
 export const UPSERT_BATCH_SIZE = 50;
 
 /** Prisma の notIn に空配列を渡すと例外になるためガードする */
