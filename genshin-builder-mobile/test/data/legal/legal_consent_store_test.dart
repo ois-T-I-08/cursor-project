@@ -18,9 +18,7 @@ void main() {
 
   test('needs disclosure until current version accepted', () async {
     expect(await store.needsHoyolabDisclosure(), isTrue);
-    await store.acceptHoyolabDisclosure(
-      now: DateTime.utc(2026, 7, 26, 12),
-    );
+    await store.acceptHoyolabDisclosure(now: DateTime.utc(2026, 7, 26, 12));
     expect(await store.needsHoyolabDisclosure(), isFalse);
     final snap = await store.read();
     expect(
@@ -35,8 +33,14 @@ void main() {
     expect(snap.acceptedAt, DateTime.utc(2026, 7, 26, 12));
   });
 
-  test('major version bump requires re-consent; typos do not change constants', () {
-    expect(LegalConsentVersions.currentHoyolabDisclosureVersion, '2026-07-26');
-    // Cosmetic copy edits must not bump these constants.
-  });
+  test(
+    'major version bump requires re-consent; typos do not change constants',
+    () {
+      expect(
+        LegalConsentVersions.currentHoyolabDisclosureVersion,
+        '2026-07-26',
+      );
+      // Cosmetic copy edits must not bump these constants.
+    },
+  );
 }

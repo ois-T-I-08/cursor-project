@@ -67,9 +67,11 @@ int getWeaponExpBetweenMarks(int from, int to, int rarity) {
 
   var total = 0;
   final startIdx = levelMarksList.indexOf(fromMark);
-  for (var i = startIdx < 0 ? 0 : startIdx;
-      i < levelMarksList.length - 1;
-      i++) {
+  for (
+    var i = startIdx < 0 ? 0 : startIdx;
+    i < levelMarksList.length - 1;
+    i++
+  ) {
     final a = levelMarksList[i];
     final b = levelMarksList[i + 1];
     if (b <= fromMark) continue;

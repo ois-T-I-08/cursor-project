@@ -29,7 +29,6 @@ import {
   updateGuideChannel,
   validateStructuredRecommendationDto,
 } from "@/lib/build-guides/store";
-import { prisma } from "@/lib/db";
 import { parseYoutubePlaylistId } from "@/lib/build-guides/youtube-client";
 
 export const runtime = "nodejs";
@@ -128,19 +127,23 @@ const actionSchema = z.discriminatedUnion("action", [
     action: z.literal("approveRecommendation"),
     recommendationId: cuid,
     adminNotes: z.string().max(2_000).optional(),
+    expectedUpdatedAt: z.string().datetime(),
   }),
   z.strictObject({
     action: z.literal("rejectRecommendation"),
     recommendationId: cuid,
     adminNotes: z.string().max(2_000).optional(),
+    expectedUpdatedAt: z.string().datetime(),
   }),
   z.strictObject({
     action: z.literal("publishRecommendation"),
     recommendationId: cuid,
+    expectedUpdatedAt: z.string().datetime(),
   }),
   z.strictObject({
     action: z.literal("unpublishRecommendation"),
     recommendationId: cuid,
+    expectedUpdatedAt: z.string().datetime(),
   }),
   z.strictObject({
     action: z.literal("overrideRecommendation"),
@@ -151,7 +154,7 @@ const actionSchema = z.discriminatedUnion("action", [
     contextPayload: z.unknown().optional(),
     structuredPayload: z.unknown().optional(),
     adminNotes: z.string().max(2_000).optional(),
-    expectedUpdatedAt: z.string().datetime().optional(),
+    expectedUpdatedAt: z.string().datetime(),
     keepPublished: z.boolean().optional(),
   }),
   z.strictObject({
@@ -165,7 +168,7 @@ const actionSchema = z.discriminatedUnion("action", [
     action: z.literal("restoreRecommendationRevision"),
     recommendationId: cuid,
     revisionId: cuid,
-    expectedUpdatedAt: z.string().datetime().optional(),
+    expectedUpdatedAt: z.string().datetime(),
   }),
   z.strictObject({
     action: z.literal("validateStructuredRecommendation"),
@@ -270,6 +273,7 @@ export async function POST(request: Request): Promise<Response> {
             recommendationId: input.recommendationId,
             status: "approved",
             adminNotes: input.adminNotes,
+            expectedUpdatedAt: input.expectedUpdatedAt,
           }),
         });
       case "rejectRecommendation":
@@ -278,6 +282,7 @@ export async function POST(request: Request): Promise<Response> {
             recommendationId: input.recommendationId,
             status: "rejected",
             adminNotes: input.adminNotes,
+            expectedUpdatedAt: input.expectedUpdatedAt,
           }),
         });
       case "publishRecommendation":
@@ -285,11 +290,15 @@ export async function POST(request: Request): Promise<Response> {
           recommendation: await setRecommendationStatus({
             recommendationId: input.recommendationId,
             status: "published",
+            expectedUpdatedAt: input.expectedUpdatedAt,
           }),
         });
       case "unpublishRecommendation":
         return NextResponse.json({
-          recommendation: await unpublishRecommendation(input.recommendationId),
+          recommendation: await unpublishRecommendation(
+            input.recommendationId,
+            input.expectedUpdatedAt,
+          ),
         });
       case "overrideRecommendation":
         return NextResponse.json(await overrideRecommendation(input));

@@ -47,32 +47,32 @@ LeyLineOverflowCatalog _catalog({
 }
 
 ResinFarmCostTable _table() => ResinFarmCostTable.fromJson({
-      'version': 2,
-      'meta': {
-        'naturalResinPerDay': 180,
-        'condensedResinValue': 40,
-        'synthesisRatio': 3,
-        'weekdayLabels': ['月', '火', '水', '木', '金', '土', '日'],
-      },
-      'kinds': {
-        'talentDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2.2},
-        'weaponDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2.2},
-        'artifactDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 1},
-        'weeklyBoss': {'resinPerRun': 30, 'assumedDropsPerRun': 1},
-        'worldBoss': {'resinPerRun': 40, 'assumedDropsPerRun': 2},
-        'leyLineExp': {
-          'resinPerRun': 20,
-          'assumedHeroWitEquivalentPerRun': 2.5,
-          'contentLabel': '地脈の花（経験値）',
-        },
-        'leyLineMora': {
-          'resinPerRun': 20,
-          'assumedMoraPerRun': 60000,
-          'contentLabel': 'モラ地脈',
-        },
-      },
-      'zeroResinCategories': [],
-    });
+  'version': 2,
+  'meta': {
+    'naturalResinPerDay': 180,
+    'condensedResinValue': 40,
+    'synthesisRatio': 3,
+    'weekdayLabels': ['月', '火', '水', '木', '金', '土', '日'],
+  },
+  'kinds': {
+    'talentDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2.2},
+    'weaponDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2.2},
+    'artifactDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 1},
+    'weeklyBoss': {'resinPerRun': 30, 'assumedDropsPerRun': 1},
+    'worldBoss': {'resinPerRun': 40, 'assumedDropsPerRun': 2},
+    'leyLineExp': {
+      'resinPerRun': 20,
+      'assumedHeroWitEquivalentPerRun': 2.5,
+      'contentLabel': '地脈の花（経験値）',
+    },
+    'leyLineMora': {
+      'resinPerRun': 20,
+      'assumedMoraPerRun': 60000,
+      'contentLabel': 'モラ地脈',
+    },
+  },
+  'zeroResinCategories': [],
+});
 
 void main() {
   final start = DateTime.utc(2026, 7, 1, 4);
@@ -96,10 +96,7 @@ void main() {
 
     test('終了時刻ちょうど', () {
       expect(event.isActiveAt(end), isTrue);
-      expect(
-        event.isActiveAt(end.add(const Duration(seconds: 1))),
-        isFalse,
-      );
+      expect(event.isActiveAt(end.add(const Duration(seconds: 1))), isFalse);
     });
 
     test('enabled=false は非開催', () {
@@ -118,13 +115,14 @@ void main() {
     }
 
     test('ボーナス上限未満', () {
-      final b = applyLeyLineOverflowBonus(
-        normalEquivalentRuns: 4,
-        resinPerRun: 20,
-        status: activeStatus(used: 0),
-        leyLineType: LeyLineOverflowLeyLineType.exp,
-        nowUtc: DateTime.utc(2026, 7, 3),
-      )!;
+      final b =
+          applyLeyLineOverflowBonus(
+            normalEquivalentRuns: 4,
+            resinPerRun: 20,
+            status: activeStatus(used: 0),
+            leyLineType: LeyLineOverflowLeyLineType.exp,
+            nowUtc: DateTime.utc(2026, 7, 3),
+          )!;
       // ceil(4/2)=2 bonus → cover 4, remain 0, actual 2
       expect(b.bonusRunsApplied, 2);
       expect(b.normalRunsAfterBonus, 0);
@@ -134,13 +132,14 @@ void main() {
     });
 
     test('ボーナス上限ちょうど', () {
-      final b = applyLeyLineOverflowBonus(
-        normalEquivalentRuns: 6,
-        resinPerRun: 20,
-        status: activeStatus(used: 0),
-        leyLineType: LeyLineOverflowLeyLineType.exp,
-        nowUtc: DateTime.utc(2026, 7, 3),
-      )!;
+      final b =
+          applyLeyLineOverflowBonus(
+            normalEquivalentRuns: 6,
+            resinPerRun: 20,
+            status: activeStatus(used: 0),
+            leyLineType: LeyLineOverflowLeyLineType.exp,
+            nowUtc: DateTime.utc(2026, 7, 3),
+          )!;
       // 3 bonus cover 6
       expect(b.bonusRunsApplied, 3);
       expect(b.normalRunsAfterBonus, 0);
@@ -149,13 +148,14 @@ void main() {
     });
 
     test('ボーナス上限超過', () {
-      final b = applyLeyLineOverflowBonus(
-        normalEquivalentRuns: 9,
-        resinPerRun: 20,
-        status: activeStatus(used: 0),
-        leyLineType: LeyLineOverflowLeyLineType.mora,
-        nowUtc: DateTime.utc(2026, 7, 3),
-      )!;
+      final b =
+          applyLeyLineOverflowBonus(
+            normalEquivalentRuns: 9,
+            resinPerRun: 20,
+            status: activeStatus(used: 0),
+            leyLineType: LeyLineOverflowLeyLineType.mora,
+            nowUtc: DateTime.utc(2026, 7, 3),
+          )!;
       expect(b.normalEquivalentRuns, 9);
       expect(b.bonusRunsApplied, 3);
       expect(b.normalRunsAfterBonus, 3);
@@ -177,26 +177,28 @@ void main() {
     });
 
     test('使用済み回数不明は最大適用時の目安', () {
-      final b = applyLeyLineOverflowBonus(
-        normalEquivalentRuns: 9,
-        resinPerRun: 20,
-        status: activeStatus(),
-        leyLineType: LeyLineOverflowLeyLineType.exp,
-        nowUtc: DateTime.utc(2026, 7, 3),
-      )!;
+      final b =
+          applyLeyLineOverflowBonus(
+            normalEquivalentRuns: 9,
+            resinPerRun: 20,
+            status: activeStatus(),
+            leyLineType: LeyLineOverflowLeyLineType.exp,
+            nowUtc: DateTime.utc(2026, 7, 3),
+          )!;
       expect(b.isMaxEstimate, isTrue);
       expect(b.bonusRunsApplied, 3);
       expect(b.actualRuns, 6);
     });
 
     test('使用済みを反映した残り枠', () {
-      final b = applyLeyLineOverflowBonus(
-        normalEquivalentRuns: 9,
-        resinPerRun: 20,
-        status: activeStatus(used: 2),
-        leyLineType: LeyLineOverflowLeyLineType.exp,
-        nowUtc: DateTime.utc(2026, 7, 3),
-      )!;
+      final b =
+          applyLeyLineOverflowBonus(
+            normalEquivalentRuns: 9,
+            resinPerRun: 20,
+            status: activeStatus(used: 2),
+            leyLineType: LeyLineOverflowLeyLineType.exp,
+            nowUtc: DateTime.utc(2026, 7, 3),
+          )!;
       // remaining 1 → cover 2, remain 7, actual 8
       expect(b.remainingBonusCapacity, 1);
       expect(b.bonusRunsApplied, 1);
@@ -322,8 +324,9 @@ void main() {
         leyLineOverflowStatus: active,
         nowUtc: DateTime.utc(2026, 7, 3),
       );
-      final exp =
-          plan.sections.singleWhere((s) => s.kind == ResinFarmKind.leyLineExp);
+      final exp = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.leyLineExp,
+      );
       expect(exp.leyLineOverflow, isNotNull);
       expect(exp.leyLineOverflow!.normalEquivalentRuns, 9);
       expect(exp.leyLineOverflow!.actualRuns, 6);
@@ -350,8 +353,9 @@ void main() {
         leyLineOverflowStatus: active,
         nowUtc: DateTime.utc(2026, 7, 3),
       );
-      final mora =
-          plan.sections.singleWhere((s) => s.kind == ResinFarmKind.leyLineMora);
+      final mora = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.leyLineMora,
+      );
       expect(mora.leyLineOverflow!.normalEquivalentRuns, 12);
       expect(mora.leyLineOverflow!.bonusRunsApplied, 3);
       expect(mora.leyLineOverflow!.normalRunsAfterBonus, 6);
@@ -374,8 +378,9 @@ void main() {
         leyLineOverflowStatus: active,
         nowUtc: DateTime.utc(2026, 8, 1),
       );
-      final exp =
-          plan.sections.singleWhere((s) => s.kind == ResinFarmKind.leyLineExp);
+      final exp = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.leyLineExp,
+      );
       expect(exp.leyLineOverflow, isNull);
       expect(exp.runsExpected, 9);
       expect(exp.resinTotal, 180);
@@ -407,10 +412,7 @@ void main() {
         expect(o.eventDisplayName, isNotEmpty);
         expect(s.runsExpected, o.actualRuns);
         expect(s.resinTotal, o.resinTotal);
-        expect(
-          o.actualRuns,
-          o.bonusRunsApplied + o.normalRunsAfterBonus,
-        );
+        expect(o.actualRuns, o.bonusRunsApplied + o.normalRunsAfterBonus);
         expect(
           o.normalEquivalentRuns,
           lessThanOrEqualTo(
@@ -439,8 +441,9 @@ void main() {
         leyLineOverflowStatus: failed,
         nowUtc: DateTime.utc(2026, 7, 3),
       );
-      final exp =
-          plan.sections.singleWhere((s) => s.kind == ResinFarmKind.leyLineExp);
+      final exp = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.leyLineExp,
+      );
       expect(exp.leyLineOverflow, isNull);
       expect(exp.resinTotal, 180);
     });
@@ -465,16 +468,17 @@ void main() {
 
   group('UI契約: 色だけに依存しない', () {
     test('開催中は必ずイベント表示名を持つ', () {
-      final b = applyLeyLineOverflowBonus(
-        normalEquivalentRuns: 9,
-        resinPerRun: 20,
-        status: LeyLineOverflowStatus(
-          isActive: true,
-          event: _event(start: start, end: end),
-        ),
-        leyLineType: LeyLineOverflowLeyLineType.exp,
-        nowUtc: DateTime.utc(2026, 7, 3),
-      )!;
+      final b =
+          applyLeyLineOverflowBonus(
+            normalEquivalentRuns: 9,
+            resinPerRun: 20,
+            status: LeyLineOverflowStatus(
+              isActive: true,
+              event: _event(start: start, end: end),
+            ),
+            leyLineType: LeyLineOverflowLeyLineType.exp,
+            nowUtc: DateTime.utc(2026, 7, 3),
+          )!;
       expect(b.eventDisplayName, '地脈の奔流');
       // UI は `${eventDisplayName} 開催中` を必ず描画する
       expect('${b.eventDisplayName} 開催中', '地脈の奔流 開催中');
@@ -483,10 +487,10 @@ void main() {
 
   group('境界・残り回数マトリクス', () {
     LeyLineOverflowStatus active({int? used}) => LeyLineOverflowStatus(
-          isActive: true,
-          event: _event(start: start, end: end),
-          bonusUsedToday: used,
-        );
+      isActive: true,
+      event: _event(start: start, end: end),
+      bonusUsedToday: used,
+    );
 
     test('開始時刻直前は非開催', () {
       final event = _event(start: start, end: end);
@@ -526,13 +530,14 @@ void main() {
 
     for (final n in [1, 2, 3, 4, 9]) {
       test('通常換算$n回（残り3）', () {
-        final b = applyLeyLineOverflowBonus(
-          normalEquivalentRuns: n,
-          resinPerRun: 20,
-          status: active(used: 0),
-          leyLineType: LeyLineOverflowLeyLineType.exp,
-          nowUtc: DateTime.utc(2026, 7, 3),
-        )!;
+        final b =
+            applyLeyLineOverflowBonus(
+              normalEquivalentRuns: n,
+              resinPerRun: 20,
+              status: active(used: 0),
+              leyLineType: LeyLineOverflowLeyLineType.exp,
+              nowUtc: DateTime.utc(2026, 7, 3),
+            )!;
         final useful = (n + 1) ~/ 2;
         final bonus = useful < 3 ? useful : 3;
         final covered = bonus * 2;
@@ -546,13 +551,14 @@ void main() {
 
     for (final used in [0, 1, 2, 3]) {
       test('ボーナス使用済み$used → 残り${3 - used}', () {
-        final b = applyLeyLineOverflowBonus(
-          normalEquivalentRuns: 9,
-          resinPerRun: 20,
-          status: active(used: used),
-          leyLineType: LeyLineOverflowLeyLineType.exp,
-          nowUtc: DateTime.utc(2026, 7, 3),
-        )!;
+        final b =
+            applyLeyLineOverflowBonus(
+              normalEquivalentRuns: 9,
+              resinPerRun: 20,
+              status: active(used: used),
+              leyLineType: LeyLineOverflowLeyLineType.exp,
+              nowUtc: DateTime.utc(2026, 7, 3),
+            )!;
         expect(b.remainingBonusCapacity, 3 - used);
         expect(b.isMaxEstimate, isFalse);
         expect(active(used: used).remainingCountKnown, isTrue);
@@ -560,13 +566,14 @@ void main() {
     }
 
     test('ボーナス残り0は通常周回のみ', () {
-      final b = applyLeyLineOverflowBonus(
-        normalEquivalentRuns: 9,
-        resinPerRun: 20,
-        status: active(used: 3),
-        leyLineType: LeyLineOverflowLeyLineType.exp,
-        nowUtc: DateTime.utc(2026, 7, 3),
-      )!;
+      final b =
+          applyLeyLineOverflowBonus(
+            normalEquivalentRuns: 9,
+            resinPerRun: 20,
+            status: active(used: 3),
+            leyLineType: LeyLineOverflowLeyLineType.exp,
+            nowUtc: DateTime.utc(2026, 7, 3),
+          )!;
       expect(b.bonusRunsApplied, 0);
       expect(b.actualRuns, 9);
       expect(b.resinTotal, 180);
@@ -658,8 +665,9 @@ void main() {
         nowUtc: DateTime.utc(2026, 7, 3),
       );
       // shortage 21 → normal 9 → actual 6
-      final exp =
-          plan.sections.singleWhere((s) => s.kind == ResinFarmKind.leyLineExp);
+      final exp = plan.sections.singleWhere(
+        (s) => s.kind == ResinFarmKind.leyLineExp,
+      );
       expect(exp.materials.single.shortage, 21);
       expect(exp.leyLineOverflow!.normalEquivalentRuns, 9);
       expect(exp.resinTotal, 120);

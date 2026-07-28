@@ -26,7 +26,8 @@ class AccountHealthCategory {
   final List<MissingData> missingData;
   final List<String> improvementHints;
 
-  double get normalizedScore => evaluated ? (score / maxScore * 100).clamp(0, 100) : 0;
+  double get normalizedScore =>
+      evaluated ? (score / maxScore * 100).clamp(0, 100) : 0;
 }
 
 /// Account health report generated from an [AccountSnapshot].

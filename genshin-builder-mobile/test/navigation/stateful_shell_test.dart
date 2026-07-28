@@ -53,20 +53,20 @@ class _CharListState extends State<_CharList> {
   double _scrollOffset = 0;
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('CHARS'),
-              Text('scroll: $_scrollOffset'),
-              ElevatedButton(
-                onPressed: () => setState(() => _scrollOffset += 100),
-                child: const Text('scroll-down'),
-              ),
-            ],
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('CHARS'),
+          Text('scroll: $_scrollOffset'),
+          ElevatedButton(
+            onPressed: () => setState(() => _scrollOffset += 100),
+            child: const Text('scroll-down'),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 class _CharDetail extends StatelessWidget {
@@ -87,19 +87,19 @@ class _DailyPageState extends State<_DailyPage> {
   String _selectedDay = 'mon';
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('DAY:$_selectedDay'),
-              ElevatedButton(
-                onPressed: () => setState(() => _selectedDay = 'tue'),
-                child: const Text('select-tue'),
-              ),
-            ],
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('DAY:$_selectedDay'),
+          ElevatedButton(
+            onPressed: () => setState(() => _selectedDay = 'tue'),
+            child: const Text('select-tue'),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 class _BookmarksPage extends StatelessWidget {
@@ -185,15 +185,30 @@ class _TestShell {
                     path: '/settings',
                     builder: (_, __) => const _SettingsPage(),
                     routes: [
-                      GoRoute(path: 'hoyolab', builder: (_, __) => const _HoyolabPage()),
+                      GoRoute(
+                        path: 'hoyolab',
+                        builder: (_, __) => const _HoyolabPage(),
+                      ),
                     ],
                   ),
                 ] else ...[
-                  GoRoute(path: '/settings', builder: (_, __) => const SizedBox.shrink()),
+                  GoRoute(
+                    path: '/settings',
+                    builder: (_, __) => const SizedBox.shrink(),
+                  ),
                 ],
-                GoRoute(path: '/abyss', builder: (_, __) => const SizedBox.shrink()),
-                GoRoute(path: '/gacha', builder: (_, __) => const SizedBox.shrink()),
-                GoRoute(path: '/artifacts', builder: (_, __) => const SizedBox.shrink()),
+                GoRoute(
+                  path: '/abyss',
+                  builder: (_, __) => const SizedBox.shrink(),
+                ),
+                GoRoute(
+                  path: '/gacha',
+                  builder: (_, __) => const SizedBox.shrink(),
+                ),
+                GoRoute(
+                  path: '/artifacts',
+                  builder: (_, __) => const SizedBox.shrink(),
+                ),
               ],
             ),
             // 1: Characters
@@ -206,15 +221,18 @@ class _TestShell {
                   routes: [
                     GoRoute(
                       path: ':id',
-                      builder: (ctx, state) => _CharDetail(state.pathParameters['id']!),
+                      builder:
+                          (ctx, state) =>
+                              _CharDetail(state.pathParameters['id']!),
                       routes: [
                         if (includeMockDetails)
                           GoRoute(
                             path: 'weapon/:weaponId',
-                            builder: (ctx, state) => _MockWeaponDetail(
-                              state.pathParameters['id']!,
-                              state.pathParameters['weaponId']!,
-                            ),
+                            builder:
+                                (ctx, state) => _MockWeaponDetail(
+                                  state.pathParameters['id']!,
+                                  state.pathParameters['weaponId']!,
+                                ),
                           ),
                       ],
                     ),
@@ -238,7 +256,10 @@ class _TestShell {
                   builder: (_, __) => const _DailyPage(),
                   routes: [
                     if (includeMockDetails)
-                      GoRoute(path: 'detail', builder: (_, __) => const _MockDailyDetail()),
+                      GoRoute(
+                        path: 'detail',
+                        builder: (_, __) => const _MockDailyDetail(),
+                      ),
                   ],
                 ),
               ],
@@ -252,7 +273,10 @@ class _TestShell {
                   builder: (_, __) => const _BookmarksPage(),
                   routes: [
                     if (includeMockDetails)
-                      GoRoute(path: 'detail', builder: (_, __) => const _MockBookmarksDetail()),
+                      GoRoute(
+                        path: 'detail',
+                        builder: (_, __) => const _MockBookmarksDetail(),
+                      ),
                   ],
                 ),
               ],
@@ -281,12 +305,20 @@ Future<void> _goBranch(WidgetTester tester, _TestShell tr, int index) async {
   await tester.pumpAndSettle(const Duration(seconds: 5));
 }
 
-Future<void> _goInBranch(WidgetTester tester, _TestShell tr, String location) async {
+Future<void> _goInBranch(
+  WidgetTester tester,
+  _TestShell tr,
+  String location,
+) async {
   tr.router.go(location);
   await tester.pumpAndSettle(const Duration(seconds: 5));
 }
 
-Future<void> _pushInBranch(WidgetTester tester, _TestShell tr, String location) async {
+Future<void> _pushInBranch(
+  WidgetTester tester,
+  _TestShell tr,
+  String location,
+) async {
   tr.router.push(location);
   await tester.pumpAndSettle(const Duration(seconds: 5));
 }
@@ -413,8 +445,9 @@ void main() {
       expect(find.text('HOME'), findsOneWidget);
     });
 
-    testWidgets('teams tab preserves state when switching away and back',
-        (tester) async {
+    testWidgets('teams tab preserves state when switching away and back', (
+      tester,
+    ) async {
       final tr = _TestShell(useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -431,8 +464,9 @@ void main() {
   });
 
   group('Cross-branch via AppShellScope.switchMainTab', () {
-    testWidgets('char detail preserved when switching via switchMainTab',
-        (tester) async {
+    testWidgets('char detail preserved when switching via switchMainTab', (
+      tester,
+    ) async {
       final tr = _TestShell(useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -451,8 +485,9 @@ void main() {
       expect(find.text('DETAIL:42'), findsOneWidget);
     });
 
-    testWidgets('daily preserved when switching via switchMainTab',
-        (tester) async {
+    testWidgets('daily preserved when switching via switchMainTab', (
+      tester,
+    ) async {
       final tr = _TestShell(useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -576,8 +611,9 @@ void main() {
       expect(find.text('HOME'), findsOneWidget);
     });
 
-    testWidgets('home nested: hoyolab to settings to home to system',
-        (tester) async {
+    testWidgets('home nested: hoyolab to settings to home to system', (
+      tester,
+    ) async {
       final tr = _TestShell(includeSettings: true, useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -612,8 +648,9 @@ void main() {
       expect(find.text('HOME'), findsOneWidget);
     });
 
-    testWidgets('drawer opened then closed, back still pops in branch',
-        (tester) async {
+    testWidgets('drawer opened then closed, back still pops in branch', (
+      tester,
+    ) async {
       final tr = _TestShell(useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -763,8 +800,9 @@ void main() {
   });
 
   group('Footer taps override pending drawer navigation', () {
-    testWidgets('footer char tap during pending drawer settings',
-        (tester) async {
+    testWidgets('footer char tap during pending drawer settings', (
+      tester,
+    ) async {
       final tr = _TestShell(includeSettings: true, useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -773,7 +811,9 @@ void main() {
       await tester.pumpAndSettle(const Duration(seconds: 5));
       await _tapDrawerItem(tester, _drawerSettings);
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_chars);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
@@ -781,8 +821,7 @@ void main() {
       expect(find.text('SETTINGS'), findsNothing);
     });
 
-    testWidgets('last footer tap wins: drawer->chars->daily',
-        (tester) async {
+    testWidgets('last footer tap wins: drawer->chars->daily', (tester) async {
       final tr = _TestShell(includeSettings: true, useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -791,7 +830,9 @@ void main() {
       await tester.pumpAndSettle(const Duration(seconds: 5));
       await _tapDrawerItem(tester, _drawerSettings);
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_chars);
       bottomNav.onDestinationSelected!(_daily);
       await tester.pumpAndSettle(const Duration(seconds: 5));
@@ -816,7 +857,9 @@ void main() {
       await _tapDrawerItem(tester, _drawerSettings);
       await tester.pump();
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_chars);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
@@ -824,8 +867,9 @@ void main() {
       expect(find.text('SETTINGS'), findsNothing);
     });
 
-    testWidgets('footer tap while drawer open closes and switches',
-        (tester) async {
+    testWidgets('footer tap while drawer open closes and switches', (
+      tester,
+    ) async {
       final tr = _TestShell(useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -834,7 +878,9 @@ void main() {
       await tester.pumpAndSettle(const Duration(seconds: 5));
       expect(_getShellScaffold(tester).isEndDrawerOpen, isTrue);
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_materials);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
@@ -842,13 +888,14 @@ void main() {
       expect(find.text('BOOKMARKS'), findsOneWidget);
     });
 
-    testWidgets('rapid footer cycle does not duplicate routes',
-        (tester) async {
+    testWidgets('rapid footer cycle does not duplicate routes', (tester) async {
       final tr = _TestShell(useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       for (final idx in [_chars, _teams, _daily, _materials, _home]) {
         bottomNav.onDestinationSelected!(idx);
         await tester.pump();
@@ -859,8 +906,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('rapid footer with open drawer: last tap wins',
-        (tester) async {
+    testWidgets('rapid footer with open drawer: last tap wins', (tester) async {
       final tr = _TestShell(useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -868,7 +914,9 @@ void main() {
       _openDrawer(tester);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_chars);
       bottomNav.onDestinationSelected!(_teams);
       bottomNav.onDestinationSelected!(_materials);
@@ -889,7 +937,9 @@ void main() {
       await _pushInBranch(tester, tr, '/settings');
       expect(find.text('SETTINGS'), findsOneWidget);
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_home);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
@@ -906,7 +956,9 @@ void main() {
       await _pushInBranch(tester, tr, '/settings/hoyolab');
       expect(find.text('HOYOLAB'), findsOneWidget);
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_home);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
@@ -916,8 +968,9 @@ void main() {
       expect(find.text('HOME'), findsOneWidget);
     });
 
-    testWidgets('settings on home branch, switch to chars, footer home',
-        (tester) async {
+    testWidgets('settings on home branch, switch to chars, footer home', (
+      tester,
+    ) async {
       final tr = _TestShell(includeSettings: true, useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -928,7 +981,9 @@ void main() {
       await _goBranch(tester, tr, _chars);
       expect(find.text('CHARS'), findsOneWidget);
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_home);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
@@ -945,7 +1000,9 @@ void main() {
       await _pushInBranch(tester, tr, '/characters/42');
       expect(find.text('DETAIL:42'), findsOneWidget);
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_home);
       await tester.pumpAndSettle(const Duration(seconds: 5));
       expect(find.text('HOME'), findsOneWidget);
@@ -961,7 +1018,9 @@ void main() {
 
       expect(find.text('HOME'), findsOneWidget);
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_home);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
@@ -993,7 +1052,9 @@ void main() {
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_teams);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
@@ -1023,7 +1084,9 @@ void main() {
       await _goBranch(tester, tr, _teams);
       expect(find.text('TEAMS'), findsOneWidget);
 
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_teams);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
@@ -1045,8 +1108,7 @@ void main() {
   });
 
   group('Android back restores home history', () {
-    testWidgets('back from non-home restores last home screen',
-        (tester) async {
+    testWidgets('back from non-home restores last home screen', (tester) async {
       final tr = _TestShell(includeSettings: true, useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -1068,8 +1130,9 @@ void main() {
       expect(find.text('HOME'), findsOneWidget);
     });
 
-    testWidgets('switchMainTab char then back restores home history',
-        (tester) async {
+    testWidgets('switchMainTab char then back restores home history', (
+      tester,
+    ) async {
       final tr = _TestShell(includeSettings: true, useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -1110,7 +1173,9 @@ void main() {
       expect(keys.length, greaterThanOrEqualTo(1));
     });
 
-    testWidgets('no GlobalKey collision with repeated switches', (tester) async {
+    testWidgets('no GlobalKey collision with repeated switches', (
+      tester,
+    ) async {
       final tr = _TestShell();
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -1273,15 +1338,18 @@ void main() {
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
 
       await _pushInBranch(tester, tr, '/settings');
-      final bottomNav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      final bottomNav = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
       bottomNav.onDestinationSelected!(_home);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
       expect(find.text('HOME'), findsOneWidget);
     });
 
-    testWidgets('char detail preserved across teams tab switch',
-        (tester) async {
+    testWidgets('char detail preserved across teams tab switch', (
+      tester,
+    ) async {
       final tr = _TestShell(useProductionAppShell: true);
       addTearDown(() => tr.dispose());
       await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
@@ -1321,18 +1389,22 @@ void main() {
             builder: (_, __) => const Scaffold(body: Center(child: Text('BS'))),
           ),
           StatefulShellRoute.indexedStack(
-            builder: (_, __, shell) => Scaffold(
-              body: shell,
-              bottomNavigationBar: SafeArea(
-                child: NavigationBar(
-                  selectedIndex: shell.currentIndex,
-                  onDestinationSelected: (i) => shell.goBranch(i),
-                  destinations: const [
-                    NavigationDestination(icon: Icon(Icons.home), label: 'H'),
-                  ],
+            builder:
+                (_, __, shell) => Scaffold(
+                  body: shell,
+                  bottomNavigationBar: SafeArea(
+                    child: NavigationBar(
+                      selectedIndex: shell.currentIndex,
+                      onDestinationSelected: (i) => shell.goBranch(i),
+                      destinations: const [
+                        NavigationDestination(
+                          icon: Icon(Icons.home),
+                          label: 'H',
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
             branches: [
               StatefulShellBranch(
                 routes: [

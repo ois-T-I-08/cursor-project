@@ -4,6 +4,38 @@ import 'package:genshin_builder_mobile/domain/build_recommendations/build_recomm
 import 'package:genshin_builder_mobile/domain/character_stats.dart';
 
 void main() {
+  test('accepts only the explicit HTTPS YouTube guide hosts', () {
+    const allowed = [
+      'https://youtube.com/',
+      'https://www.youtube.com/',
+      'https://m.youtube.com/',
+      'https://youtu.be/',
+    ];
+    const rejected = [
+      'http://www.youtube.com/watch?v=abcdefghijk',
+      'javascript:alert(1)',
+      'data:text/plain,hello',
+      'file:///tmp/video',
+      'ftp://youtube.com/video',
+      'https://youtube.com.evil.example/watch?v=abcdefghijk',
+      'https://youtube.example/watch?v=abcdefghijk',
+      'https://user:pass@youtube.com/watch?v=abcdefghijk',
+      'https://www.youtube.com@evil.example/watch?v=abcdefghijk',
+      'https://music.youtube.com/watch?v=abcdefghijk',
+      'https://www.youtube.com./watch?v=abcdefghijk',
+      'https://xn--.com/',
+      '',
+      '/watch?v=abcdefghijk',
+    ];
+
+    for (final url in allowed) {
+      expect(isSafeYoutubeGuideUrl(url), isTrue, reason: url);
+    }
+    for (final url in rejected) {
+      expect(isSafeYoutubeGuideUrl(url), isFalse, reason: url);
+    }
+  });
+
   test('parses visual recommendation payload', () {
     final parsed = parseBuildRecommendation({
       'characterId': 'hu-tao',
@@ -51,6 +83,27 @@ void main() {
     expect(parsed.evidence.single.startSeconds, 530);
   });
 
+  test('drops unsafe source URLs from an otherwise valid payload', () {
+    final parsed = parseBuildRecommendation({
+      'characterId': 'hu-tao',
+      'sources': <Object?>[
+        {
+          'videoId': 'unsafe',
+          'title': 'unsafe',
+          'channelTitle': 'channel',
+          'sourceUrl': 'https://youtube.com.evil.example/watch?v=unsafe',
+        },
+        {
+          'videoId': 'safe',
+          'title': 'safe',
+          'channelTitle': 'channel',
+          'sourceUrl': 'https://www.youtube.com/watch?v=safe',
+        },
+      ],
+    });
+    expect(parsed.sources.map((source) => source.videoId), ['safe']);
+  });
+
   test('compareStatToTarget classifies ranges', () {
     const target = BuildStatTarget(
       stat: StatKey.critRate,
@@ -58,8 +111,17 @@ void main() {
       recommended: 70,
       max: 80,
     );
-    expect(compareStatToTarget(current: 55, target: target), StatCompareVerdict.below);
-    expect(compareStatToTarget(current: 70, target: target), StatCompareVerdict.within);
-    expect(compareStatToTarget(current: 90, target: target), StatCompareVerdict.above);
+    expect(
+      compareStatToTarget(current: 55, target: target),
+      StatCompareVerdict.below,
+    );
+    expect(
+      compareStatToTarget(current: 70, target: target),
+      StatCompareVerdict.within,
+    );
+    expect(
+      compareStatToTarget(current: 90, target: target),
+      StatCompareVerdict.above,
+    );
   });
 }

@@ -157,7 +157,7 @@ genshin-builder-mobile/
 | `sync_logs` | 同期履歴 |
 | `app_settings` | 匿名 userId、最終同期時刻（Phase 2 で HoYoLAB 設定キー追加） |
 
-Codegen: `dart run build_runner build --delete-conflicting-outputs`
+Codegen: `dart run build_runner build`
 
 ### 4.2 Project Amber
 

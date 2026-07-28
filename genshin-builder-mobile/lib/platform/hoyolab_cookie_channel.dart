@@ -4,7 +4,9 @@ import '../data/hoyolab/native_cookie_fetch_result.dart';
 
 /// Android native CookieManager via MethodChannel.
 class HoyolabCookieChannel {
-  static const _channel = MethodChannel('genshin_builder_mobile/hoyolab_cookie');
+  static const _channel = MethodChannel(
+    'genshin_builder_mobile/hoyolab_cookie',
+  );
 
   /// Fetches raw cookie string status. Does not log cookie bodies.
   static Future<NativeCookieFetchResult> fetchNativeCookie() async {

@@ -64,8 +64,11 @@ class NotificationBootstrap {
       }
 
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-        final androidPlugin = plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+        final androidPlugin =
+            plugin
+                .resolvePlatformSpecificImplementation<
+                  AndroidFlutterLocalNotificationsPlugin
+                >();
         await androidPlugin?.createNotificationChannel(
           const AndroidNotificationChannel(
             'resin_reminders',

@@ -11,8 +11,8 @@ class CompositeDailyMaterialScheduleSource
     required DailyMaterialScheduleSource localSource,
     DailyMaterialScheduleSource? remoteSource,
     this.refreshInterval = const Duration(hours: 12),
-  })  : _local = localSource,
-        _remote = remoteSource;
+  }) : _local = localSource,
+       _remote = remoteSource;
 
   final DailyMaterialScheduleSource _local;
   final DailyMaterialScheduleSource? _remote;

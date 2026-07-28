@@ -135,9 +135,10 @@ class GameRecordWeapon {
       refinement: _asInt(json['affix_level'], fallback: 1),
       promoteLevel: _asInt(json['promote_level']),
       rarity: _asInt(json['rarity'], fallback: 3),
-      mainStat: main == null
-          ? null
-          : GameRecordProp.fromJson(main, propertyMap: propertyMap),
+      mainStat:
+          main == null
+              ? null
+              : GameRecordProp.fromJson(main, propertyMap: propertyMap),
       subStats: subs,
       iconUrl: json['icon'] as String?,
     );
@@ -186,9 +187,10 @@ class GameRecordRelic {
       posName: json['pos_name'] as String? ?? '',
       level: _asInt(json['level']),
       setName: set?['name'] as String? ?? '',
-      mainStat: main == null
-          ? null
-          : GameRecordProp.fromJson(main, propertyMap: propertyMap),
+      mainStat:
+          main == null
+              ? null
+              : GameRecordProp.fromJson(main, propertyMap: propertyMap),
       subStats: subs,
       iconUrl: json['icon'] as String?,
     );
@@ -201,7 +203,8 @@ class GameRecordTalent {
   final String name;
   final int level;
 
-  factory GameRecordTalent.fromJson(Map<String, dynamic> json) => GameRecordTalent(
+  factory GameRecordTalent.fromJson(Map<String, dynamic> json) =>
+      GameRecordTalent(
         name: json['name'] as String? ?? json['skill_name'] as String? ?? '天賦',
         level: _asInt(json['level'] ?? json['level_current']),
       );

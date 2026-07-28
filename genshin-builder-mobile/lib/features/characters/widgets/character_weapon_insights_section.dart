@@ -33,10 +33,10 @@ class _CharacterWeaponInsightsSectionState
 
   @override
   Widget build(BuildContext context) {
-    final usageAsync =
-        ref.watch(weaponUsageRatesProvider(widget.characterId));
-    final guideAsync =
-        ref.watch(buildRecommendationProvider(widget.characterId));
+    final usageAsync = ref.watch(weaponUsageRatesProvider(widget.characterId));
+    final guideAsync = ref.watch(
+      buildRecommendationProvider(widget.characterId),
+    );
 
     return CharacterWeaponInsightsView(
       weapons: widget.weapons,
@@ -44,14 +44,14 @@ class _CharacterWeaponInsightsSectionState
       guideAsync: guideAsync,
       akashaExpanded: _akashaExpanded,
       youtubeExpanded: _youtubeExpanded,
-      onToggleAkashaExpand: () =>
-          setState(() => _akashaExpanded = !_akashaExpanded),
-      onToggleYoutubeExpand: () =>
-          setState(() => _youtubeExpanded = !_youtubeExpanded),
-      onRetryAkasha: () =>
-          ref.invalidate(weaponUsageRatesProvider(widget.characterId)),
-      onRetryGuide: () =>
-          ref.invalidate(buildRecommendationProvider(widget.characterId)),
+      onToggleAkashaExpand:
+          () => setState(() => _akashaExpanded = !_akashaExpanded),
+      onToggleYoutubeExpand:
+          () => setState(() => _youtubeExpanded = !_youtubeExpanded),
+      onRetryAkasha:
+          () => ref.invalidate(weaponUsageRatesProvider(widget.characterId)),
+      onRetryGuide:
+          () => ref.invalidate(buildRecommendationProvider(widget.characterId)),
     );
   }
 }
@@ -102,16 +102,18 @@ class CharacterWeaponInsightsView extends StatelessWidget {
         const SizedBox(height: 8),
         akashaAsync.when(
           loading: () => const GuideSectionLoading(),
-          error: (_, __) => GuideSectionMessage(
-            message: '使用率データを取得できませんでした。',
-            onRetry: onRetryAkasha,
-          ),
-          data: (snap) => _AkashaWeaponsGroup(
-            snapshot: snap,
-            weapons: weapons,
-            expanded: akashaExpanded,
-            onToggleExpand: onToggleAkashaExpand,
-          ),
+          error:
+              (_, __) => GuideSectionMessage(
+                message: '使用率データを取得できませんでした。',
+                onRetry: onRetryAkasha,
+              ),
+          data:
+              (snap) => _AkashaWeaponsGroup(
+                snapshot: snap,
+                weapons: weapons,
+                expanded: akashaExpanded,
+                onToggleExpand: onToggleAkashaExpand,
+              ),
         ),
         const SizedBox(height: 16),
         Text('攻略おすすめ', style: theme.textTheme.titleSmall),
@@ -124,21 +126,20 @@ class CharacterWeaponInsightsView extends StatelessWidget {
             if (error is BuildRecommendationException &&
                 (error.failure == BuildRecommendationFailure.notConfigured ||
                     error.failure == BuildRecommendationFailure.notFound)) {
-              return const GuideSectionMessage(
-                message: 'おすすめ情報はまだ登録されていません。',
-              );
+              return const GuideSectionMessage(message: 'おすすめ情報はまだ登録されていません。');
             }
             return GuideSectionMessage(
               message: '攻略おすすめを取得できませんでした。',
               onRetry: onRetryGuide,
             );
           },
-          data: (rec) => _YoutubeWeaponsGroup(
-            recommendation: rec,
-            weapons: weapons,
-            expanded: youtubeExpanded,
-            onToggleExpand: onToggleYoutubeExpand,
-          ),
+          data:
+              (rec) => _YoutubeWeaponsGroup(
+                recommendation: rec,
+                weapons: weapons,
+                expanded: youtubeExpanded,
+                onToggleExpand: onToggleYoutubeExpand,
+              ),
         ),
       ],
     );
@@ -165,8 +166,9 @@ class _AkashaWeaponsGroup extends StatelessWidget {
     }
 
     final byId = {for (final w in weapons) w.id: w};
-    final ranked = snapshot.rates.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final ranked =
+        snapshot.rates.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
     final items = <_RankedWeapon>[];
     var rank = 0;
     for (final e in ranked) {
@@ -207,9 +209,10 @@ class _AkashaWeaponsGroup extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 8),
             child: _WeaponInsightTile(
               title: item.weapon?.name ?? '武器 ID ${item.weaponId}',
-              subtitle: item.weapon != null
-                  ? '${item.weapon!.rarity}★ · 使用率 ${_formatRate(item.rate)} · ${item.rank}位'
-                  : '使用率 ${_formatRate(item.rate)} · ${item.rank}位',
+              subtitle:
+                  item.weapon != null
+                      ? '${item.weapon!.rarity}★ · 使用率 ${_formatRate(item.rate)} · ${item.rank}位'
+                      : '使用率 ${_formatRate(item.rate)} · ${item.rank}位',
               iconUrl: item.weapon?.iconUrl,
               fallback: item.weapon?.name,
             ),
@@ -243,16 +246,12 @@ class _YoutubeWeaponsGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (recommendation == null) {
-      return const GuideSectionMessage(
-        message: 'おすすめ情報はまだ登録されていません。',
-      );
+      return const GuideSectionMessage(message: 'おすすめ情報はまだ登録されていません。');
     }
 
     final items = recommendation!.youtubeWeapons;
     if (items.isEmpty) {
-      return const GuideSectionMessage(
-        message: '攻略動画のおすすめ武器はまだ登録されていません。',
-      );
+      return const GuideSectionMessage(message: '攻略動画のおすすめ武器はまだ登録されていません。');
     }
 
     final byId = {for (final w in weapons) w.id: w};
@@ -272,9 +271,11 @@ class _YoutubeWeaponsGroup extends StatelessWidget {
           ),
         if (recommendation!.freshnessCaption != null) const SizedBox(height: 8),
         ...visible.map((item) {
-          final master = (item.weaponId != null ? byId[item.weaponId!] : null) ??
+          final master =
+              (item.weaponId != null ? byId[item.weaponId!] : null) ??
               (item.displayName != null ? byName[item.displayName!] : null);
-          final title = master?.name ??
+          final title =
+              master?.name ??
               item.displayName ??
               (item.weaponId != null ? '未登録武器 (${item.weaponId})' : '武器');
           final subtitleParts = <String>[
@@ -300,9 +301,7 @@ class _YoutubeWeaponsGroup extends StatelessWidget {
         if (items.length > 3 && onToggleExpand != null)
           TextButton(
             onPressed: onToggleExpand,
-            child: Text(
-              expanded ? '閉じる' : '残り ${items.length - 3} 件を表示',
-            ),
+            child: Text(expanded ? '閉じる' : '残り ${items.length - 3} 件を表示'),
           ),
       ],
     );
@@ -357,9 +356,7 @@ class _WeaponInsightTile extends StatelessWidget {
               size: 40,
               borderRadius: 8,
               fallback: Text(
-                (fallback != null && fallback!.isNotEmpty)
-                    ? fallback![0]
-                    : '?',
+                (fallback != null && fallback!.isNotEmpty) ? fallback![0] : '?',
                 style: theme.textTheme.titleMedium,
               ),
             ),

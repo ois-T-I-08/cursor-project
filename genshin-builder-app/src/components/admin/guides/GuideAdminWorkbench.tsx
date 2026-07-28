@@ -770,6 +770,7 @@ export default function GuideAdminWorkbench() {
                       void postAction({
                         action: "approveRecommendation",
                         recommendationId: rec.id,
+                        expectedUpdatedAt: rec.updatedAt,
                       })
                     }
                   >
@@ -783,6 +784,7 @@ export default function GuideAdminWorkbench() {
                       void postAction({
                         action: "rejectRecommendation",
                         recommendationId: rec.id,
+                        expectedUpdatedAt: rec.updatedAt,
                       })
                     }
                   >
@@ -796,6 +798,7 @@ export default function GuideAdminWorkbench() {
                       void postAction({
                         action: "publishRecommendation",
                         recommendationId: rec.id,
+                        expectedUpdatedAt: rec.updatedAt,
                       })
                     }
                   >
@@ -809,6 +812,7 @@ export default function GuideAdminWorkbench() {
                       void postAction({
                         action: "unpublishRecommendation",
                         recommendationId: rec.id,
+                        expectedUpdatedAt: rec.updatedAt,
                       })
                     }
                   >

@@ -16,23 +16,19 @@ class HoyolabRepository {
       String? region,
       String? uid,
       String appVersion,
-    })? apiFactory,
-  })  : _secure = secureStorage,
-        _flags = featureFlags,
-        _cookieService = cookieService ?? const HoyolabCookieService(),
-        _apiFactory = apiFactory ??
-            (({
-              required cookie,
-              region,
-              uid,
-              required appVersion,
-            }) =>
-                HoyolabApi(
-                  cookie: cookie,
-                  region: region,
-                  uid: uid,
-                  appVersion: appVersion,
-                ));
+    })?
+    apiFactory,
+  }) : _secure = secureStorage,
+       _flags = featureFlags,
+       _cookieService = cookieService ?? const HoyolabCookieService(),
+       _apiFactory =
+           apiFactory ??
+           (({required cookie, region, uid, required appVersion}) => HoyolabApi(
+             cookie: cookie,
+             region: region,
+             uid: uid,
+             appVersion: appVersion,
+           ));
 
   final SecureStorageService _secure;
   final FeatureFlags _flags;
@@ -42,7 +38,8 @@ class HoyolabRepository {
     String? region,
     String? uid,
     required String appVersion,
-  }) _apiFactory;
+  })
+  _apiFactory;
 
   void _ensureEnabled() {
     if (!_flags.hoyolabLinkEnabled) {
@@ -84,7 +81,8 @@ class HoyolabRepository {
     );
   }
 
-  Future<String?> fetchCookieFromWebView() => _cookieService.fetchCookieString();
+  Future<String?> fetchCookieFromWebView() =>
+      _cookieService.fetchCookieString();
 
   Future<HoyolabSession> completeLogin({required String cookie}) async {
     _ensureEnabled();
@@ -103,12 +101,13 @@ class HoyolabRepository {
     await _secure.saveCookie(cookie);
 
     final existingUid = await _secure.getUid();
-    final selected = existingUid == null
-        ? roles.first
-        : roles.firstWhere(
-            (r) => r.uid == existingUid,
-            orElse: () => roles.first,
-          );
+    final selected =
+        existingUid == null
+            ? roles.first
+            : roles.firstWhere(
+              (r) => r.uid == existingUid,
+              orElse: () => roles.first,
+            );
 
     await _secure.saveRole(
       uid: selected.uid,
@@ -133,9 +132,10 @@ class HoyolabRepository {
 
   Future<List<HoyolabGameRole>> _fetchAllRoles(HoyolabApi api) async {
     final regions = await api.lookupRegions();
-    final targetRegions = regions.isEmpty
-        ? [const HoyolabRegion(region: 'os_asia', name: 'Asia')]
-        : regions;
+    final targetRegions =
+        regions.isEmpty
+            ? [const HoyolabRegion(region: 'os_asia', name: 'Asia')]
+            : regions;
 
     final allRoles = <HoyolabGameRole>[];
     for (final region in targetRegions) {

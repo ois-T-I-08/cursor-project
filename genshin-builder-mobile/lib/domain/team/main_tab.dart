@@ -6,10 +6,4 @@
 /// 3. Add a `_NavItem` entry in `_bottomNavItems`.
 /// 4. Add a `_DrawerDestination` entry in `_drawerDestinations`.
 /// 5. Add a `GlobalKey<NavigatorState>` and register it in `_branchNavKeys`.
-enum MainTab {
-  home,
-  characters,
-  teams,
-  daily,
-  materials,
-}
+enum MainTab { home, characters, teams, daily, materials }

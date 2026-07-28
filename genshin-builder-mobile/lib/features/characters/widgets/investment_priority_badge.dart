@@ -6,10 +6,7 @@ import '../../../providers/build_recommendation_providers.dart';
 
 /// ヘッダー右側の育成優先度（YouTube 由来）。タップで根拠を表示。
 class InvestmentPriorityBadge extends ConsumerWidget {
-  const InvestmentPriorityBadge({
-    super.key,
-    required this.characterId,
-  });
+  const InvestmentPriorityBadge({super.key, required this.characterId});
 
   final String characterId;
 
@@ -22,28 +19,20 @@ class InvestmentPriorityBadge extends ConsumerWidget {
         if (error is BuildRecommendationException &&
             (error.failure == BuildRecommendationFailure.notConfigured ||
                 error.failure == BuildRecommendationFailure.notFound)) {
-          return const _Badge(
-            priority: InvestmentPriority.none,
-            onTap: null,
-          );
+          return const _Badge(priority: InvestmentPriority.none, onTap: null);
         }
-        return const _Badge(
-          priority: InvestmentPriority.none,
-          onTap: null,
-        );
+        return const _Badge(priority: InvestmentPriority.none, onTap: null);
       },
       data: (recommendation) {
         if (recommendation == null) {
-          return const _Badge(
-            priority: InvestmentPriority.none,
-            onTap: null,
-          );
+          return const _Badge(priority: InvestmentPriority.none, onTap: null);
         }
         return _Badge(
           priority: recommendation.investmentPriority,
-          onTap: recommendation.investmentPriority == InvestmentPriority.none
-              ? null
-              : () => _showDetails(context, recommendation),
+          onTap:
+              recommendation.investmentPriority == InvestmentPriority.none
+                  ? null
+                  : () => _showDetails(context, recommendation),
         );
       },
     );
@@ -79,7 +68,10 @@ class InvestmentPriorityBadge extends ConsumerWidget {
                 if (recommendation.role != null &&
                     recommendation.role!.trim().isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  Text('役割: ${recommendation.role}', style: theme.textTheme.bodyMedium),
+                  Text(
+                    '役割: ${recommendation.role}',
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 ],
                 if (recommendation.teamArchetype != null &&
                     recommendation.teamArchetype!.trim().isNotEmpty)
@@ -97,12 +89,17 @@ class InvestmentPriorityBadge extends ConsumerWidget {
                 if (recommendation.notes != null &&
                     recommendation.notes!.trim().isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(recommendation.notes!, style: theme.textTheme.bodyMedium),
+                  Text(
+                    recommendation.notes!,
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 ],
                 if (recommendation.sources.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text('出典（攻略動画）', style: theme.textTheme.labelMedium),
-                  ...recommendation.sources.take(3).map(
+                  ...recommendation.sources
+                      .take(3)
+                      .map(
                         (s) => Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
@@ -124,10 +121,7 @@ class InvestmentPriorityBadge extends ConsumerWidget {
 }
 
 class _Badge extends StatelessWidget {
-  const _Badge({
-    required this.priority,
-    required this.onTap,
-  });
+  const _Badge({required this.priority, required this.onTap});
 
   final InvestmentPriority priority;
   final VoidCallback? onTap;
@@ -138,21 +132,21 @@ class _Badge extends StatelessWidget {
     final scheme = theme.colorScheme;
     final (bg, fg) = switch (priority) {
       InvestmentPriority.high => (
-          scheme.primaryContainer,
-          scheme.onPrimaryContainer,
-        ),
+        scheme.primaryContainer,
+        scheme.onPrimaryContainer,
+      ),
       InvestmentPriority.medium => (
-          scheme.secondaryContainer,
-          scheme.onSecondaryContainer,
-        ),
+        scheme.secondaryContainer,
+        scheme.onSecondaryContainer,
+      ),
       InvestmentPriority.low => (
-          scheme.surfaceContainerHighest,
-          scheme.onSurfaceVariant,
-        ),
+        scheme.surfaceContainerHighest,
+        scheme.onSurfaceVariant,
+      ),
       InvestmentPriority.none => (
-          scheme.surfaceContainerHighest,
-          scheme.onSurfaceVariant,
-        ),
+        scheme.surfaceContainerHighest,
+        scheme.onSurfaceVariant,
+      ),
     };
 
     final child = Container(
@@ -183,10 +177,7 @@ class _Badge extends StatelessWidget {
     );
 
     if (onTap == null || priority == InvestmentPriority.none) {
-      return Semantics(
-        label: priority.fullLabel,
-        child: child,
-      );
+      return Semantics(label: priority.fullLabel, child: child);
     }
 
     return Semantics(

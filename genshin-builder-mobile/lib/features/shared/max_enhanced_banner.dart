@@ -24,11 +24,7 @@ class MaxEnhancedBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.verified_outlined,
-            size: 20,
-            color: colorScheme.primary,
-          ),
+          Icon(Icons.verified_outlined, size: 20, color: colorScheme.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -37,14 +33,14 @@ class MaxEnhancedBanner extends StatelessWidget {
                 Text(
                   label,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 Text(
                   '最大強化済み',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -52,9 +48,9 @@ class MaxEnhancedBanner extends StatelessWidget {
           Text(
             'Lv.$level',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.primary,
-                ),
+              fontWeight: FontWeight.w700,
+              color: colorScheme.primary,
+            ),
           ),
         ],
       ),

@@ -2,8 +2,9 @@ import 'package:flutter/services.dart';
 
 /// Opens the system app notification settings (Android).
 class AppNotificationSettingsChannel {
-  static const _channel =
-      MethodChannel('genshin_builder_mobile/app_notification_settings');
+  static const _channel = MethodChannel(
+    'genshin_builder_mobile/app_notification_settings',
+  );
 
   static Future<bool> open() async {
     try {

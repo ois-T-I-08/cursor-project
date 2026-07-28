@@ -54,7 +54,10 @@ void main() {
     final runAt2310 = DateTime(2026, 7, 15, 23, 10);
     final runAt0001 = DateTime(2026, 7, 16, 0, 1);
     expect(pinned, isNot(equals(_format(runAt0001))));
-    expect(pinned, _format(DateTime(runAt2310.year, runAt2310.month, runAt2310.day)));
+    expect(
+      pinned,
+      _format(DateTime(runAt2310.year, runAt2310.month, runAt2310.day)),
+    );
   });
 
   test('afterEval for today schedules tomorrow', () {

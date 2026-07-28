@@ -19,11 +19,9 @@ class ArtifactSetOverview {
   final List<ArtifactEquippedCharacter> equippedCharacters;
   final List<ArtifactSetRecommendedCharacter> recommendedCharacters;
 
-  String get twoPieceEffect =>
-      set.effects.isNotEmpty ? set.effects[0] : '';
+  String get twoPieceEffect => set.effects.isNotEmpty ? set.effects[0] : '';
 
-  String get fourPieceEffect =>
-      set.effects.length > 1 ? set.effects[1] : '';
+  String get fourPieceEffect => set.effects.length > 1 ? set.effects[1] : '';
 }
 
 /// おすすめキャラ（Akasha 使用率 or 設定フォールバック）
@@ -142,10 +140,11 @@ Map<String, List<ArtifactEquippedCharacter>> groupEquippedBySetId({
             iconUrl: targetSet.iconUrl,
           ),
         );
-        final others = counts.entries
-            .where((e) => e.key != entry.key && e.value > 0)
-            .toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
+        final others =
+            counts.entries
+                .where((e) => e.key != entry.key && e.value > 0)
+                .toList()
+              ..sort((a, b) => b.value.compareTo(a.value));
         for (final other in others) {
           final otherSet = catalog.byId[other.key];
           if (otherSet == null) continue;
@@ -159,7 +158,9 @@ Map<String, List<ArtifactEquippedCharacter>> groupEquippedBySetId({
         }
       }
 
-      result.putIfAbsent(entry.key, () => []).add(
+      result
+          .putIfAbsent(entry.key, () => [])
+          .add(
             ArtifactEquippedCharacter(
               character: character,
               artifactCompleted: input.artifactCompleted,
@@ -201,7 +202,8 @@ List<ArtifactSetOverview> buildArtifactSetOverviews({
 
     // 1) Akasha（英語 route キー）
     final routeKey = set.route.isNotEmpty ? set.route : set.name;
-    final akashaHits = akashaByEnglishSet[routeKey] ??
+    final akashaHits =
+        akashaByEnglishSet[routeKey] ??
         akashaByEnglishSet.entries
             .where(
               (e) =>
@@ -240,10 +242,7 @@ List<ArtifactSetOverview> buildArtifactSetOverviews({
         final c = charactersByName[name] ?? charactersById[name];
         if (c == null || !seen.add(c.id)) continue;
         recommended.add(
-          ArtifactSetRecommendedCharacter(
-            character: c,
-            source: 'config',
-          ),
+          ArtifactSetRecommendedCharacter(character: c, source: 'config'),
         );
       }
     }
@@ -261,10 +260,7 @@ List<ArtifactSetOverview> buildArtifactSetOverviews({
 
 /// 地域ごとのセクション（空地域は省略）。
 class ArtifactSetRegionSection {
-  const ArtifactSetRegionSection({
-    required this.region,
-    required this.items,
-  });
+  const ArtifactSetRegionSection({required this.region, required this.items});
 
   final String region;
   final List<ArtifactSetOverview> items;

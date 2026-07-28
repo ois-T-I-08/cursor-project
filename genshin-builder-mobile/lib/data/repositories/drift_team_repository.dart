@@ -44,11 +44,16 @@ class DriftTeamRepository implements TeamRepository {
 
     final membersJson = jsonEncode({
       'version': _version,
-      'members': team.members.map((m) => {
-            'characterId': m.characterId,
-            'buildId': m.buildId,
-            'position': m.position,
-          }).toList(),
+      'members':
+          team.members
+              .map(
+                (m) => {
+                  'characterId': m.characterId,
+                  'buildId': m.buildId,
+                  'position': m.position,
+                },
+              )
+              .toList(),
     });
     await _db.growthDao.teamSave(
       id: team.id,
@@ -80,19 +85,26 @@ class DriftTeamRepository implements TeamRepository {
     } else if (parsed is List) {
       membersList = parsed;
     } else {
-      throw FormatException('Unexpected members JSON type: ${parsed.runtimeType}');
+      throw FormatException(
+        'Unexpected members JSON type: ${parsed.runtimeType}',
+      );
     }
 
-    final members = membersList.map((m) {
-      if (m is! Map) throw const FormatException('Member entry is not a Map');
-      final cid = m['characterId'];
-      if (cid is! String || cid.isEmpty) throw const FormatException('Missing characterId');
-      return TeamMemberSlot(
-        characterId: cid,
-        buildId: m['buildId'] as String?,
-        position: (m['position'] as int?) ?? 0,
-      );
-    }).toList();
+    final members =
+        membersList.map((m) {
+          if (m is! Map) {
+            throw const FormatException('Member entry is not a Map');
+          }
+          final cid = m['characterId'];
+          if (cid is! String || cid.isEmpty) {
+            throw const FormatException('Missing characterId');
+          }
+          return TeamMemberSlot(
+            characterId: cid,
+            buildId: m['buildId'] as String?,
+            position: (m['position'] as int?) ?? 0,
+          );
+        }).toList();
 
     final team = Team(
       id: row.id as String,

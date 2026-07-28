@@ -13,10 +13,10 @@ class DailyMaterialsService {
     required CharacterRepository characterRepository,
     required ProgressRepository progressRepository,
     required BookmarkRepository bookmarkRepository,
-  })  : _scheduleRepository = scheduleRepository,
-        _characterRepository = characterRepository,
-        _progressRepository = progressRepository,
-        _bookmarkRepository = bookmarkRepository;
+  }) : _scheduleRepository = scheduleRepository,
+       _characterRepository = characterRepository,
+       _progressRepository = progressRepository,
+       _bookmarkRepository = bookmarkRepository;
 
   final DailyMaterialScheduleRepository _scheduleRepository;
   final CharacterRepository _characterRepository;
@@ -59,7 +59,9 @@ class DailyMaterialsService {
     for (final p in progressList) {
       if (p.weaponId.isEmpty) continue;
       final character = characterById[p.characterId];
-      equippedByWeapon.putIfAbsent(p.weaponId, () => []).add(
+      equippedByWeapon
+          .putIfAbsent(p.weaponId, () => [])
+          .add(
             DailyEquippedCharacter(
               id: p.characterId,
               name: character?.name ?? p.characterId,

@@ -3,19 +3,9 @@
 /// These are domain models — no external API DTOs or DB rows.
 library;
 
-enum RecommendationConfidence {
-  high,
-  medium,
-  low,
-  unknown,
-}
+enum RecommendationConfidence { high, medium, low, unknown }
 
-enum DataCompleteness {
-  complete,
-  partial,
-  minimal,
-  unavailable,
-}
+enum DataCompleteness { complete, partial, minimal, unavailable }
 
 enum MissingData {
   masterUpgradeData,

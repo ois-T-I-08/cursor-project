@@ -128,13 +128,13 @@ class CharacterDetailTabViews {
   final CharacterBuildSnapshot Function() snapshotFromCurrent;
 
   List<Widget> buildTabs(BuildContext context) => [
-        _buildLevelTab(context),
-        _buildWeaponTab(context),
-        _buildRelicsTab(),
-        _buildTalentTab(context),
-        _buildSimulationTab(context),
-        _buildHoyolabTab(),
-      ];
+    _buildLevelTab(context),
+    _buildWeaponTab(context),
+    _buildRelicsTab(),
+    _buildTalentTab(context),
+    _buildSimulationTab(context),
+    _buildHoyolabTab(),
+  ];
 
   Widget _buildLevelTab(BuildContext context) {
     return ListView(
@@ -174,8 +174,9 @@ class CharacterDetailTabViews {
           resolveIcon: resolveIcon,
           bookmarkContext: bookmarkCtx,
           bookmarks: bookmarks,
-          onToggleBookmark: (line, scope) =>
-              bookmarkActions.toggleLineBookmark(bookmarkCtx, line, scope),
+          onToggleBookmark:
+              (line, scope) =>
+                  bookmarkActions.toggleLineBookmark(bookmarkCtx, line, scope),
         ),
         const Divider(height: 32),
         LevelMarkSlider(
@@ -185,11 +186,12 @@ class CharacterDetailTabViews {
           headerTrailing: IconButton(
             icon: const Icon(Icons.bookmark_add_outlined),
             tooltip: '範囲をブックマーク',
-            onPressed: () => bookmarkActions.bookmarkRange(
-              bookmarkCtx,
-              rangeLines,
-              rangeSourceKey,
-            ),
+            onPressed:
+                () => bookmarkActions.bookmarkRange(
+                  bookmarkCtx,
+                  rangeLines,
+                  rangeSourceKey,
+                ),
           ),
         ),
         const Divider(height: 24),
@@ -198,11 +200,12 @@ class CharacterDetailTabViews {
           (line) => MaterialListTile(
             line: line,
             isBookmarked: isBookmarked(rangeSourceKey, line.materialId),
-            onToggleBookmark: () => bookmarkActions.toggleRangeLineBookmark(
-              bookmarkCtx,
-              line,
-              rangeSourceKey,
-            ),
+            onToggleBookmark:
+                () => bookmarkActions.toggleRangeLineBookmark(
+                  bookmarkCtx,
+                  line,
+                  rangeSourceKey,
+                ),
           ),
         ),
       ],
@@ -244,22 +247,24 @@ class CharacterDetailTabViews {
               refinement: isEquipped ? weaponRefinement : 1,
             );
           },
-          onToggleBookmark: (line, scope) => bookmarkActions.toggleLineBookmark(
-            weaponBookmarkCtx,
-            line,
-            scope,
-          ),
-          onToggleRangeBookmark: (line, rangeSourceKey) =>
-              bookmarkActions.toggleRangeLineBookmark(
-            weaponBookmarkCtx,
-            line,
-            rangeSourceKey,
-          ),
-          onBookmarkRange: (lines, sourceKey) => bookmarkActions.bookmarkRange(
-            weaponBookmarkCtx,
-            lines,
-            sourceKey,
-          ),
+          onToggleBookmark:
+              (line, scope) => bookmarkActions.toggleLineBookmark(
+                weaponBookmarkCtx,
+                line,
+                scope,
+              ),
+          onToggleRangeBookmark:
+              (line, rangeSourceKey) => bookmarkActions.toggleRangeLineBookmark(
+                weaponBookmarkCtx,
+                line,
+                rangeSourceKey,
+              ),
+          onBookmarkRange:
+              (lines, sourceKey) => bookmarkActions.bookmarkRange(
+                weaponBookmarkCtx,
+                lines,
+                sourceKey,
+              ),
         ),
       ],
     );
@@ -374,9 +379,7 @@ class CharacterDetailTabViews {
   Widget _buildHoyolabTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: [
-        HoyolabCharacterStatusCard(characterId: characterId),
-      ],
+      children: [HoyolabCharacterStatusCard(characterId: characterId)],
     );
   }
 }

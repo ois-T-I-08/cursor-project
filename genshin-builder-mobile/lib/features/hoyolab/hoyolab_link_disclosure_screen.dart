@@ -5,10 +5,7 @@ import '../../application/legal/legal_url_launcher.dart';
 
 /// Explicit pre-link disclosure. Must be accepted before WebView / HoYoLAB APIs start.
 class HoyolabLinkDisclosureScreen extends StatelessWidget {
-  const HoyolabLinkDisclosureScreen({
-    required this.launcher,
-    super.key,
-  });
+  const HoyolabLinkDisclosureScreen({required this.launcher, super.key});
 
   final LegalUrlLauncher launcher;
 
@@ -36,16 +33,10 @@ class HoyolabLinkDisclosureScreen extends StatelessWidget {
                     const _Bullet(
                       'Cookie その他の認証情報は、端末の Secure Storage に保存します。',
                     ),
-                    const _Bullet(
-                      '認証情報は HoYoLAB / HoYoverse へ直接送信されます。',
-                    ),
-                    const _Bullet(
-                      '認証情報は運営者サーバーへ送信・保存しません。',
-                    ),
+                    const _Bullet('認証情報は HoYoLAB / HoYoverse へ直接送信されます。'),
+                    const _Bullet('認証情報は運営者サーバーへ送信・保存しません。'),
                     const _Bullet('連携は設定画面からいつでも解除できます。'),
-                    const _Bullet(
-                      '連携解除時に、端末内の Cookie と認証情報を削除します。',
-                    ),
+                    const _Bullet('連携解除時に、端末内の Cookie と認証情報を削除します。'),
                     const SizedBox(height: 16),
                     Text('関連文書', style: theme.textTheme.titleSmall),
                     ListTile(
@@ -85,9 +76,9 @@ class HoyolabLinkDisclosureScreen extends StatelessWidget {
     if (uri == null || uri.scheme != 'https') return;
     final ok = await launcher(uri);
     if (!context.mounted || ok) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ページを開けませんでした。')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('ページを開けませんでした。')));
   }
 }
 
@@ -100,10 +91,7 @@ class _Bullet extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('・'),
-          Expanded(child: Text(text)),
-        ],
+        children: [const Text('・'), Expanded(child: Text(text))],
       ),
     );
   }

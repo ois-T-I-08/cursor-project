@@ -47,7 +47,8 @@ void main() {
       totalTaskNum: 4,
       currentHomeCoin: 0,
       maxHomeCoin: 2400,
-      expeditions: expeditions ??
+      expeditions:
+          expeditions ??
           List.generate(
             5,
             (i) => HoyolabExpedition(
@@ -191,10 +192,7 @@ void main() {
   test('immediate show failure does not mark notified', () async {
     scheduler.failShow = true;
     await coordinator.reconcile(
-      ReminderReconcileSnapshot(
-        note: note(resin: 190),
-        fetchedAt: now,
-      ),
+      ReminderReconcileSnapshot(note: note(resin: 190), fetchedAt: now),
     );
     final prior = await settings.readPriorState();
     expect(prior.resinWasAtOrAbove190, isFalse);
@@ -202,10 +200,7 @@ void main() {
 
   test('KV does not store cookie/uid/api body keys', () async {
     await coordinator.reconcile(
-      ReminderReconcileSnapshot(
-        note: note(resin: 190),
-        fetchedAt: now,
-      ),
+      ReminderReconcileSnapshot(note: note(resin: 190), fetchedAt: now),
     );
     for (final key in kv.values.keys) {
       expect(key.toLowerCase().contains('cookie'), isFalse);
@@ -266,8 +261,7 @@ class _GateOnCancelScheduler implements NotificationScheduler {
     required String title,
     required String body,
     required String payload,
-  }) =>
-      inner.show(kind: kind, title: title, body: body, payload: payload);
+  }) => inner.show(kind: kind, title: title, body: body, payload: payload);
 
   @override
   Future<void> schedule({
@@ -276,14 +270,13 @@ class _GateOnCancelScheduler implements NotificationScheduler {
     required String title,
     required String body,
     required String payload,
-  }) =>
-      inner.schedule(
-        kind: kind,
-        notifyAt: notifyAt,
-        title: title,
-        body: body,
-        payload: payload,
-      );
+  }) => inner.schedule(
+    kind: kind,
+    notifyAt: notifyAt,
+    title: title,
+    body: body,
+    payload: payload,
+  );
 
   @override
   Future<void> cancel(ReminderKind kind) async {

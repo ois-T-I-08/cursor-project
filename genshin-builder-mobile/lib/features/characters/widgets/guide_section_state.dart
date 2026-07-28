@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 
 /// セクション単位の空・エラー表示（画面全体をブロックしない）。
 class GuideSectionMessage extends StatelessWidget {
-  const GuideSectionMessage({
-    super.key,
-    required this.message,
-    this.onRetry,
-  });
+  const GuideSectionMessage({super.key, required this.message, this.onRetry});
 
   final String message;
   final VoidCallback? onRetry;
@@ -28,10 +24,7 @@ class GuideSectionMessage extends StatelessWidget {
             ),
           ),
           if (onRetry != null)
-            TextButton(
-              onPressed: onRetry,
-              child: const Text('再試行'),
-            ),
+            TextButton(onPressed: onRetry, child: const Text('再試行')),
         ],
       ),
     );

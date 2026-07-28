@@ -64,10 +64,7 @@ String buildIconUrl(String icon) {
 
 /// Amber sortOrder と既知例外から聖遺物セットの地域を推定する。
 /// API に region が無いため、新規セットは sortOrder 帯で自動分類する。
-String resolveArtifactSetRegion({
-  required String id,
-  required int sortOrder,
-}) {
+String resolveArtifactSetRegion({required String id, required int sortOrder}) {
   const idOverrides = <String, String>{
     // 層岩巨淵（sortOrder が稲妻帯だが璃月）
     '15023': '璃月',

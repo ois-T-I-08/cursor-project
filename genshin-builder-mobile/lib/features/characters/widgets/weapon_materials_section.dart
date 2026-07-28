@@ -56,9 +56,9 @@ class WeaponMaterialsSection extends StatelessWidget {
   final ValueChanged<int> onTargetWeaponLevelChanged;
   final void Function(RequirementLine line, String scope) onToggleBookmark;
   final void Function(RequirementLine line, String rangeSourceKey)
-      onToggleRangeBookmark;
+  onToggleRangeBookmark;
   final void Function(List<RequirementLine> lines, String sourceKey)
-      onBookmarkRange;
+  onBookmarkRange;
   final bool showTitle;
 
   /// キャラクターの装備可能武器種（例: sword）。指定時はこの種のみ表示
@@ -66,7 +66,7 @@ class WeaponMaterialsSection extends StatelessWidget {
 
   /// 武器詳細表示（選択変更とは分離）
   final void Function(MasterWeapon weapon, {required bool isEquipped})?
-      onShowWeaponDetail;
+  onShowWeaponDetail;
 
   final int equippedRefinement;
 
@@ -100,39 +100,45 @@ class WeaponMaterialsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = allowedWeaponType == null
-        ? weapons
-        : weapons.where((w) => w.weaponType == allowedWeaponType).toList();
-    final selected =
-        weapons.where((w) => w.id == selectedWeaponId).firstOrNull;
+    final filtered =
+        allowedWeaponType == null
+            ? weapons
+            : weapons.where((w) => w.weaponType == allowedWeaponType).toList();
+    final selected = weapons.where((w) => w.id == selectedWeaponId).firstOrNull;
 
-    final nextStage = promotes.isEmpty
-        ? null
-        : getNextStageRequirements(
-            weaponLevel,
-            promotes,
-            'weapon',
-            weaponRarity,
-          );
+    final nextStage =
+        promotes.isEmpty
+            ? null
+            : getNextStageRequirements(
+              weaponLevel,
+              promotes,
+              'weapon',
+              weaponRarity,
+            );
 
-    final rangeLines = promotes.isEmpty
-        ? <RequirementLine>[]
-        : getRangeLevelRequirements(
-            weaponLevel,
-            targetWeaponLevel,
-            promotes,
-            'weapon',
-            weaponRarity: weaponRarity,
-            resolveName: resolveName,
-            resolveIcon: resolveIcon,
-          );
+    final rangeLines =
+        promotes.isEmpty
+            ? <RequirementLine>[]
+            : getRangeLevelRequirements(
+              weaponLevel,
+              targetWeaponLevel,
+              promotes,
+              'weapon',
+              weaponRarity: weaponRarity,
+              resolveName: resolveName,
+              resolveIcon: resolveIcon,
+            );
 
-    final rangeSourceKey =
-        makeRangeSourceKey(bookmarkContext, weaponLevel, targetWeaponLevel);
+    final rangeSourceKey = makeRangeSourceKey(
+      bookmarkContext,
+      weaponLevel,
+      targetWeaponLevel,
+    );
 
-    final typeLabel = allowedWeaponType == null
-        ? null
-        : (weaponTypeLabelMap[allowedWeaponType!] ?? allowedWeaponType);
+    final typeLabel =
+        allowedWeaponType == null
+            ? null
+            : (weaponTypeLabelMap[allowedWeaponType!] ?? allowedWeaponType);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,8 +151,8 @@ class WeaponMaterialsSection extends StatelessWidget {
           Text(
             '装備可能: $typeLabelのみ',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 8),
         ],
@@ -159,10 +165,7 @@ class WeaponMaterialsSection extends StatelessWidget {
                 GameIconImage(iconUrl: selected.iconUrl, size: 28),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    selected.name,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  child: Text(selected.name, overflow: TextOverflow.ellipsis),
                 ),
               ] else
                 const Expanded(child: Text('武器を選択')),
@@ -187,10 +190,8 @@ class WeaponMaterialsSection extends StatelessWidget {
                     Text(
                       '${selected.rarity}★ · Lv.$weaponLevel · 装備中',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -199,8 +200,8 @@ class WeaponMaterialsSection extends StatelessWidget {
                 IconButton(
                   tooltip: '詳細',
                   icon: const Icon(Icons.info_outline),
-                  onPressed: () =>
-                      onShowWeaponDetail!(selected, isEquipped: true),
+                  onPressed:
+                      () => onShowWeaponDetail!(selected, isEquipped: true),
                 ),
             ],
           ),
@@ -224,22 +225,23 @@ class WeaponMaterialsSection extends StatelessWidget {
               label: '目標レベル',
               value: targetWeaponLevel,
               onChanged: onTargetWeaponLevelChanged,
-              headerTrailing: rangeLines.isEmpty
-                  ? null
-                  : IconButton(
-                      icon: const Icon(Icons.bookmark_add_outlined),
-                      tooltip: '範囲をブックマーク',
-                      onPressed: () =>
-                          onBookmarkRange(rangeLines, rangeSourceKey),
-                    ),
+              headerTrailing:
+                  rangeLines.isEmpty
+                      ? null
+                      : IconButton(
+                        icon: const Icon(Icons.bookmark_add_outlined),
+                        tooltip: '範囲をブックマーク',
+                        onPressed:
+                            () => onBookmarkRange(rangeLines, rangeSourceKey),
+                      ),
             ),
             if (promotes.isEmpty) ...[
               const SizedBox(height: 12),
               Text(
                 '突破データ未取得 — 設定でマスタ同期を実行してください',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+                  color: Theme.of(context).colorScheme.error,
+                ),
               ),
             ] else ...[
               const Divider(height: 32),
@@ -253,20 +255,18 @@ class WeaponMaterialsSection extends StatelessWidget {
                   nextStage.mora,
                   resolveName,
                   resolveIcon: resolveIcon,
-                ).map(
-                  (line) {
-                    final sourceKey = makeItemSourceKey(
-                      bookmarkContext,
-                      'next',
-                      line.materialId,
-                    );
-                    return MaterialListTile(
-                      line: line,
-                      isBookmarked: _isBookmarked(sourceKey, line.materialId),
-                      onToggleBookmark: () => onToggleBookmark(line, 'next'),
-                    );
-                  },
-                ),
+                ).map((line) {
+                  final sourceKey = makeItemSourceKey(
+                    bookmarkContext,
+                    'next',
+                    line.materialId,
+                  );
+                  return MaterialListTile(
+                    line: line,
+                    isBookmarked: _isBookmarked(sourceKey, line.materialId),
+                    onToggleBookmark: () => onToggleBookmark(line, 'next'),
+                  );
+                }),
               const Divider(height: 24),
               Text('目標までの合計', style: Theme.of(context).textTheme.titleMedium),
               if (rangeLines.isEmpty)
@@ -275,10 +275,12 @@ class WeaponMaterialsSection extends StatelessWidget {
                 ...rangeLines.map(
                   (line) => MaterialListTile(
                     line: line,
-                    isBookmarked:
-                        _isBookmarked(rangeSourceKey, line.materialId),
-                    onToggleBookmark: () =>
-                        onToggleRangeBookmark(line, rangeSourceKey),
+                    isBookmarked: _isBookmarked(
+                      rangeSourceKey,
+                      line.materialId,
+                    ),
+                    onToggleBookmark:
+                        () => onToggleRangeBookmark(line, rangeSourceKey),
                   ),
                 ),
             ],

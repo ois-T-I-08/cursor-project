@@ -29,8 +29,7 @@ class HoyolabGameDataCache {
     return entry.data as T;
   }
 
-  List<T>? getOwned<T>(Duration ttl) =>
-      readList<T>(entry: _owned, ttl: ttl);
+  List<T>? getOwned<T>(Duration ttl) => readList<T>(entry: _owned, ttl: ttl);
 
   void setOwned<T>(List<T> data) =>
       _owned = CacheEntry<List<dynamic>>(data, DateTime.now());
@@ -41,7 +40,8 @@ class HoyolabGameDataCache {
   void setCharacterBuild<T>(String id, T data) =>
       _characterBuilds[id] = CacheEntry<dynamic>(data, DateTime.now());
 
-  T? getAdventure<T>(Duration ttl) => readSingle<T>(entry: _adventure, ttl: ttl);
+  T? getAdventure<T>(Duration ttl) =>
+      readSingle<T>(entry: _adventure, ttl: ttl);
 
   void setAdventure<T>(T data) =>
       _adventure = CacheEntry<dynamic>(data, DateTime.now());

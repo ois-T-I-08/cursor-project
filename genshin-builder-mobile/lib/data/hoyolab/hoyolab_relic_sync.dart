@@ -12,10 +12,7 @@ List<ArtifactSubstat> substatsFromGameRecord(List<GameRecordProp> props) {
   return props
       .map((p) {
         final label = normalizeSubStatLabel(p.label) ?? p.label;
-        return ArtifactSubstat(
-          stat: label,
-          value: parseStatValue(p.value),
-        );
+        return ArtifactSubstat(stat: label, value: parseStatValue(p.value));
       })
       .where((s) => s.stat.isNotEmpty && subStatOptions.contains(s.stat))
       .toList();
@@ -49,7 +46,9 @@ ArtifactState mergeRelicsFromHoyolab({
     }
 
     if (piece.substats.isEmpty && relic.subStats.isNotEmpty) {
-      updated = updated.copyWith(substats: substatsFromGameRecord(relic.subStats));
+      updated = updated.copyWith(
+        substats: substatsFromGameRecord(relic.subStats),
+      );
     }
 
     result = updateArtifactPiece(result, slot, updated);

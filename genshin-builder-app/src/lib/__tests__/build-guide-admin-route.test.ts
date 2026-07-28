@@ -58,4 +58,50 @@ describe("admin build-guides route hardening", () => {
     );
     expect(huge.status).toBe(413);
   });
+
+  it.each([
+    {
+      action: "approveRecommendation",
+      recommendationId: "recommendation-1234567890",
+    },
+    {
+      action: "rejectRecommendation",
+      recommendationId: "recommendation-1234567890",
+    },
+    {
+      action: "publishRecommendation",
+      recommendationId: "recommendation-1234567890",
+    },
+    {
+      action: "unpublishRecommendation",
+      recommendationId: "recommendation-1234567890",
+    },
+    {
+      action: "overrideRecommendation",
+      recommendationId: "recommendation-1234567890",
+      targetsPayload: [],
+    },
+    {
+      action: "restoreRecommendationRevision",
+      recommendationId: "recommendation-1234567890",
+      revisionId: "revision-123456789012345",
+    },
+  ])("rejects $action without expectedUpdatedAt", async (payload) => {
+    vi.stubEnv("BUILD_GUIDE_ADMIN_SECRET", "guide-secret-for-route-test");
+    const { POST } = await import("../../app/api/admin/build-guides/route");
+    const response = await POST(
+      new Request("http://localhost/api/admin/build-guides", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer guide-secret-for-route-test",
+          "content-type": "application/json",
+          "x-forwarded-for": "203.0.113.12",
+        },
+        body: JSON.stringify(payload),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: "invalidRequest" });
+  });
 });

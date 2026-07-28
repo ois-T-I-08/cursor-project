@@ -46,7 +46,8 @@ class AkashaWeaponUsageRepository {
     });
   }
 
-  WeaponUsageSnapshot _heuristicEmpty(String characterId) => WeaponUsageSnapshot(
+  WeaponUsageSnapshot _heuristicEmpty(String characterId) =>
+      WeaponUsageSnapshot(
         characterId: characterId,
         rates: const {},
         sampleSize: 0,

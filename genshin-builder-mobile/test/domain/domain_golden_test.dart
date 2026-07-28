@@ -94,11 +94,7 @@ void main() {
 
         if (fn == 'makeRangeSourceKey') {
           expect(
-            makeRangeSourceKey(
-              ctx,
-              input['from'] as int,
-              input['to'] as int,
-            ),
+            makeRangeSourceKey(ctx, input['from'] as int, input['to'] as int),
             c['expected'],
           );
           return;
@@ -125,9 +121,10 @@ void main() {
     for (final c in _cases(suites, 'getNextStageRequirements')) {
       test(c['id'] as String, () {
         final input = c['input'] as Map<String, dynamic>;
-        final promotes = (input['promotes'] as List)
-            .map((p) => _parsePromote(p as Map<String, dynamic>))
-            .toList();
+        final promotes =
+            (input['promotes'] as List)
+                .map((p) => _parsePromote(p as Map<String, dynamic>))
+                .toList();
         final stage = getNextStageRequirements(
           input['currentLevel'] as int,
           promotes,
@@ -160,9 +157,10 @@ void main() {
     for (final c in _cases(suites, 'getRangeLevelRequirements')) {
       test(c['id'] as String, () {
         final input = c['input'] as Map<String, dynamic>;
-        final promotes = (input['promotes'] as List)
-            .map((p) => _parsePromote(p as Map<String, dynamic>))
-            .toList();
+        final promotes =
+            (input['promotes'] as List)
+                .map((p) => _parsePromote(p as Map<String, dynamic>))
+                .toList();
         final lines = getRangeLevelRequirements(
           input['fromLevel'] as int,
           input['toLevel'] as int,
@@ -196,9 +194,10 @@ void main() {
     for (final c in _cases(suites, 'getRangeTalentRequirements')) {
       test(c['id'] as String, () {
         final input = c['input'] as Map<String, dynamic>;
-        final upgrades = (input['upgrades'] as List)
-            .map((u) => _parseTalentUpgrade(u as Map<String, dynamic>))
-            .toList();
+        final upgrades =
+            (input['upgrades'] as List)
+                .map((u) => _parseTalentUpgrade(u as Map<String, dynamic>))
+                .toList();
         final lines = getRangeTalentRequirements(
           input['fromLevel'] as int,
           input['toLevel'] as int,
@@ -302,10 +301,7 @@ Map<String, dynamic> _loadGolden() {
   );
 }
 
-List<Map<String, dynamic>> _cases(
-  Map<String, dynamic> suites,
-  String name,
-) {
+List<Map<String, dynamic>> _cases(Map<String, dynamic> suites, String name) {
   final suite = suites[name] as Map<String, dynamic>;
   return (suite['cases'] as List)
       .map((e) => Map<String, dynamic>.from(e as Map))
@@ -313,11 +309,11 @@ List<Map<String, dynamic>> _cases(
 }
 
 CultivationKind _parseKind(String kind) => switch (kind) {
-      'character-level' => CultivationKind.characterLevel,
-      'weapon-level' => CultivationKind.weaponLevel,
-      'talent' => CultivationKind.talent,
-      _ => throw ArgumentError('Unknown kind: $kind'),
-    };
+  'character-level' => CultivationKind.characterLevel,
+  'weapon-level' => CultivationKind.weaponLevel,
+  'talent' => CultivationKind.talent,
+  _ => throw ArgumentError('Unknown kind: $kind'),
+};
 
 PromoteStage _parsePromote(Map<String, dynamic> json) {
   final costItems = <String, int>{

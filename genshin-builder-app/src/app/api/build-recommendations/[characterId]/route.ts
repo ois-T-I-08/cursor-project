@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { buildPublicRecommendationEtag } from "@/lib/build-guides/public-etag";
+import {
+  buildPublicRecommendationEtag,
+  matchesPublicRecommendationEtag,
+} from "@/lib/build-guides/public-etag";
 import { getPublishedBuildRecommendation } from "@/lib/build-guides/store";
 
 export const runtime = "nodejs";
@@ -25,7 +28,7 @@ export async function GET(
 
     const etag = buildPublicRecommendationEtag(characterId, data);
     const ifNoneMatch = request.headers.get("if-none-match");
-    if (ifNoneMatch && ifNoneMatch === etag) {
+    if (matchesPublicRecommendationEtag(ifNoneMatch, etag)) {
       return new Response(null, {
         status: 304,
         headers: {

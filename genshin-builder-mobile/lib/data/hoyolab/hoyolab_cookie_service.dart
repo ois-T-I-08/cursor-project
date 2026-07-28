@@ -29,11 +29,12 @@ class HoyolabCookieService {
   /// Priority: WebView values win; native only fills keys missing from WebView.
   Future<String?> collectNormalizedCookie() async {
     final webViewMap = await _readWebViewCookies();
-    final nativeResult = await (nativeCookieFetcher ??
-        HoyolabCookieChannel.fetchNativeCookie)();
-    final nativeMap = nativeResult.isOk
-        ? HoyolabCookieNormalizer.parseToMap(nativeResult.value)
-        : null;
+    final nativeResult =
+        await (nativeCookieFetcher ?? HoyolabCookieChannel.fetchNativeCookie)();
+    final nativeMap =
+        nativeResult.isOk
+            ? HoyolabCookieNormalizer.parseToMap(nativeResult.value)
+            : null;
 
     final merged = HoyolabCookieNormalizer.mergePreferBase(
       base: webViewMap,

@@ -15,14 +15,13 @@ class DailyPlanNotificationCoordinator {
     required DailyPlanNotificationSettingsStore settings,
     required DailyPlanEvalHistoryRepository evalHistory,
     DailyPlanIncompleteScheduler? scheduler,
-    DailyPlanIncompleteNotifier notifier =
-        const DailyPlanIncompleteNotifier(),
+    DailyPlanIncompleteNotifier notifier = const DailyPlanIncompleteNotifier(),
     DateTime Function()? now,
-  })  : _settings = settings,
-        _evalHistory = evalHistory,
-        _scheduler = scheduler ?? DailyPlanIncompleteScheduler(),
-        _notifier = notifier,
-        _now = now ?? DateTime.now;
+  }) : _settings = settings,
+       _evalHistory = evalHistory,
+       _scheduler = scheduler ?? DailyPlanIncompleteScheduler(),
+       _notifier = notifier,
+       _now = now ?? DateTime.now;
 
   final DailyPlanNotificationSettingsStore _settings;
   final DailyPlanEvalHistoryRepository _evalHistory;

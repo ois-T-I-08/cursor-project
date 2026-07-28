@@ -14,12 +14,7 @@ enum CalculationMode {
   unavailable,
 }
 
-enum InventoryStatus {
-  ownedSufficient,
-  ownedInsufficient,
-  notSet,
-  unknown,
-}
+enum InventoryStatus { ownedSufficient, ownedInsufficient, notSet, unknown }
 
 class UpgradeOption {
   const UpgradeOption({
@@ -50,7 +45,8 @@ class UpgradeOption {
 
   final String optionId;
   final String characterId;
-  final String optionType; // level, ascension, talentNormal, talentSkill, talentBurst, weapon
+  final String
+  optionType; // level, ascension, talentNormal, talentSkill, talentBurst, weapon
   final String? relatedGoalId;
   final int? fromValue;
   final int? toValue;

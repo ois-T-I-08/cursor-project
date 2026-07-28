@@ -36,33 +36,43 @@ class GenerateDailyPlanUseCase {
     // 1. High-priority goals. Weekday-specific tasks are produced by the
     // dedicated daily-material planner, not guessed here.
     for (final goal in goals.where((g) => g.priority > 0).take(2)) {
-      items.add(DailyPlanItem(
-        id: 'pri_${goal.id}',
-        type: DailyPlanItemType.growthGoal,
-        title: '優先: ${_goalSummary(goal)}',
-        characterIds: [goal.characterId],
-        priority: 80 + goal.priority,
-        relatedGoalId: goal.id,
-        reasons: ['優先度の高い育成目標'],
-        estimatedResinCost: resin,
-        confidence: hasInventory ? RecommendationConfidence.high : RecommendationConfidence.low,
-        missingData: missingData,
-      ));
+      items.add(
+        DailyPlanItem(
+          id: 'pri_${goal.id}',
+          type: DailyPlanItemType.growthGoal,
+          title: '優先: ${_goalSummary(goal)}',
+          characterIds: [goal.characterId],
+          priority: 80 + goal.priority,
+          relatedGoalId: goal.id,
+          reasons: ['優先度の高い育成目標'],
+          estimatedResinCost: resin,
+          confidence:
+              hasInventory
+                  ? RecommendationConfidence.high
+                  : RecommendationConfidence.low,
+          missingData: missingData,
+        ),
+      );
     }
 
     // 2. General goals
     for (final goal in goals.where((g) => g.priority <= 0).take(2)) {
-      items.add(DailyPlanItem(
-        id: 'gen_${goal.id}',
-        type: DailyPlanItemType.generalMaterial,
-        title: _goalSummary(goal),
-        characterIds: [goal.characterId],
-        priority: 50,
-        relatedGoalId: goal.id,
-        reasons: ['育成素材集め'],
-        confidence: hasInventory ? RecommendationConfidence.high : RecommendationConfidence.low,
-        missingData: missingData,
-      ));
+      items.add(
+        DailyPlanItem(
+          id: 'gen_${goal.id}',
+          type: DailyPlanItemType.generalMaterial,
+          title: _goalSummary(goal),
+          characterIds: [goal.characterId],
+          priority: 50,
+          relatedGoalId: goal.id,
+          reasons: ['育成素材集め'],
+          confidence:
+              hasInventory
+                  ? RecommendationConfidence.high
+                  : RecommendationConfidence.low,
+          missingData: missingData,
+        ),
+      );
     }
 
     items.sort((a, b) => b.priority.compareTo(a.priority));
@@ -73,7 +83,10 @@ class GenerateDailyPlanUseCase {
       items: items,
       currentResin: resin,
       maxResin: snapshot.maxResin,
-      confidence: hasInventory ? RecommendationConfidence.high : RecommendationConfidence.low,
+      confidence:
+          hasInventory
+              ? RecommendationConfidence.high
+              : RecommendationConfidence.low,
       completeness: snapshot.completeness,
       missingData: missingData,
       generatedAt: generatedAt ?? DateTime.now(),

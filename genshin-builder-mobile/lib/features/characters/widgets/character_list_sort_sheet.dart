@@ -27,10 +27,7 @@ Future<void> showCharacterListSortSheet({
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '並び替え',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
+                  Text('並び替え', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
@@ -40,13 +37,16 @@ Future<void> showCharacterListSortSheet({
                           ? '地域並びではオフ（聖遺物一覧と同じ）'
                           : 'オフにすると1つのリストで並び替え',
                     ),
-                    value: current.mode == CharacterListSortMode.region
-                        ? false
-                        : current.groupByOwnership,
-                    onChanged: current.mode == CharacterListSortMode.region
-                        ? null
-                        : (value) =>
-                            apply(current.copyWith(groupByOwnership: value)),
+                    value:
+                        current.mode == CharacterListSortMode.region
+                            ? false
+                            : current.groupByOwnership,
+                    onChanged:
+                        current.mode == CharacterListSortMode.region
+                            ? null
+                            : (value) => apply(
+                              current.copyWith(groupByOwnership: value),
+                            ),
                   ),
                   const Divider(),
                   _SortSection(
@@ -66,8 +66,7 @@ Future<void> showCharacterListSortSheet({
                   const SizedBox(height: 8),
                   _SortSection(
                     title: '所持データ（HoYoLAB）',
-                    subtitle:
-                        '取得推定はアプリ導入後に新しく所持したキャラから記録されます',
+                    subtitle: '取得推定はアプリ導入後に新しく所持したキャラから記録されます',
                     modes: const [
                       CharacterListSortMode.levelDesc,
                       CharacterListSortMode.levelAsc,
@@ -112,17 +111,17 @@ class _SortSection extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         if (subtitle != null) ...[
           const SizedBox(height: 4),
           Text(
             subtitle!,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
         RadioGroup<CharacterListSortMode>(

@@ -8,10 +8,11 @@ import 'secure_storage_keys.dart';
 /// Cookie / UID / region を端末内暗号化保存（SharedPreferences 禁止）
 class SecureStorageService {
   SecureStorageService({FlutterSecureStorage? storage})
-      : _storage = storage ??
-            const FlutterSecureStorage(
-              aOptions: AndroidOptions(encryptedSharedPreferences: true),
-            );
+    : _storage =
+          storage ??
+          const FlutterSecureStorage(
+            aOptions: AndroidOptions(encryptedSharedPreferences: true),
+          );
 
   final FlutterSecureStorage _storage;
   Future<String>? _dbKeyCreation;
@@ -59,8 +60,7 @@ class SecureStorageService {
     }
   }
 
-  Future<String?> getAppVersionOverride() =>
-      read(SecureStorageKeys.appVersion);
+  Future<String?> getAppVersionOverride() => read(SecureStorageKeys.appVersion);
 
   Future<void> saveAppVersionOverride(String version) =>
       write(SecureStorageKeys.appVersion, version);

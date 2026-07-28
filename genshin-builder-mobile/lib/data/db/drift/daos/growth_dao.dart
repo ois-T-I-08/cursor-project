@@ -5,12 +5,9 @@ import '../tables/growth_tables.dart';
 
 part 'growth_dao.g.dart';
 
-@DriftAccessor(tables: [
-  GrowthGoals,
-  UserMaterialInventory,
-  SavedTeams,
-  GrowthEvents,
-])
+@DriftAccessor(
+  tables: [GrowthGoals, UserMaterialInventory, SavedTeams, GrowthEvents],
+)
 class GrowthDao extends DatabaseAccessor<DriftAppDatabase>
     with _$GrowthDaoMixin {
   GrowthDao(super.db);
@@ -74,7 +71,8 @@ class GrowthDao extends DatabaseAccessor<DriftAppDatabase>
       (delete(growthGoals)..where((t) => t.userId.equals(userId))).go();
 
   Future<void> inventoryDeleteAllForUser(String userId) =>
-      (delete(userMaterialInventory)..where((t) => t.userId.equals(userId))).go();
+      (delete(userMaterialInventory)
+        ..where((t) => t.userId.equals(userId))).go();
 
   Future<void> teamsDeleteAllForUser(String userId) =>
       (delete(savedTeams)..where((t) => t.userId.equals(userId))).go();
@@ -90,16 +88,21 @@ class GrowthDao extends DatabaseAccessor<DriftAppDatabase>
   }
 
   Future<void> goalDeleteByCharacter(String userId, String characterId) =>
-      (delete(growthGoals)
-            ..where((t) => t.userId.equals(userId) & t.characterId.equals(characterId)))
-          .go();
+      (delete(growthGoals)..where(
+        (t) => t.userId.equals(userId) & t.characterId.equals(characterId),
+      )).go();
 
   // ── Material Inventory ────────────────────────────────────────
 
   Future<List<UserMaterialInventoryData>> inventoryGet(String userId) =>
-      (select(userMaterialInventory)..where((t) => t.userId.equals(userId))).get();
+      (select(userMaterialInventory)
+        ..where((t) => t.userId.equals(userId))).get();
 
-  Future<void> inventorySetQuantity(String userId, String materialId, int quantity) async {
+  Future<void> inventorySetQuantity(
+    String userId,
+    String materialId,
+    int quantity,
+  ) async {
     await into(userMaterialInventory).insertOnConflictUpdate(
       UserMaterialInventoryCompanion(
         userId: Value(userId),
@@ -114,9 +117,9 @@ class GrowthDao extends DatabaseAccessor<DriftAppDatabase>
       into(userMaterialInventory).insertOnConflictUpdate(c);
 
   Future<void> inventoryDelete(String userId, String materialId) =>
-      (delete(userMaterialInventory)
-            ..where((t) => t.userId.equals(userId) & t.materialId.equals(materialId)))
-          .go();
+      (delete(userMaterialInventory)..where(
+        (t) => t.userId.equals(userId) & t.materialId.equals(materialId),
+      )).go();
 
   // ── Saved Teams ───────────────────────────────────────────────
 
@@ -180,27 +183,56 @@ class GrowthDao extends DatabaseAccessor<DriftAppDatabase>
     }
   }
 
-  Future<List<GrowthEvent>> eventsGetByUser(String userId, {int limit = 50, DateTime? beforeObservedAt, String? beforeEventId}) {
+  Future<List<GrowthEvent>> eventsGetByUser(
+    String userId, {
+    int limit = 50,
+    DateTime? beforeObservedAt,
+    String? beforeEventId,
+  }) {
     var q = select(growthEvents)..where((t) => t.userId.equals(userId));
     if (beforeObservedAt != null && beforeEventId != null) {
-      q = q..where((t) =>
-            t.observedAt.isSmallerThanValue(beforeObservedAt.millisecondsSinceEpoch) |
-            (t.observedAt.equals(beforeObservedAt.millisecondsSinceEpoch) &
-             t.eventId.isSmallerThanValue(beforeEventId)));
+      q =
+          q..where(
+            (t) =>
+                t.observedAt.isSmallerThanValue(
+                  beforeObservedAt.millisecondsSinceEpoch,
+                ) |
+                (t.observedAt.equals(beforeObservedAt.millisecondsSinceEpoch) &
+                    t.eventId.isSmallerThanValue(beforeEventId)),
+          );
     } else if (beforeObservedAt != null) {
-      q = q..where((t) => t.observedAt.isSmallerThanValue(beforeObservedAt.millisecondsSinceEpoch));
+      q =
+          q..where(
+            (t) => t.observedAt.isSmallerThanValue(
+              beforeObservedAt.millisecondsSinceEpoch,
+            ),
+          );
     }
-    q = q..orderBy([(t) => OrderingTerm(expression: t.observedAt, mode: OrderingMode.desc)]);
-    q = q..orderBy([(t) => OrderingTerm(expression: t.eventId, mode: OrderingMode.desc)]);
+    q =
+        q..orderBy([
+          (t) =>
+              OrderingTerm(expression: t.observedAt, mode: OrderingMode.desc),
+        ]);
+    q =
+        q..orderBy([
+          (t) => OrderingTerm(expression: t.eventId, mode: OrderingMode.desc),
+        ]);
     q = q..limit(limit);
     return q.get();
   }
 
   Future<List<GrowthEvent>> eventsGetByCharacter(
-      String userId, String characterId) {
+    String userId,
+    String characterId,
+  ) {
     return (select(growthEvents)
-          ..where((t) => t.userId.equals(userId) & t.characterId.equals(characterId))
-          ..orderBy([(t) => OrderingTerm(expression: t.observedAt, mode: OrderingMode.desc)]))
+          ..where(
+            (t) => t.userId.equals(userId) & t.characterId.equals(characterId),
+          )
+          ..orderBy([
+            (t) =>
+                OrderingTerm(expression: t.observedAt, mode: OrderingMode.desc),
+          ]))
         .get();
   }
 

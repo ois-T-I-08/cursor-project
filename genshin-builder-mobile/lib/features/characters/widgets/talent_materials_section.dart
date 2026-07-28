@@ -46,29 +46,32 @@ class TalentMaterialsSection extends StatelessWidget {
     CultivationBookmarkContext ctx,
     RequirementLine line,
     String scope,
-  ) onToggleBookmark;
+  )
+  onToggleBookmark;
   final Future<void> Function(
     CultivationBookmarkContext ctx,
     List<RequirementLine> lines,
     String sourceKey,
-  ) onBookmarkRange;
+  )
+  onBookmarkRange;
   final Future<void> Function(
     CultivationBookmarkContext ctx,
     RequirementLine line,
     String rangeSourceKey,
-  ) onToggleRangeLineBookmark;
+  )
+  onToggleRangeLineBookmark;
 
   CultivationBookmarkContext get _ctx => CultivationBookmarkContext(
-        kind: CultivationKind.talent,
-        targetId: '$characterId:$talentKind',
-        targetName: characterName,
-        subLabel: label,
-        character: BookmarkCharacterSource(
-          characterId: characterId,
-          characterName: characterName,
-          characterIconUrl: characterIconUrl,
-        ),
-      );
+    kind: CultivationKind.talent,
+    targetId: '$characterId:$talentKind',
+    targetName: characterName,
+    subLabel: label,
+    character: BookmarkCharacterSource(
+      characterId: characterId,
+      characterName: characterName,
+      characterIconUrl: characterIconUrl,
+    ),
+  );
 
   bool _isBookmarked(String sourceKey, String materialId) =>
       isMaterialBookmarked(bookmarks, sourceKey, materialId);
@@ -90,8 +93,11 @@ class TalentMaterialsSection extends StatelessWidget {
       resolveName: resolveName,
       resolveIcon: resolveIcon,
     );
-    final rangeSourceKey =
-        makeRangeSourceKey(_ctx, currentLevel, talentLevelMax);
+    final rangeSourceKey = makeRangeSourceKey(
+      _ctx,
+      currentLevel,
+      talentLevelMax,
+    );
 
     final isMaxEnhanced = currentLevel >= talentLevelMax;
 
@@ -104,15 +110,17 @@ class TalentMaterialsSection extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child:
-                    Text(label, style: Theme.of(context).textTheme.titleMedium),
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
               if (rangeLines.isNotEmpty)
                 IconButton(
                   icon: const Icon(Icons.bookmark_add_outlined),
                   tooltip: '$label を目標までブックマーク',
-                  onPressed: () =>
-                      onBookmarkRange(_ctx, rangeLines, rangeSourceKey),
+                  onPressed:
+                      () => onBookmarkRange(_ctx, rangeLines, rangeSourceKey),
                 ),
             ],
           ),
@@ -132,8 +140,11 @@ class TalentMaterialsSection extends StatelessWidget {
               resolveName,
               resolveIcon: resolveIcon,
             ).map((line) {
-              final sourceKey =
-                  makeItemSourceKey(_ctx, 'next', line.materialId);
+              final sourceKey = makeItemSourceKey(
+                _ctx,
+                'next',
+                line.materialId,
+              );
               return MaterialListTile(
                 line: line,
                 isBookmarked: _isBookmarked(sourceKey, line.materialId),
@@ -148,8 +159,8 @@ class TalentMaterialsSection extends StatelessWidget {
               (line) => MaterialListTile(
                 line: line,
                 isBookmarked: _isBookmarked(rangeSourceKey, line.materialId),
-                onToggleBookmark: () =>
-                    onToggleRangeLineBookmark(_ctx, line, rangeSourceKey),
+                onToggleBookmark:
+                    () => onToggleRangeLineBookmark(_ctx, line, rangeSourceKey),
               ),
             ),
           ],

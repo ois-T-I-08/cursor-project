@@ -51,8 +51,11 @@ class DailyNoteCard extends ConsumerWidget {
                         IconButton(
                           icon: const Icon(Icons.refresh),
                           tooltip: '更新',
-                          onPressed: () =>
-                              ref.read(dailyNoteProvider.notifier).refresh(),
+                          onPressed:
+                              () =>
+                                  ref
+                                      .read(dailyNoteProvider.notifier)
+                                      .refresh(),
                         ),
                         TextButton(
                           onPressed: () => context.go('/settings/hoyolab'),
@@ -73,8 +76,9 @@ class DailyNoteCard extends ConsumerWidget {
                         }
                         return _DailyNoteBody(note: note);
                       },
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
+                      loading:
+                          () =>
+                              const Center(child: CircularProgressIndicator()),
                       error: (e, _) => Text(userFacingError(e)),
                     ),
                   ],
@@ -82,13 +86,16 @@ class DailyNoteCard extends ConsumerWidget {
               ),
             );
           },
-          loading: () => const Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ),
-          error: (e, _) => Text(userFacingError(e, fallback: 'セッションの読み込みに失敗しました。')),
+          loading:
+              () => const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ),
+          error:
+              (e, _) =>
+                  Text(userFacingError(e, fallback: 'セッションの読み込みに失敗しました。')),
         );
       },
       loading: () => const SizedBox.shrink(),
@@ -134,9 +141,10 @@ class _DailyNoteBody extends StatelessWidget {
           icon: Icons.water_drop_outlined,
           label: '天然樹脂',
           value: '${note.currentResin} / ${note.maxResin}',
-          sub: note.remainingResin > 0
-              ? _formatRecovery(note.resinRecoveryTime)
-              : '満タン',
+          sub:
+              note.remainingResin > 0
+                  ? _formatRecovery(note.resinRecoveryTime)
+                  : '満タン',
         ),
         const SizedBox(height: 8),
         _StatRow(
@@ -151,7 +159,10 @@ class _DailyNoteBody extends StatelessWidget {
           label: '探索派遣',
           value:
               '完了 ${note.finishedExpeditions} / 進行中 ${note.activeExpeditions}',
-          sub: note.expeditions.isEmpty ? '派遣なし' : '合計 ${note.expeditions.length}',
+          sub:
+              note.expeditions.isEmpty
+                  ? '派遣なし'
+                  : '合計 ${note.expeditions.length}',
         ),
         const SizedBox(height: 8),
         _StatRow(

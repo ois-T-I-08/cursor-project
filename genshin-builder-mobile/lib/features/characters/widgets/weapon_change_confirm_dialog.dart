@@ -24,14 +24,15 @@ Future<bool?> showWeaponChangeConfirmDialog({
   final repository = ref.read(amberDetailRepositoryProvider);
   return showDialog<bool>(
     context: context,
-    builder: (context) => _WeaponChangeConfirmDialog(
-      repository: repository,
-      character: character,
-      promotes: promotes,
-      currentBuild: currentBuild,
-      currentWeapon: currentWeapon,
-      newWeapon: newWeapon,
-    ),
+    builder:
+        (context) => _WeaponChangeConfirmDialog(
+          repository: repository,
+          character: character,
+          promotes: promotes,
+          currentBuild: currentBuild,
+          currentWeapon: currentWeapon,
+          newWeapon: newWeapon,
+        ),
   );
 }
 
@@ -69,17 +70,21 @@ class _WeaponChangeConfirmDialogState
 
   Future<_DialogData> _loadDeltas() async {
     try {
-      final detail =
-          await widget.repository.getAvatarDetail(widget.character.id);
+      final detail = await widget.repository.getAvatarDetail(
+        widget.character.id,
+      );
       final avatarStats = detail?.stats;
       if (avatarStats == null) return const _DialogData();
 
-      final currentWeaponStats = widget.currentBuild.weaponId.isEmpty
-          ? null
-          : await widget.repository
-              .getWeaponStats(widget.currentBuild.weaponId);
-      final newWeaponStats =
-          await widget.repository.getWeaponStats(widget.newWeapon.id);
+      final currentWeaponStats =
+          widget.currentBuild.weaponId.isEmpty
+              ? null
+              : await widget.repository.getWeaponStats(
+                widget.currentBuild.weaponId,
+              );
+      final newWeaponStats = await widget.repository.getWeaponStats(
+        widget.newWeapon.id,
+      );
 
       final build = widget.currentBuild;
       final ascension = getAscensionForLevel(build.level, widget.promotes);
@@ -90,16 +95,15 @@ class _WeaponChangeConfirmDialogState
         sets: sets,
       );
 
-      StatValues compute(WeaponStatsData? weaponStats) =>
-          computeCharacterStats(
-            avatarStats: avatarStats,
-            element: widget.character.element,
-            level: build.level,
-            ascension: ascension,
-            weapon: weaponStats?.statsAtLevel(build.weaponLevel),
-            artifacts: build.artifacts,
-            activeSetEffects: activeSetEffects,
-          );
+      StatValues compute(WeaponStatsData? weaponStats) => computeCharacterStats(
+        avatarStats: avatarStats,
+        element: widget.character.element,
+        level: build.level,
+        ascension: ascension,
+        weapon: weaponStats?.statsAtLevel(build.weaponLevel),
+        artifacts: build.artifacts,
+        activeSetEffects: activeSetEffects,
+      );
 
       final elementLabel =
           '${elementLabelMap[widget.character.element] ?? widget.character.element}元素ダメージ';
@@ -131,7 +135,8 @@ class _WeaponChangeConfirmDialogState
             children: [
               _WeaponRow(
                 label: '現在',
-                name: widget.currentWeapon?.name ??
+                name:
+                    widget.currentWeapon?.name ??
                     (widget.currentBuild.weaponName.isEmpty
                         ? '武器なし'
                         : widget.currentBuild.weaponName),
@@ -183,32 +188,37 @@ class _WeaponChangeConfirmDialogState
                     );
                   }
                   return Column(
-                    children: changed
-                        .map(
-                          (row) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    row.label,
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
+                    children:
+                        changed
+                            .map(
+                              (row) => Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 2,
                                 ),
-                                Text(
-                                  formatStatDelta(row.key, row.delta),
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: row.delta > 0
-                                        ? Colors.green.shade600
-                                        : theme.colorScheme.error,
-                                  ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        row.label,
+                                        style: theme.textTheme.bodyMedium,
+                                      ),
+                                    ),
+                                    Text(
+                                      formatStatDelta(row.key, row.delta),
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color:
+                                                row.delta > 0
+                                                    ? Colors.green.shade600
+                                                    : theme.colorScheme.error,
+                                          ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
+                              ),
+                            )
+                            .toList(),
                   );
                 },
               ),

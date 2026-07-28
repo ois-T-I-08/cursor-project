@@ -54,7 +54,5 @@ Map<String, double> artifactSetRatesFromCounts(
   int sampleSize,
 ) {
   if (sampleSize <= 0) return const {};
-  return {
-    for (final e in counts.entries) e.key: e.value / sampleSize,
-  };
+  return {for (final e in counts.entries) e.key: e.value / sampleSize};
 }

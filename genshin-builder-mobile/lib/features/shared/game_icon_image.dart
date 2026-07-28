@@ -22,8 +22,8 @@ class GameIconImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final placeholder = fallback ??
-        Icon(Icons.image_not_supported_outlined, size: size * 0.55);
+    final placeholder =
+        fallback ?? Icon(Icons.image_not_supported_outlined, size: size * 0.55);
 
     Widget icon;
     if (iconUrl == null || iconUrl!.isEmpty) {
@@ -46,29 +46,31 @@ class GameIconImage extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          placeholder: (_, __) => SizedBox(
-            width: size,
-            height: size,
-            child: const Center(
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
+          placeholder:
+              (_, __) => SizedBox(
+                width: size,
+                height: size,
+                child: const Center(
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
               ),
-            ),
-          ),
-          errorWidget: (_, __, ___) => SizedBox(
-            width: size,
-            height: size,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color:
-                    Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(borderRadius),
+          errorWidget:
+              (_, __, ___) => SizedBox(
+                width: size,
+                height: size,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(borderRadius),
+                  ),
+                  child: Center(child: placeholder),
+                ),
               ),
-              child: Center(child: placeholder),
-            ),
-          ),
         ),
       );
     }

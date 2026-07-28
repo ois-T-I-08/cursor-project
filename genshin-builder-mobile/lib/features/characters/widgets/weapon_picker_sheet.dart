@@ -77,53 +77,55 @@ class _WeaponPickerSheetState extends ConsumerState<WeaponPickerSheet> {
   @override
   void initState() {
     super.initState();
-    _entries = widget.weapons
-        .map(
-          (w) => WeaponListEntry(
-            weapon: w,
-            recommendScore: computeWeaponRecommendScore(
-              weapon: w,
-              character: widget.character,
-            ),
-          ),
-        )
-        .toList();
+    _entries =
+        widget.weapons
+            .map(
+              (w) => WeaponListEntry(
+                weapon: w,
+                recommendScore: computeWeaponRecommendScore(
+                  weapon: w,
+                  character: widget.character,
+                ),
+              ),
+            )
+            .toList();
     _filter = WeaponListFilter(weaponType: widget.character.weaponType);
     _enrichStats();
     _loadUsageRates();
   }
 
   List<WeaponListEntry> get _visible => prepareWeaponList(
-        entries: _entries,
-        sortMode: _sortMode,
-        filter: _filter,
-        selectedWeaponId: widget.selectedWeaponId,
-      );
+    entries: _entries,
+    sortMode: _sortMode,
+    filter: _filter,
+    selectedWeaponId: widget.selectedWeaponId,
+  );
 
   void _applyUsageToEntries(WeaponUsageSnapshot usage) {
     _usage = usage;
     final useRemote = usage.isFromRemote && usage.sampleSize > 0;
-    _entries = _entries.map((entry) {
-      if (!useRemote) {
-        return entry.copyWith(
-          recommendScore: computeWeaponRecommendScore(
-            weapon: entry.weapon,
-            character: widget.character,
-            specialProp: entry.specialProp,
-            baseAttack: entry.baseAttack,
-          ),
-        );
-      }
-      final rate = usage.rateFor(entry.id);
-      return entry.copyWith(
-        usageRate: rate,
-        recommendScore: computeWeaponPopularityScore(
-          usageRate: rate,
-          rarity: entry.rarity,
-          baseAttack: entry.baseAttack,
-        ),
-      );
-    }).toList();
+    _entries =
+        _entries.map((entry) {
+          if (!useRemote) {
+            return entry.copyWith(
+              recommendScore: computeWeaponRecommendScore(
+                weapon: entry.weapon,
+                character: widget.character,
+                specialProp: entry.specialProp,
+                baseAttack: entry.baseAttack,
+              ),
+            );
+          }
+          final rate = usage.rateFor(entry.id);
+          return entry.copyWith(
+            usageRate: rate,
+            recommendScore: computeWeaponPopularityScore(
+              usageRate: rate,
+              rarity: entry.rarity,
+              baseAttack: entry.baseAttack,
+            ),
+          );
+        }).toList();
   }
 
   Future<void> _loadUsageRates() async {
@@ -187,9 +189,7 @@ class _WeaponPickerSheetState extends ConsumerState<WeaponPickerSheet> {
 
     for (var i = 0; i < source.length; i += concurrency) {
       final end = (i + concurrency).clamp(0, source.length);
-      await Future.wait([
-        for (var j = i; j < end; j++) enrichAt(j),
-      ]);
+      await Future.wait([for (var j = i; j < end; j++) enrichAt(j)]);
       if (!mounted) return;
       setState(() {
         _entries = List<WeaponListEntry>.from(next);
@@ -257,14 +257,15 @@ class _WeaponPickerSheetState extends ConsumerState<WeaponPickerSheet> {
                       isExpanded: true,
                       isDense: true,
                       value: _sortMode,
-                      items: WeaponListSortMode.values
-                          .map(
-                            (m) => DropdownMenuItem(
-                              value: m,
-                              child: Text(m.label),
-                            ),
-                          )
-                          .toList(),
+                      items:
+                          WeaponListSortMode.values
+                              .map(
+                                (m) => DropdownMenuItem(
+                                  value: m,
+                                  child: Text(m.label),
+                                ),
+                              )
+                              .toList(),
                       onChanged: (mode) {
                         if (mode == null) return;
                         setState(() => _sortMode = mode);
@@ -306,17 +307,20 @@ class _WeaponPickerSheetState extends ConsumerState<WeaponPickerSheet> {
               final equipped = weapon.id == widget.selectedWeaponId;
               final typeLabel =
                   weaponTypeLabelMap[weapon.weaponType] ?? weapon.weaponType;
-              final levelLabel = equipped
-                  ? 'Lv.${widget.equippedWeaponLevel}'
-                  : 'Lv.$levelMax';
-              final atkLabel = entry.baseAttack > 0
-                  ? ' · 基礎ATK ${entry.baseAttack.round()}'
-                  : '';
-              final usageLabel = _sortMode == WeaponListSortMode.popularity &&
-                      entry.usageRate != null &&
-                      (_usage?.isFromRemote ?? false)
-                  ? ' · 使用率 ${(entry.usageRate! * 100).toStringAsFixed(1)}%'
-                  : '';
+              final levelLabel =
+                  equipped
+                      ? 'Lv.${widget.equippedWeaponLevel}'
+                      : 'Lv.$levelMax';
+              final atkLabel =
+                  entry.baseAttack > 0
+                      ? ' · 基礎ATK ${entry.baseAttack.round()}'
+                      : '';
+              final usageLabel =
+                  _sortMode == WeaponListSortMode.popularity &&
+                          entry.usageRate != null &&
+                          (_usage?.isFromRemote ?? false)
+                      ? ' · 使用率 ${(entry.usageRate! * 100).toStringAsFixed(1)}%'
+                      : '';
 
               return SelectableDetailListTile(
                 leading: GameIconImage(iconUrl: weapon.iconUrl, size: 40),

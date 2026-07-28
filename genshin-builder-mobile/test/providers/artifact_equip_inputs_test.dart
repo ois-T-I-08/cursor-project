@@ -61,10 +61,7 @@ void main() {
 
       expect(inputs, hasLength(1));
       expect(inputs.single.artifactCompleted, isTrue);
-      expect(
-        inputs.single.pieces.map((p) => p.setName),
-        everyElement('絶縁の旗印'),
-      );
+      expect(inputs.single.pieces.map((p) => p.setName), everyElement('絶縁の旗印'));
     });
 
     test('falls back to progress when detail and list have no relics', () {

@@ -25,10 +25,10 @@ class NotificationScheduleCoordinator {
     required NotificationScheduler scheduler,
     HoyolabReminderCalculator calculator = const HoyolabReminderCalculator(),
     DateTime Function()? now,
-  })  : _settings = settings,
-        _scheduler = scheduler,
-        _calculator = calculator,
-        _now = now ?? DateTime.now;
+  }) : _settings = settings,
+       _scheduler = scheduler,
+       _calculator = calculator,
+       _now = now ?? DateTime.now;
 
   final ReminderSettingsStore _settings;
   final NotificationScheduler _scheduler;
@@ -289,7 +289,8 @@ class NotificationScheduleCoordinator {
       return;
     }
     if (!await _stillCurrent(seq, accountGen, settingsGen)) return;
-    final keepState = reasonCode == 'already_at_or_above' ||
+    final keepState =
+        reasonCode == 'already_at_or_above' ||
         reasonCode == 'already_all_complete';
     if (kind == ReminderKind.resin) {
       await _settings.clearResinScheduleMeta(clearWasAtOrAbove: !keepState);
@@ -310,17 +311,17 @@ class NotificationScheduleCoordinator {
   }
 
   static String _title(ReminderKind kind) => switch (kind) {
-        ReminderKind.resin => ReminderNotificationIds.resinTitle,
-        ReminderKind.expedition => ReminderNotificationIds.expeditionTitle,
-      };
+    ReminderKind.resin => ReminderNotificationIds.resinTitle,
+    ReminderKind.expedition => ReminderNotificationIds.expeditionTitle,
+  };
 
   static String _body(ReminderKind kind) => switch (kind) {
-        ReminderKind.resin => ReminderNotificationIds.resinBody,
-        ReminderKind.expedition => ReminderNotificationIds.expeditionBody,
-      };
+    ReminderKind.resin => ReminderNotificationIds.resinBody,
+    ReminderKind.expedition => ReminderNotificationIds.expeditionBody,
+  };
 
   static String _payload(ReminderKind kind) => switch (kind) {
-        ReminderKind.resin => ReminderNotificationIds.resinPayload,
-        ReminderKind.expedition => ReminderNotificationIds.expeditionPayload,
-      };
+    ReminderKind.resin => ReminderNotificationIds.resinPayload,
+    ReminderKind.expedition => ReminderNotificationIds.expeditionPayload,
+  };
 }

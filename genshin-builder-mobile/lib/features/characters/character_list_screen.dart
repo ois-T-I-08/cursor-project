@@ -62,8 +62,9 @@ class CharacterListScreen extends ConsumerWidget {
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              final columns =
-                  artifactSetGridCrossAxisCount(constraints.maxWidth);
+              final columns = artifactSetGridCrossAxisCount(
+                constraints.maxWidth,
+              );
               return CustomScrollView(
                 slivers: [
                   if (fetchMessage != null)
@@ -90,9 +91,8 @@ class CharacterListScreen extends ConsumerWidget {
                           childAspectRatio: 0.78,
                         ),
                         delegate: SliverChildBuilderDelegate(
-                          (context, index) => _CharacterGridTile(
-                            entry: section.items[index],
-                          ),
+                          (context, index) =>
+                              _CharacterGridTile(entry: section.items[index]),
                           childCount: section.items.length,
                         ),
                       ),
@@ -134,8 +134,10 @@ class _CharacterGridTile extends StatelessWidget {
                 child: Center(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final size =
-                          constraints.biggest.shortestSide.clamp(36.0, 72.0);
+                      final size = constraints.biggest.shortestSide.clamp(
+                        36.0,
+                        72.0,
+                      );
                       return Stack(
                         clipBehavior: Clip.none,
                         children: [

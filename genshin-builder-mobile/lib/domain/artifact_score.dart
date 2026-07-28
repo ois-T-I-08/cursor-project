@@ -48,21 +48,21 @@ ArtifactScoreType inferScoreType(
 }
 
 ArtifactScoreType? artifactScoreTypeFromString(String? raw) => switch (raw) {
-      'atk' => ArtifactScoreType.atk,
-      'hp' => ArtifactScoreType.hp,
-      'def' => ArtifactScoreType.def,
-      'recharge' || 'er' => ArtifactScoreType.recharge,
-      'em' => ArtifactScoreType.em,
-      _ => null,
-    };
+  'atk' => ArtifactScoreType.atk,
+  'hp' => ArtifactScoreType.hp,
+  'def' => ArtifactScoreType.def,
+  'recharge' || 'er' => ArtifactScoreType.recharge,
+  'em' => ArtifactScoreType.em,
+  _ => null,
+};
 
 String artifactScoreTypeToStorage(ArtifactScoreType type) => switch (type) {
-      ArtifactScoreType.atk => 'atk',
-      ArtifactScoreType.hp => 'hp',
-      ArtifactScoreType.def => 'def',
-      ArtifactScoreType.recharge => 'recharge',
-      ArtifactScoreType.em => 'em',
-    };
+  ArtifactScoreType.atk => 'atk',
+  ArtifactScoreType.hp => 'hp',
+  ArtifactScoreType.def => 'def',
+  ArtifactScoreType.recharge => 'recharge',
+  ArtifactScoreType.em => 'em',
+};
 
 const _userArtifactScoreTypePrefix = 'user:';
 
@@ -79,7 +79,9 @@ ArtifactScoreType? userArtifactScoreTypeFromStorage(String? raw) {
   );
 }
 
-ArtifactScoreType? inferArtifactScoreTypeFromWeights(ArtifactStatWeights weights) {
+ArtifactScoreType? inferArtifactScoreTypeFromWeights(
+  ArtifactStatWeights weights,
+) {
   for (final type in ArtifactScoreType.values) {
     if (_sameWeights(weights, scoreWeightsForType(type))) {
       return type;
@@ -89,58 +91,56 @@ ArtifactScoreType? inferArtifactScoreTypeFromWeights(ArtifactStatWeights weights
 }
 
 double calcArtifactPieceScore(ArtifactPiece piece, ArtifactScoreType type) {
-  return calcArtifactPieceScoreWithWeights(
-    piece,
-    scoreWeightsForType(type),
-  );
+  return calcArtifactPieceScoreWithWeights(piece, scoreWeightsForType(type));
 }
 
-ArtifactStatWeights scoreWeightsForType(ArtifactScoreType type) => switch (type) {
+ArtifactStatWeights scoreWeightsForType(ArtifactScoreType type) =>
+    switch (type) {
       ArtifactScoreType.atk => const ArtifactStatWeights(
-          critRate: 2,
-          critDamage: 1,
-          atkPercent: 1,
-          hpPercent: 0,
-          defPercent: 0,
-          elementalMastery: 0,
-          energyRecharge: 0,
-        ),
+        critRate: 2,
+        critDamage: 1,
+        atkPercent: 1,
+        hpPercent: 0,
+        defPercent: 0,
+        elementalMastery: 0,
+        energyRecharge: 0,
+      ),
       ArtifactScoreType.hp => const ArtifactStatWeights(
-          critRate: 2,
-          critDamage: 1,
-          atkPercent: 0,
-          hpPercent: 1,
-          defPercent: 0,
-          elementalMastery: 0,
-          energyRecharge: 0,
-        ),
+        critRate: 2,
+        critDamage: 1,
+        atkPercent: 0,
+        hpPercent: 1,
+        defPercent: 0,
+        elementalMastery: 0,
+        energyRecharge: 0,
+      ),
       ArtifactScoreType.def => const ArtifactStatWeights(
-          critRate: 2,
-          critDamage: 1,
-          atkPercent: 0,
-          hpPercent: 0,
-          defPercent: 1,
-          elementalMastery: 0,
-          energyRecharge: 0,
-        ),
+        critRate: 2,
+        critDamage: 1,
+        atkPercent: 0,
+        hpPercent: 0,
+        defPercent: 1,
+        elementalMastery: 0,
+        energyRecharge: 0,
+      ),
       ArtifactScoreType.recharge => const ArtifactStatWeights(
-          critRate: 2,
-          critDamage: 1,
-          atkPercent: 0,
-          hpPercent: 0,
-          defPercent: 0,
-          elementalMastery: 0,
-          energyRecharge: 1,
-        ),
+        critRate: 2,
+        critDamage: 1,
+        atkPercent: 0,
+        hpPercent: 0,
+        defPercent: 0,
+        elementalMastery: 0,
+        energyRecharge: 1,
+      ),
       ArtifactScoreType.em => const ArtifactStatWeights(
-          critRate: 2,
-          critDamage: 1,
-          atkPercent: 0,
-          hpPercent: 0,
-          defPercent: 0,
-          elementalMastery: 0.25,
-          energyRecharge: 0,
-        ),
+        critRate: 2,
+        critDamage: 1,
+        atkPercent: 0,
+        hpPercent: 0,
+        defPercent: 0,
+        elementalMastery: 0.25,
+        energyRecharge: 0,
+      ),
     };
 
 double calcArtifactPieceScoreWithWeights(

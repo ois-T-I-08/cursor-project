@@ -61,11 +61,7 @@ void main() {
     test('creates entries with character fields', () {
       final entries = buildBookmarkEntries(
         lines: const [
-          RequirementLine(
-            materialId: '100001',
-            name: 'テスト素材',
-            count: 3,
-          ),
+          RequirementLine(materialId: '100001', name: 'テスト素材', count: 3),
         ],
         sourceKey: 'range:character-level:hu-tao:1-90',
         sourceLabel: '胡桃 キャラLv 1→90',
@@ -89,14 +85,8 @@ void main() {
         count: 1,
         addedAt: 0,
       );
-      expect(
-        isMaterialBookmarked([entry], entry.sourceKey, '100001'),
-        isTrue,
-      );
-      expect(
-        isMaterialBookmarked([entry], entry.sourceKey, '999'),
-        isFalse,
-      );
+      expect(isMaterialBookmarked([entry], entry.sourceKey, '100001'), isTrue);
+      expect(isMaterialBookmarked([entry], entry.sourceKey, '999'), isFalse);
     });
   });
 }

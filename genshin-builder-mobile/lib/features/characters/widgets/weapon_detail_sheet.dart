@@ -17,18 +17,20 @@ Future<void> showWeaponDetailSheet({
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (context) => DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.7,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) => WeaponDetailSheet(
-        weaponId: weaponId,
-        weaponLevel: weaponLevel,
-        refinement: refinement,
-        scrollController: scrollController,
-      ),
-    ),
+    builder:
+        (context) => DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.7,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          builder:
+              (context, scrollController) => WeaponDetailSheet(
+                weaponId: weaponId,
+                weaponLevel: weaponLevel,
+                refinement: refinement,
+                scrollController: scrollController,
+              ),
+        ),
   );
 }
 
@@ -52,14 +54,16 @@ class WeaponDetailSheet extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return async.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.all(32),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (_, __) => const Padding(
-        padding: EdgeInsets.all(24),
-        child: Text('武器詳細を取得できませんでした'),
-      ),
+      loading:
+          () => const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+      error:
+          (_, __) => const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text('武器詳細を取得できませんでした'),
+          ),
       data: (detail) {
         if (detail == null) {
           return const Padding(
@@ -128,17 +132,13 @@ class _WeaponDetailBody extends StatelessWidget {
         const SizedBox(height: 16),
         _kv(theme, 'レベル', 'Lv.$weaponLevel'),
         _kv(theme, '突破段階', '突破 $ascension'),
-        _kv(
-          theme,
-          '基礎攻撃力',
-          levelStats.baseAttack.round().toString(),
-        ),
+        _kv(theme, '基礎攻撃力', levelStats.baseAttack.round().toString()),
         if (subProp != null && subValue != null)
           _kv(
             theme,
             'サブステータス',
             '${detail.subStatName ?? fightPropLabel(subProp)} '
-            '${formatFightPropValue(subProp, subValue)}',
+                '${formatFightPropValue(subProp, subValue)}',
           ),
         _kv(theme, '精錬ランク', 'R$refinement'),
         if (detail.effectName != null && detail.effectName!.isNotEmpty) ...[
@@ -153,14 +153,13 @@ class _WeaponDetailBody extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           if (detail.effectDescriptions.isEmpty)
-            Text(
-              '効果説明を取得できませんでした',
-              style: theme.textTheme.bodySmall,
-            )
+            Text('効果説明を取得できませんでした', style: theme.textTheme.bodySmall)
           else ...[
             Text(
-              detail.effectDescriptions[(refinement - 1)
-                  .clamp(0, detail.effectDescriptions.length - 1)],
+              detail.effectDescriptions[(refinement - 1).clamp(
+                0,
+                detail.effectDescriptions.length - 1,
+              )],
               style: theme.textTheme.bodyMedium,
             ),
             if (detail.effectDescriptions.length > 1) ...[
@@ -174,15 +173,18 @@ class _WeaponDetailBody extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: selected
-                          ? theme.colorScheme.primaryContainer
-                              .withValues(alpha: 0.45)
-                          : null,
+                      color:
+                          selected
+                              ? theme.colorScheme.primaryContainer.withValues(
+                                alpha: 0.45,
+                              )
+                              : null,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: selected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.outlineVariant,
+                        color:
+                            selected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.outlineVariant,
                       ),
                     ),
                     child: Padding(
@@ -193,9 +195,8 @@ class _WeaponDetailBody extends StatelessWidget {
                           Text(
                             'R$rank${selected ? '（現在）' : ''}',
                             style: theme.textTheme.labelLarge?.copyWith(
-                              color: selected
-                                  ? theme.colorScheme.primary
-                                  : null,
+                              color:
+                                  selected ? theme.colorScheme.primary : null,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -243,9 +244,7 @@ class _WeaponDetailBody extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
-            child: Text(value, style: theme.textTheme.bodyMedium),
-          ),
+          Expanded(child: Text(value, style: theme.textTheme.bodyMedium)),
         ],
       ),
     );

@@ -96,8 +96,7 @@ class CharacterFarmPlan {
   final List<FarmContentSection> sections;
   final List<FarmMaterialLine> zeroResinMaterials;
 
-  bool get hasLeyLineOverflow =>
-      sections.any((s) => s.leyLineOverflow != null);
+  bool get hasLeyLineOverflow => sections.any((s) => s.leyLineOverflow != null);
 }
 
 /// UpgradeOption 群から詳細ファーミング計画を構築する。
@@ -279,11 +278,9 @@ CharacterFarmPlan buildCharacterFarmPlan({
     characterId: characterId,
     totalResin: totalResin,
     naturalRegenDays: totalResin <= 0 ? 0 : (totalResin / day).ceil(),
-    condensedResinCount:
-        totalResin <= 0 ? 0 : (totalResin / condensed).ceil(),
+    condensedResinCount: totalResin <= 0 ? 0 : (totalResin / condensed).ceil(),
     sections: sections,
-    zeroResinMaterials: zeroLines
-      ..sort((a, b) => a.name.compareTo(b.name)),
+    zeroResinMaterials: zeroLines..sort((a, b) => a.name.compareTo(b.name)),
   );
 }
 
@@ -360,9 +357,8 @@ FarmContentSection? _buildExpSection({
 
   final heroExp = expBooks.firstWhere((b) => b.id == '104003').exp;
   final heroEquiv = totalExpShortage / heroExp;
-  final perRun = cost.assumedHeroWitEquivalentPerRun ??
-      cost.assumedDropsPerRun ??
-      1.0;
+  final perRun =
+      cost.assumedHeroWitEquivalentPerRun ?? cost.assumedDropsPerRun ?? 1.0;
   final normalRuns = (heroEquiv / perRun).ceil();
   final label = cost.contentLabel ?? '地脈の花（経験値）';
 
@@ -375,9 +371,10 @@ FarmContentSection? _buildExpSection({
   );
   final runs = overflow?.actualRuns ?? normalRuns;
   final resin = overflow?.resinTotal ?? (runs * cost.resinPerRun);
-  final rationale = overflow == null
-      ? '不足経験値を大英雄の経験相当へ換算し、1回あたり約$perRun冊相当で切り上げ。'
-      : overflow.isMaxEstimate
+  final rationale =
+      overflow == null
+          ? '不足経験値を大英雄の経験相当へ換算し、1回あたり約$perRun冊相当で切り上げ。'
+          : overflow.isMaxEstimate
           ? '通常換算 $normalRuns 回分。ボーナスは最大適用時の目安（使用済み回数不明）。'
           : '通常換算 $normalRuns 回分。当日ボーナス残り ${overflow.remainingBonusCapacity} 回を反映。';
 
@@ -416,9 +413,10 @@ FarmContentSection? _buildMoraSection({
   );
   final runs = overflow?.actualRuns ?? normalRuns;
   final resin = overflow?.resinTotal ?? (runs * cost.resinPerRun);
-  final rationale = overflow == null
-      ? '不足モラ $moraNeeded を1回あたり $perRun で切り上げ。'
-      : overflow.isMaxEstimate
+  final rationale =
+      overflow == null
+          ? '不足モラ $moraNeeded を1回あたり $perRun で切り上げ。'
+          : overflow.isMaxEstimate
           ? '通常換算 $normalRuns 回分。ボーナスは最大適用時の目安（使用済み回数不明）。'
           : '通常換算 $normalRuns 回分。当日ボーナス残り ${overflow.remainingBonusCapacity} 回を反映。';
 
@@ -452,9 +450,10 @@ FarmContentSection? _buildSeriesSection({
   required ResinFarmCostTable table,
   required Map<String, String> materialNames,
 }) {
-  final kind = series.kind == DailyMaterialKind.talentBook
-      ? ResinFarmKind.talentDomain
-      : ResinFarmKind.weaponDomain;
+  final kind =
+      series.kind == DailyMaterialKind.talentBook
+          ? ResinFarmKind.talentDomain
+          : ResinFarmKind.weaponDomain;
   final cost = table.costFor(kind);
   if (cost == null) return null;
 
@@ -495,7 +494,8 @@ FarmContentSection? _buildSeriesSection({
   final dropsInBase = drops * highestWeight;
   final runs = (shortageUnits / dropsInBase).ceil();
   final resin = runs * cost.resinPerRun;
-  final content = cost.contentLabel ??
+  final content =
+      cost.contentLabel ??
       (kind == ResinFarmKind.talentDomain ? '熟知秘境' : '煉武秘境');
   final openWeekdays = [
     for (var d = 1; d <= 7; d++)
@@ -513,8 +513,7 @@ FarmContentSection? _buildSeriesSection({
     resinTotal: resin,
     runsExpected: runs,
     estimateMode: FarmEstimateMode.expected,
-    rationale:
-        '合成比 $ratio:1 で共通単位へ正規化し、1回あたり最高レア約$drops個相当で切り上げ。',
+    rationale: '合成比 $ratio:1 で共通単位へ正規化し、1回あたり最高レア約$drops個相当で切り上げ。',
     openWeekdays: openWeekdays,
     openWeekdayLabels: dayLabels,
     materials: lines,
@@ -592,9 +591,10 @@ FarmContentSection? _buildFlatKindSection({
     _ => label,
   };
 
-  final rationale = mode == FarmEstimateMode.range
-      ? 'ドロップ ${cost.assumedDropsPerRunMin}〜${cost.assumedDropsPerRunMax}個/回の推定。目安は期待値 $expectedDrops個/回。'
-      : '1回あたり約$expectedDrops個の目安で切り上げ。';
+  final rationale =
+      mode == FarmEstimateMode.range
+          ? 'ドロップ ${cost.assumedDropsPerRunMin}〜${cost.assumedDropsPerRunMax}個/回の推定。目安は期待値 $expectedDrops個/回。'
+          : '1回あたり約$expectedDrops個の目安で切り上げ。';
 
   return FarmContentSection(
     kind: kind,

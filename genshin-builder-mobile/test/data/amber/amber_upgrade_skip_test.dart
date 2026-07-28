@@ -13,10 +13,7 @@ void main() {
           return http.Response(
             jsonEncode({
               'response': 200,
-              'data': {
-                'name': 'マネキン剣',
-                'items': <String, dynamic>{},
-              },
+              'data': {'name': 'マネキン剣', 'items': <String, dynamic>{}},
             }),
             200,
             headers: {'content-type': 'application/json'},

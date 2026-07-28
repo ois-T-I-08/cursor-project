@@ -57,8 +57,7 @@ HoyolabSliderSnapshot buildHoyolabSliderSnapshot({
     constellation: constellation.clamp(0, 6),
     weaponId: weaponId?.isNotEmpty == true ? weaponId : null,
     weaponName: weaponName?.isNotEmpty == true ? weaponName : null,
-    weaponLevel:
-        weaponLevel == null ? null : snapToLevelMark(weaponLevel),
+    weaponLevel: weaponLevel == null ? null : snapToLevelMark(weaponLevel),
     weaponRefinement: weaponRefinement?.clamp(1, 5),
   );
 }
@@ -118,15 +117,12 @@ enum _TalentKind { normal, skill, burst }
 bool _matchesTalentKind(String name, _TalentKind kind) {
   final lower = name.toLowerCase();
   return switch (kind) {
-    _TalentKind.normal =>
-      lower.contains('通常') || lower.contains('normal'),
+    _TalentKind.normal => lower.contains('通常') || lower.contains('normal'),
     _TalentKind.skill =>
       lower.contains('元素スキル') ||
           lower.contains('スキル') ||
           lower.contains('skill'),
     _TalentKind.burst =>
-      lower.contains('元素爆発') ||
-          lower.contains('爆発') ||
-          lower.contains('burst'),
+      lower.contains('元素爆発') || lower.contains('爆発') || lower.contains('burst'),
   };
 }

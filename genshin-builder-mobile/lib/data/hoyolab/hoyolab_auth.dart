@@ -24,9 +24,7 @@ class HoyolabAuth {
               '$key=${Uri.encodeQueryComponent(queryParameters[key] ?? '')}',
         )
         .join('&');
-    final c = md5.convert(
-      utf8.encode('salt=$_salt&t=$t&r=$r&b=$body&q=$q'),
-    );
+    final c = md5.convert(utf8.encode('salt=$_salt&t=$t&r=$r&b=$body&q=$q'));
     return '$t,$r,${c.toString()}';
   }
 

@@ -8,29 +8,27 @@ MasterCharacter _char({
   int rarity = 5,
   String element = 'pyro',
   String region = 'mondstadt',
-}) =>
-    MasterCharacter(
-      id: id,
-      name: name,
-      element: element,
-      weaponType: 'sword',
-      rarity: rarity,
-      region: region,
-      iconUrl: '',
-    );
+}) => MasterCharacter(
+  id: id,
+  name: name,
+  element: element,
+  weaponType: 'sword',
+  rarity: rarity,
+  region: region,
+  iconUrl: '',
+);
 
 OwnedCharacterSortInfo _owned({
   int level = 1,
   int constellation = 0,
   int friendship = 0,
   DateTime? obtainedAt,
-}) =>
-    OwnedCharacterSortInfo(
-      level: level,
-      constellation: constellation,
-      friendship: friendship,
-      obtainedAt: obtainedAt,
-    );
+}) => OwnedCharacterSortInfo(
+  level: level,
+  constellation: constellation,
+  friendship: friendship,
+  obtainedAt: obtainedAt,
+);
 
 void main() {
   group('character list sort', () {
@@ -39,9 +37,7 @@ void main() {
         _char(id: '10000002', name: 'Ayaka'),
         _char(id: '10000003', name: 'Unowned'),
       ];
-      final ownedMap = {
-        '10000002': _owned(level: 90),
-      };
+      final ownedMap = {'10000002': _owned(level: 90)};
 
       final entries = buildCharacterListEntries(
         characters: characters,
@@ -60,9 +56,7 @@ void main() {
       final characters = [
         _char(id: '10000005-anemo', name: 'TravelerAnemo', element: 'anemo'),
       ];
-      final ownedMap = {
-        '10000005': _owned(level: 90),
-      };
+      final ownedMap = {'10000005': _owned(level: 90)};
 
       final entries = buildCharacterListEntries(
         characters: characters,
@@ -119,10 +113,7 @@ void main() {
         _char(id: '2', name: 'High'),
         _char(id: '3', name: 'Unowned'),
       ];
-      final ownedMap = {
-        '1': _owned(level: 40),
-        '2': _owned(level: 90),
-      };
+      final ownedMap = {'1': _owned(level: 40), '2': _owned(level: 90)};
 
       final entries = buildCharacterListEntries(
         characters: characters,
@@ -224,106 +215,90 @@ void main() {
       ]);
     });
 
-    test('maps skirk to natlan and sandrone to nod-krai; drops fatui section', () {
-      final characters = [
-        _char(id: '10000114', name: 'スカーク', region: 'ファデュイ', rarity: 5),
-        _char(id: '9', name: 'サンドローネ', region: 'ファデュイ', rarity: 5),
-        _char(id: '10000033', name: 'タルタリヤ', region: 'ファデュイ', rarity: 5),
-        _char(id: '2', name: 'ジン', region: 'モンド', rarity: 5),
-      ];
+    test(
+      'maps skirk to natlan and sandrone to nod-krai; drops fatui section',
+      () {
+        final characters = [
+          _char(id: '10000114', name: 'スカーク', region: 'ファデュイ', rarity: 5),
+          _char(id: '9', name: 'サンドローネ', region: 'ファデュイ', rarity: 5),
+          _char(id: '10000033', name: 'タルタリヤ', region: 'ファデュイ', rarity: 5),
+          _char(id: '2', name: 'ジン', region: 'モンド', rarity: 5),
+        ];
 
-      final sections = groupCharacterEntriesByRegion(
-        buildCharacterListEntries(
-          characters: characters,
-          ownedMap: const {},
-        ),
-      );
+        final sections = groupCharacterEntriesByRegion(
+          buildCharacterListEntries(characters: characters, ownedMap: const {}),
+        );
 
-      expect(sections.map((s) => s.region), isNot(contains('ファデュイ')));
-      expect(
-        sections.firstWhere((s) => s.region == 'ナタ').items.single.character.name,
-        'スカーク',
-      );
-      expect(
-        sections
-            .firstWhere((s) => s.region == 'ノド・クライ')
-            .items
-            .single
-            .character
-            .name,
-        'サンドローネ',
-      );
-      // タルタリヤは ID オーバーライドで璃月に移動
-      expect(
-        sections
-            .firstWhere((s) => s.region == '璃月')
-            .items
-            .map((e) => e.character.name),
-        contains('タルタリヤ'),
-      );
-    });
+        expect(sections.map((s) => s.region), isNot(contains('ファデュイ')));
+        expect(
+          sections
+              .firstWhere((s) => s.region == 'ナタ')
+              .items
+              .single
+              .character
+              .name,
+          'スカーク',
+        );
+        expect(
+          sections
+              .firstWhere((s) => s.region == 'ノド・クライ')
+              .items
+              .single
+              .character
+              .name,
+          'サンドローネ',
+        );
+        // タルタリヤは ID オーバーライドで璃月に移動
+        expect(
+          sections
+              .firstWhere((s) => s.region == '璃月')
+              .items
+              .map((e) => e.character.name),
+          contains('タルタリヤ'),
+        );
+      },
+    );
 
-    test('traveler pinned before mondstadt section, all element variants shown', () {
-      final characters = [
-        _char(
-          id: '10000005-anemo',
-          name: '旅人（風）',
-          region: 'モンド',
-          rarity: 5,
-        ),
-        _char(
-          id: '10000005-geo',
-          name: '旅人（岩）',
-          region: 'モンド',
-          rarity: 5,
-        ),
-        _char(id: '2', name: 'ジン', region: 'モンド', rarity: 5),
-        _char(id: '3', name: '香菱', region: '璃月', rarity: 4),
-      ];
+    test(
+      'traveler pinned before mondstadt section, all element variants shown',
+      () {
+        final characters = [
+          _char(id: '10000005-anemo', name: '旅人（風）', region: 'モンド', rarity: 5),
+          _char(id: '10000005-geo', name: '旅人（岩）', region: 'モンド', rarity: 5),
+          _char(id: '2', name: 'ジン', region: 'モンド', rarity: 5),
+          _char(id: '3', name: '香菱', region: '璃月', rarity: 4),
+        ];
 
-      final sections = groupCharacterEntriesByRegion(
-        buildCharacterListEntries(
-          characters: characters,
-          ownedMap: const {},
-        ),
-      );
+        final sections = groupCharacterEntriesByRegion(
+          buildCharacterListEntries(characters: characters, ownedMap: const {}),
+        );
 
-      // 先頭セクションが旅人
-      expect(sections.first.region, '旅人');
-      // 旅人セクションは元素ごとに全件表示
-      expect(sections.first.items.length, 2);
-      expect(
-        sections.first.items.map((e) => e.character.name),
-        containsAll(['旅人（風）', '旅人（岩）']),
-      );
-      // 2番目がモンド（旅人を含まない）
-      expect(sections[1].region, 'モンド');
-      expect(
-        sections[1].items.map((e) => e.character.name),
-        contains('ジン'),
-      );
-      expect(
-        sections[1].items.map((e) => e.character.name),
-        isNot(contains('旅人')),
-      );
-    });
+        // 先頭セクションが旅人
+        expect(sections.first.region, '旅人');
+        // 旅人セクションは元素ごとに全件表示
+        expect(sections.first.items.length, 2);
+        expect(
+          sections.first.items.map((e) => e.character.name),
+          containsAll(['旅人（風）', '旅人（岩）']),
+        );
+        // 2番目がモンド（旅人を含まない）
+        expect(sections[1].region, 'モンド');
+        expect(sections[1].items.map((e) => e.character.name), contains('ジン'));
+        expect(
+          sections[1].items.map((e) => e.character.name),
+          isNot(contains('旅人')),
+        );
+      },
+    );
 
     test('traveler from other region still pinned before mondstadt', () {
       final characters = [
-        _char(
-          id: '10000005-anemo',
-          name: '旅人（風）',
-          region: 'メイン大陸',
-          rarity: 5,
-        ),
+        _char(id: '10000005-anemo', name: '旅人（風）', region: 'メイン大陸', rarity: 5),
         _char(id: '2', name: 'ジン', region: 'モンド', rarity: 5),
       ];
 
       final sections = groupCharacterEntriesByRegion(
-        buildCharacterListEntries(
-          characters: characters,
-          ownedMap: const {},
-        ),
+        buildCharacterListEntries(characters: characters, ownedMap: const {}),
       );
 
       expect(sections.first.region, '旅人');

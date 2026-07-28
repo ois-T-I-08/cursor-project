@@ -22,10 +22,11 @@ class RecommendedStatsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(buildRecommendationProvider(characterId));
     return async.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.only(top: 16),
-        child: LinearProgressIndicator(minHeight: 2),
-      ),
+      loading:
+          () => const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: LinearProgressIndicator(minHeight: 2),
+          ),
       error: (error, _) {
         if (error is BuildRecommendationException &&
             (error.failure == BuildRecommendationFailure.notConfigured ||
@@ -36,9 +37,22 @@ class RecommendedStatsCard extends ConsumerWidget {
           margin: const EdgeInsets.only(top: 16),
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Text(
-              '動画内推奨目安を取得できませんでした。',
-              style: Theme.of(context).textTheme.bodySmall,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '動画内推奨目安を取得できませんでした。',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                TextButton(
+                  onPressed:
+                      () => ref.invalidate(
+                        buildRecommendationProvider(characterId),
+                      ),
+                  child: const Text('再試行'),
+                ),
+              ],
             ),
           ),
         );
@@ -48,7 +62,8 @@ class RecommendedStatsCard extends ConsumerWidget {
         return _RecommendationBody(
           recommendation: recommendation,
           currentStats: currentStats,
-          onRetry: () => ref.invalidate(buildRecommendationProvider(characterId)),
+          onRetry:
+              () => ref.invalidate(buildRecommendationProvider(characterId)),
         );
       },
     );
@@ -120,9 +135,10 @@ class _RecommendationBody extends StatelessWidget {
             else
               ...recommendation.targets.map((target) {
                 final current = currentStats[target.stat] ?? 0;
-                final displayCurrent = percentStatKeys.contains(target.stat)
-                    ? current * 100
-                    : current;
+                final displayCurrent =
+                    percentStatKeys.contains(target.stat)
+                        ? current * 100
+                        : current;
                 final verdict = compareStatToTarget(
                   current: displayCurrent,
                   target: target,
@@ -152,8 +168,9 @@ class _RecommendationBody extends StatelessWidget {
               }),
             const SizedBox(height: 8),
             Text('根拠動画', style: theme.textTheme.labelMedium),
-            ...recommendation.sources.map(
-              (source) => ListTile(
+            ...recommendation.sources.map((source) {
+              final canOpen = isSafeYoutubeGuideUrl(source.sourceUrl);
+              return ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
                 title: Text(
@@ -168,10 +185,11 @@ class _RecommendationBody extends StatelessWidget {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-                trailing: const Icon(Icons.open_in_new, size: 18),
-                onTap: () => _openUrl(source.sourceUrl),
-              ),
-            ),
+                trailing:
+                    canOpen ? const Icon(Icons.open_in_new, size: 18) : null,
+                onTap: canOpen ? () => _openUrl(source.sourceUrl) : null,
+              );
+            }),
             if (recommendation.evidence.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text('動画内で確認', style: theme.textTheme.labelMedium),
@@ -187,7 +205,10 @@ class _RecommendationBody extends StatelessWidget {
                           break;
                         }
                       }
-                      if (source == null) return;
+                      if (source == null ||
+                          !isSafeYoutubeGuideUrl(source.sourceUrl)) {
+                        return;
+                      }
                       _openUrl(_youtubeAt(source.sourceUrl, e.startSeconds));
                     },
                     child: Text(
@@ -249,6 +270,7 @@ class _RecommendationBody extends StatelessWidget {
   }
 
   Future<void> _openUrl(String url) async {
+    if (!isSafeYoutubeGuideUrl(url)) return;
     final uri = Uri.tryParse(url);
     if (uri == null) return;
     if (!await canLaunchUrl(uri)) return;

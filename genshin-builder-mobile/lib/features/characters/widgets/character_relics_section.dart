@@ -44,9 +44,10 @@ class CharacterRelicsSection extends StatelessWidget {
     final piece = artifacts[slot] ?? createEmptyArtifactPiece();
     final substats = List<ArtifactSubstat>.generate(
       4,
-      (i) => i < piece.substats.length
-          ? piece.substats[i]
-          : const ArtifactSubstat(stat: '', value: 0),
+      (i) =>
+          i < piece.substats.length
+              ? piece.substats[i]
+              : const ArtifactSubstat(stat: '', value: 0),
     );
     substats[index] = ArtifactSubstat(stat: stat, value: value);
     _updatePiece(
@@ -66,8 +67,8 @@ class CharacterRelicsSection extends StatelessWidget {
           'セット名・レベル・メインステータスは HoYoLAB 連携時に自動反映されます。サブステは手入力できます。'
           '各部位を長押しすると詳細を表示します。',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 12),
         ...artifactSlotOrder.map((slot) {
@@ -79,32 +80,31 @@ class CharacterRelicsSection extends StatelessWidget {
               piece: piece,
               scoreType: scoreType,
               weights: weights,
-              onMainStatChanged: (mainStat) =>
-                  _updatePiece(slot, piece.copyWith(mainStat: mainStat)),
-              onSubstatChanged: (index, stat, value) =>
-                  _updateSubstat(slot, index, stat, value),
-              onLongPressDetail: () => showArtifactDetailSheet(
-                context: context,
-                characterId: characterId,
-                slot: slot,
-                piece: piece,
-                scoreType: scoreType,
-                weights: weights,
-              ),
+              onMainStatChanged:
+                  (mainStat) =>
+                      _updatePiece(slot, piece.copyWith(mainStat: mainStat)),
+              onSubstatChanged:
+                  (index, stat, value) =>
+                      _updateSubstat(slot, index, stat, value),
+              onLongPressDetail:
+                  () => showArtifactDetailSheet(
+                    context: context,
+                    characterId: characterId,
+                    slot: slot,
+                    piece: piece,
+                    scoreType: scoreType,
+                    weights: weights,
+                  ),
             ),
           );
         }),
         // スコア基準は画面最下部に配置する（合計スコアは画面上部のカードで表示）
         const Divider(height: 24),
         Text(
-          'スコア基準: ${formatArtifactScoreTypeLabel(
-            scoreType: scoreType,
-            resolvedScoreType: resolvedScoreType,
-            scoreTypeUserSet: scoreTypeUserSet,
-          )}',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          'スコア基準: ${formatArtifactScoreTypeLabel(scoreType: scoreType, resolvedScoreType: resolvedScoreType, scoreTypeUserSet: scoreTypeUserSet)}',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         if (weights != null)
           Text(
@@ -113,8 +113,8 @@ class CharacterRelicsSection extends StatelessWidget {
             'DEF ${weights!.defPercent} / ER ${weights!.energyRecharge} / '
             'EM ${weights!.elementalMastery}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         const SizedBox(height: 8),
         DropdownButtonFormField<ArtifactScoreType>(
@@ -127,14 +127,15 @@ class CharacterRelicsSection extends StatelessWidget {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             isDense: true,
           ),
-          items: ArtifactScoreType.values
-              .map(
-                (type) => DropdownMenuItem(
-                  value: type,
-                  child: Text(_scoreTypeLabel(type)),
-                ),
-              )
-              .toList(),
+          items:
+              ArtifactScoreType.values
+                  .map(
+                    (type) => DropdownMenuItem(
+                      value: type,
+                      child: Text(_scoreTypeLabel(type)),
+                    ),
+                  )
+                  .toList(),
           onChanged: (value) {
             if (value != null) onScoreTypeChanged(value);
           },
@@ -167,33 +168,30 @@ class ArtifactSummaryContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          children: artifactSlotOrder.map((slot) {
-            final piece = artifacts[slot] ?? createEmptyArtifactPiece();
-            final slotLabel = artifactSlotLabels[slot] ?? slot.name;
-            return Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: GameIconImage(
-                iconUrl: piece.iconUrl,
-                size: 36,
-                fallback: Text(
-                  slotLabel,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-              ),
-            );
-          }).toList(),
+          children:
+              artifactSlotOrder.map((slot) {
+                final piece = artifacts[slot] ?? createEmptyArtifactPiece();
+                final slotLabel = artifactSlotLabels[slot] ?? slot.name;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: GameIconImage(
+                    iconUrl: piece.iconUrl,
+                    size: 36,
+                    fallback: Text(
+                      slotLabel,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ),
+                );
+              }).toList(),
         ),
         const SizedBox(height: 6),
         Text(
           '合計スコア ${_formatScore(_calcTotalScore(artifacts, scoreType, weights))}'
-          '（${formatArtifactScoreTypeLabel(
-            scoreType: scoreType,
-            resolvedScoreType: resolvedScoreType,
-            scoreTypeUserSet: scoreTypeUserSet,
-          )}）',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          '（${formatArtifactScoreTypeLabel(scoreType: scoreType, resolvedScoreType: resolvedScoreType, scoreTypeUserSet: scoreTypeUserSet)}）',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 2),
         Text(buildArtifactSummary(artifacts)),
@@ -260,11 +258,14 @@ class _PieceEditor extends StatelessWidget {
                           Text(
                             piece.name!,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                            ),
                           ),
                       ],
                     ),
@@ -275,8 +276,8 @@ class _PieceEditor extends StatelessWidget {
                         piece.setName,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ),
                   const SizedBox(width: 8),
@@ -297,9 +298,9 @@ class _PieceEditor extends StatelessWidget {
                 child: Text(
                   'スコア ${_formatScore(_calcPieceScore(piece, scoreType, weights))}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -313,21 +314,21 @@ class _PieceEditor extends StatelessWidget {
                   ),
                   isDense: true,
                 ),
-                items: mainOptions
-                    .map(
-                      (stat) => DropdownMenuItem(
-                        value: stat,
-                        child: Text(stat),
-                      ),
-                    )
-                    .toList(),
+                items:
+                    mainOptions
+                        .map(
+                          (stat) =>
+                              DropdownMenuItem(value: stat, child: Text(stat)),
+                        )
+                        .toList(),
                 onChanged: (v) => onMainStatChanged(v ?? ''),
               ),
               const SizedBox(height: 8),
               ...List.generate(4, (i) {
-                final sub = i < piece.substats.length
-                    ? piece.substats[i]
-                    : const ArtifactSubstat(stat: '', value: 0);
+                final sub =
+                    i < piece.substats.length
+                        ? piece.substats[i]
+                        : const ArtifactSubstat(stat: '', value: 0);
                 final subStatValue = _matchingOption(sub.stat, subStatOptions);
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 6),
@@ -345,16 +346,17 @@ class _PieceEditor extends StatelessWidget {
                             ),
                             isDense: true,
                           ),
-                          items: subStatOptions
-                              .map(
-                                (stat) => DropdownMenuItem(
-                                  value: stat,
-                                  child: Text(stat),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (v) =>
-                              onSubstatChanged(i, v ?? '', sub.value),
+                          items:
+                              subStatOptions
+                                  .map(
+                                    (stat) => DropdownMenuItem(
+                                      value: stat,
+                                      child: Text(stat),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged:
+                              (v) => onSubstatChanged(i, v ?? '', sub.value),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -378,11 +380,12 @@ class _PieceEditor extends StatelessWidget {
                             ),
                             isDense: true,
                           ),
-                          onChanged: (v) => onSubstatChanged(
-                            i,
-                            sub.stat,
-                            double.tryParse(v) ?? 0,
-                          ),
+                          onChanged:
+                              (v) => onSubstatChanged(
+                                i,
+                                sub.stat,
+                                double.tryParse(v) ?? 0,
+                              ),
                         ),
                       ),
                     ],
@@ -405,12 +408,12 @@ class _PieceEditor extends StatelessWidget {
 }
 
 String _scoreTypeLabel(ArtifactScoreType type) => switch (type) {
-      ArtifactScoreType.atk => '攻撃',
-      ArtifactScoreType.def => '防御',
-      ArtifactScoreType.hp => 'HP',
-      ArtifactScoreType.recharge => '元素チャージ',
-      ArtifactScoreType.em => '元素熟知',
-    };
+  ArtifactScoreType.atk => '攻撃',
+  ArtifactScoreType.def => '防御',
+  ArtifactScoreType.hp => 'HP',
+  ArtifactScoreType.recharge => '元素チャージ',
+  ArtifactScoreType.em => '元素熟知',
+};
 
 /// 手動変更時は「選択基準（取得基準）」形式で表示する。
 String formatArtifactScoreTypeLabel({
@@ -431,8 +434,7 @@ String _scoreTypeFieldLabel({
   required ArtifactScoreType? resolvedScoreType,
   required bool scoreTypeUserSet,
 }) {
-  if (!scoreTypeUserSet ||
-      resolvedScoreType == null) {
+  if (!scoreTypeUserSet || resolvedScoreType == null) {
     return 'スコア基準';
   }
   return 'スコア基準（${_scoreTypeLabel(resolvedScoreType)}）';

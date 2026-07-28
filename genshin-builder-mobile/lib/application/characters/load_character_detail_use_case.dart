@@ -8,8 +8,8 @@ class LoadCharacterDetailUseCase {
   const LoadCharacterDetailUseCase({
     required CharacterRepository characters,
     required ProgressRepository progress,
-  })  : _characters = characters,
-        _progress = progress;
+  }) : _characters = characters,
+       _progress = progress;
 
   final CharacterRepository _characters;
   final ProgressRepository _progress;
@@ -69,15 +69,12 @@ Future<CharacterDetailState> attachWeaponUpgrade(
   CharacterRepository characters,
 ) async {
   if (state.weaponId.isEmpty) {
-    return state.copyWith(
-      weaponPromotes: const [],
-      weaponRarity: 4,
-    );
+    return state.copyWith(weaponPromotes: const [], weaponRarity: 4);
   }
 
   final weapon =
       state.weapons.where((w) => w.id == state.weaponId).firstOrNull ??
-          await characters.getWeapon(state.weaponId);
+      await characters.getWeapon(state.weaponId);
   var weaponRarity = state.weaponRarity;
   var weaponName = state.weaponName;
   if (weapon != null) {

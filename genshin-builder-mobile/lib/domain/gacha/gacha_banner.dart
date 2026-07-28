@@ -1,17 +1,8 @@
 /// PU バナー種別
-enum GachaBannerType {
-  character,
-  character2,
-  weapon,
-  chronicled,
-}
+enum GachaBannerType { character, character2, weapon, chronicled }
 
 /// 開催ステータス（表示・ソート用）
-enum GachaBannerStatus {
-  active,
-  upcoming,
-  ended,
-}
+enum GachaBannerStatus { active, upcoming, ended }
 
 /// ガチャ（PU）バナー1件
 class GachaBanner {
@@ -81,10 +72,10 @@ class GachaBanner {
 }
 
 int _statusRank(GachaBannerStatus s) => switch (s) {
-      GachaBannerStatus.active => 0,
-      GachaBannerStatus.upcoming => 1,
-      GachaBannerStatus.ended => 2,
-    };
+  GachaBannerStatus.active => 0,
+  GachaBannerStatus.upcoming => 1,
+  GachaBannerStatus.ended => 2,
+};
 
 /// 開催中 → 予告 → 終了済み。
 /// 開催中は終了が近い順、他は開始の新しい順。
@@ -102,8 +93,7 @@ List<GachaBanner> sortGachaBanners(
     return switch (sa) {
       GachaBannerStatus.active => a.end.compareTo(b.end),
       GachaBannerStatus.upcoming ||
-      GachaBannerStatus.ended =>
-        b.start.compareTo(a.start),
+      GachaBannerStatus.ended => b.start.compareTo(a.start),
     };
   });
   return list;
@@ -117,9 +107,7 @@ List<GachaBanner> mergeGachaBanners({
   String scheduleKey(GachaBanner b) =>
       '${b.type.name}|${b.start.toUtc().millisecondsSinceEpoch}|${b.end.toUtc().millisecondsSinceEpoch}';
 
-  final byId = <String, GachaBanner>{
-    for (final b in history) b.id: b,
-  };
+  final byId = <String, GachaBanner>{for (final b in history) b.id: b};
   final bySchedule = <String, String>{
     for (final b in history) scheduleKey(b): b.id,
   };
@@ -136,8 +124,8 @@ List<GachaBanner> mergeGachaBanners({
 }
 
 String gachaBannerTypeLabel(GachaBannerType type) => switch (type) {
-      GachaBannerType.character => 'キャラクター祈願',
-      GachaBannerType.character2 => 'キャラクター祈願2',
-      GachaBannerType.weapon => '武器祈願',
-      GachaBannerType.chronicled => '集録・追憶祈願',
-    };
+  GachaBannerType.character => 'キャラクター祈願',
+  GachaBannerType.character2 => 'キャラクター祈願2',
+  GachaBannerType.weapon => '武器祈願',
+  GachaBannerType.chronicled => '集録・追憶祈願',
+};

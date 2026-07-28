@@ -15,8 +15,7 @@ class _FakeProgressRepository implements ProgressRepository {
     required String userId,
     required String characterId,
     required String progressId,
-  }) async =>
-      throw UnimplementedError();
+  }) async => throw UnimplementedError();
 
   @override
   Future<void> save(UserProgress progress) async {
@@ -44,10 +43,9 @@ void main() {
       progress: base,
     );
 
-    final saved = await SaveCharacterProgressUseCase(progress: repo).call(
-      base: base,
-      state: state,
-    );
+    final saved = await SaveCharacterProgressUseCase(
+      progress: repo,
+    ).call(base: base, state: state);
 
     expect(saved.level, 90);
     expect(saved.talentNormal, 9);

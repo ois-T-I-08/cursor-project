@@ -8,11 +8,18 @@ void main() {
       expect(_confidenceLabel(RecommendationConfidence.high), '\u9ad8');
       expect(_confidenceLabel(RecommendationConfidence.medium), '\u4e2d');
       expect(_confidenceLabel(RecommendationConfidence.low), '\u4f4e');
-      expect(_confidenceLabel(RecommendationConfidence.unknown), '\u4e0d\u660e');
+      expect(
+        _confidenceLabel(RecommendationConfidence.unknown),
+        '\u4e0d\u660e',
+      );
     });
 
     testWidgets('Diagnosis severity labels exist in code', (tester) async {
-      const labels = ['\u91cd\u8981', '\u78ba\u8a8d\u63a8\u5968', '\u60c5\u5831'];
+      const labels = [
+        '\u91cd\u8981',
+        '\u78ba\u8a8d\u63a8\u5968',
+        '\u60c5\u5831',
+      ];
       expect(labels.length, 3);
     });
 
@@ -28,9 +35,13 @@ void main() {
 
 String _confidenceLabel(RecommendationConfidence c) {
   switch (c) {
-    case RecommendationConfidence.high: return '\u9ad8';
-    case RecommendationConfidence.medium: return '\u4e2d';
-    case RecommendationConfidence.low: return '\u4f4e';
-    case RecommendationConfidence.unknown: return '\u4e0d\u660e';
+    case RecommendationConfidence.high:
+      return '\u9ad8';
+    case RecommendationConfidence.medium:
+      return '\u4e2d';
+    case RecommendationConfidence.low:
+      return '\u4f4e';
+    case RecommendationConfidence.unknown:
+      return '\u4e0d\u660e';
   }
 }

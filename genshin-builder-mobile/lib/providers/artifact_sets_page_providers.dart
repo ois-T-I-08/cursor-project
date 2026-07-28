@@ -13,15 +13,15 @@ import 'hoyolab_game_providers.dart';
 
 final artifactSetRecommendationsConfigProvider =
     FutureProvider<ArtifactSetRecommendationsConfig>((ref) {
-  return const ArtifactSetRecommendationsLoader().load();
-});
+      return const ArtifactSetRecommendationsLoader().load();
+    });
 
 final akashaArtifactSetUsageRepositoryProvider =
     Provider<AkashaArtifactSetUsageRepository>((ref) {
-  final repo = AkashaArtifactSetUsageRepository();
-  ref.onDispose(repo.dispose);
-  return repo;
-});
+      final repo = AkashaArtifactSetUsageRepository();
+      ref.onDispose(repo.dispose);
+      return repo;
+    });
 
 /// セット一覧の Akasha 取得キャラ数上限（所持優先で切り詰め）。
 const int kArtifactAkashaSampleLimit = 32;
@@ -111,10 +111,11 @@ List<ArtifactEquipInput> buildArtifactEquipInputs({
     required Iterable<ArtifactPiece> pieces,
     required bool artifactCompleted,
   }) {
-    final masterId = charactersById.isEmpty
-        ? sourceCharacterId
-        : (resolveMasterCharacterId(sourceCharacterId, charactersById) ??
-            sourceCharacterId);
+    final masterId =
+        charactersById.isEmpty
+            ? sourceCharacterId
+            : (resolveMasterCharacterId(sourceCharacterId, charactersById) ??
+                sourceCharacterId);
     if (!seenMasterIds.add(masterId)) return;
     inputs.add(
       ArtifactEquipInput(
@@ -129,7 +130,8 @@ List<ArtifactEquipInput> buildArtifactEquipInputs({
   for (final entry in detailBuilds.entries) {
     final relics = entry.value.relics;
     if (relics.isEmpty) continue;
-    final progress = progressById[entry.key] ??
+    final progress =
+        progressById[entry.key] ??
         progressById[resolveMasterCharacterId(entry.key, charactersById) ?? ''];
     addInput(
       sourceCharacterId: entry.key,
@@ -142,14 +144,17 @@ List<ArtifactEquipInput> buildArtifactEquipInputs({
   for (final entry in ownedMap.entries) {
     final relics = entry.value.relics;
     if (relics.isEmpty) continue;
-    final masterId = charactersById.isEmpty
-        ? entry.key
-        : (resolveMasterCharacterId(entry.key, charactersById) ?? entry.key);
+    final masterId =
+        charactersById.isEmpty
+            ? entry.key
+            : (resolveMasterCharacterId(entry.key, charactersById) ??
+                entry.key);
     if (seenMasterIds.contains(masterId)) continue;
     addInput(
       sourceCharacterId: entry.key,
       pieces: relics.map(artifactPieceFromHoyolabRelic),
-      artifactCompleted: progressById[masterId]?.artifactCompleted ??
+      artifactCompleted:
+          progressById[masterId]?.artifactCompleted ??
           progressById[entry.key]?.artifactCompleted ??
           false,
     );
@@ -157,10 +162,11 @@ List<ArtifactEquipInput> buildArtifactEquipInputs({
 
   // 3) progress fallback
   for (final progress in progressList) {
-    final masterId = charactersById.isEmpty
-        ? progress.characterId
-        : (resolveMasterCharacterId(progress.characterId, charactersById) ??
-            progress.characterId);
+    final masterId =
+        charactersById.isEmpty
+            ? progress.characterId
+            : (resolveMasterCharacterId(progress.characterId, charactersById) ??
+                progress.characterId);
     if (seenMasterIds.contains(masterId)) continue;
     final pieces = progress.artifacts.values.where(
       (p) =>
@@ -179,15 +185,17 @@ List<ArtifactEquipInput> buildArtifactEquipInputs({
 }
 
 /// 聖遺物セット一覧（効果・装備キャラ・推奨）。
-final artifactSetOverviewsProvider =
-    FutureProvider<List<ArtifactSetOverview>>((ref) async {
+final artifactSetOverviewsProvider = FutureProvider<List<ArtifactSetOverview>>((
+  ref,
+) async {
   final sets = await ref.watch(artifactSetsProvider.future);
   final characters = await ref.watch(charactersProvider.future);
   final progressRepo = await ref.watch(progressRepositoryProvider.future);
   final userId = await ref.watch(localUserIdProvider.future);
   final progressList = await progressRepo.getAll(userId);
-  final config =
-      await ref.watch(artifactSetRecommendationsConfigProvider.future);
+  final config = await ref.watch(
+    artifactSetRecommendationsConfigProvider.future,
+  );
   final ownedMap = await ref.watch(hoyolabOwnedCharacterMapProvider.future);
   final ownedIds = ownedMap.keys.toSet();
 
@@ -206,10 +214,7 @@ final artifactSetOverviewsProvider =
   final byName = <String, MasterCharacter>{
     for (final c in characters) c.name: c,
   };
-  final catalog = ArtifactSetCatalog.fromSets(
-    sets,
-    aliases: config.aliases,
-  );
+  final catalog = ArtifactSetCatalog.fromSets(sets, aliases: config.aliases);
 
   final equipped = groupEquippedBySetId(
     inputs: buildArtifactEquipInputs(
@@ -220,8 +225,7 @@ final artifactSetOverviewsProvider =
     ),
     charactersById: byId,
     ownedCharacterIds: {
-      for (final id in ownedIds)
-        resolveMasterCharacterId(id, byId) ?? id,
+      for (final id in ownedIds) resolveMasterCharacterId(id, byId) ?? id,
     },
     catalog: catalog,
   );
@@ -262,31 +266,35 @@ final artifactSetOverviewsProvider =
 });
 
 /// キャラ別おすすめ聖遺物セット（Akasha 使用率 → 設定フォールバック）
-final characterRecommendedArtifactSetsProvider = FutureProvider.family<
-    List<CharacterRecommendedArtifactSet>, String>((ref, characterId) async {
-  final characters = await ref.watch(charactersProvider.future);
-  MasterCharacter? character;
-  for (final c in characters) {
-    if (c.id == characterId) {
-      character = c;
-      break;
-    }
-  }
-  if (character == null) return const [];
+final characterRecommendedArtifactSetsProvider =
+    FutureProvider.family<List<CharacterRecommendedArtifactSet>, String>((
+      ref,
+      characterId,
+    ) async {
+      final characters = await ref.watch(charactersProvider.future);
+      MasterCharacter? character;
+      for (final c in characters) {
+        if (c.id == characterId) {
+          character = c;
+          break;
+        }
+      }
+      if (character == null) return const [];
 
-  final sets = await ref.watch(artifactSetsProvider.future);
-  final config =
-      await ref.watch(artifactSetRecommendationsConfigProvider.future);
-  final snap = await ref
-      .watch(akashaArtifactSetUsageRepositoryProvider)
-      .getUsageRates(characterId);
+      final sets = await ref.watch(artifactSetsProvider.future);
+      final config = await ref.watch(
+        artifactSetRecommendationsConfigProvider.future,
+      );
+      final snap = await ref
+          .watch(akashaArtifactSetUsageRepositoryProvider)
+          .getUsageRates(characterId);
 
-  return buildCharacterRecommendedArtifactSets(
-    characterId: character.id,
-    characterName: character.name,
-    sets: sets,
-    akashaRates: snap.isFromRemote ? snap.rates : const {},
-    configRecommendationsBySetName: config.recommendations,
-    setNameAliases: config.aliases,
-  );
-});
+      return buildCharacterRecommendedArtifactSets(
+        characterId: character.id,
+        characterName: character.name,
+        sets: sets,
+        akashaRates: snap.isFromRemote ? snap.rates : const {},
+        configRecommendationsBySetName: config.recommendations,
+        setNameAliases: config.aliases,
+      );
+    });

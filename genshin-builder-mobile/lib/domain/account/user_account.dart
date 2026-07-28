@@ -42,8 +42,5 @@ class CloudSyncResult {
   final int pushed;
   final int pulled;
 
-  static const disabled = CloudSyncResult(
-    ok: true,
-    message: 'クラウド同期は未設定です',
-  );
+  static const disabled = CloudSyncResult(ok: true, message: 'クラウド同期は未設定です');
 }

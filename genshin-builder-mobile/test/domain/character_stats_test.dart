@@ -4,8 +4,8 @@ import 'package:genshin_builder_mobile/domain/models/artifact_state.dart';
 
 /// メインステータス未設定（完全に空）の聖遺物状態
 ArtifactState blankArtifacts() => {
-      for (final slot in ArtifactSlotKey.values) slot: const ArtifactPiece(),
-    };
+  for (final slot in ArtifactSlotKey.values) slot: const ArtifactPiece(),
+};
 
 void main() {
   group('artifactMainStatValue', () {
@@ -33,11 +33,7 @@ void main() {
         ),
       ],
       promotes: const [
-        StatPromote(
-          promoteLevel: 0,
-          unlockMaxLevel: 20,
-          addProps: {},
-        ),
+        StatPromote(promoteLevel: 0, unlockMaxLevel: 20, addProps: {}),
         StatPromote(
           promoteLevel: 1,
           unlockMaxLevel: 40,
@@ -152,16 +148,14 @@ void main() {
 
   group('buildStatDeltaRows / format', () {
     test('delta rows and formatting', () {
-      final current = <StatKey, double>{
-        for (final k in StatKey.values) k: 0,
-      }
-        ..[StatKey.atk] = 1000
-        ..[StatKey.critRate] = 50.0;
-      final simulated = <StatKey, double>{
-        for (final k in StatKey.values) k: 0,
-      }
-        ..[StatKey.atk] = 1350
-        ..[StatKey.critRate] = 62.4;
+      final current =
+          <StatKey, double>{for (final k in StatKey.values) k: 0}
+            ..[StatKey.atk] = 1000
+            ..[StatKey.critRate] = 50.0;
+      final simulated =
+          <StatKey, double>{for (final k in StatKey.values) k: 0}
+            ..[StatKey.atk] = 1350
+            ..[StatKey.critRate] = 62.4;
 
       final rows = buildStatDeltaRows(
         current: current,
@@ -203,26 +197,16 @@ void main() {
         ),
       ],
       promotes: const [
-        StatPromote(
-          promoteLevel: 0,
-          unlockMaxLevel: 20,
-          addProps: {},
-        ),
+        StatPromote(promoteLevel: 0, unlockMaxLevel: 20, addProps: {}),
         StatPromote(
           promoteLevel: 1,
           unlockMaxLevel: 40,
-          addProps: {
-            'FIGHT_PROP_BASE_HP': 100,
-            'FIGHT_PROP_CRITICAL': 0.048,
-          },
+          addProps: {'FIGHT_PROP_BASE_HP': 100, 'FIGHT_PROP_CRITICAL': 0.048},
         ),
         StatPromote(
           promoteLevel: 6,
           unlockMaxLevel: 90,
-          addProps: {
-            'FIGHT_PROP_BASE_HP': 600,
-            'FIGHT_PROP_CRITICAL': 0.192,
-          },
+          addProps: {'FIGHT_PROP_BASE_HP': 600, 'FIGHT_PROP_CRITICAL': 0.192},
         ),
       ],
     );
@@ -245,10 +229,7 @@ void main() {
       expect(bonuses.keys, ['FIGHT_PROP_CRITICAL']);
       expect(formatFightPropValue('FIGHT_PROP_CRITICAL', 0.192), '19.2%');
       expect(
-        formatAscensionStageLabel(
-          promoteLevel: 6,
-          promotes: avatar.promotes,
-        ),
+        formatAscensionStageLabel(promoteLevel: 6, promotes: avatar.promotes),
         isNot(equals('未突破')),
       );
     });

@@ -5,25 +5,36 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:genshin_builder_mobile/data/db/drift/app_database.dart';
 import 'package:genshin_builder_mobile/data/db/drift/daos/growth_dao.dart';
 import 'package:genshin_builder_mobile/data/models/master_models.dart';
-import 'package:genshin_builder_mobile/domain/history/growth_event.dart' as domain;
+import 'package:genshin_builder_mobile/domain/history/growth_event.dart'
+    as domain;
 import 'package:genshin_builder_mobile/domain/account/snapshot_supplement.dart';
 
 void main() {
   group('GrowthEvent composite cursor pagination', () {
     testWidgets('same observedAt events paginate correctly', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
-      addTearDown(() async { try { await db.close(); } catch (_) {} });
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
+      addTearDown(() async {
+        try {
+          await db.close();
+        } catch (_) {}
+      });
 
       final dt = DateTime(2026, 7, 14, 12, 0, 0);
       for (var i = 0; i < 6; i++) {
         await db.growthDao.eventsSaveAll([
-          EventParams(eventId: 'ev$i', userId: 'local', characterId: 'c1',
+          EventParams(
+            eventId: 'ev$i',
+            userId: 'local',
+            characterId: 'c1',
             eventType: 'characterLevelChanged',
-            beforeValue: '$i', afterValue: '${i + 1}',
-            source: 'test', observedAt: dt.millisecondsSinceEpoch,
-            dedupKey: 'local:c1:level:$i->${i + 1}'),
+            beforeValue: '$i',
+            afterValue: '${i + 1}',
+            source: 'test',
+            observedAt: dt.millisecondsSinceEpoch,
+            dedupKey: 'local:c1:level:$i->${i + 1}',
+          ),
         ]);
       }
 
@@ -37,8 +48,12 @@ void main() {
         observedAt: DateTime.fromMillisecondsSinceEpoch(page1.last.observedAt),
         eventId: page1.last.eventId,
       );
-      final page2 = await db.growthDao.eventsGetByUser('local', limit: 2,
-          beforeObservedAt: cursor2.observedAt, beforeEventId: cursor2.eventId);
+      final page2 = await db.growthDao.eventsGetByUser(
+        'local',
+        limit: 2,
+        beforeObservedAt: cursor2.observedAt,
+        beforeEventId: cursor2.eventId,
+      );
       expect(page2.length, 2);
       expect(page2[0].eventId, 'ev3');
       expect(page2[1].eventId, 'ev2');
@@ -47,8 +62,12 @@ void main() {
         observedAt: DateTime.fromMillisecondsSinceEpoch(page2.last.observedAt),
         eventId: page2.last.eventId,
       );
-      final page3 = await db.growthDao.eventsGetByUser('local', limit: 2,
-          beforeObservedAt: cursor3.observedAt, beforeEventId: cursor3.eventId);
+      final page3 = await db.growthDao.eventsGetByUser(
+        'local',
+        limit: 2,
+        beforeObservedAt: cursor3.observedAt,
+        beforeEventId: cursor3.eventId,
+      );
       expect(page3.length, 2);
       expect(page3[0].eventId, 'ev1');
       expect(page3[1].eventId, 'ev0');
@@ -57,8 +76,12 @@ void main() {
         observedAt: DateTime.fromMillisecondsSinceEpoch(page3.last.observedAt),
         eventId: page3.last.eventId,
       );
-      final page4 = await db.growthDao.eventsGetByUser('local', limit: 2,
-          beforeObservedAt: cursor4.observedAt, beforeEventId: cursor4.eventId);
+      final page4 = await db.growthDao.eventsGetByUser(
+        'local',
+        limit: 2,
+        beforeObservedAt: cursor4.observedAt,
+        beforeEventId: cursor4.eventId,
+      );
       expect(page4, isEmpty);
 
       final all = [...page1, ...page2, ...page3];
@@ -68,10 +91,14 @@ void main() {
     });
 
     testWidgets('empty history returns empty list', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
-      addTearDown(() async { try { await db.close(); } catch (_) {} });
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
+      addTearDown(() async {
+        try {
+          await db.close();
+        } catch (_) {}
+      });
       final page = await db.growthDao.eventsGetByUser('local', limit: 50);
       expect(page, isEmpty);
       await db.close();
@@ -80,17 +107,33 @@ void main() {
 
   group('GrowthEvent source and dedup', () {
     testWidgets('events save with correct source', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
-      addTearDown(() async { try { await db.close(); } catch (_) {} });
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
+      addTearDown(() async {
+        try {
+          await db.close();
+        } catch (_) {}
+      });
       await db.growthDao.eventsSaveAll([
-        EventParams(eventId: 'src_1', userId: 'local', characterId: 'c1',
-            eventType: 'level', source: 'localManual',
-            observedAt: 1000000, dedupKey: 'l:src:1'),
-        EventParams(eventId: 'src_2', userId: 'local', characterId: 'c1',
-            eventType: 'level', source: 'hoyolabSync',
-            observedAt: 2000000, dedupKey: 'l:src:2'),
+        EventParams(
+          eventId: 'src_1',
+          userId: 'local',
+          characterId: 'c1',
+          eventType: 'level',
+          source: 'localManual',
+          observedAt: 1000000,
+          dedupKey: 'l:src:1',
+        ),
+        EventParams(
+          eventId: 'src_2',
+          userId: 'local',
+          characterId: 'c1',
+          eventType: 'level',
+          source: 'hoyolabSync',
+          observedAt: 2000000,
+          dedupKey: 'l:src:2',
+        ),
       ]);
       final events = await db.growthDao.eventsGetByUser('local', limit: 50);
       expect(events.length, 2);
@@ -101,59 +144,115 @@ void main() {
     });
 
     testWidgets('duplicate dedupKey is ignored', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
-      addTearDown(() async { try { await db.close(); } catch (_) {} });
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
+      addTearDown(() async {
+        try {
+          await db.close();
+        } catch (_) {}
+      });
       await db.growthDao.eventsSaveAll([
-        EventParams(eventId: 'dup_1', userId: 'local', characterId: 'c1',
-            eventType: 'level', source: 'localManual',
-            observedAt: 1000000, dedupKey: 'local:c1:dup'),
+        EventParams(
+          eventId: 'dup_1',
+          userId: 'local',
+          characterId: 'c1',
+          eventType: 'level',
+          source: 'localManual',
+          observedAt: 1000000,
+          dedupKey: 'local:c1:dup',
+        ),
       ]);
       await db.growthDao.eventsSaveAll([
-        EventParams(eventId: 'dup_2', userId: 'local', characterId: 'c1',
-            eventType: 'level', source: 'localManual',
-            observedAt: 1000000, dedupKey: 'local:c1:dup'),
+        EventParams(
+          eventId: 'dup_2',
+          userId: 'local',
+          characterId: 'c1',
+          eventType: 'level',
+          source: 'localManual',
+          observedAt: 1000000,
+          dedupKey: 'local:c1:dup',
+        ),
       ]);
-      expect((await db.growthDao.eventsGetByUser('local', limit: 50)).length, 1);
+      expect(
+        (await db.growthDao.eventsGetByUser('local', limit: 50)).length,
+        1,
+      );
       await db.close();
     });
   });
 
   group('Transaction rollback', () {
     testWidgets('baseline produces no events', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
-      addTearDown(() async { try { await db.close(); } catch (_) {} });
-      await db.characterDao.upsertCharacter(const MasterCharacter(
-        id: '10000002', name: 'Ayaka', element: 'cryo',
-        weaponType: 'sword', rarity: 5, region: 'Inazuma', iconUrl: '',
-      ));
-      await db.progressDao.upsertProgress(const UserProgress(
-        id: 'p1', userId: 'local', characterId: '10000002', level: 80,
-      ));
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
+      addTearDown(() async {
+        try {
+          await db.close();
+        } catch (_) {}
+      });
+      await db.characterDao.upsertCharacter(
+        const MasterCharacter(
+          id: '10000002',
+          name: 'Ayaka',
+          element: 'cryo',
+          weaponType: 'sword',
+          rarity: 5,
+          region: 'Inazuma',
+          iconUrl: '',
+        ),
+      );
+      await db.progressDao.upsertProgress(
+        const UserProgress(
+          id: 'p1',
+          userId: 'local',
+          characterId: '10000002',
+          level: 80,
+        ),
+      );
       expect((await db.growthDao.eventsGetByUser('local', limit: 50)), isEmpty);
       await db.close();
     });
 
     testWidgets('transaction rolls back on error', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
-      addTearDown(() async { try { await db.close(); } catch (_) {} });
-      await db.characterDao.upsertCharacter(const MasterCharacter(
-        id: '10000002', name: 'Ayaka', element: 'cryo',
-        weaponType: 'sword', rarity: 5, region: 'Inazuma', iconUrl: '',
-      ));
-      await db.progressDao.upsertProgress(const UserProgress(
-        id: 'p1', userId: 'local', characterId: '10000002', level: 1,
-      ));
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
+      addTearDown(() async {
+        try {
+          await db.close();
+        } catch (_) {}
+      });
+      await db.characterDao.upsertCharacter(
+        const MasterCharacter(
+          id: '10000002',
+          name: 'Ayaka',
+          element: 'cryo',
+          weaponType: 'sword',
+          rarity: 5,
+          region: 'Inazuma',
+          iconUrl: '',
+        ),
+      );
+      await db.progressDao.upsertProgress(
+        const UserProgress(
+          id: 'p1',
+          userId: 'local',
+          characterId: '10000002',
+          level: 1,
+        ),
+      );
       try {
         await db.transaction(() async {
-          await db.progressDao.upsertProgress(const UserProgress(
-            id: 'p1', userId: 'local', characterId: '10000002', level: 90,
-          ));
+          await db.progressDao.upsertProgress(
+            const UserProgress(
+              id: 'p1',
+              userId: 'local',
+              characterId: '10000002',
+              level: 90,
+            ),
+          );
           await db.customStatement('INVALID_SQL');
         });
       } catch (_) {}
@@ -163,27 +262,52 @@ void main() {
     });
 
     testWidgets('progress + events saved in transaction', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
-      addTearDown(() async { try { await db.close(); } catch (_) {} });
-      await db.characterDao.upsertCharacter(const MasterCharacter(
-        id: '10000002', name: 'Ayaka', element: 'cryo',
-        weaponType: 'sword', rarity: 5, region: 'Inazuma', iconUrl: '',
-      ));
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
+      addTearDown(() async {
+        try {
+          await db.close();
+        } catch (_) {}
+      });
+      await db.characterDao.upsertCharacter(
+        const MasterCharacter(
+          id: '10000002',
+          name: 'Ayaka',
+          element: 'cryo',
+          weaponType: 'sword',
+          rarity: 5,
+          region: 'Inazuma',
+          iconUrl: '',
+        ),
+      );
       await db.transaction(() async {
-        await db.progressDao.upsertProgress(const UserProgress(
-          id: 'p1', userId: 'local', characterId: '10000002', level: 90,
-        ));
+        await db.progressDao.upsertProgress(
+          const UserProgress(
+            id: 'p1',
+            userId: 'local',
+            characterId: '10000002',
+            level: 90,
+          ),
+        );
         await db.growthDao.eventsSaveAll([
-          EventParams(eventId: 'ev_tx', userId: 'local', characterId: '10000002',
-            eventType: 'level', source: 'localManual',
-            observedAt: 1000000, dedupKey: 'tx:unique'),
+          EventParams(
+            eventId: 'ev_tx',
+            userId: 'local',
+            characterId: '10000002',
+            eventType: 'level',
+            source: 'localManual',
+            observedAt: 1000000,
+            dedupKey: 'tx:unique',
+          ),
         ]);
       });
       final saved = await db.progressDao.getProgress('local', '10000002');
       expect(saved?.level, 90);
-      expect((await db.growthDao.eventsGetByUser('local', limit: 50)).length, 1);
+      expect(
+        (await db.growthDao.eventsGetByUser('local', limit: 50)).length,
+        1,
+      );
       await db.close();
     });
   });
@@ -197,7 +321,8 @@ void main() {
     });
     test('supplement with resin values', () {
       const sup = AccountSnapshotSupplement(
-        currentResin: 120, maxResin: 200,
+        currentResin: 120,
+        maxResin: 200,
         status: SnapshotSupplementStatus.linked,
       );
       expect(sup.currentResin, 120);
@@ -207,7 +332,8 @@ void main() {
 
     test('supplement contains no cookies, DS, or API headers', () {
       const sup = AccountSnapshotSupplement(
-        currentResin: 120, maxResin: 200,
+        currentResin: 120,
+        maxResin: 200,
         status: SnapshotSupplementStatus.linked,
       );
       // The model has no cookie/DS/header fields  Ecompile-time guarantee.
@@ -221,7 +347,8 @@ void main() {
 
     test('currentResin 0 is valid (not null)', () {
       const sup = AccountSnapshotSupplement(
-        currentResin: 0, maxResin: 200,
+        currentResin: 0,
+        maxResin: 200,
         status: SnapshotSupplementStatus.linked,
       );
       expect(sup.currentResin, 0);
@@ -243,7 +370,8 @@ void main() {
     test('AccountSnapshotSupplement has no network dependency', () {
       // Pure Dart model guarantee: no HTTP/API imports in this file.
       const sup = AccountSnapshotSupplement(
-        currentResin: 160, maxResin: 200,
+        currentResin: 160,
+        maxResin: 200,
         status: SnapshotSupplementStatus.linked,
       );
       expect(sup.acquiredAt, isNull); // default
@@ -253,7 +381,8 @@ void main() {
 
     test('supplement is immutable and has no side effects', () {
       const sup = AccountSnapshotSupplement(
-        currentResin: 160, maxResin: 200,
+        currentResin: 160,
+        maxResin: 200,
         status: SnapshotSupplementStatus.linked,
       );
       expect(sup.currentResin, 160);

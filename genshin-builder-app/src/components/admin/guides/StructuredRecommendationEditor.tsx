@@ -416,6 +416,7 @@ export default function StructuredRecommendationEditor({
   const [focusPath, setFocusPath] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const isHydrating = useRef(false);
 
   const selected = useMemo(
     () => recommendations.find((r) => r.id === selectedId) ?? null,
@@ -450,13 +451,9 @@ export default function StructuredRecommendationEditor({
     }
   }, [postAction]);
 
-  useEffect(() => {
-    void loadMasters();
-  }, [loadMasters]);
-
-  useEffect(() => {
-    if (!selected) return;
-    const structured = selected.structuredPayload ?? {};
+  const hydrateRecommendation = useCallback((nextSelected: RecommendationRow) => {
+    isHydrating.current = true;
+    const structured = nextSelected.structuredPayload ?? {};
     setInvestmentPriority(
       typeof structured.investmentPriority === "string"
         ? structured.investmentPriority
@@ -465,7 +462,7 @@ export default function StructuredRecommendationEditor({
     setGameVersion(
       typeof structured.gameVersion === "string" ? structured.gameVersion : "",
     );
-    setAdminNotes(selected.adminNotes ?? "");
+    setAdminNotes(nextSelected.adminNotes ?? "");
 
     setWeapons(
       asArray(structured.weapons).map((item, index) => {
@@ -482,7 +479,7 @@ export default function StructuredRecommendationEditor({
           role: String(map.role ?? ""),
           citationId: String(map.citationId ?? ""),
           dataOrigin: String(map.dataOrigin ?? "manual"),
-          adminConfirmed: map.adminConfirmed !== false,
+          adminConfirmed: map.adminConfirmed === true,
         } satisfies WeaponDraft;
       }),
     );
@@ -518,14 +515,14 @@ export default function StructuredRecommendationEditor({
           isAlternative: map.isAlternative === true,
           citationId: String(map.citationId ?? ""),
           dataOrigin: String(map.dataOrigin ?? "manual"),
-          adminConfirmed: map.adminConfirmed !== false,
+          adminConfirmed: map.adminConfirmed === true,
         } satisfies ArtifactDraft;
       }),
     );
 
     setMainStats(
       (["sands", "goblet", "circlet"] as const).map((slot) => {
-        const found = asArray(selected.mainStats).find(
+        const found = asArray(nextSelected.mainStats).find(
           (m) => asRecord(m).slot === slot,
         );
         const map = asRecord(found);
@@ -548,18 +545,44 @@ export default function StructuredRecommendationEditor({
     const fromRecommended = asArray(structured.recommendedStats);
     setTargets(
       payloadToTargetDrafts(
-        fromRecommended.length > 0 ? fromRecommended : selected.targets,
+        fromRecommended.length > 0 ? fromRecommended : nextSelected.targets,
       ),
     );
-    setPendingWeapons(asArray(selected.pendingMentions?.weapons));
-    setPendingArtifacts(asArray(selected.pendingMentions?.artifactSets));
-    setKeepPublished(selected.status === "published");
+    setPendingWeapons(asArray(nextSelected.pendingMentions?.weapons));
+    setPendingArtifacts(asArray(nextSelected.pendingMentions?.artifactSets));
+    setKeepPublished(nextSelected.status === "published");
+    setWeaponQuery("");
+    setSetQueryA({});
+    setSetQueryB({});
     setPreviewJson("");
     setValidationJson("");
     setLocalError(null);
     setLocalOk(null);
     setDirty(false);
-  }, [selected]);
+    window.setTimeout(() => {
+      isHydrating.current = false;
+    }, 0);
+  }, []);
+
+  const handleRecommendationChange = (nextId: string) => {
+    if (nextId === selectedId) return;
+    if (
+      dirty &&
+      !window.confirm("未保存の変更があります。破棄して別の推奨レコードへ移動しますか？")
+    ) {
+      return;
+    }
+    setSelectedId(nextId);
+    const nextSelected = recommendations.find((row) => row.id === nextId);
+    if (!nextSelected) {
+      setDirty(false);
+      return;
+    }
+    hydrateRecommendation(nextSelected);
+    if (!masters && !mastersLoading) {
+      void loadMasters();
+    }
+  };
 
   useEffect(() => {
     if (!focusPath) return;
@@ -580,19 +603,11 @@ export default function StructuredRecommendationEditor({
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [dirty]);
 
-  const isHydrating = useRef(false);
   useEffect(() => {
-    isHydrating.current = true;
-    const t = window.setTimeout(() => {
-      isHydrating.current = false;
-    }, 0);
-    return () => window.clearTimeout(t);
-  }, [selected]);
-  useEffect(() => {
-    if (isHydrating.current || !selected) return;
+    if (isHydrating.current || !selectedId) return;
     setDirty(true);
   }, [
-    selected,
+    selectedId,
     weapons,
     artifacts,
     targets,
@@ -762,8 +777,8 @@ export default function StructuredRecommendationEditor({
       );
       return;
     }
-      setDirty(false);
-      setLocalOk(
+    setDirty(false);
+    setLocalOk(
       result.keepPublished || keepPublished
         ? "作業下書きを保存しました（公開中の API レスポンスは変更していません）"
         : "下書きを保存しました",
@@ -812,6 +827,39 @@ export default function StructuredRecommendationEditor({
     setPreviewJson(JSON.stringify(result, null, 2));
   };
 
+  const runStatusAction = async (
+    action:
+      | "approveRecommendation"
+      | "publishRecommendation"
+      | "unpublishRecommendation",
+    successMessage: string,
+  ) => {
+    if (!selected) return;
+    setLocalError(null);
+    setLocalOk(null);
+    const result = (await postAction({
+      action,
+      recommendationId: selected.id,
+      expectedUpdatedAt: selected.updatedAt,
+    })) as { error?: string; detail?: string };
+    if (result?.error) {
+      if (
+        action === "publishRecommendation" &&
+        result.error === "structuredPublishBlocked"
+      ) {
+        await runValidate();
+        setLocalOk(null);
+      }
+      setLocalError(
+        result.error === "conflictUpdatedAt"
+          ? "他の編集と衝突しました。入力内容を保持したまま再読み込みしてください。"
+          : `${result.error}${result.detail ? `: ${result.detail}` : ""}`,
+      );
+      return;
+    }
+    setLocalOk(successMessage);
+  };
+
   const debugPayload = useMemo(
     () => ({
       structured: buildStructuredPayload(),
@@ -834,7 +882,7 @@ export default function StructuredRecommendationEditor({
         <select
           className="mt-1 w-full rounded-lg border border-white/10 bg-[#151d2a] px-3 py-2"
           value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
+          onChange={(e) => handleRecommendationChange(e.target.value)}
         >
           <option value="">選択してください</option>
           {recommendations.map((r) => (
@@ -1822,6 +1870,16 @@ export default function StructuredRecommendationEditor({
             公開を維持したまま作業下書きを保存（公開 API は旧データを返します）
           </label>
 
+          {dirty ? (
+            <p id="structured-action-hint" className="text-xs text-amber-200">
+              未保存の変更があります。プレビュー・承認・公開の前に下書きを保存してください。
+            </p>
+          ) : selected.structuredReviewStatus !== "admin_confirmed" ? (
+            <p id="structured-action-hint" className="text-xs text-gray-400">
+              公開するには、検証後に構造化下書きを承認してください。
+            </p>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -1844,7 +1902,9 @@ export default function StructuredRecommendationEditor({
             </button>
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || dirty}
+              aria-describedby={dirty ? "structured-action-hint" : undefined}
+              title={dirty ? "先に下書きを保存してください" : undefined}
               className="rounded border border-white/20 px-3 py-2 text-sm"
               onClick={() => void runPreview()}
             >
@@ -1852,20 +1912,40 @@ export default function StructuredRecommendationEditor({
             </button>
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || dirty}
+              aria-describedby={dirty ? "structured-action-hint" : undefined}
+              title={dirty ? "先に下書きを保存してください" : undefined}
               className="rounded border border-white/20 px-3 py-2 text-sm"
               onClick={() =>
-                void postAction({
-                  action: "approveRecommendation",
-                  recommendationId: selected.id,
-                })
+                void runStatusAction(
+                  "approveRecommendation",
+                  selected.status === "published"
+                    ? "作業下書きを承認しました（旧公開は維持されています）"
+                    : "推奨を承認しました",
+                )
               }
             >
               承認
             </button>
             <button
               type="button"
-              disabled={busy}
+              disabled={
+                busy ||
+                dirty ||
+                selected.structuredReviewStatus !== "admin_confirmed"
+              }
+              aria-describedby={
+                dirty || selected.structuredReviewStatus !== "admin_confirmed"
+                  ? "structured-action-hint"
+                  : undefined
+              }
+              title={
+                dirty
+                  ? "先に下書きを保存してください"
+                  : selected.structuredReviewStatus !== "admin_confirmed"
+                    ? "先に構造化下書きを承認してください"
+                    : undefined
+              }
               className="rounded border border-accent/40 px-3 py-2 text-sm"
               onClick={() => {
                 if (
@@ -1875,39 +1955,29 @@ export default function StructuredRecommendationEditor({
                 ) {
                   return;
                 }
-                void postAction({
-                  action: "publishRecommendation",
-                  recommendationId: selected.id,
-                }).then((result) => {
-                  const r = result as {
-                    error?: string;
-                    detail?: string;
-                    publishIssues?: Array<{ path: string }>;
-                  };
-                  if (r?.error) {
-                    setLocalError(
-                      `${r.error}${r.detail ? `: ${r.detail}` : ""}`,
-                    );
-                    if (r.detail) {
-                      const path = r.detail.split(":")[0];
-                      if (path) setFocusPath(path);
-                    }
-                  }
-                });
+                void runStatusAction(
+                  "publishRecommendation",
+                  "構造化育成情報を公開しました",
+                );
               }}
             >
               公開
             </button>
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || selected.status !== "published"}
+              title={
+                selected.status !== "published"
+                  ? "現在は公開されていません"
+                  : undefined
+              }
               className="rounded border border-white/20 px-3 py-2 text-sm"
               onClick={() => {
                 if (!window.confirm("公開を取り消しますか？")) return;
-                void postAction({
-                  action: "unpublishRecommendation",
-                  recommendationId: selected.id,
-                });
+                void runStatusAction(
+                  "unpublishRecommendation",
+                  "公開を取り消しました",
+                );
               }}
             >
               公開取り消し
@@ -1918,9 +1988,7 @@ export default function StructuredRecommendationEditor({
               className="rounded border border-white/20 px-3 py-2 text-sm"
               onClick={() => {
                 if (!window.confirm("未保存の変更を破棄しますか？")) return;
-                const id = selected.id;
-                setSelectedId("");
-                setTimeout(() => setSelectedId(id), 0);
+                hydrateRecommendation(selected);
               }}
             >
               変更破棄

@@ -75,10 +75,7 @@ void main() {
         _char('10000052', '雷電将軍'),
         owned,
         _char('10000030', '鍾離'),
-        ...List.generate(
-          7,
-          (i) => _char('extra_$i', 'Extra$i', rarity: 4),
-        ),
+        ...List.generate(7, (i) => _char('extra_$i', 'Extra$i', rarity: 4)),
       ];
 
       final ids = selectArtifactRecommendationSampleIds(
@@ -110,12 +107,8 @@ void main() {
     });
 
     test('caps at maxSampleIds with owned priority', () {
-      final ownedIds = {
-        for (var i = 0; i < 40; i++) 'owned_$i',
-      };
-      final masters = [
-        for (final id in ownedIds) _char(id, id),
-      ];
+      final ownedIds = {for (var i = 0; i < 40; i++) 'owned_$i'};
+      final masters = [for (final id in ownedIds) _char(id, id)];
 
       final ids = selectArtifactRecommendationSampleIds(
         ownedIds: ownedIds,

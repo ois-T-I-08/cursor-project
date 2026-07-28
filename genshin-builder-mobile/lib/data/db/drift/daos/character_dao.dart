@@ -13,21 +13,22 @@ import '../../upgrade_content_hash.dart';
 
 part 'character_dao.g.dart';
 
-@DriftAccessor(tables: [
-  Characters,
-  Weapons,
-  Materials,
-  CharacterUpgrades,
-  WeaponUpgrades,
-  LevelExpSegments,
-])
+@DriftAccessor(
+  tables: [
+    Characters,
+    Weapons,
+    Materials,
+    CharacterUpgrades,
+    WeaponUpgrades,
+    LevelExpSegments,
+  ],
+)
 class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
     with _$CharacterDaoMixin {
   CharacterDao(super.db);
 
   Future<void> upsertCharacter(MasterCharacter c) async {
-    await into(characters)
-        .insertOnConflictUpdate(_characterToCompanion(c));
+    await into(characters).insertOnConflictUpdate(_characterToCompanion(c));
   }
 
   Future<void> upsertCharactersBatch(List<MasterCharacter> list) async {
@@ -58,12 +59,16 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
   }
 
   Future<List<MasterCharacter>> getAllCharacters() async {
-    final rows = await (select(characters)..orderBy([(t) => OrderingTerm.asc(t.name)])).get();
+    final rows =
+        await (select(characters)
+          ..orderBy([(t) => OrderingTerm.asc(t.name)])).get();
     return rows.map(_characterFromRow).toList();
   }
 
   Future<MasterCharacter?> getCharacter(String id) async {
-    final row = await (select(characters)..where((t) => t.id.equals(id))).getSingleOrNull();
+    final row =
+        await (select(characters)
+          ..where((t) => t.id.equals(id))).getSingleOrNull();
     return row == null ? null : _characterFromRow(row);
   }
 
@@ -72,14 +77,16 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
   }
 
   Future<MasterWeapon?> getWeapon(String id) async {
-    final row = await (select(weapons)..where((t) => t.id.equals(id))).getSingleOrNull();
+    final row =
+        await (select(weapons)
+          ..where((t) => t.id.equals(id))).getSingleOrNull();
     return row == null ? null : _weaponFromRow(row);
   }
 
   Future<List<MasterWeapon>> getAllWeapons() async {
-    final rows = await (select(weapons)
-          ..orderBy([(t) => OrderingTerm.asc(t.name)]))
-        .get();
+    final rows =
+        await (select(weapons)
+          ..orderBy([(t) => OrderingTerm.asc(t.name)])).get();
     return rows.map(_weaponFromRow).toList();
   }
 
@@ -88,22 +95,26 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
   }
 
   Future<List<MasterMaterial>> getAllMaterials() async {
-    final rows = await (select(materials)..orderBy([(t) => OrderingTerm.asc(t.name)])).get();
+    final rows =
+        await (select(materials)
+          ..orderBy([(t) => OrderingTerm.asc(t.name)])).get();
     return rows.map(_materialFromRow).toList();
   }
 
   Future<MasterMaterial?> getMaterial(String id) async {
-    final row = await (select(materials)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row =
+        await (select(materials)
+          ..where((t) => t.id.equals(id))).getSingleOrNull();
     return row == null ? null : _materialFromRow(row);
   }
 
   Future<int> countExpMaterials() async {
-    final query = selectOnly(materials)
-      ..addColumns([materials.id.count()])
-      ..where(
-        materials.expValue.isNotNull() & materials.expTarget.isNotNull(),
-      );
+    final query =
+        selectOnly(materials)
+          ..addColumns([materials.id.count()])
+          ..where(
+            materials.expValue.isNotNull() & materials.expTarget.isNotNull(),
+          );
     final row = await query.getSingle();
     return row.read(materials.id.count()) ?? 0;
   }
@@ -188,8 +199,9 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
     required Map<String, List<TalentLevelUpgrade>> talents,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final promotesJson =
-        jsonEncode(promotes.map(UpgradeSerde.promoteToJson).toList());
+    final promotesJson = jsonEncode(
+      promotes.map(UpgradeSerde.promoteToJson).toList(),
+    );
     final talentsJson = jsonEncode(
       talents.map(
         (key, value) =>
@@ -212,29 +224,38 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
   }
 
   Future<
-      ({
-        List<PromoteStage> promotes,
-        Map<String, List<TalentLevelUpgrade>> talents,
-      })?> getCharacterUpgrade(String characterId) async {
-    final row = await (select(characterUpgrades)
-          ..where((t) => t.characterId.equals(characterId)))
-        .getSingleOrNull();
+    ({
+      List<PromoteStage> promotes,
+      Map<String, List<TalentLevelUpgrade>> talents,
+    })?
+  >
+  getCharacterUpgrade(String characterId) async {
+    final row =
+        await (select(characterUpgrades)
+          ..where((t) => t.characterId.equals(characterId))).getSingleOrNull();
     if (row == null) return null;
     return _parseCharacterUpgradeRow(row);
   }
 
   Future<
-      Map<
+    Map<
+      String,
+      ({
+        List<PromoteStage> promotes,
+        Map<String, List<TalentLevelUpgrade>> talents,
+      })
+    >
+  >
+  getAllCharacterUpgrades() async {
+    final rows = await select(characterUpgrades).get();
+    final result =
+        <
           String,
           ({
             List<PromoteStage> promotes,
             Map<String, List<TalentLevelUpgrade>> talents,
-          })>> getAllCharacterUpgrades() async {
-    final rows = await select(characterUpgrades).get();
-    final result = <String, ({
-      List<PromoteStage> promotes,
-      Map<String, List<TalentLevelUpgrade>> talents,
-    })>{};
+          })
+        >{};
     for (final row in rows) {
       final parsed = _parseCharacterUpgradeRow(row);
       if (parsed != null) result[row.characterId] = parsed;
@@ -245,21 +266,26 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
   ({
     List<PromoteStage> promotes,
     Map<String, List<TalentLevelUpgrade>> talents,
-  })? _parseCharacterUpgradeRow(CharacterUpgrade row) {
+  })?
+  _parseCharacterUpgradeRow(CharacterUpgrade row) {
     try {
       final promotesRaw = jsonDecode(row.promotes) as List;
       final talentsRaw = jsonDecode(row.talents) as Map<String, dynamic>;
       return (
-        promotes: promotesRaw
-            .map((e) => UpgradeSerde.promoteFromJson(e as Map<String, dynamic>))
-            .toList(),
+        promotes:
+            promotesRaw
+                .map(
+                  (e) =>
+                      UpgradeSerde.promoteFromJson(e as Map<String, dynamic>),
+                )
+                .toList(),
         talents: talentsRaw.map(
           (key, value) => MapEntry(
             key,
             (value as List)
-                .map((e) => UpgradeSerde.talentFromJson(
-                      e as Map<String, dynamic>,
-                    ))
+                .map(
+                  (e) => UpgradeSerde.talentFromJson(e as Map<String, dynamic>),
+                )
                 .toList(),
           ),
         ),
@@ -284,11 +310,10 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
 
   /// characterId → contentHash（空文字は未ハッシュ / マイグレーション直後）
   Future<Map<String, String>> getCharacterUpgradeHashes() async {
-    final query = selectOnly(characterUpgrades)
-      ..addColumns([
-        characterUpgrades.characterId,
-        characterUpgrades.contentHash,
-      ]);
+    final query = selectOnly(characterUpgrades)..addColumns([
+      characterUpgrades.characterId,
+      characterUpgrades.contentHash,
+    ]);
     final rows = await query.get();
     final map = <String, String>{};
     for (final row in rows) {
@@ -305,8 +330,9 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
     required List<String> levelUpItemIds,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final promotesJson =
-        jsonEncode(promotes.map(UpgradeSerde.promoteToJson).toList());
+    final promotesJson = jsonEncode(
+      promotes.map(UpgradeSerde.promoteToJson).toList(),
+    );
     final itemsJson = jsonEncode(levelUpItemIds);
     final hash = computeUpgradeContentHash(
       promotesJson: promotesJson,
@@ -324,26 +350,24 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
   }
 
   Future<({List<PromoteStage> promotes, List<String> levelUpItemIds})?>
-      getWeaponUpgrade(String weaponId) async {
-    final row = await (select(weaponUpgrades)
-          ..where((t) => t.weaponId.equals(weaponId)))
-        .getSingleOrNull();
+  getWeaponUpgrade(String weaponId) async {
+    final row =
+        await (select(weaponUpgrades)
+          ..where((t) => t.weaponId.equals(weaponId))).getSingleOrNull();
     if (row == null) return null;
     return _parseWeaponUpgradeRow(row);
   }
 
   Future<
-      Map<
-          String,
-          ({
-            List<PromoteStage> promotes,
-            List<String> levelUpItemIds,
-          })>> getAllWeaponUpgrades() async {
+    Map<String, ({List<PromoteStage> promotes, List<String> levelUpItemIds})>
+  >
+  getAllWeaponUpgrades() async {
     final rows = await select(weaponUpgrades).get();
-    final result = <String, ({
-      List<PromoteStage> promotes,
-      List<String> levelUpItemIds,
-    })>{};
+    final result =
+        <
+          String,
+          ({List<PromoteStage> promotes, List<String> levelUpItemIds})
+        >{};
     for (final row in rows) {
       final parsed = _parseWeaponUpgradeRow(row);
       if (parsed != null) result[row.weaponId] = parsed;
@@ -352,15 +376,18 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
   }
 
   ({List<PromoteStage> promotes, List<String> levelUpItemIds})?
-      _parseWeaponUpgradeRow(WeaponUpgrade row) {
+  _parseWeaponUpgradeRow(WeaponUpgrade row) {
     try {
       final promotesRaw = jsonDecode(row.promotes) as List;
-      final itemIds =
-          (jsonDecode(row.levelUpItemIds) as List).cast<String>();
+      final itemIds = (jsonDecode(row.levelUpItemIds) as List).cast<String>();
       return (
-        promotes: promotesRaw
-            .map((e) => UpgradeSerde.promoteFromJson(e as Map<String, dynamic>))
-            .toList(),
+        promotes:
+            promotesRaw
+                .map(
+                  (e) =>
+                      UpgradeSerde.promoteFromJson(e as Map<String, dynamic>),
+                )
+                .toList(),
         levelUpItemIds: itemIds,
       );
     } on FormatException {
@@ -431,31 +458,31 @@ class CharacterDao extends DatabaseAccessor<DriftAppDatabase>
       );
 
   MasterCharacter _characterFromRow(Character row) => MasterCharacter(
-        id: row.id,
-        name: row.name,
-        element: row.element,
-        weaponType: row.weaponType,
-        rarity: row.rarity,
-        region: row.region,
-        iconUrl: row.iconUrl,
-        scoreType: row.scoreType,
-      );
+    id: row.id,
+    name: row.name,
+    element: row.element,
+    weaponType: row.weaponType,
+    rarity: row.rarity,
+    region: row.region,
+    iconUrl: row.iconUrl,
+    scoreType: row.scoreType,
+  );
 
   MasterWeapon _weaponFromRow(Weapon row) => MasterWeapon(
-        id: row.id,
-        name: row.name,
-        weaponType: row.weaponType,
-        rarity: row.rarity,
-        iconUrl: row.iconUrl,
-      );
+    id: row.id,
+    name: row.name,
+    weaponType: row.weaponType,
+    rarity: row.rarity,
+    iconUrl: row.iconUrl,
+  );
 
   MasterMaterial _materialFromRow(Material row) => MasterMaterial(
-        id: row.id,
-        name: row.name,
-        category: row.category,
-        rarity: row.rarity,
-        iconUrl: row.iconUrl,
-        expValue: row.expValue,
-        expTarget: row.expTarget,
-      );
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    rarity: row.rarity,
+    iconUrl: row.iconUrl,
+    expValue: row.expValue,
+    expTarget: row.expTarget,
+  );
 }

@@ -20,9 +20,10 @@ import 'hoyolab_game_providers.dart';
 import 'growth_providers.dart';
 
 final characterDetailProvider = AutoDisposeNotifierProvider.family<
-    CharacterDetailNotifier, CharacterDetailState, String>(
-  CharacterDetailNotifier.new,
-);
+  CharacterDetailNotifier,
+  CharacterDetailState,
+  String
+>(CharacterDetailNotifier.new);
 
 class CharacterDetailNotifier
     extends AutoDisposeFamilyNotifier<CharacterDetailState, String> {
@@ -69,10 +70,7 @@ class CharacterDetailNotifier
       await _syncFromHoyolab();
     } catch (e) {
       if (_disposed) return;
-      state = state.copyWith(
-        error: userFacingError(e),
-        loading: false,
-      );
+      state = state.copyWith(error: userFacingError(e), loading: false);
       logAppError(e, null, 'characterDetail.load');
     }
   }
@@ -85,8 +83,9 @@ class CharacterDetailNotifier
 
   Future<void> _syncFromHoyolab() async {
     try {
-      final build =
-          await ref.read(hoyolabCharacterBuildProvider(characterId).future);
+      final build = await ref.read(
+        hoyolabCharacterBuildProvider(characterId).future,
+      );
       if (build != null && build.isOwned) {
         await applyHoyolabBuild(build);
       }
@@ -106,10 +105,9 @@ class CharacterDetailNotifier
   Future<void> applyHoyolabBuild(HoyolabCharacterBuild build) async {
     if (_disposed) return;
     final charRepo = await ref.read(characterRepositoryProvider.future);
-    final next = await ApplyHoyolabBuildUseCase(characters: charRepo).call(
-      state: state,
-      build: build,
-    );
+    final next = await ApplyHoyolabBuildUseCase(
+      characters: charRepo,
+    ).call(state: state, build: build);
     if (_disposed || next == null) return;
     state = next;
     // debounce 破棄で聖遺物が進捗に残らないのを防ぐ（即保存）
@@ -146,8 +144,9 @@ class CharacterDetailNotifier
     final progress = state.progress;
     if (character == null || progress == null) return;
 
-    final userScoreType =
-        userArtifactScoreTypeFromStorage(progress.artifactScoreType);
+    final userScoreType = userArtifactScoreTypeFromStorage(
+      progress.artifactScoreType,
+    );
     final artifactScoreTypeUserSet = userScoreType != null;
 
     final resolver = ArtifactScoreResolver(
@@ -189,10 +188,7 @@ class CharacterDetailNotifier
       final updated = await SaveCharacterProgressUseCase(
         progress: repo,
         mutation: mutation,
-      ).call(
-        base: base,
-        state: state,
-      );
+      ).call(base: base, state: state);
       if (_disposed) return;
       state = state.copyWith(progress: updated);
       invalidateAfterProgressChange(ref, characterId: characterId);
@@ -267,9 +263,10 @@ class CharacterDetailNotifier
     if (base == null) return;
 
     final updated = base.copyWith(
-      artifactScoreType: state.artifactScoreTypeUserSet
-          ? artifactScoreTypeToUserStorage(state.artifactScoreType)
-          : '',
+      artifactScoreType:
+          state.artifactScoreTypeUserSet
+              ? artifactScoreTypeToUserStorage(state.artifactScoreType)
+              : '',
     );
     state = state.copyWith(progress: updated);
     try {

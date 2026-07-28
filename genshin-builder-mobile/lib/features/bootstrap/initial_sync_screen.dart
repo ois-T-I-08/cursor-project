@@ -78,9 +78,10 @@ class _InitialSyncScreenState extends ConsumerState<InitialSyncScreen> {
           logAppError(result.errors.join('; '), null, 'initialSync');
         }
         setState(() {
-          _error = result.hasErrors
-              ? userFacingSyncErrors(result.errors)
-              : 'キャラデータを取得できませんでした。ネットワーク接続を確認してください。';
+          _error =
+              result.hasErrors
+                  ? userFacingSyncErrors(result.errors)
+                  : 'キャラデータを取得できませんでした。ネットワーク接続を確認してください。';
         });
         return;
       }
@@ -93,8 +94,7 @@ class _InitialSyncScreenState extends ConsumerState<InitialSyncScreen> {
     } catch (e, st) {
       logAppError(e, st, 'initialSync');
       if (mounted) {
-        setState(() =>
-            _error = '同期に失敗しました。ネットワーク接続を確認して再試行してください。');
+        setState(() => _error = '同期に失敗しました。ネットワーク接続を確認して再試行してください。');
       }
     } finally {
       if (mounted) {
@@ -149,9 +149,7 @@ class _InitialSyncScreenState extends ConsumerState<InitialSyncScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-                LinearProgressIndicator(
-                  value: _syncProgress!.displayFraction,
-                ),
+                LinearProgressIndicator(value: _syncProgress!.displayFraction),
               ] else if (_running) ...[
                 const Center(child: CircularProgressIndicator()),
               ],
@@ -170,12 +168,13 @@ class _InitialSyncScreenState extends ConsumerState<InitialSyncScreen> {
                   child: const Text('再試行'),
                 ),
                 TextButton(
-                  onPressed: _running
-                      ? null
-                      : () {
-                          // スキップは同期済み扱いにしない
-                          _goHome();
-                        },
+                  onPressed:
+                      _running
+                          ? null
+                          : () {
+                            // スキップは同期済み扱いにしない
+                            _goHome();
+                          },
                   child: const Text('スキップして続行'),
                 ),
               ],

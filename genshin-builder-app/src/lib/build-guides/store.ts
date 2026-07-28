@@ -54,6 +54,14 @@ function safeJson<T>(raw: string, fallback: T): T {
   }
 }
 
+function parseExpectedUpdatedAt(raw: string): Date {
+  const parsed = new Date(raw);
+  if (!Number.isFinite(parsed.getTime())) {
+    throw new Error("conflictUpdatedAt");
+  }
+  return parsed;
+}
+
 export async function getGuideAdminOverview() {
   const [channels, videos, jobs, evidences, recommendations, audits] =
     await Promise.all([
@@ -493,6 +501,7 @@ export async function setRecommendationStatus(input: {
   recommendationId: string;
   status: "approved" | "rejected" | "published" | "pending_review";
   adminNotes?: string;
+  expectedUpdatedAt: string;
 }) {
   const existing = await prisma.characterBuildRecommendation.findUnique({
     where: { id: input.recommendationId },
@@ -501,24 +510,29 @@ export async function setRecommendationStatus(input: {
     },
   });
   if (!existing) throw new Error("recommendationNotFound");
+  const expectedUpdatedAt = parseExpectedUpdatedAt(input.expectedUpdatedAt);
+  if (expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
+    throw new Error("conflictUpdatedAt");
+  }
 
   if (input.status === "published") {
-    for (const contribution of existing.contributions) {
+    const publishableContributions = existing.contributions.filter((contribution) =>
+      ["adopted", "partially_adopted"].includes(contribution.decision),
+    );
+    for (const contribution of publishableContributions) {
       if (contribution.video.channel.permissionStatus !== "approved_for_processing") {
         throw new Error("permissionNotApproved");
       }
       if (contribution.video.privacyStatus !== "public") {
         throw new Error("videoNotPublic");
       }
-      if (contribution.evidence.approvalStatus === "rejected") {
-        throw new Error("rejectedEvidencePresent");
+      if (contribution.evidence.approvalStatus !== "approved") {
+        throw new Error("evidenceNotApproved");
       }
     }
     if (existing.status !== "approved" && existing.status !== "published") {
       throw new Error("notApproved");
     }
-
-    // 公開中の作業下書きがあればそれを昇格してから検証・公開する
   }
 
   let nextStructuredPayload = existing.structuredPayload;
@@ -527,6 +541,8 @@ export async function setRecommendationStatus(input: {
   let nextPriorityPayload = existing.priorityPayload;
   let nextContextPayload = existing.contextPayload;
   let nextAdminNotes = input.adminNotes ?? existing.adminNotes;
+  let nextStatus = input.status;
+  let revisionAction: string = input.status;
 
   if (input.status === "published") {
     const structuredRaw = safeJson<Record<string, unknown>>(existing.structuredPayload, {});
@@ -549,31 +565,34 @@ export async function setRecommendationStatus(input: {
     if (working?.adminNotes != null) {
       nextAdminNotes = working.adminNotes;
     }
-    structured.structuredReviewStatus = "admin_confirmed";
-    structured.publishedContentUpdatedAt = new Date().toISOString();
-    nextStructuredPayload = JSON.stringify(structured);
 
     const weaponRows = await prisma.weapon.findMany({ select: { id: true } });
     const knownWeaponIds = new Set(weaponRows.map((w) => w.id));
     const artifactSets = await fetchArtifactSets().catch(() => []);
     const knownSetIds = new Set(artifactSets.map((s) => s.id));
+    const publishableContributions = existing.contributions.filter((contribution) =>
+      ["adopted", "partially_adopted"].includes(contribution.decision),
+    );
     const publishIssues = validateStructuredForPublish({
       characterId: existing.characterId,
       structured,
       mainStats: safeJson(nextMainStatsPayload, []),
       targets: safeJson(nextTargetsPayload, []),
-      sources: existing.contributions.map((c, index) => ({
+      sources: publishableContributions.map((c, index) => ({
         id: `source-${c.videoId || index}`,
         videoId: c.videoId,
       })),
       knownWeaponIds,
       knownSetIds,
+      artifactMasterAvailable: artifactSets.length > 0,
     });
     const fatal = publishIssues.filter((i) => i.level === "error");
     if (fatal.length > 0) {
       // DB 更新前に拒否 → 旧公開スナップショット維持
       throw new Error(`structuredPublishBlocked:${fatal.map((f) => f.message).join(" | ")}`);
     }
+    structured.publishedContentUpdatedAt = new Date().toISOString();
+    nextStructuredPayload = JSON.stringify(structured);
   }
 
   if (input.status === "approved") {
@@ -601,14 +620,24 @@ export async function setRecommendationStatus(input: {
           structured: base,
         },
       });
+      if (existing.status === "published") {
+        // 作業下書きの承認では旧公開スナップショットを維持する。
+        nextStatus = "published";
+        revisionAction = "approve_draft";
+      }
     } else {
       nextStructuredPayload = JSON.stringify(base);
+      if (existing.status === "published") {
+        nextStatus = "published";
+        revisionAction = "approve_published";
+      }
     }
   }
 
-  const row = await prisma.characterBuildRecommendation.update({
-    where: { id: input.recommendationId },
-    data: {
+  const updateLastVerifiedAt =
+    revisionAction !== "approve_draft" &&
+    (input.status === "approved" || input.status === "published");
+  const updateData = {
       status: input.status,
       adminNotes: nextAdminNotes,
       structuredPayload: nextStructuredPayload,
@@ -616,79 +645,128 @@ export async function setRecommendationStatus(input: {
       mainStatsPayload: nextMainStatsPayload,
       priorityPayload: nextPriorityPayload,
       contextPayload: nextContextPayload,
-      publishedAt: input.status === "published" ? new Date() : existing.publishedAt,
-      lastVerifiedAt:
-        input.status === "approved" || input.status === "published"
-          ? new Date()
-          : existing.lastVerifiedAt,
-    },
-  });
-
-  if (input.status === "published") {
-    await prisma.recommendationVisualContribution.updateMany({
+      publishedAt:
+        nextStatus === "published"
+          ? input.status === "published"
+            ? new Date()
+            : existing.publishedAt
+          : null,
+      lastVerifiedAt: updateLastVerifiedAt
+        ? new Date()
+        : existing.lastVerifiedAt,
+    } as const;
+  const row = await prisma.$transaction(async (tx) => {
+    const result = await tx.characterBuildRecommendation.updateMany({
       where: {
-        recommendationId: row.id,
-        decision: { in: ["adopted", "partially_adopted"] },
+        id: input.recommendationId,
+        updatedAt: expectedUpdatedAt,
       },
-      data: { usedInPublishedResult: true },
+      data: { ...updateData, status: nextStatus },
     });
-  }
-  if (input.status !== "published") {
-    await prisma.recommendationVisualContribution.updateMany({
-      where: { recommendationId: row.id },
-      data: { usedInPublishedResult: false },
+    if (result.count !== 1) throw new Error("conflictUpdatedAt");
+    const updated = await tx.characterBuildRecommendation.findUnique({
+      where: { id: input.recommendationId },
     });
-  }
+    if (!updated) throw new Error("recommendationNotFound");
 
-  await prisma.guideRecommendationRevision.create({
-    data: {
-      recommendationId: row.id,
-      action: input.status,
-      beforePayload: JSON.stringify({ status: existing.status }),
-      afterPayload: JSON.stringify({ status: row.status }),
-    },
-  });
-  await audit("setRecommendationStatus", "ok", {
-    recommendationId: row.id,
-    status: input.status,
+    if (input.status === "published") {
+      await tx.recommendationVisualContribution.updateMany({
+        where: { recommendationId: updated.id },
+        data: { usedInPublishedResult: false },
+      });
+      await tx.recommendationVisualContribution.updateMany({
+        where: {
+          recommendationId: updated.id,
+          decision: { in: ["adopted", "partially_adopted"] },
+        },
+        data: { usedInPublishedResult: true },
+      });
+    } else if (nextStatus !== "published") {
+      await tx.recommendationVisualContribution.updateMany({
+        where: { recommendationId: updated.id },
+        data: { usedInPublishedResult: false },
+      });
+    }
+
+    await tx.guideRecommendationRevision.create({
+      data: {
+        recommendationId: updated.id,
+        action: revisionAction,
+        beforePayload: JSON.stringify({ status: existing.status }),
+        afterPayload: JSON.stringify({ status: updated.status }),
+      },
+    });
+    await tx.guideAdminAuditLog.create({
+      data: {
+        action: "setRecommendationStatus",
+        status: "ok",
+        detail: JSON.stringify({
+          recommendationId: updated.id,
+          requestedStatus: input.status,
+          resultingStatus: updated.status,
+        }).slice(0, 4_000),
+      },
+    });
+    return updated;
   });
   return row;
 }
 
-export async function unpublishRecommendation(recommendationId: string) {
+export async function unpublishRecommendation(
+  recommendationId: string,
+  expectedUpdatedAtRaw: string,
+) {
   const existing = await prisma.characterBuildRecommendation.findUnique({
     where: { id: recommendationId },
   });
   if (!existing) throw new Error("recommendationNotFound");
-  const row = await prisma.characterBuildRecommendation.update({
-    where: { id: recommendationId },
-    data: { status: "approved", publishedAt: null },
+  const expectedUpdatedAt = parseExpectedUpdatedAt(expectedUpdatedAtRaw);
+  if (expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
+    throw new Error("conflictUpdatedAt");
+  }
+  const row = await prisma.$transaction(async (tx) => {
+    const result = await tx.characterBuildRecommendation.updateMany({
+      where: { id: recommendationId, updatedAt: expectedUpdatedAt },
+      data: { status: "approved", publishedAt: null },
+    });
+    if (result.count !== 1) throw new Error("conflictUpdatedAt");
+    const updated = await tx.characterBuildRecommendation.findUnique({
+      where: { id: recommendationId },
+    });
+    if (!updated) throw new Error("recommendationNotFound");
+    await tx.recommendationVisualContribution.updateMany({
+      where: { recommendationId: updated.id },
+      data: { usedInPublishedResult: false },
+    });
+    await tx.guideRecommendationRevision.create({
+      data: {
+        recommendationId: updated.id,
+        action: "unpublish",
+        beforePayload: JSON.stringify({
+          status: existing.status,
+          publishedAt: existing.publishedAt,
+          structured: safeJson(existing.structuredPayload, {}),
+          targets: safeJson(existing.targetsPayload, []),
+          mainStats: safeJson(existing.mainStatsPayload, []),
+        }),
+        afterPayload: JSON.stringify({
+          status: updated.status,
+          publishedAt: null,
+          structured: safeJson(updated.structuredPayload, {}),
+          targets: safeJson(updated.targetsPayload, []),
+          mainStats: safeJson(updated.mainStatsPayload, []),
+        }),
+      },
+    });
+    await tx.guideAdminAuditLog.create({
+      data: {
+        action: "unpublishRecommendation",
+        status: "ok",
+        detail: JSON.stringify({ recommendationId: updated.id }),
+      },
+    });
+    return updated;
   });
-  await prisma.recommendationVisualContribution.updateMany({
-    where: { recommendationId: row.id },
-    data: { usedInPublishedResult: false },
-  });
-  await prisma.guideRecommendationRevision.create({
-    data: {
-      recommendationId: row.id,
-      action: "unpublish",
-      beforePayload: JSON.stringify({
-        status: existing.status,
-        publishedAt: existing.publishedAt,
-        structured: safeJson(existing.structuredPayload, {}),
-        targets: safeJson(existing.targetsPayload, []),
-        mainStats: safeJson(existing.mainStatsPayload, []),
-      }),
-      afterPayload: JSON.stringify({
-        status: row.status,
-        publishedAt: null,
-        structured: safeJson(row.structuredPayload, {}),
-        targets: safeJson(row.targetsPayload, []),
-        mainStats: safeJson(row.mainStatsPayload, []),
-      }),
-    },
-  });
-  await audit("unpublishRecommendation", "ok", { recommendationId: row.id });
   return row;
 }
 
@@ -700,7 +778,7 @@ export async function overrideRecommendation(input: {
   contextPayload?: unknown;
   structuredPayload?: unknown;
   adminNotes?: string;
-  expectedUpdatedAt?: string;
+  expectedUpdatedAt: string;
   keepPublished?: boolean;
 }) {
   const existing = await prisma.characterBuildRecommendation.findUnique({
@@ -708,12 +786,9 @@ export async function overrideRecommendation(input: {
   });
   if (!existing) throw new Error("recommendationNotFound");
 
-  if (input.expectedUpdatedAt) {
-    const expected = new Date(input.expectedUpdatedAt).getTime();
-    const actual = existing.updatedAt.getTime();
-    if (!Number.isFinite(expected) || Math.abs(expected - actual) > 1000) {
-      throw new Error("conflictUpdatedAt");
-    }
+  const expectedUpdatedAt = parseExpectedUpdatedAt(input.expectedUpdatedAt);
+  if (expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
+    throw new Error("conflictUpdatedAt");
   }
 
   const incomingStructured =
@@ -732,6 +807,7 @@ export async function overrideRecommendation(input: {
     targets: input.targetsPayload,
     knownWeaponIds: new Set(weaponRows.map((w) => w.id)),
     knownSetIds: new Set(artifactSets.map((s) => s.id)),
+    artifactMasterAvailable: artifactSets.length > 0,
   });
   if (draftIssues.some((i) => i.level === "error")) {
     throw new Error(
@@ -792,9 +868,7 @@ export async function overrideRecommendation(input: {
     }
   }
 
-  const row = await prisma.characterBuildRecommendation.update({
-    where: { id: input.recommendationId },
-    data: {
+  const updateData = {
       targetsPayload: nextTargets,
       mainStatsPayload: nextMainStats,
       priorityPayload: nextPriority,
@@ -803,31 +877,52 @@ export async function overrideRecommendation(input: {
       adminNotes: input.adminNotes ?? existing.adminNotes,
       status: nextStatus,
       publishedAt: nextPublishedAt,
-    },
-  });
-  await prisma.guideRecommendationRevision.create({
-    data: {
-      recommendationId: row.id,
-      action: keepPublishedLive ? "override_draft" : "override",
-      beforePayload: JSON.stringify({
-        targets: safeJson(existing.targetsPayload, []),
-        mainStats: safeJson(existing.mainStatsPayload, []),
-        structured: safeJson(existing.structuredPayload, {}),
-        status: existing.status,
-      }),
-      afterPayload: JSON.stringify({
-        targets: input.targetsPayload,
-        mainStats: input.mainStatsPayload ?? safeJson(existing.mainStatsPayload, []),
-        structured: incomingStructured,
-        status: row.status,
-        keepPublished: keepPublishedLive,
-      }),
-    },
-  });
-  await audit("overrideRecommendation", "ok", {
-    recommendationId: row.id,
-    keepPublished: keepPublishedLive,
-    warnings: draftIssues.filter((i) => i.level === "warning").length,
+    } as const;
+  const row = await prisma.$transaction(async (tx) => {
+    const result = await tx.characterBuildRecommendation.updateMany({
+      where: {
+        id: input.recommendationId,
+        updatedAt: expectedUpdatedAt,
+      },
+      data: updateData,
+    });
+    if (result.count !== 1) throw new Error("conflictUpdatedAt");
+    const updated = await tx.characterBuildRecommendation.findUnique({
+      where: { id: input.recommendationId },
+    });
+    if (!updated) throw new Error("recommendationNotFound");
+    await tx.guideRecommendationRevision.create({
+      data: {
+        recommendationId: updated.id,
+        action: keepPublishedLive ? "override_draft" : "override",
+        beforePayload: JSON.stringify({
+          targets: safeJson(existing.targetsPayload, []),
+          mainStats: safeJson(existing.mainStatsPayload, []),
+          structured: safeJson(existing.structuredPayload, {}),
+          status: existing.status,
+        }),
+        afterPayload: JSON.stringify({
+          targets: input.targetsPayload,
+          mainStats:
+            input.mainStatsPayload ?? safeJson(existing.mainStatsPayload, []),
+          structured: incomingStructured,
+          status: updated.status,
+          keepPublished: keepPublishedLive,
+        }),
+      },
+    });
+    await tx.guideAdminAuditLog.create({
+      data: {
+        action: "overrideRecommendation",
+        status: "ok",
+        detail: JSON.stringify({
+          recommendationId: updated.id,
+          keepPublished: keepPublishedLive,
+          warnings: draftIssues.filter((i) => i.level === "warning").length,
+        }).slice(0, 4_000),
+      },
+    });
+    return updated;
   });
   return { recommendation: row, warnings: draftIssues, keepPublished: keepPublishedLive };
 }
@@ -876,7 +971,10 @@ export async function validateStructuredRecommendationDto(input: {
   const knownWeaponIds = new Set(weaponRows.map((w) => w.id));
   const artifactSets = await fetchArtifactSets().catch(() => []);
   const knownSetIds = new Set(artifactSets.map((s) => s.id));
-  const sources = row.contributions.map((c, index) => ({
+  const publishableContributions = row.contributions.filter((contribution) =>
+    ["adopted", "partially_adopted"].includes(contribution.decision),
+  );
+  const sources = publishableContributions.map((c, index) => ({
     id: `source-${c.videoId || index}`,
     videoId: c.videoId,
     title: c.video.title,
@@ -893,6 +991,7 @@ export async function validateStructuredRecommendationDto(input: {
     targets,
     knownWeaponIds,
     knownSetIds,
+    artifactMasterAvailable: artifactSets.length > 0,
   });
   const publishIssues = validateStructuredForPublish({
     characterId: row.characterId,
@@ -902,6 +1001,7 @@ export async function validateStructuredRecommendationDto(input: {
     sources,
     knownWeaponIds,
     knownSetIds,
+    artifactMasterAvailable: artifactSets.length > 0,
   });
   const preview = previewNormalizedRecommendation({
     characterId: row.characterId,
@@ -939,6 +1039,9 @@ export async function previewRecommendationPublicDto(recommendationId: string) {
   const structured = working?.structured
     ? stripAdminWorkingDraft(working.structured)
     : stripAdminWorkingDraft(structuredRaw);
+  const publishableContributions = row.contributions.filter((contribution) =>
+    ["adopted", "partially_adopted"].includes(contribution.decision),
+  );
   return previewNormalizedRecommendation({
     characterId: row.characterId,
     origin: row.origin,
@@ -950,7 +1053,7 @@ export async function previewRecommendationPublicDto(recommendationId: string) {
     substatPriority: working?.priority ?? safeJson(row.priorityPayload, []),
     targets: working?.targets ?? safeJson(row.targetsPayload, []),
     structured,
-    sources: row.contributions.map((c) => ({
+    sources: publishableContributions.map((c) => ({
       videoId: c.video.videoId,
       title: c.video.title,
       channelId: c.video.channel.channelId,
@@ -961,7 +1064,7 @@ export async function previewRecommendationPublicDto(recommendationId: string) {
       gameVersion:
         typeof structured.gameVersion === "string" ? structured.gameVersion : null,
     })),
-    evidence: row.contributions.map((c) => ({
+    evidence: publishableContributions.map((c) => ({
       fieldPath: "visual",
       exactVisibleText: c.exactVisibleText.slice(0, 200),
       startSeconds: c.startSeconds,
@@ -977,17 +1080,15 @@ export async function previewRecommendationPublicDto(recommendationId: string) {
 export async function restoreRecommendationRevision(input: {
   recommendationId: string;
   revisionId: string;
-  expectedUpdatedAt?: string;
+  expectedUpdatedAt: string;
 }) {
   const existing = await prisma.characterBuildRecommendation.findUnique({
     where: { id: input.recommendationId },
   });
   if (!existing) throw new Error("recommendationNotFound");
-  if (input.expectedUpdatedAt) {
-    const expected = new Date(input.expectedUpdatedAt).getTime();
-    if (Math.abs(expected - existing.updatedAt.getTime()) > 1000) {
-      throw new Error("conflictUpdatedAt");
-    }
+  const expectedUpdatedAt = parseExpectedUpdatedAt(input.expectedUpdatedAt);
+  if (expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
+    throw new Error("conflictUpdatedAt");
   }
   const revision = await prisma.guideRecommendationRevision.findFirst({
     where: { id: input.revisionId, recommendationId: input.recommendationId },
@@ -1001,12 +1102,20 @@ export async function restoreRecommendationRevision(input: {
   if (before.targets == null && before.structured == null) {
     throw new Error("revisionNotRestorable");
   }
+  const beforeStructured = asRecord(before.structured);
+  const previousWorking = readAdminWorkingDraft(beforeStructured);
   // 公開中は予告なく公開スナップショットを上書きしない（working draft へ復元）
   return overrideRecommendation({
     recommendationId: input.recommendationId,
-    targetsPayload: before.targets ?? safeJson(existing.targetsPayload, []),
-    mainStatsPayload: before.mainStats,
-    structuredPayload: before.structured,
+    targetsPayload:
+      previousWorking?.targets ??
+      before.targets ??
+      safeJson(existing.targetsPayload, []),
+    mainStatsPayload: previousWorking?.mainStats ?? before.mainStats,
+    priorityPayload: previousWorking?.priority,
+    contextPayload: previousWorking?.context,
+    structuredPayload: previousWorking?.structured ?? before.structured,
+    adminNotes: previousWorking?.adminNotes,
     expectedUpdatedAt: input.expectedUpdatedAt,
     keepPublished: existing.status === "published",
   });

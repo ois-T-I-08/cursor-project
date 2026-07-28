@@ -42,29 +42,27 @@ NextTalentRequirements? getNextTalentRequirements(
   return NextTalentRequirements(
     fromLevel: fromLevel,
     toLevel: toLevel,
-    materials: costItems.entries
-        .map((e) => MaterialCost(materialId: e.key, count: e.value))
-        .toList(),
+    materials:
+        costItems.entries
+            .map((e) => MaterialCost(materialId: e.key, count: e.value))
+            .toList(),
     mora: upgrade?.coinCost ?? 0,
   );
 }
 
-List<({
-  int level,
-  List<MaterialCost> materials,
-  int mora,
-})> getTalentUpgradeInfos(List<TalentLevelUpgrade> upgrades) {
-  final filtered = upgrades
-      .where((u) => u.level > 1 && u.costItems.isNotEmpty)
-      .toList()
-    ..sort((a, b) => a.level.compareTo(b.level));
+List<({int level, List<MaterialCost> materials, int mora})>
+getTalentUpgradeInfos(List<TalentLevelUpgrade> upgrades) {
+  final filtered =
+      upgrades.where((u) => u.level > 1 && u.costItems.isNotEmpty).toList()
+        ..sort((a, b) => a.level.compareTo(b.level));
   return filtered
       .map(
         (u) => (
           level: u.level,
-          materials: u.costItems.entries
-              .map((e) => MaterialCost(materialId: e.key, count: e.value))
-              .toList(),
+          materials:
+              u.costItems.entries
+                  .map((e) => MaterialCost(materialId: e.key, count: e.value))
+                  .toList(),
           mora: u.coinCost,
         ),
       )

@@ -3,11 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/character_list_sort.dart';
 import 'app_providers.dart';
 
-final characterListSortSettingsProvider =
-    AsyncNotifierProvider<CharacterListSortSettingsNotifier,
-        CharacterListSortSettings>(
-  CharacterListSortSettingsNotifier.new,
-);
+final characterListSortSettingsProvider = AsyncNotifierProvider<
+  CharacterListSortSettingsNotifier,
+  CharacterListSortSettings
+>(CharacterListSortSettingsNotifier.new);
 
 class CharacterListSortSettingsNotifier
     extends AsyncNotifier<CharacterListSortSettings> {
@@ -28,10 +27,7 @@ class CharacterListSortSettingsNotifier
         CharacterListSortSettings.storageKeyMode,
         next.mode.name,
       );
-      await db.setSetting(
-        CharacterListSortSettings.storageKeyGroup,
-        'false',
-      );
+      await db.setSetting(CharacterListSortSettings.storageKeyGroup, 'false');
       await db.setSetting(
         CharacterListSortSettings.storageKeyRegionDefaultMigration,
         '1',
@@ -39,9 +35,12 @@ class CharacterListSortSettingsNotifier
       return next;
     }
 
-    final modeRaw = await db.getSetting(CharacterListSortSettings.storageKeyMode);
-    final groupRaw =
-        await db.getSetting(CharacterListSortSettings.storageKeyGroup);
+    final modeRaw = await db.getSetting(
+      CharacterListSortSettings.storageKeyMode,
+    );
+    final groupRaw = await db.getSetting(
+      CharacterListSortSettings.storageKeyGroup,
+    );
     return CharacterListSortSettings(
       mode: CharacterListSortModeLabels.fromStorage(modeRaw),
       groupByOwnership: groupRaw == 'true',

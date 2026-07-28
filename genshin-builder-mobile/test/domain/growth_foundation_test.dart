@@ -7,17 +7,32 @@ import 'package:genshin_builder_mobile/domain/recommendation/recommendation.dart
 void main() {
   group('GrowthGoal', () {
     test('validate rejects empty id', () {
-      const g = GrowthGoal(id: '', userId: 'u1', characterId: 'c1', targetLevel: 90);
+      const g = GrowthGoal(
+        id: '',
+        userId: 'u1',
+        characterId: 'c1',
+        targetLevel: 90,
+      );
       expect(GrowthGoal.validate(g), isNotNull);
     });
 
     test('validate rejects empty userId', () {
-      const g = GrowthGoal(id: 'g1', userId: '', characterId: 'c1', targetLevel: 90);
+      const g = GrowthGoal(
+        id: 'g1',
+        userId: '',
+        characterId: 'c1',
+        targetLevel: 90,
+      );
       expect(GrowthGoal.validate(g), isNotNull);
     });
 
     test('validate rejects empty characterId', () {
-      const g = GrowthGoal(id: 'g1', userId: 'u1', characterId: '', targetLevel: 90);
+      const g = GrowthGoal(
+        id: 'g1',
+        userId: 'u1',
+        characterId: '',
+        targetLevel: 90,
+      );
       expect(GrowthGoal.validate(g), isNotNull);
     });
 
@@ -28,12 +43,22 @@ void main() {
     });
 
     test('validate rejects invalid level', () {
-      const g = GrowthGoal(id: 'g1', userId: 'u1', characterId: 'c1', targetLevel: 91);
+      const g = GrowthGoal(
+        id: 'g1',
+        userId: 'u1',
+        characterId: 'c1',
+        targetLevel: 91,
+      );
       expect(GrowthGoal.validate(g), isNotNull);
     });
 
     test('validate rejects invalid ascension', () {
-      const g = GrowthGoal(id: 'g1', userId: 'u1', characterId: 'c1', targetAscension: 7);
+      const g = GrowthGoal(
+        id: 'g1',
+        userId: 'u1',
+        characterId: 'c1',
+        targetAscension: 7,
+      );
       expect(GrowthGoal.validate(g), isNotNull);
     });
 

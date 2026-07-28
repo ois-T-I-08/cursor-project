@@ -41,12 +41,13 @@ class ConstellationIconsRow extends StatelessWidget {
             elementColor: elementColor,
             size: iconSize,
             detail: i <= constellations.length ? constellations[i - 1] : null,
-            onSelect: onConstellationSelected == null
-                ? null
-                : () {
-                    final next = count == i ? i - 1 : i;
-                    onConstellationSelected!(next.clamp(0, 6));
-                  },
+            onSelect:
+                onConstellationSelected == null
+                    ? null
+                    : () {
+                      final next = count == i ? i - 1 : i;
+                      onConstellationSelected!(next.clamp(0, 6));
+                    },
           ),
         ],
       ],
@@ -77,9 +78,10 @@ class _ConstellationIconButton extends StatelessWidget {
     final dimColor = theme.colorScheme.onSurface.withValues(alpha: 0.28);
 
     return Tooltip(
-      message: onSelect == null
-          ? '命ノ星座 第$position重'
-          : 'タップで凸$position（再タップで戻す）· 長押しで効果',
+      message:
+          onSelect == null
+              ? '命ノ星座 第$position重'
+              : 'タップで凸$position（再タップで戻す）· 長押しで効果',
       child: InkWell(
         onTap: onSelect ?? () => _showDetail(context),
         onLongPress: onSelect == null ? null : () => _showDetail(context),
@@ -88,22 +90,23 @@ class _ConstellationIconButton extends StatelessWidget {
           width: size + 4,
           height: size + 4,
           child: Center(
-            child: detail?.iconUrl != null
-                ? ColorFiltered(
-                    colorFilter: ColorFilter.mode(
-                      unlocked ? elementColor : dimColor,
-                      BlendMode.srcATop,
+            child:
+                detail?.iconUrl != null
+                    ? ColorFiltered(
+                      colorFilter: ColorFilter.mode(
+                        unlocked ? elementColor : dimColor,
+                        BlendMode.srcATop,
+                      ),
+                      child: GameIconImage(
+                        iconUrl: detail!.iconUrl,
+                        size: size,
+                      ),
+                    )
+                    : Icon(
+                      unlocked ? Icons.circle : Icons.circle_outlined,
+                      size: size * 0.85,
+                      color: unlocked ? elementColor : dimColor,
                     ),
-                    child: GameIconImage(
-                      iconUrl: detail!.iconUrl,
-                      size: size,
-                    ),
-                  )
-                : Icon(
-                    unlocked ? Icons.circle : Icons.circle_outlined,
-                    size: size * 0.85,
-                    color: unlocked ? elementColor : dimColor,
-                  ),
           ),
         ),
       ),
@@ -126,9 +129,7 @@ class _ConstellationIconButton extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name?.isNotEmpty == true
-                      ? name!
-                      : '命ノ星座 第$position重',
+                  name?.isNotEmpty == true ? name! : '命ノ星座 第$position重',
                   style: theme.textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),

@@ -11,7 +11,8 @@ class HoyolabCharacterDiscoveryStore {
 
   static String snapshotKey(String uid) => 'hoyolab_owned_snapshot_$uid';
 
-  static String discoveredMapKey(String uid) => 'hoyolab_char_discovered_map_$uid';
+  static String discoveredMapKey(String uid) =>
+      'hoyolab_char_discovered_map_$uid';
 
   Future<Map<String, HoyolabOwnedCharacter>> enrichOwnedCharacters({
     required String uid,

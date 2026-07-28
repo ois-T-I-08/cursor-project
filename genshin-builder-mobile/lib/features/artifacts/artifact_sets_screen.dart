@@ -45,12 +45,13 @@ class ArtifactSetsScreen extends ConsumerWidget {
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(userFacingError(e)),
-          ),
-        ),
+        error:
+            (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(userFacingError(e)),
+              ),
+            ),
         data: (overviews) {
           if (overviews.isEmpty) {
             return const Center(child: Text('聖遺物セットがありません'));
@@ -58,8 +59,9 @@ class ArtifactSetsScreen extends ConsumerWidget {
           final sections = groupArtifactSetOverviewsByRegion(overviews);
           return LayoutBuilder(
             builder: (context, constraints) {
-              final columns =
-                  artifactSetGridCrossAxisCount(constraints.maxWidth);
+              final columns = artifactSetGridCrossAxisCount(
+                constraints.maxWidth,
+              );
               return CustomScrollView(
                 slivers: [
                   for (final section in sections) ...[
@@ -116,10 +118,11 @@ class _ArtifactSetGridTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => showArtifactSetDetailDialog(
-          context: context,
-          overview: overview,
-        ),
+        onTap:
+            () => showArtifactSetDetailDialog(
+              context: context,
+              overview: overview,
+            ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
           child: Column(
@@ -128,8 +131,10 @@ class _ArtifactSetGridTile extends StatelessWidget {
                 child: Center(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final size = constraints.biggest.shortestSide
-                          .clamp(36.0, 72.0);
+                      final size = constraints.biggest.shortestSide.clamp(
+                        36.0,
+                        72.0,
+                      );
                       return GameIconImage(
                         iconUrl: set.iconUrl,
                         size: size,

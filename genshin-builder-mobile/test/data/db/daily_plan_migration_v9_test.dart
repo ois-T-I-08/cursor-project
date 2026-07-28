@@ -23,54 +23,56 @@ void main() {
     }
   });
 
-  test('real v8 file migrates to v9 creating daily plan tables without loss',
-      () async {
-    final file = File(p.join(tempDir.path, 'legacy-v8.db'));
-    await _createAndSeedV8(file);
+  test(
+    'real v8 file migrates to v9 creating daily plan tables without loss',
+    () async {
+      final file = File(p.join(tempDir.path, 'legacy-v8.db'));
+      await _createAndSeedV8(file);
 
-    final db = await DriftAppDatabase.open(
-      fileOverride: file,
-      createInBackground: false,
-    );
-
-    final version = (await db.customSelect('PRAGMA user_version').getSingle())
-        .read<int>('user_version');
-    expect(version, 9);
-
-    for (final table in [
-      'daily_plan_completions',
-      'daily_plan_eval_history',
-    ]) {
-      expect(
-        await db
-            .customSelect(
-              "SELECT name FROM sqlite_master WHERE type='table' AND name='$table'",
-            )
-            .get(),
-        hasLength(1),
+      final db = await DriftAppDatabase.open(
+        fileOverride: file,
+        createInBackground: false,
       );
-    }
 
-    expect(await db.progressDao.getSetting('local_user_id'), _userId);
-    expect(await db.progressDao.getSetting('sentinel_v8'), 'keep-me');
-    final progress = await db.progressDao.getProgress(_userId, '10000002');
-    expect(progress, isNotNull);
-    expect(progress!.level, 70);
-    final goals = await db.growthDao.goalsGetAll(_userId);
-    expect(goals, hasLength(1));
-    expect(goals.single.id, 'goal-v8');
-    final bookmarks = await db.bookmarkDao.getAllBookmarks();
-    expect(bookmarks, hasLength(1));
+      final version = (await db.customSelect('PRAGMA user_version').getSingle())
+          .read<int>('user_version');
+      expect(version, 9);
 
-    // New tables start empty; v8 rows untouched.
-    final completions = await db.dailyPlanDao.completionsForDate(
-      userId: _userId,
-      localDate: '2026-07-15',
-    );
-    expect(completions, isEmpty);
+      for (final table in [
+        'daily_plan_completions',
+        'daily_plan_eval_history',
+      ]) {
+        expect(
+          await db
+              .customSelect(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='$table'",
+              )
+              .get(),
+          hasLength(1),
+        );
+      }
 
-    await db.close();
-  });
+      expect(await db.progressDao.getSetting('local_user_id'), _userId);
+      expect(await db.progressDao.getSetting('sentinel_v8'), 'keep-me');
+      final progress = await db.progressDao.getProgress(_userId, '10000002');
+      expect(progress, isNotNull);
+      expect(progress!.level, 70);
+      final goals = await db.growthDao.goalsGetAll(_userId);
+      expect(goals, hasLength(1));
+      expect(goals.single.id, 'goal-v8');
+      final bookmarks = await db.bookmarkDao.getAllBookmarks();
+      expect(bookmarks, hasLength(1));
+
+      // New tables start empty; v8 rows untouched.
+      final completions = await db.dailyPlanDao.completionsForDate(
+        userId: _userId,
+        localDate: '2026-07-15',
+      );
+      expect(completions, isEmpty);
+
+      await db.close();
+    },
+  );
 }
 
 Future<void> _createAndSeedV8(File file) async {

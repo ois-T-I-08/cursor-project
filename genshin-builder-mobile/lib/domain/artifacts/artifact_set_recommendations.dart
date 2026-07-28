@@ -12,16 +12,18 @@ class ArtifactSetRecommendationHit {
 }
 
 /// 英語セット名 → おすすめキャラ（使用率降順）
-typedef ArtifactSetRecommendationIndex
-    = Map<String, List<ArtifactSetRecommendationHit>>;
+typedef ArtifactSetRecommendationIndex =
+    Map<String, List<ArtifactSetRecommendationHit>>;
 
 String normalizeArtifactSetKey(String raw) =>
     raw.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 
 /// キャラ別使用率をセット別ランキングへ反転する。
 ArtifactSetRecommendationIndex invertCharacterSetUsage({
-  required Iterable<({String characterId, Map<String, double> rates, bool isRemote})>
-      snapshots,
+  required Iterable<
+    ({String characterId, Map<String, double> rates, bool isRemote})
+  >
+  snapshots,
   double minRate = 0.05,
   int topPerSet = 8,
 }) {
@@ -30,7 +32,9 @@ ArtifactSetRecommendationIndex invertCharacterSetUsage({
     if (!snap.isRemote) continue;
     for (final e in snap.rates.entries) {
       if (e.value < minRate) continue;
-      buckets.putIfAbsent(e.key, () => []).add(
+      buckets
+          .putIfAbsent(e.key, () => [])
+          .add(
             ArtifactSetRecommendationHit(
               characterId: snap.characterId,
               usageRate: e.value,

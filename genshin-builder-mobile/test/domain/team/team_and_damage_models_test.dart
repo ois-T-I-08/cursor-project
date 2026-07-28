@@ -27,7 +27,9 @@ void main() {
       region: '璃月',
       iconUrl: '',
     );
-    final result = estimateDamage(const DamageContext(character: character, level: 90));
+    final result = estimateDamage(
+      const DamageContext(character: character, level: 90),
+    );
     expect(result.average, 0);
     expect(result.notes, isNotEmpty);
   });

@@ -8,9 +8,7 @@ class DriftMaterialInventoryRepository implements MaterialInventoryRepository {
   @override
   Future<Map<String, int>> getInventory(String userId) async {
     final rows = await _db.growthDao.inventoryGet(userId);
-    return {
-      for (final r in rows) r.materialId: r.quantity,
-    };
+    return {for (final r in rows) r.materialId: r.quantity};
   }
 
   @override

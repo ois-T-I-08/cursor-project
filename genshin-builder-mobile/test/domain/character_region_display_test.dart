@@ -16,10 +16,7 @@ void main() {
 
     test('sandrone goes to nod-krai by name', () {
       expect(
-        normalizeCharacterRegionForDisplay(
-          'FATUI',
-          characterName: 'サンドローネ',
-        ),
+        normalizeCharacterRegionForDisplay('FATUI', characterName: 'サンドローネ'),
         'ノド・クライ',
       );
     });
@@ -37,10 +34,7 @@ void main() {
 
     test('other fatui go to other', () {
       expect(
-        normalizeCharacterRegionForDisplay(
-          'ファデュイ',
-          characterName: '隊長',
-        ),
+        normalizeCharacterRegionForDisplay('ファデュイ', characterName: '隊長'),
         'その他',
       );
     });

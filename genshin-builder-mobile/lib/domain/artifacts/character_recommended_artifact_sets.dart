@@ -32,8 +32,8 @@ List<CharacterRecommendedArtifactSet> buildCharacterRecommendedArtifactSets({
   final recommended = <CharacterRecommendedArtifactSet>[];
   final seen = <String>{};
 
-  final sorted = akashaRates.entries.toList()
-    ..sort((a, b) => b.value.compareTo(a.value));
+  final sorted =
+      akashaRates.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
   for (final e in sorted) {
     if (recommended.length >= maxRecommended) break;
     if (e.value < minRate) continue;
@@ -70,10 +70,7 @@ List<CharacterRecommendedArtifactSet> buildCharacterRecommendedArtifactSets({
       if (!configNames.any(matchesCharacter)) continue;
       seen.add(set.id);
       recommended.add(
-        CharacterRecommendedArtifactSet(
-          set: set,
-          source: 'config',
-        ),
+        CharacterRecommendedArtifactSet(set: set, source: 'config'),
       );
     }
   }

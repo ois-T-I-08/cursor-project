@@ -5,6 +5,23 @@ export 'guide_insight.dart';
 
 enum BuildRecommendationOrigin { singleVideo, merged }
 
+bool isSafeYoutubeGuideUrl(String raw) {
+  final uri = Uri.tryParse(raw.trim());
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      !uri.hasAuthority ||
+      uri.userInfo.isNotEmpty) {
+    return false;
+  }
+  final host = uri.host.toLowerCase();
+  return const {
+    'youtube.com',
+    'www.youtube.com',
+    'm.youtube.com',
+    'youtu.be',
+  }.contains(host);
+}
+
 class BuildRecommendationSource {
   const BuildRecommendationSource({
     required this.videoId,
@@ -30,15 +47,15 @@ class BuildRecommendationSource {
   final String? gameVersion;
 
   GuideCitation toCitation() => GuideCitation(
-        videoId: videoId.isEmpty ? null : videoId,
-        videoTitle: title.isEmpty ? null : title,
-        channelId: channelId,
-        channelName: channelTitle.isEmpty ? null : channelTitle,
-        publishedAt: publishedAt,
-        reviewedAt: reviewedAt,
-        gameVersion: gameVersion,
-        sourceUrl: sourceUrl.isEmpty ? null : sourceUrl,
-      );
+    videoId: videoId.isEmpty ? null : videoId,
+    videoTitle: title.isEmpty ? null : title,
+    channelId: channelId,
+    channelName: channelTitle.isEmpty ? null : channelTitle,
+    publishedAt: publishedAt,
+    reviewedAt: reviewedAt,
+    gameVersion: gameVersion,
+    sourceUrl: sourceUrl.isEmpty ? null : sourceUrl,
+  );
 }
 
 class BuildRecommendationEvidence {
@@ -126,15 +143,15 @@ class CharacterBuildRecommendation {
 
   /// 構造化優先、なければ legacy `weaponPreference`。
   List<GuideWeaponRecommendation> get youtubeWeapons => resolveYoutubeWeapons(
-        structured: weapons,
-        legacyWeaponPreference: weaponPreference,
-      );
+    structured: weapons,
+    legacyWeaponPreference: weaponPreference,
+  );
 
   /// 鮮度表示用（「最新」とは断定しない）
   String? get freshnessCaption => formatFreshnessCaption(
-        gameVersion: gameVersion,
-        reviewedAt: lastVerifiedAt,
-      );
+    gameVersion: gameVersion,
+    reviewedAt: lastVerifiedAt,
+  );
 }
 
 enum BuildRecommendationFailure {
