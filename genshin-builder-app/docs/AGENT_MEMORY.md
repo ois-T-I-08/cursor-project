@@ -9,8 +9,9 @@
 - **目的:** 既存機能・ドメイン計算を維持し、公開中の編集、楽観ロック、公開前検証、管理UI、外部URL、開発手順をリリース前品質へ揃える。
 - **決定事項:** 公開中の保存・承認・revision復元は旧公開スナップショットを直接上書きせず`adminWorkingDraft`を使う。公開・公開取り消し・overrideは`id + updatedAt`完全一致の条件付き更新とrevision/auditを同一transactionで行う。公開時は採用/部分採用した根拠だけを使い、チャンネル許可、public動画、evidence=`approved`、管理レビュー、Amberマスター、pieces、citationをサーバーで再検証する。
 - **安全性/UI:** 公開出典URLをHTTPS YouTube/youtu.beへ限定。管理画面は未保存の選択移動を確認し、409後も入力を保持、未保存・未承認時のdisabled理由を表示。マスター一覧の取得はレコード選択時の1回と明示再試行に限定。
+- **最終レビュー:** 管理変異の`expectedUpdatedAt`を必須化し、全更新を`id + updatedAt`条件へ統一。作業下書き承認で公開`lastVerifiedAt`を動かさず、`adminConfirmed: true`と`structuredReviewStatus: admin_confirmed`を公開必須にした。ETagは公開DTO全体を指紋化し、weak/list形式の`If-None-Match`にも対応。Web/FlutterのYouTube URLは`youtube.com`、`www.youtube.com`、`m.youtube.com`、`youtu.be`だけを許可する。
 - **変更ファイル（主要）:** `src/lib/build-guides/{store,structured-admin,public-recommendation-normalize}.ts`、管理route/editor、回帰テスト、README/開発資料/Build Guide運用資料。
-- **検証:** Prisma 6.19.3 generate/validate成功、local SQLite 11 migrationsでstatus/deployともpendingなし、typecheck/lint成功、Vitest 306成功・環境依存DB integration 1 skip、Next.js 16.2.12 production build成功、production dependency audit 0。
+- **検証:** Prisma 6.19.3 generate/validate成功、local SQLite 11 migrationsでstatus/deployともpendingなし、typecheck/lint成功、Vitest 334成功・環境依存DB integration 1 skip、Flutter analyze 0件・756テスト成功・debug APK成功、Next.js 16.2.12 production build成功、production dependency audit 0。
 - **未完了 / 次回:** 本番migration・デプロイは未実施。signed release、staging疎通、実機migration/UI確認、CIは運用者ゲート。dev-only ESLint依存にhigh advisory 9件が残るため、互換修正版待ち（`audit fix --force`禁止）。
 
 ## 2026-07-26 — 承認済み編成テンプレートと事前生成入れ替え候補
