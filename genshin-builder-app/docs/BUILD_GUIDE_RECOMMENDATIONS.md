@@ -29,6 +29,57 @@
 7. 管理者が映像証拠を確認し承認・公開
 8. Flutter は公開 API のみ参照（Gemini/DeepSeek 非呼び出し）
 
+## 構造化スキーマ
+
+`CharacterBuildRecommendation` は既存の列との互換性を維持しながら、`structuredPayload` に `schemaVersion: 1` の構造化情報を保存します。
+
+| フィールド | 意味 |
+|---|---|
+| `weapons` | 管理者確認済みの武器候補。`weaponId`、順位、推奨度、理由、条件、`citationId` |
+| `artifactRecommendations` | 4セットまたは2+2。`sets[].setId` と `pieces` を明示し、推測で補完しない |
+| `mainStats` | 時計・杯・冠の第一候補、代替、条件 |
+| `recommendedStats` | 数値目標。`flat` / `percent` を表示し、未知の ratio はモバイル未表示 |
+| `investmentPriority` | 明示された育成優先度。confidence から推測しない |
+| `sources` | 公開 DTO のトップレベル出典。各候補は `citationId` で参照 |
+| `pendingMentions` | 映像抽出した未確認候補。公開対象ではない |
+| `structuredReviewStatus` | `review_required` / `admin_confirmed`。公開 DTO では除去 |
+| `adminWorkingDraft` | 公開中の次版。公開 DTO では必ず除去 |
+
+構造化武器が無い古いデータだけは `context.weaponPreference` を `legacy_preference` として読み替えます。この fallback は新しい正式データを上書きしません。
+
+## 管理画面の状態遷移
+
+| 操作 | 永続化と公開への影響 |
+|---|---|
+| 保存 | 非公開行を更新。公開中は `keepPublished` により `adminWorkingDraft` だけを更新し、旧公開スナップショットと ETag を維持 |
+| 検証 / APIプレビュー | DB を変更せず、現在のフォームまたは working draft を公開正規化して問題箇所を返す |
+| 承認 | `structuredReviewStatus=admin_confirmed`。公開中の working draft を承認しても行の `published` 状態と旧公開内容を維持 |
+| 公開 | working draft を公開列へ昇格し、`publishedContentUpdatedAt` を更新。公開前検証とDB更新・revision・auditを1 transactionで実行 |
+| 公開取り消し | `approved` へ戻し `publishedAt` と公開使用フラグを解除。構造化内容とrevisionは保持 |
+| revision復元 | 非公開なら編集内容へ復元。公開中なら公開版を直接上書きせず working draft へ復元 |
+
+保存・承認・公開・公開取り消し・revision復元は、画面が取得した `expectedUpdatedAt` を送ります。サーバーは日時をミリ秒単位で完全一致させ、transaction 内でも `id + updatedAt` の条件付き更新を行います。競合は 409 とし、管理画面は入力を消さず最新状態の確認を促します。
+
+公開中の編集で `row.updatedAt` が動いても、公開 API の `updatedAt` / ETag は `publishedContentUpdatedAt` を基準にするため変化しません。
+
+## 公開時の fail-closed 条件
+
+`setRecommendationStatus(..., published)` は UI の検証結果を信頼せず、サーバーで再検証します。
+
+- 現在の状態が `approved` または `published`
+- 採用・部分採用した contribution のチャンネルが処理許可済み
+- 動画が public
+- 対応する映像証拠が `approved`（`pending_review` も拒否）
+- `structuredReviewStatus=admin_confirmed`
+- `pendingMentions` が空
+- `evidence_mention` / `adminConfirmed: false` が正式候補にない
+- 武器 ID がローカルマスターに存在
+- 聖遺物候補がある場合、Amber マスターを取得でき、setId が存在
+- 4セットまたは2+2の pieces 合計が4。未確定 pieces は拒否
+- 武器・聖遺物・推奨値・メインステータスの `citationId` が、採用した出典で解決可能
+
+どれかが失敗した場合は更新前に拒否し、旧公開データを維持します。Amber 障害時も、聖遺物候補を含む新しい公開は安全側に停止します。
+
 ## 禁止事項
 
 * 動画ダウンロード / フレーム・音声の長期保存
@@ -114,11 +165,38 @@ Gemini 3.6 Flash リクエストでは非推奨 sampling パラメータ（`temp
 * `dataOrigin: evidence_mention` および `adminConfirmed: false` は公開正規化で除外
 * 管理画面「構造化編集」で確認・編集・承認・公開（聖遺物は Amber `/reliquary` マスター検索、目標ステは専用フォーム。JSON 手編集は読み取り専用）
 * 公開中の編集は `structuredPayload.adminWorkingDraft` に分離（`keepPublished`）。公開 API は下書きを返さない
-* 公開前は `validateStructuredForPublish`（pendingMentions・未確定 pieces・未知 setId で拒否）
+* 公開前は `validateStructuredForPublish`（pendingMentions・未確定 pieces・未知 setId・解決不能 citation・レビュー未完了で拒否）
 * 2+2 構成は管理 override の `structuredPayload` で配列として登録可能
 * HTTP: 内容指紋ベースの `ETag` + `Cache-Control: max-age=60, stale-while-revalidate=300`
 * 公開内容の時刻は `structuredPayload.publishedContentUpdatedAt`（working draft 保存では変更しない）
+* `sources[].sourceUrl` は HTTPS の `youtube.com`（サブドメイン含む）または `youtu.be` のみ。サーバー正規化と Flutter 起動前の両方で検証
 * ratio は公開 JSON に含められるがモバイル表示は未対応（管理画面で警告、公開はブロックしない）
 
 正規化実装: `src/lib/build-guides/public-recommendation-normalize.ts`  
 管理バリデーション: `src/lib/build-guides/structured-admin.ts`
+
+## 配布・復旧チェック
+
+本番反映前:
+
+1. DB と環境変数をバックアップし、secret を成果物へ含めていないことを確認
+2. `npm ci`
+3. `npx prisma generate`
+4. `npx prisma validate`
+5. 対象 DB を明示して `npx prisma migrate status`
+6. 承認された migration だけを `npx prisma migrate deploy`
+7. `npm run typecheck && npm run lint && npm test && npm run build`
+8. staging で管理 API の 401 / 403 / 503、保存、検証、承認、公開、公開取り消し、409 を確認
+9. 公開 API の 200 / ETag / 304と、管理情報が含まれないことを確認
+10. Flutter で Akasha / YouTube の分離、出典、空・エラー・再試行を確認
+
+障害時は新規解析の kill switch を OFF にし、公開データを維持したまま原因を切り分けます。誤公開は「公開取り消し」で `approved` に戻し、必要なら revision を working draft へ復元して再検証します。migration の巻き戻しは SQL を即興で実行せず、バックアップ復元またはレビュー済みの forward fix を使います。
+
+### トラブルシューティング
+
+- **409 conflict**: 別の更新が先に保存済み。画面の入力は保持される。最新データと差分を確認して再実行する
+- **ETag が更新されない**: working draft の保存だけなら仕様どおり。実際の「公開」後に `publishedContentUpdatedAt` が更新される
+- **working draft が見えない**: 公開 API には出ない。Bearer 認証済みの `/admin/guides` で対象行を選択する
+- **Amber 取得失敗 / 不明 setId**: 聖遺物を含む公開は停止。IDを推測せず、マスター復旧後に検索ピッカーで置換する
+- **401 / 403 / 503**: Bearer 不足 / 不一致 / `BUILD_GUIDE_ADMIN_SECRET` 未設定。レスポンスやログへ secret を出さない
+- **Flutter パースエラー**: 公開 API の `schemaVersion` と DTO を確認。未知フィールドは無視し、必須フィールド破損はセクションエラーとして再試行可能にする

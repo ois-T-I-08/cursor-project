@@ -1,137 +1,113 @@
-# Genshin Builder
+# Genshin Builder Web / API
 
-原神のキャラクター育成状況を管理するWebアプリです。
+Next.js 16（App Router）、TypeScript、Prisma で構成する Genshin Builder の Web・API・管理サービスです。
 
-## 技術スタック
+## 主な責務
 
-- **Next.js**（App Router）
-- **TypeScript**
-- **Tailwind CSS**
-- PostgreSQL（予定 / 開発初期はSQLite）
-- Vercelでデプロイ予定
+- Project Amber のゲームマスター同期と Prisma への保存
+- 匿名ユーザーの育成状況、編成、素材計画
+- AZA.GG の深境螺旋統計を安全な内部 DTO へ正規化・キャッシュ
+- gcsim を使う編成推薦（既定無効）
+- 承認済み YouTube 映像証拠から作る育成おすすめ
+- `/admin/guides` の構造化編集、検証、承認、公開、revision 復元
+- Flutter 向け公開 API
 
-## 開発の始め方
+モノレポ全体のセットアップ、Flutter、検証、トラブルシューティングは [ルート README](../README.md) を先に参照してください。
 
-```bash
-npm install
-cp .env.example .env.local
-npx prisma generate
-npx prisma migrate dev    # DB作成・マイグレーション（初回のみ）
-npm run dev
-```
+## ローカル起動
 
-### Windows PowerShell の場合
+必要環境は Node.js 20 と npm です。
 
 ```powershell
-npm install
-Copy-Item .env.example .env.local
+Copy-Item .env.example .env
+npm ci
 npx prisma generate
-npx prisma migrate dev
+npx prisma migrate deploy
 npm run dev
 ```
 
-### 環境変数
+`http://localhost:3000` を開きます。初回のゲームマスター同期は「設定」画面または認証済み `POST /api/sync` から実行します。
 
-| 変数 | 必須 | 説明 |
-|------|------|------|
-| `DATABASE_URL` | はい | Prisma の接続先（開発: `file:./dev.db`） |
-| `SYNC_API_SECRET` | 本番のみ | `/api/sync` と設定画面の手動同期で共用する認証トークン。手動同期時は画面へ同じ値を入力 |
-| `AZA_API_BASE_URL` | 統計機能のみ | AZA.GG 公開 API の HTTPS origin。既定例は `https://c1-api.aza.gg` |
-| `AZA_ABYSS_ENABLED` | いいえ | `false` で深境螺旋統計の upstream 更新を停止する kill switch（キャッシュがあれば stale で返却） |
-| `AZA_CACHE_TTL_SECONDS` | いいえ | 統計の DB キャッシュ TTL。300〜86400 秒、既定 21600 秒（6時間） |
-| `AZA_REQUEST_TIMEOUT_MS` | いいえ | AZA.GG へのタイムアウト。1000〜30000 ms、既定 10000 ms |
+SQLite の既定 DB は `prisma/dev.db` です。既存 migration の状態確認と適用:
 
-`DATABASE_URL` が未設定の状態で起動すると、Prisma Client の初期化時にエラーが表示されます。
-
-http://localhost:3000 を開き、「設定」→「ゲームデータを同期」でマスターデータを取り込んでください。
-
-## 現在の実装状況
-
-- [x] プロジェクト構成・共通レイアウト（ヘッダー・フッター）
-- [x] ホーム画面（最近編集したキャラクター・お知らせエリア）
-- [x] キャラクター一覧（名前検索・元素・武器種・レアリティフィルター）
-- [x] API接続（Project Amber / gi.yatta.moe → サーバー側で取得・日本語名対応）
-- [x] マスターデータのDB保存・同期（`POST /api/sync`・設定画面の同期ボタン）
-- [x] 育成状況の保存機能（匿名ユーザーID発行・Server ActionでDB保存・自動保存）
-- [x] キャラクター詳細画面（アコーディオン形式）
-  - レベル・突破段階
-  - 武器（性能・精錬ランクごとの武器効果表示）
-  - 聖遺物（セット効果・メイン/サブステータス・スコア計算）
-  - 命ノ星座（凸効果一覧・解放状態の強調表示）
-  - スキル・天賦（説明文・固有天賦一覧）
-
-## データ取得の流れ
-
-```
-外部API（Project Amber / gi.yatta.moe）
-    ↓ lib/api（プロバイダー分離・正規化）
-Next.js サーバー（POST /api/sync）
-    ↓ lib/sync（必要な項目だけ upsert）
-データベース（Prisma / SQLite → 本番はPostgreSQL）
-    ↓ lib/repository（DB読み取り・空ならダミーへフォールバック）
-ブラウザ（Server Componentで表示）
+```powershell
+npx prisma validate
+npx prisma migrate status
+npx prisma migrate deploy
 ```
 
-- APIが利用できなくてもDB内のデータでアプリは動作し続ける
-- プロバイダー変更時は `lib/api/` の実装を差し替えるだけでよい
-- 同期履歴は `SyncLog` テーブルに記録（将来のCron自動実行を想定）
+`migrate dev` はローカルで新しい migration を作る場合だけ使います。本番 DB の migration や公開は、このリポジトリの通常検証では実行しません。
 
-### 深境螺旋統計
+## 環境変数
 
-```
-AZA.GG 公開 API
-    ↓ src/lib/api/abyss（取得・検証・内部 DTO へ正規化）
-AbyssStatisticsService（6時間 TTL・process-local single-flight・最大1回再試行）
-    ↓ 成功時に ExternalApiCache へ最終成功スナップショットを保存
-GET /api/abyss/statistics（Flutter 向け安全な同一-origin DTO）
-```
+正本は [`.env.example`](.env.example) です。
 
-- Flutter は AZA.GG を直接呼ばず、この Next.js API だけを呼び出す
-- 期限切れ後の upstream 障害時は、最終成功キャッシュを `isStale: true` で返す
-- 現在確認できる公開 KV API は API キー不要。未確認の認証ヘッダーは送信しない
-- 原神ゲームバージョンや編成使用回数は upstream に存在しないため生成しない
-- migration、kill switch、stale fallback、staging 確認手順は [`docs/AZA_ABYSS_OPERATIONS.md`](./docs/AZA_ABYSS_OPERATIONS.md) を参照
+- `DATABASE_URL` — Prisma 接続先
+- `SYNC_API_SECRET` — `/api/sync` の Bearer secret
+- `BUILD_GUIDE_ADMIN_SECRET` — Build Guide 管理 API。未設定は 503
+- `TEAM_TEMPLATE_ADMIN_SECRET` — 編成テンプレート管理 API
+- `AZA_*` — 統計 upstream、TTL、kill switch
+- `GCSIM_*` — 編成シミュレーション。既定無効
+- `YOUTUBE_*` / `GEMINI_*` / `DEEPSEEK_GUIDE_*` — 動画メタデータ・映像解析・証拠統合。既定無効
 
-## ディレクトリ構成
+secret はクライアント bundle、公開 API、ログ、URL、ドキュメントへ含めないでください。
 
-```
-prisma/                   # DBスキーマ・マイグレーション
-src/
-├── app/                  # App Router のページ
-│   ├── layout.tsx        # 共通レイアウト
-│   ├── page.tsx          # ホーム
-│   ├── api/sync/         # マスターデータ同期API
-│   ├── characters/       # キャラクター一覧・詳細
-│   └── settings/         # 設定（同期ボタン）
-├── components/
-│   ├── layout/           # ヘッダー・フッター
-│   ├── character/        # キャラ関連UI
-│   └── settings/         # 設定画面UI
-├── lib/
-│   ├── api/              # 外部API取得層（プロバイダー分離）
-│   ├── repository/       # DB読み取り層
-│   ├── db.ts             # Prisma Client
-│   └── sync.ts           # マスターデータ同期処理
-└── types/                # 型定義
+## 管理画面と公開 API
+
+- 管理画面: `http://localhost:3000/admin/guides`
+- 管理 API: `/api/admin/build-guides`（Bearer 認証、サイズ上限、レート制限、fail-closed）
+- 公開おすすめ: `GET /api/build-recommendations/{characterId}`
+- 出典: `GET /api/build-recommendations/{characterId}/sources`
+- 深境螺旋統計: `GET /api/abyss/statistics`
+
+公開おすすめは内容指紋ベースの ETag と 304 に対応します。`adminWorkingDraft`、管理者メモ、revision、pending mention、内部レビュー状態は公開 DTO に含めません。詳細は [`docs/BUILD_GUIDE_RECOMMENDATIONS.md`](docs/BUILD_GUIDE_RECOMMENDATIONS.md) を参照してください。
+
+## 検証
+
+```powershell
+npm run typecheck
+npm run lint
+npm test
+npm run build
 ```
 
-## 設計方針
+Vitest は正規化、同期、認証、公開情報漏えい、ETag、楽観ロック、Build Guide、編成推薦、ドメイン計算を含みます。DB integration test は明示的なテスト用 DB 設定がある場合だけ実行されます。
 
-- Server Component と Client Component を使い分け（フィルター操作など状態を持つ部分のみ Client）
-- 外部APIのレスポンスはそのまま使わず、正規化してからDBへ保存
-- マスターデータ（キャラ・武器・素材）とユーザーの育成状況は別テーブルで管理
-- Ver.1はログインなし。初回アクセス時に匿名IDを発行してデータを紐づける（今後実装）
+## データフロー
 
-## AI / 開発者向けドキュメント
+```text
+外部 API
+  -> src/lib/api（取得・タイムアウト・検証・正規化）
+  -> src/lib/sync / service（整合性とキャッシュ）
+  -> Prisma（SQLite。運用判断なしに別 DB へ変更しない）
+  -> App Router / 公開 API
+  -> Flutter
+```
+
+Build Guide は次の境界を追加します。
+
+```text
+許可済み YouTube metadata
+  -> Gemini による映像証拠候補
+  -> 通常コードによる ID・時刻・数値検証
+  -> 管理者の採用・構造化・承認
+  -> 公開時のサーバー再検証
+  -> 公開 DTO
+```
+
+映像内の mention は `pendingMentions` に留め、管理者が確認するまで正式なおすすめへ昇格しません。公開中の編集は `adminWorkingDraft` に分離し、承認・公開に失敗しても旧公開スナップショットを維持します。
+
+## 開発資料
 
 | ファイル | 内容 |
-|----------|------|
-| [`AI_AGENT_RULES.md`](./AI_AGENT_RULES.md) | AI エージェント向けルール・禁止事項 |
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | アーキテクチャ・データフロー |
-| [`DEVELOPMENT_GUIDE.md`](./DEVELOPMENT_GUIDE.md) | 開発ガイド・命名規則 |
-| [`docs/AZA_ABYSS_OPERATIONS.md`](./docs/AZA_ABYSS_OPERATIONS.md) | AZA.GG 深境螺旋統計の運用・障害対応 |
-| [`AGENTS.md`](./AGENTS.md) | エントリポイント（Next.js 16 注意含む） |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | 作業開始時の必須ルール |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Web の境界とデータフロー |
+| [`DEVELOPMENT_GUIDE.md`](DEVELOPMENT_GUIDE.md) | 実装規約と検証 |
+| [`AI_AGENT_RULES.md`](AI_AGENT_RULES.md) | 変更時の安全ルール |
+| [`docs/BUILD_GUIDE_RECOMMENDATIONS.md`](docs/BUILD_GUIDE_RECOMMENDATIONS.md) | 構造化攻略情報の公開フロー |
+| [`docs/AZA_ABYSS_OPERATIONS.md`](docs/AZA_ABYSS_OPERATIONS.md) | AZA.GG の運用・障害対応 |
 
-## 今後追加予定
+## Windows で Prisma がロックされる場合
 
-樹脂タイマー / 素材自動計算 / 曜日別素材表示 / 聖遺物管理 / チーム編成 / ガチャ履歴 / デイリー・週ボス管理 / Enka.Network連携 / PWA対応 / 通知機能
+`npm ci` や `prisma generate` が `EPERM`、`query_engine-windows.dll.node`、`lightningcss` などのロックで失敗した場合は、このプロジェクトの `next dev` / Node プロセスだけを終了して再実行します。実行中プロセスのコマンドラインと作業ディレクトリを確認し、無関係な Node プロセスを一括終了しないでください。

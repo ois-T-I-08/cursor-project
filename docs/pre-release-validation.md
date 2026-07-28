@@ -1,7 +1,8 @@
 # Pre-release validation checklist
 
-Target branch: `main` (via `salvage/daily-plan-completion-notifications`)
+Target branch: `chore/release-quality-improvements`
 Base: `main`
+Last local validation: `2026-07-28` (Windows, local SQLite; no production mutation)
 
 Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, or device account credentials in this file.
 
@@ -23,13 +24,19 @@ Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, or devic
 
 | Gate | Status | Notes |
 |------|--------|--------|
-| Mobile tests | 571 passed (local) | |
-| Domain parity (3) | passed | |
-| `flutter analyze` | 0 errors / 0 warnings | info only |
-| Web tests | 111 passed (local) | includes cooperative abort |
-| Web lint | passed | |
-| Web production build | passed | |
-| Secret Guard | passed (local) | |
+| Mobile format | passed | 436 files, 0 changed after repository-wide formatting |
+| Mobile codegen | passed | build_runner completed; generated outputs current |
+| Mobile tests | 756 passed (local) | 0 failed / 0 skipped |
+| Domain parity (3) | passed | included in full suite |
+| `flutter analyze` | passed | 0 issues |
+| Android debug APK | passed | `build/app/outputs/flutter-apk/app-debug.apk`; not a signed release artifact |
+| Web tests | 306 passed / 1 skipped (local) | skip is the environment-gated DB integration suite |
+| Web typecheck / lint | passed | 0 errors / 0 warnings |
+| Web production build | passed | Next.js 16.2.12 / Turbopack |
+| Prisma generate / validate | passed | Prisma 6.19.3 |
+| Prisma migration status / deploy | passed | local SQLite, 11 migrations, no pending migration |
+| Production dependency audit | passed | `npm audit --omit=dev`: 0 vulnerabilities |
+| Secret logging guards | passed | included in full Flutter/Web test suites |
 | Genshin Mobile CI | | fill after push |
 | Genshin Web CI | | fill after push |
 
@@ -125,6 +132,8 @@ Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, or devic
 - WorkManager does not guarantee exact 23:00; delayed runs use `targetLocalDate` from registration.
 - In-flight Prisma queries cannot be forcibly cancelled; after ownership loss is observed, no new phase or replacement transaction is started. An in-flight transaction rolls back if the abort check throws inside it.
 - Completion / eval history can grow over time; optional prune (>90 days) is not mandatory in v1.
+- Android debug build reports that `workmanager_android` still applies Kotlin Gradle Plugin directly. It succeeds today, but the plugin must migrate before a future Flutter release makes Built-in Kotlin mandatory.
+- Full `npm audit` reports 9 high advisories in the development-only ESLint dependency chain. Production dependencies report 0; `npm audit fix --force` is not used because its proposed major/downgrade changes are unsafe.
 - Release APK/AAB verification remains incomplete until upload signing files exist locally.
 
 ## Go / no-go

@@ -9,10 +9,10 @@
 
 ```bash
 cd genshin-builder-app
-npm install
+npm ci
 cp .env.example .env          # DATABASE_URL="file:./dev.db"
-npx prisma migrate dev
 npx prisma generate
+npx prisma migrate deploy
 npm run dev                     # http://localhost:3000
 ```
 
@@ -20,9 +20,10 @@ npm run dev                     # http://localhost:3000
 
 | 症状 | 対処 |
 |------|------|
-| `EPERM` on `prisma generate` | dev サーバーを止めてから再実行 |
+| `EPERM` on `npm ci` / `prisma generate` | このプロジェクトの dev サーバー / Node プロセスを特定して止めてから再実行 |
 | 同期 500 / 即失敗 | migrate + generate + dev 再起動 |
 | `npm` が見つからない | Node.js PATH を確認。Cursor 統合ターミナルを使う |
+| 409 conflict | 別更新が先に保存済み。入力を保持したまま最新データとの差分を確認 |
 
 ### 初回データ投入
 
@@ -239,8 +240,10 @@ UI では「データがありません」+ **設定への Link**（`LevelMateri
 
 ### 現状
 
-- 自動テストなし
-- `npm run build` + `npm run lint` が最低ライン
+- Vitest による自動テストあり
+- `npm run typecheck` + `npm run lint` + `npm test` + `npm run build` が最低ライン
+- Prisma 変更時は `npx prisma validate` + `npx prisma migrate status` + migration テストも確認
+- 本番 DB や本番データをテストに使わない
 
 ### 手動テストチェックリスト
 
@@ -251,13 +254,16 @@ UI では「データがありません」+ **設定への Link**（`LevelMateri
 - [ ] 天賦スライダー → 素材
 - [ ] 育成保存 → リロード後も保持
 - [ ] API 不通時も一覧表示（DB データ）
+- [ ] `/admin/guides` → 保存 / 検証 / 承認 / 公開 / 公開取り消し / 409
+- [ ] 公開 API → ETag / 304 / 管理情報が含まれない
 
-### 将来のテスト優先度
+### 保護対象
 
 1. `level-progression.ts` — 素材計算
 2. `artifact-score.ts` — スコア
-3. `sync-utils.ts` — idsForNotIn
-4. E2E — 同期 → 詳細保存
+3. `sync-utils.ts` と同期 lease / abort
+4. Build Guide の正規化・公開拒否・working draft・revision・楽観ロック
+5. E2E — 同期 → 詳細保存、管理画面のキーボード操作
 
 ---
 

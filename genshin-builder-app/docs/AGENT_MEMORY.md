@@ -4,6 +4,15 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-07-28 — 全体品質仕上げとBuild Guide公開安全性
+
+- **目的:** 既存機能・ドメイン計算を維持し、公開中の編集、楽観ロック、公開前検証、管理UI、外部URL、開発手順をリリース前品質へ揃える。
+- **決定事項:** 公開中の保存・承認・revision復元は旧公開スナップショットを直接上書きせず`adminWorkingDraft`を使う。公開・公開取り消し・overrideは`id + updatedAt`完全一致の条件付き更新とrevision/auditを同一transactionで行う。公開時は採用/部分採用した根拠だけを使い、チャンネル許可、public動画、evidence=`approved`、管理レビュー、Amberマスター、pieces、citationをサーバーで再検証する。
+- **安全性/UI:** 公開出典URLをHTTPS YouTube/youtu.beへ限定。管理画面は未保存の選択移動を確認し、409後も入力を保持、未保存・未承認時のdisabled理由を表示。マスター一覧の取得はレコード選択時の1回と明示再試行に限定。
+- **変更ファイル（主要）:** `src/lib/build-guides/{store,structured-admin,public-recommendation-normalize}.ts`、管理route/editor、回帰テスト、README/開発資料/Build Guide運用資料。
+- **検証:** Prisma 6.19.3 generate/validate成功、local SQLite 11 migrationsでstatus/deployともpendingなし、typecheck/lint成功、Vitest 306成功・環境依存DB integration 1 skip、Next.js 16.2.12 production build成功、production dependency audit 0。
+- **未完了 / 次回:** 本番migration・デプロイは未実施。signed release、staging疎通、実機migration/UI確認、CIは運用者ゲート。dev-only ESLint依存にhigh advisory 9件が残るため、互換修正版待ち（`audit fix --force`禁止）。
+
 ## 2026-07-26 — 承認済み編成テンプレートと事前生成入れ替え候補
 
 - `team-recommendations/replacements/`へTeamSource、ローカルJSON、正規化、Prisma永続化、10〜20件の一次絞り込み、DeepSeek JSON評価、Zod＋決定論的最終検証、版付きキャッシュを追加。GenshinBuilds接続は公開API許可待ちで意図的に未実装。
