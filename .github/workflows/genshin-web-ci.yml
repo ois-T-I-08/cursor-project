@@ -6,11 +6,15 @@ on:
       - "genshin-builder-app/**"
       - "shared/domain-golden/**"
       - ".github/workflows/genshin-web-ci.yml"
+      - ".nvmrc"
+      - ".node-version"
   pull_request:
     paths:
       - "genshin-builder-app/**"
       - "shared/domain-golden/**"
       - ".github/workflows/genshin-web-ci.yml"
+      - ".nvmrc"
+      - ".node-version"
 
 jobs:
   lint-and-build:
@@ -19,7 +23,29 @@ jobs:
       run:
         working-directory: genshin-builder-app
     env:
-      DATABASE_URL: "file:./dev.db"
+      # CI-only disposable Postgres (service container below). Not production.
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/genshin_test?schema=public"
+      DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/genshin_test?schema=public"
+      RUN_REPLACEMENT_DB_TEST: "true"
+      RUN_BUILD_GUIDE_DB_TEST: "true"
+      # External guide providers stay OFF in CI (no network keys).
+      YOUTUBE_GUIDE_ENABLED: "false"
+      GEMINI_VIDEO_ANALYSIS_ENABLED: "false"
+      DEEPSEEK_GUIDE_ANALYSIS_ENABLED: "false"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: genshin_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -27,7 +53,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version-file: ".nvmrc"
           cache: npm
           cache-dependency-path: genshin-builder-app/package-lock.json
 
@@ -40,8 +66,11 @@ jobs:
       - name: Validate Prisma schema
         run: npx prisma validate
 
-      - name: Apply Prisma migrations
+      - name: Apply PostgreSQL migrations
         run: npx prisma migrate deploy
+
+      - name: Migration status
+        run: npx prisma migrate status
 
       - name: Lint
         run: npm run lint
@@ -54,3 +83,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Production dependency audit
+        run: npm audit --omit=dev
