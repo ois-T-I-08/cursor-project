@@ -5,8 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../domain/build_recommendations/build_recommendation.dart';
 import '../../../domain/character_stats.dart';
 import '../../../providers/build_recommendation_providers.dart';
+import 'guide_source_label.dart';
 
-/// 「動画内推奨目安」カード。公式/理想/最適の断定はしない。
+/// YouTube 由来の目標ステータス目安カード。公式/理想/最適の断定はしない。
 class RecommendedStatsCard extends ConsumerWidget {
   const RecommendedStatsCard({
     super.key,
@@ -90,6 +91,8 @@ class _RecommendationBody extends StatelessWidget {
                 ),
               ],
             ),
+            const GuideSourceLabel(source: GuideInsightSource.youtube),
+            const SizedBox(height: 4),
             Text(
               '攻略動画の画面内で確認された目安です。公式推奨や最適値ではありません。'
               '条件付き効果・編成バフは含みません。',
@@ -97,39 +100,56 @@ class _RecommendationBody extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 8),
-            ...recommendation.targets.map((target) {
-              final current = currentStats[target.stat] ?? 0;
-              final displayCurrent = percentStatKeys.contains(target.stat)
-                  ? current * 100
-                  : current;
-              final verdict = compareStatToTarget(
-                current: displayCurrent,
-                target: target,
-              );
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${statLabels[target.stat] ?? target.stat.name}'
-                        '${_rangeLabel(target)}',
-                        style: theme.textTheme.bodyMedium,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      _verdictLabel(verdict),
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: _verdictColor(theme, verdict),
-                      ),
-                    ),
-                  ],
+            if (recommendation.freshnessCaption != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                recommendation.freshnessCaption!,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-              );
-            }),
+              ),
+            ],
+            const SizedBox(height: 8),
+            if (recommendation.targets.isEmpty)
+              Text(
+                '目標ステータス情報がありません。',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ...recommendation.targets.map((target) {
+                final current = currentStats[target.stat] ?? 0;
+                final displayCurrent = percentStatKeys.contains(target.stat)
+                    ? current * 100
+                    : current;
+                final verdict = compareStatToTarget(
+                  current: displayCurrent,
+                  target: target,
+                );
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${statLabels[target.stat] ?? target.stat.name}'
+                          '${_rangeLabel(target)}',
+                          style: theme.textTheme.bodyMedium,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        _verdictLabel(verdict),
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: _verdictColor(theme, verdict),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
             const SizedBox(height: 8),
             Text('根拠動画', style: theme.textTheme.labelMedium),
             ...recommendation.sources.map(

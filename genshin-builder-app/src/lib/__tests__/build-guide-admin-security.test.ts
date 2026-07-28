@@ -35,13 +35,12 @@ describe("build-guide admin security", () => {
 
   it("rate limits separately from other scopes", () => {
     const value = request("Bearer guide-secret", "1.2.3.4");
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 120; i++) {
       expect(allowBuildGuideAdminRequest(value, 1_000)).toBe(true);
     }
     expect(allowBuildGuideAdminRequest(value, 1_000)).toBe(false);
   });
 });
-
 function request(authorization: string | null, ip = "9.9.9.9"): Request {
   const headers = new Headers();
   if (authorization) headers.set("authorization", authorization);

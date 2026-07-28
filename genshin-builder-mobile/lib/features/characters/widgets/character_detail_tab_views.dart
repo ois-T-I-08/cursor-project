@@ -16,9 +16,10 @@ import 'artifact_completion_panel.dart';
 import 'artifact_score_summary_card.dart';
 import 'character_detail_bookmark_actions.dart';
 import 'character_level_stats_panel.dart';
-import 'character_recommended_artifact_sets_panel.dart';
+import 'character_artifact_insights_section.dart';
 import 'character_relics_section.dart';
 import 'character_talent_sections_list.dart';
+import 'character_weapon_insights_section.dart';
 import 'simulated_stats_section.dart';
 import 'skill_details_section.dart';
 import 'weapon_detail_sheet.dart';
@@ -212,6 +213,11 @@ class CharacterDetailTabViews {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        CharacterWeaponInsightsSection(
+          characterId: characterId,
+          weapons: weapons,
+        ),
+        const SizedBox(height: 24),
         WeaponMaterialsSection(
           showTitle: true,
           weapons: weapons,
@@ -283,8 +289,9 @@ class CharacterDetailTabViews {
           ),
         ),
         const SizedBox(height: 16),
-        CharacterRecommendedArtifactSetsPanel(characterId: characterId),
+        CharacterArtifactInsightsSection(characterId: characterId),
         CharacterRelicsSection(
+          characterId: characterId,
           artifacts: artifacts,
           scoreType: artifactScoreType,
           resolvedScoreType: resolvedArtifactScoreType,
@@ -339,7 +346,7 @@ class CharacterDetailTabViews {
           children: [
             Expanded(
               child: Text(
-                '想定ステータス',
+                'ステータス',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),

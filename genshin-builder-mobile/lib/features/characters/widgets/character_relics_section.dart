@@ -12,6 +12,7 @@ import 'artifact_detail_sheet.dart';
 class CharacterRelicsSection extends StatelessWidget {
   const CharacterRelicsSection({
     super.key,
+    required this.characterId,
     required this.artifacts,
     required this.scoreType,
     this.resolvedScoreType,
@@ -21,6 +22,7 @@ class CharacterRelicsSection extends StatelessWidget {
     required this.onChanged,
   });
 
+  final String characterId;
   final ArtifactState artifacts;
   final ArtifactScoreType scoreType;
   final ArtifactScoreType? resolvedScoreType;
@@ -83,6 +85,7 @@ class CharacterRelicsSection extends StatelessWidget {
                   _updateSubstat(slot, index, stat, value),
               onLongPressDetail: () => showArtifactDetailSheet(
                 context: context,
+                characterId: characterId,
                 slot: slot,
                 piece: piece,
                 scoreType: scoreType,

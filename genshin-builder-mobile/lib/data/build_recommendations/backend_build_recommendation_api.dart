@@ -123,6 +123,24 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
     );
   }
 
+  // 正式 recommendedStats を targets へも反映（targets が空のとき優先）
+  if (targets.isEmpty) {
+    for (final item in _list(json['recommendedStats'], maxLength: 20)) {
+      final map = _object(item);
+      final stat = parseGuideStatKey(_string(map['stat']));
+      if (stat == null) continue;
+      targets.add(
+        BuildStatTarget(
+          stat: stat,
+          recommended: _optionalDouble(map['recommended']),
+          min: _optionalDouble(map['minimum'] ?? map['min']),
+          max: _optionalDouble(map['maximum'] ?? map['max']),
+          unit: map['unit'] is String ? map['unit'] as String : null,
+        ),
+      );
+    }
+  }
+
   final priority = <StatKey>[];
   for (final item in _list(json['substatPriority'], maxLength: 10)) {
     final raw = item is String ? item : null;
@@ -136,14 +154,30 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
     final map = _object(item);
     sources.add(
       BuildRecommendationSource(
+        id: _nullableString(map['id']),
         videoId: _string(map['videoId']),
-        title: _string(map['title']),
-        channelTitle: _string(map['channelTitle']),
+        title: _string(map['title'] ?? map['videoTitle']),
+        channelTitle: _string(map['channelTitle'] ?? map['channelName']),
         sourceUrl: _string(map['sourceUrl']),
         publishedAt: _optionalDate(map['publishedAt']),
+        channelId: map['channelId'] is String
+            ? (map['channelId'] as String).trim()
+            : null,
+        reviewedAt: _optionalDate(map['reviewedAt']),
+        gameVersion: map['gameVersion'] is String
+            ? (map['gameVersion'] as String).trim()
+            : null,
       ),
     );
   }
+  final citationByVideoId = <String, GuideCitation>{
+    for (final s in sources)
+      if (s.videoId.isNotEmpty) s.videoId: s.toCitation(),
+  };
+  final citationById = <String, GuideCitation>{
+    for (final s in sources)
+      if (s.id != null && s.id!.isNotEmpty) s.id!: s.toCitation(),
+  };
 
   final evidence = <BuildRecommendationEvidence>[];
   for (final item in _list(json['evidence'], maxLength: 40)) {
@@ -170,10 +204,129 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
     if (item is String && item.trim().isNotEmpty) caveats.add(item.trim());
   }
 
+  final mainStats = <GuideMainStatRecommendation>[];
+  for (final item in _list(json['mainStats'], maxLength: 6)) {
+    final map = _object(item);
+    final slot = _parseArtifactSlot(_string(map['slot']));
+    if (slot == null) continue;
+    final stats = <String>[];
+    for (final raw in _list(map['primaryStats'], maxLength: 4)) {
+      if (raw is String && raw.trim().isNotEmpty) stats.add(raw.trim());
+    }
+    for (final raw in _list(map['alternativeStats'], maxLength: 4)) {
+      if (raw is String && raw.trim().isNotEmpty) stats.add(raw.trim());
+    }
+    if (stats.isEmpty) {
+      for (final raw in _list(map['stats'], maxLength: 6)) {
+        if (raw is String && raw.trim().isNotEmpty) stats.add(raw.trim());
+      }
+    }
+    if (stats.isEmpty) continue;
+    mainStats.add(
+      GuideMainStatRecommendation(
+        slot: slot,
+        candidates: stats,
+        condition: map['condition'] is String
+            ? (map['condition'] as String).trim()
+            : null,
+        citation: _resolveCitation(
+          map['citationId'] ?? map['source'] ?? map['citation'],
+          citationById,
+          citationByVideoId,
+        ),
+      ),
+    );
+  }
+
+  final weapons = <GuideWeaponRecommendation>[];
+  final weaponList = json['weapons'] ?? json['weaponRecommendations'];
+  for (final item in _list(weaponList, maxLength: 12)) {
+    final map = _object(item);
+    final weaponId = _nullableString(map['weaponId'] ?? map['id']);
+    final displayName = _nullableString(map['displayName'] ?? map['name']);
+    if ((weaponId == null || weaponId.isEmpty) &&
+        (displayName == null || displayName.isEmpty)) {
+      continue;
+    }
+    final conditions = <String>[];
+    for (final raw in _list(map['conditions'], maxLength: 8)) {
+      if (raw is String && raw.trim().isNotEmpty) {
+        conditions.add(raw.trim());
+      }
+    }
+    final originRaw = _nullableString(map['dataOrigin']);
+    final dataOrigin = originRaw == 'legacy_preference'
+        ? GuideWeaponDataOrigin.legacyPreference
+        : GuideWeaponDataOrigin.structured;
+    weapons.add(
+      GuideWeaponRecommendation(
+        weaponId: weaponId,
+        displayName: displayName,
+        rank: _optionalInt(map['rank']),
+        recommendationLevel:
+            parseGuideRecommendationLevel(_nullableString(map['recommendationLevel'])),
+        reason: _nullableString(map['reason']),
+        conditions: conditions,
+        role: _nullableString(map['role']),
+        citation: _resolveCitation(
+          map['citationId'] ?? map['source'] ?? map['citation'],
+          citationById,
+          citationByVideoId,
+        ),
+        dataOrigin: dataOrigin,
+      ),
+    );
+  }
+
+  final artifactRecommendations = <GuideArtifactRecommendation>[];
+  final artifactList =
+      json['artifactRecommendations'] ?? json['artifactSets'];
+  for (final item in _list(artifactList, maxLength: 12)) {
+    final map = _object(item);
+    final parts = <GuideArtifactSetPart>[];
+    for (final rawPart in _list(map['sets'], maxLength: 4)) {
+      final partMap = _object(rawPart);
+      final setId = _nullableString(partMap['setId'] ?? partMap['id']);
+      final pieces = _optionalInt(partMap['pieces']) ?? 0;
+      if (setId == null || setId.isEmpty || pieces <= 0) continue;
+      parts.add(GuideArtifactSetPart(setId: setId, pieces: pieces));
+    }
+    if (parts.isEmpty) continue;
+    final conditions = <String>[];
+    for (final raw in _list(map['conditions'], maxLength: 8)) {
+      if (raw is String && raw.trim().isNotEmpty) {
+        conditions.add(raw.trim());
+      }
+    }
+    artifactRecommendations.add(
+      GuideArtifactRecommendation(
+        sets: parts,
+        rank: _optionalInt(map['rank']),
+        recommendationLevel:
+            parseGuideRecommendationLevel(_nullableString(map['recommendationLevel'])),
+        reason: _nullableString(map['reason']),
+        conditions: conditions,
+        role: _nullableString(map['role']),
+        citation: _resolveCitation(
+          map['citationId'] ?? map['source'] ?? map['citation'],
+          citationById,
+          citationByVideoId,
+        ),
+        isAlternative: map['isAlternative'] == true,
+      ),
+    );
+  }
+
   final originRaw = _string(json['origin']);
   final origin = originRaw == 'merged'
       ? BuildRecommendationOrigin.merged
       : BuildRecommendationOrigin.singleVideo;
+
+  final priorityRaw = context['investmentPriority'] is String
+      ? context['investmentPriority'] as String
+      : (json['investmentPriority'] is String
+          ? json['investmentPriority'] as String
+          : null);
 
   return CharacterBuildRecommendation(
     characterId: _string(json['characterId']),
@@ -185,13 +338,88 @@ CharacterBuildRecommendation parseBuildRecommendation(Map<String, Object?> json)
     caveats: caveats,
     sources: sources,
     evidence: evidence,
+    mainStats: mainStats,
+    weapons: weapons,
+    artifactRecommendations: artifactRecommendations,
     lastVerifiedAt: _optionalDate(json['lastVerifiedAt']),
     publishedAt: _optionalDate(json['publishedAt']),
     role: context['role'] is String ? context['role'] as String : null,
     teamArchetype: context['teamArchetype'] is String
         ? context['teamArchetype'] as String
         : null,
+    weaponPreference: context['weaponPreference'] is String
+        ? context['weaponPreference'] as String
+        : null,
+    notes: context['notes'] is String ? context['notes'] as String : null,
+    investmentPriority: parseInvestmentPriority(priorityRaw),
+    gameVersion: context['gameVersion'] is String
+        ? context['gameVersion'] as String
+        : (json['gameVersion'] is String ? json['gameVersion'] as String : null),
   );
+}
+
+GuideArtifactSlot? _parseArtifactSlot(String raw) {
+  switch (raw) {
+    case 'sands':
+      return GuideArtifactSlot.sands;
+    case 'goblet':
+      return GuideArtifactSlot.goblet;
+    case 'circlet':
+      return GuideArtifactSlot.circlet;
+    default:
+      return null;
+  }
+}
+
+GuideCitation? _resolveCitation(
+  Object? raw,
+  Map<String, GuideCitation> byId,
+  Map<String, GuideCitation> byVideoId,
+) {
+  if (raw is String) {
+    final key = raw.trim();
+    if (key.isEmpty) return null;
+    return byId[key] ?? byVideoId[key] ?? GuideCitation(videoId: key);
+  }
+  final map = _object(raw);
+  if (map.isEmpty) return null;
+  final citationId = _nullableString(map['citationId'] ?? map['id']);
+  if (citationId != null && byId.containsKey(citationId)) {
+    return byId[citationId];
+  }
+  final videoId = _nullableString(map['videoId']);
+  if (videoId != null && byVideoId.containsKey(videoId)) {
+    final base = byVideoId[videoId]!;
+    return GuideCitation(
+      videoId: base.videoId,
+      videoTitle: _nullableString(map['videoTitle']) ?? base.videoTitle,
+      channelId: _nullableString(map['channelId']) ?? base.channelId,
+      channelName: _nullableString(map['channelName'] ?? map['channelTitle']) ??
+          base.channelName,
+      publishedAt: _optionalDate(map['publishedAt']) ?? base.publishedAt,
+      reviewedAt: _optionalDate(map['reviewedAt']) ?? base.reviewedAt,
+      gameVersion: _nullableString(map['gameVersion']) ?? base.gameVersion,
+      sourceUrl: _nullableString(map['sourceUrl']) ?? base.sourceUrl,
+    );
+  }
+  final citation = GuideCitation(
+    videoId: videoId,
+    videoTitle: _nullableString(map['videoTitle'] ?? map['title']),
+    channelId: _nullableString(map['channelId']),
+    channelName: _nullableString(map['channelName'] ?? map['channelTitle']),
+    publishedAt: _optionalDate(map['publishedAt']),
+    reviewedAt: _optionalDate(map['reviewedAt']),
+    gameVersion: _nullableString(map['gameVersion']),
+    sourceUrl: _nullableString(map['sourceUrl']),
+  );
+  return citation.hasAnyField ? citation : null;
+}
+
+String? _nullableString(Object? value) {
+  if (value is! String) return null;
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) return null;
+  return trimmed.length > 500 ? trimmed.substring(0, 500) : trimmed;
 }
 
 Map<String, Object?> _decodeObject(List<int> bytes) {

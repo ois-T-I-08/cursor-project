@@ -44,6 +44,7 @@ const playlistItemsSchema = z.object({
             title: z.string().optional(),
             description: z.string().optional(),
             publishedAt: z.string().optional(),
+            channelId: z.string().optional(),
             thumbnails: z
               .object({
                 default: z.object({ url: z.string() }).optional(),
@@ -53,6 +54,21 @@ const playlistItemsSchema = z.object({
               .optional(),
           })
           .optional(),
+      }),
+    )
+    .default([]),
+});
+
+const playlistsListSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        snippet: z.object({
+          title: z.string(),
+          channelId: z.string(),
+          description: z.string().optional().default(""),
+        }),
       }),
     )
     .default([]),
@@ -125,6 +141,41 @@ export interface YoutubeClientOptions {
   apiKey?: string;
 }
 
+export type YoutubePlaylistInfo = {
+  playlistId: string;
+  title: string;
+  channelId: string;
+  description: string;
+};
+
+/**
+ * 管理画面入力からプレイリスト ID を取り出す。
+ * 対応例: PLxxx / UUxxx / playlist?list= / watch?list=
+ */
+export function parseYoutubePlaylistId(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (/^[\w-]{10,80}$/.test(trimmed) && !trimmed.includes("://")) {
+    return trimmed;
+  }
+  try {
+    const url = new URL(trimmed);
+    if (
+      url.hostname !== "www.youtube.com" &&
+      url.hostname !== "youtube.com" &&
+      url.hostname !== "m.youtube.com" &&
+      url.hostname !== "music.youtube.com"
+    ) {
+      return null;
+    }
+    const list = url.searchParams.get("list")?.trim();
+    if (list && /^[\w-]{10,80}$/.test(list)) return list;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 export class YoutubeGuideClient {
   private readonly fetchImpl: typeof fetch;
   private readonly apiKey: string | undefined;
@@ -164,8 +215,27 @@ export class YoutubeGuideClient {
     };
   }
 
-  async listUploadVideoIds(
-    uploadsPlaylistId: string,
+  async fetchPlaylist(playlistId: string): Promise<YoutubePlaylistInfo> {
+    this.assertEnabled();
+    const data = await this.getJson("playlists", {
+      part: "snippet",
+      id: playlistId,
+      maxResults: "1",
+    });
+    const parsed = playlistsListSchema.parse(data);
+    const item = parsed.items[0];
+    if (!item) throw new YoutubeError("playlistNotFound");
+    return {
+      playlistId: item.id,
+      title: item.snippet.title,
+      channelId: item.snippet.channelId,
+      description: item.snippet.description ?? "",
+    };
+  }
+
+  /** 任意プレイリスト（uploads / PL…）の動画 ID 一覧 */
+  async listPlaylistVideoIds(
+    playlistId: string,
     options: { maxPages?: number } = {},
   ): Promise<string[]> {
     this.assertEnabled();
@@ -175,7 +245,7 @@ export class YoutubeGuideClient {
     for (let page = 0; page < maxPages; page++) {
       const data = await this.getJson("playlistItems", {
         part: "contentDetails,snippet",
-        playlistId: uploadsPlaylistId,
+        playlistId,
         maxResults: "50",
         ...(pageToken ? { pageToken } : {}),
       });
@@ -187,6 +257,14 @@ export class YoutubeGuideClient {
       if (!pageToken) break;
     }
     return [...new Set(ids)];
+  }
+
+  /** @deprecated 互換: listPlaylistVideoIds を使う */
+  async listUploadVideoIds(
+    uploadsPlaylistId: string,
+    options: { maxPages?: number } = {},
+  ): Promise<string[]> {
+    return this.listPlaylistVideoIds(uploadsPlaylistId, options);
   }
 
   async fetchVideos(videoIds: string[]): Promise<YoutubeVideoInfo[]> {
@@ -246,7 +324,7 @@ export class YoutubeGuideClient {
   }
 
   private async getJson(
-    resource: "channels" | "playlistItems" | "videos",
+    resource: "channels" | "playlistItems" | "videos" | "playlists",
     params: Record<string, string>,
   ): Promise<unknown> {
     if (!this.apiKey) throw new YoutubeError("youtubeNotConfigured");

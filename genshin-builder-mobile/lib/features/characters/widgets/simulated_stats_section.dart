@@ -10,7 +10,7 @@ import '../../../domain/models/character_build_snapshot.dart';
 import '../../../providers/character_detail_providers.dart';
 import 'recommended_stats_card.dart';
 
-/// 想定ステータス: 現在（取得情報基準）と変更後（編集状態）を比較表示する
+/// ステータスタブ: 現在（取得情報基準）と変更後（編集状態）を比較表示する
 class SimulatedStatsSection extends ConsumerWidget {
   const SimulatedStatsSection({
     super.key,
@@ -95,7 +95,7 @@ class SimulatedStatsSection extends ConsumerWidget {
       children: [
         _BuildSummaryRow(label: '現在（取得情報）', snapshot: baseline),
         const SizedBox(height: 4),
-        _BuildSummaryRow(label: '変更後（想定）', snapshot: simulated),
+        _BuildSummaryRow(label: '変更後（編集）', snapshot: simulated),
         const SizedBox(height: 12),
         Card(
           margin: EdgeInsets.zero,
@@ -119,7 +119,7 @@ class SimulatedStatsSection extends ConsumerWidget {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        '想定',
+                        '編集後',
                         textAlign: TextAlign.end,
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,

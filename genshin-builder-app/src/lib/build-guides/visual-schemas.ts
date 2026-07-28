@@ -148,24 +148,101 @@ export type VideoVisualAnalysisResult = z.infer<typeof videoVisualAnalysisResult
 export type VideoVisualEvidence = z.infer<typeof videoVisualEvidenceSchema>;
 export type VisualStatValue = z.infer<typeof visualStatValueSchema>;
 
+const recommendationLevelSchema = z.enum([
+  "strongly_recommended",
+  "recommended",
+  "situational",
+  "alternative",
+]);
+
+const publicSourceSchema = z.strictObject({
+  id: z.string().min(1).max(64),
+  videoId: z.string(),
+  title: z.string(),
+  channelId: z.string().max(64).nullable().optional(),
+  channelTitle: z.string(),
+  sourceUrl: z.string().url(),
+  publishedAt: z.string().datetime().nullable().optional(),
+  reviewedAt: z.string().datetime().nullable().optional(),
+  gameVersion: z.string().max(32).nullable().optional(),
+});
+
+const publicWeaponSchema = z.strictObject({
+  weaponId: z.string().max(64).nullable().optional(),
+  displayName: z.string().max(64).nullable().optional(),
+  rank: z.number().int().positive().nullable().optional(),
+  recommendationLevel: recommendationLevelSchema.nullable().optional(),
+  reason: z.string().max(500).nullable().optional(),
+  conditions: z.array(z.string().max(200)).max(8),
+  role: z.string().max(64).nullable().optional(),
+  citationId: z.string().max(64).nullable().optional(),
+  dataOrigin: z.enum(["structured", "legacy_preference"]),
+});
+
+const publicArtifactRecommendationSchema = z.strictObject({
+  sets: z
+    .array(
+      z.strictObject({
+        setId: z.string().min(1).max(64),
+        pieces: z.number().int().positive().max(5),
+      }),
+    )
+    .min(1)
+    .max(4),
+  rank: z.number().int().positive().nullable().optional(),
+  recommendationLevel: recommendationLevelSchema.nullable().optional(),
+  reason: z.string().max(500).nullable().optional(),
+  conditions: z.array(z.string().max(200)).max(8),
+  role: z.string().max(64).nullable().optional(),
+  isAlternative: z.boolean(),
+  citationId: z.string().max(64).nullable().optional(),
+});
+
+const publicMainStatSchema = z.strictObject({
+  slot: z.enum(["sands", "goblet", "circlet"]),
+  primaryStats: z.array(z.string().max(64)).min(1).max(4),
+  alternativeStats: z.array(z.string().max(64)).max(4),
+  /** モバイル互換: primary + alternative */
+  stats: z.array(z.string().max(64)).min(1).max(6),
+  condition: z.string().max(500).nullable().optional(),
+  citationId: z.string().max(64).nullable().optional(),
+});
+
+const publicRecommendedStatSchema = z.strictObject({
+  stat: guideStatKeySchema,
+  valueType: z.enum(["minimum", "maximum", "range", "target", "ratio"]),
+  minimum: z.number().finite().nullable().optional(),
+  maximum: z.number().finite().nullable().optional(),
+  recommended: z.number().finite().nullable().optional(),
+  unit: z.enum(["flat", "percent"]).nullable().optional(),
+  condition: z.string().max(500).nullable().optional(),
+  citationId: z.string().max(64).nullable().optional(),
+  leftStat: guideStatKeySchema.nullable().optional(),
+  leftValue: z.number().finite().nullable().optional(),
+  rightStat: guideStatKeySchema.nullable().optional(),
+  rightValue: z.number().finite().nullable().optional(),
+});
+
 export const publicBuildRecommendationSchema = z.strictObject({
+  schemaVersion: z.literal(1),
   characterId: z.string(),
   label: z.literal("動画内推奨目安"),
   status: z.literal("published"),
   origin: z.enum(["single_video", "merged"]),
   overallConfidence: z.number().min(0).max(1),
+  investmentPriority: z.enum(["high", "medium", "low"]).optional(),
+  gameVersion: z.string().max(32).optional(),
   context: z.strictObject({
     role: z.string().max(64).optional(),
     teamArchetype: z.string().max(64).optional(),
     weaponPreference: z.string().max(128).optional(),
     notes: z.string().max(500).optional(),
   }),
-  mainStats: z.array(
-    z.strictObject({
-      slot: z.enum(["sands", "goblet", "circlet"]),
-      stats: z.array(z.string().max(64)).max(6),
-    }),
-  ),
+  weapons: z.array(publicWeaponSchema).max(12),
+  artifactRecommendations: z.array(publicArtifactRecommendationSchema).max(12),
+  mainStats: z.array(publicMainStatSchema).max(6),
+  recommendedStats: z.array(publicRecommendedStatSchema).max(20),
+  /** 既存クライアント互換 */
   substatPriority: z.array(guideStatKeySchema),
   targets: z.array(
     z.strictObject({
@@ -179,15 +256,8 @@ export const publicBuildRecommendationSchema = z.strictObject({
   caveats: z.array(z.string()),
   lastVerifiedAt: z.string().datetime().nullable(),
   publishedAt: z.string().datetime().nullable(),
-  sources: z.array(
-    z.strictObject({
-      videoId: z.string(),
-      title: z.string(),
-      channelTitle: z.string(),
-      sourceUrl: z.string().url(),
-      publishedAt: z.string().datetime().nullable().optional(),
-    }),
-  ),
+  updatedAt: z.string().datetime().nullable(),
+  sources: z.array(publicSourceSchema),
   evidence: z.array(
     z.strictObject({
       fieldPath: z.string(),

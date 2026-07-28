@@ -42,7 +42,55 @@ export function buildVisualUserPrompt(input: {
     targetCharacterIds: input.targetCharacterIds,
     durationSeconds: input.durationSeconds,
     requestedRanges: input.requestedRanges ?? [],
-    requiredJsonShape:
-      "videoVisualAnalysisResult with evidences[].statValues[].purpose classification",
+    requiredJsonShape: {
+      videoId: "string",
+      relevant: "boolean",
+      detectedCharacterIds: ["amber-id-slug"],
+      evidences: [
+        {
+          videoId: "string",
+          startSeconds: 0,
+          endSeconds: 10,
+          evidenceType:
+            "recommendation_table|build_summary_slide|character_status_screen|artifact_screen|weapon_screen|comparison_table|on_screen_text|unreadable|other",
+          targetCharacterIds: [],
+          visibleTexts: [
+            { text: "string", confidence: 0.9, category: "stat_value" },
+          ],
+          statValues: [
+            {
+              statKey:
+                "hp|atk|def|em|critRate|critDmg|er|healing|elemDmg|physDmg",
+              unit: "flat|percent",
+              minimum: null,
+              recommended: 150,
+              maximum: null,
+              purpose:
+                "explicit_recommendation|minimum_requirement|comfortable_target|recommended_range|example_build|creator_current_build|comparison_build|damage_test_build|before_after_comparison|unknown",
+              exactVisibleText: "ER 150%",
+              condition: "",
+              confidence: 0.9,
+            },
+          ],
+          recommendedMainStats: null,
+          statPriority: [],
+          weaponMentions: [],
+          artifactSetMentions: [],
+          visualSummary: "string",
+          confidence: 0.9,
+          readable: true,
+          warnings: [],
+        },
+      ],
+      unresolvedEntities: [],
+      analysisSummary: "string",
+    },
+    rules: [
+      "Use only the enums listed above.",
+      "Use numeric seconds for timestamps (not mm:ss strings).",
+      "Use null for missing numbers.",
+      "Do not invent character ids; use targetCharacterIds slugs only when clearly on screen.",
+      "Return JSON only.",
+    ],
   });
 }

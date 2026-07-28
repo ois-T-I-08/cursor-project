@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { normalizePublicBuildRecommendation } from "../build-guides/public-recommendation-normalize";
 import { publicBuildRecommendationSchema } from "../build-guides/visual-schemas";
 
 const forbidden = [
@@ -10,14 +11,16 @@ const forbidden = [
   "DEEPSEEK_API_KEY",
   "system_instruction",
   "transcript",
+  "adminWorkingDraft",
+  "pendingMentions",
+  "structuredReviewStatus",
+  "SECRET_ADMIN",
 ];
 
 describe("public build-recommendation leak guards (visual)", () => {
   it("accepts published visual DTO and rejects internal fields", () => {
-    const dto = publicBuildRecommendationSchema.parse({
+    const { data } = normalizePublicBuildRecommendation({
       characterId: "hu-tao",
-      label: "動画内推奨目安",
-      status: "published",
       origin: "single_video",
       overallConfidence: 0.7,
       context: {},
@@ -27,6 +30,17 @@ describe("public build-recommendation leak guards (visual)", () => {
       caveats: ["動画画面内で確認"],
       lastVerifiedAt: "2026-07-15T00:00:00.000Z",
       publishedAt: "2026-07-15T00:00:00.000Z",
+      updatedAt: "2026-07-15T00:00:00.000Z",
+      structured: {
+        adminWorkingDraft: {
+          adminNotes: "SECRET_ADMIN",
+          structured: {
+            weapons: [{ weaponId: "x", dataOrigin: "evidence_mention" }],
+          },
+        },
+        pendingMentions: { weapons: [{ weaponId: "x" }], artifactSets: [] },
+        structuredReviewStatus: "review_required",
+      },
       sources: [
         {
           videoId: "abcdefghijk",
@@ -45,10 +59,15 @@ describe("public build-recommendation leak guards (visual)", () => {
         },
       ],
     });
+
+    const dto = publicBuildRecommendationSchema.parse(data);
     const serialized = JSON.stringify(dto);
     for (const key of forbidden) {
       expect(serialized).not.toContain(key);
     }
+    expect(dto.schemaVersion).toBe(1);
+    expect(dto.weapons).toEqual([]);
+    expect(dto.artifactRecommendations).toEqual([]);
     expect(() =>
       publicBuildRecommendationSchema.parse({ ...dto, rawAiOutput: "x" }),
     ).toThrow();

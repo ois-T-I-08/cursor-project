@@ -9,11 +9,31 @@ import {
 } from "./deepseek-visual-merge";
 import { geminiVideoCostHints } from "./gemini-settings";
 import {
+  buildStructuredPayloadFromEvidences,
+  normalizePublicBuildRecommendation,
+} from "./public-recommendation-normalize";
+import {
+  ADMIN_WORKING_DRAFT_KEY,
+  readAdminWorkingDraft,
+  stripAdminWorkingDraft,
+} from "./guide-admin-form";
+import {
+  listGuideMasterOptions,
+  previewNormalizedRecommendation,
+  validateStructuredDraft,
+  validateStructuredForPublish,
+} from "./structured-admin";
+import { fetchArtifactSets } from "@/lib/api/amber-details";
+import {
   permissionStatusSchema,
   publicBuildRecommendationSchema,
   type PublicBuildRecommendation,
 } from "./visual-schemas";
-import { YoutubeGuideClient, YoutubeError } from "./youtube-client";
+import { YoutubeGuideClient, YoutubeError, parseYoutubePlaylistId } from "./youtube-client";
+import {
+  GENSIN_VIDEO_TITLE_MARKER,
+  isGenshinTitledVideo,
+} from "./genshin-video-title";
 import { GUIDE_GAME_DATA_VERSION } from "./versions";
 
 async function audit(action: string, status: string, detail: unknown): Promise<void> {
@@ -39,7 +59,8 @@ export async function getGuideAdminOverview() {
     await Promise.all([
       prisma.guideChannel.findMany({ orderBy: { updatedAt: "desc" }, take: 100 }),
       prisma.guideVideo.findMany({
-        orderBy: { updatedAt: "desc" },
+        where: { title: { contains: GENSIN_VIDEO_TITLE_MARKER } },
+        orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
         take: 200,
         include: { channel: { select: { title: true, permissionStatus: true } } },
       }),
@@ -56,36 +77,90 @@ export async function getGuideAdminOverview() {
         orderBy: { updatedAt: "desc" },
         take: 100,
         include: {
-          contributions: true,
-          revisions: { orderBy: { createdAt: "desc" }, take: 5 },
+          contributions: {
+            include: { video: { include: { channel: true } } },
+          },
+          revisions: { orderBy: { createdAt: "desc" }, take: 20 },
         },
       }),
       prisma.guideAdminAuditLog.findMany({ orderBy: { createdAt: "desc" }, take: 40 }),
     ]);
 
+  const evidenceMentions = evidences.map((row) => {
+    const payload = safeJson<{
+      weaponMentions?: unknown[];
+      artifactSetMentions?: unknown[];
+    }>(row.normalizedPayload, {});
+    return {
+      id: row.id,
+      videoId: row.videoId,
+      startSeconds: row.startSeconds,
+      endSeconds: row.endSeconds,
+      evidenceType: row.evidenceType,
+      exactVisibleText: row.exactVisibleText,
+      confidence: row.confidence,
+      validationStatus: row.validationStatus,
+      approvalStatus: row.approvalStatus,
+      exclusionCode: row.exclusionCode,
+      purposeSummary: row.purposeSummary,
+      weaponMentions: payload.weaponMentions ?? [],
+      artifactSetMentions: payload.artifactSetMentions ?? [],
+    };
+  });
+
   return {
     channels,
     videos,
     jobs,
-    evidences,
-    recommendations: recommendations.map((row) => ({
-      id: row.id,
-      characterId: row.characterId,
-      status: row.status,
-      origin: row.origin,
-      overallConfidence: row.overallConfidence,
-      notes: row.notes,
-      adminNotes: row.adminNotes,
-      publishedAt: row.publishedAt,
-      lastVerifiedAt: row.lastVerifiedAt,
-      updatedAt: row.updatedAt,
-      context: safeJson(row.contextPayload, {}),
-      mainStats: safeJson(row.mainStatsPayload, []),
-      substatPriority: safeJson(row.priorityPayload, []),
-      targets: safeJson(row.targetsPayload, []),
-      contributions: row.contributions,
-      revisions: row.revisions,
-    })),
+    evidences: evidenceMentions,
+    recommendations: recommendations.map((row) => {
+      const structuredRaw = safeJson<Record<string, unknown>>(row.structuredPayload, {});
+      const working = readAdminWorkingDraft(structuredRaw);
+      const structured = working?.structured
+        ? working.structured
+        : stripAdminWorkingDraft(structuredRaw);
+      return {
+        id: row.id,
+        characterId: row.characterId,
+        status: row.status,
+        origin: row.origin,
+        overallConfidence: row.overallConfidence,
+        notes: row.notes,
+        adminNotes: working?.adminNotes ?? row.adminNotes,
+        publishedAt: row.publishedAt,
+        lastVerifiedAt: row.lastVerifiedAt,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        context: working?.context
+          ? asRecord(working.context)
+          : safeJson(row.contextPayload, {}),
+        mainStats: working?.mainStats ?? safeJson(row.mainStatsPayload, []),
+        substatPriority: working?.priority ?? safeJson(row.priorityPayload, []),
+        targets: working?.targets ?? safeJson(row.targetsPayload, []),
+        structuredPayload: structured,
+        hasUnpublishedDraft: Boolean(working),
+        structuredReviewStatus:
+          typeof structured.structuredReviewStatus === "string"
+            ? structured.structuredReviewStatus
+            : null,
+        pendingMentions: structured.pendingMentions ?? { weapons: [], artifactSets: [] },
+        contributions: row.contributions.map((c) => ({
+          id: c.id,
+          videoId: c.videoId,
+          startSeconds: c.startSeconds,
+          endSeconds: c.endSeconds,
+          exactVisibleText: c.exactVisibleText,
+          contributionRole: c.contributionRole,
+          decision: c.decision,
+          usedInPublishedResult: c.usedInPublishedResult,
+          videoTitle: c.video.title,
+          channelTitle: c.video.channel.title,
+          sourceUrl: c.video.sourceUrl,
+          publishedAt: c.video.publishedAt,
+        })),
+        revisions: row.revisions,
+      };
+    }),
     audits,
     geminiCost: geminiVideoCostHints(),
   };
@@ -180,13 +255,18 @@ export async function syncChannelVideos(input: {
 
   const client = input.client ?? new YoutubeGuideClient();
   const info = await client.fetchChannel(input.channelId);
-  const videoIds = await client.listUploadVideoIds(info.uploadsPlaylistId, {
+  const videoIds = await client.listPlaylistVideoIds(info.uploadsPlaylistId, {
     maxPages: input.maxPages,
   });
   const videos = await client.fetchVideos(videoIds);
   let upserted = 0;
+  let skippedTitle = 0;
   for (const video of videos) {
     if (video.channelId !== input.channelId) continue;
+    if (!isGenshinTitledVideo(video.title)) {
+      skippedTitle += 1;
+      continue;
+    }
     const previous = await prisma.guideVideo.findUnique({
       where: { videoId: video.videoId },
     });
@@ -239,8 +319,146 @@ export async function syncChannelVideos(input: {
       lastFetchedAt: new Date(),
     },
   });
-  await audit("syncChannelVideos", "ok", { channelId: input.channelId, upserted });
-  return { upserted, totalFetched: videos.length };
+  await audit("syncChannelVideos", "ok", {
+    channelId: input.channelId,
+    upserted,
+    skippedTitle,
+    titleMarker: GENSIN_VIDEO_TITLE_MARKER,
+  });
+  return {
+    upserted,
+    totalFetched: videos.length,
+    skippedTitle,
+    titleMarker: GENSIN_VIDEO_TITLE_MARKER,
+  };
+}
+
+/**
+ * 特定プレイリストから動画メタデータを取り込む。
+ * 動画の所属チャンネルが「登録済み・有効・approved_for_processing」の場合のみ upsert。
+ * 未承認チャンネルの動画はスキップ（勝手にチャンネル登録しない）。
+ * タイトルに「【原神】」を含む動画のみ対象。
+ */
+export async function syncPlaylistVideos(input: {
+  playlistId: string;
+  client?: YoutubeGuideClient;
+  maxPages?: number;
+}) {
+  const playlistId = parseYoutubePlaylistId(input.playlistId);
+  if (!playlistId) throw new Error("invalidPlaylistId");
+
+  const client = input.client ?? new YoutubeGuideClient();
+  const playlist = await client.fetchPlaylist(playlistId);
+  const videoIds = await client.listPlaylistVideoIds(playlistId, {
+    maxPages: input.maxPages ?? 5,
+  });
+  const videos = await client.fetchVideos(videoIds);
+
+  const channelIds = [...new Set(videos.map((v) => v.channelId))];
+  const channels = await prisma.guideChannel.findMany({
+    where: { channelId: { in: channelIds } },
+  });
+  const channelById = new Map(channels.map((c) => [c.channelId, c]));
+
+  let upserted = 0;
+  let skippedUnregisteredChannel = 0;
+  let skippedNotApproved = 0;
+  let skippedDisabled = 0;
+  let skippedTitle = 0;
+  const skippedChannelIds = new Set<string>();
+
+  for (const video of videos) {
+    if (!isGenshinTitledVideo(video.title)) {
+      skippedTitle += 1;
+      continue;
+    }
+    const channel = channelById.get(video.channelId);
+    if (!channel) {
+      skippedUnregisteredChannel += 1;
+      skippedChannelIds.add(video.channelId);
+      continue;
+    }
+    if (!channel.enabled) {
+      skippedDisabled += 1;
+      skippedChannelIds.add(video.channelId);
+      continue;
+    }
+    if (channel.permissionStatus !== "approved_for_processing") {
+      skippedNotApproved += 1;
+      skippedChannelIds.add(video.channelId);
+      continue;
+    }
+
+    const previous = await prisma.guideVideo.findUnique({
+      where: { videoId: video.videoId },
+    });
+    await prisma.guideVideo.upsert({
+      where: { videoId: video.videoId },
+      create: {
+        videoId: video.videoId,
+        channelId: video.channelId,
+        title: video.title,
+        description: video.description,
+        publishedAt: video.publishedAt,
+        thumbnailUrl: video.thumbnailUrl,
+        durationSeconds: video.durationSeconds,
+        privacyStatus: video.privacyStatus,
+        metadataHash: video.metadataHash,
+        sourceUrl: video.sourceUrl,
+      },
+      update: {
+        title: video.title,
+        description: video.description,
+        publishedAt: video.publishedAt,
+        thumbnailUrl: video.thumbnailUrl,
+        durationSeconds: video.durationSeconds,
+        privacyStatus: video.privacyStatus,
+        metadataHash: video.metadataHash,
+        sourceUrl: video.sourceUrl,
+      },
+    });
+    if (
+      previous &&
+      previous.privacyStatus === "public" &&
+      video.privacyStatus !== "public"
+    ) {
+      await prisma.characterBuildRecommendation.updateMany({
+        where: {
+          status: "published",
+          contributions: { some: { videoId: video.videoId } },
+        },
+        data: { status: "approved", publishedAt: null },
+      });
+    }
+    upserted += 1;
+  }
+
+  await audit("syncPlaylistVideos", "ok", {
+    playlistId,
+    playlistTitle: playlist.title,
+    upserted,
+    skippedUnregisteredChannel,
+    skippedNotApproved,
+    skippedDisabled,
+    skippedTitle,
+    titleMarker: GENSIN_VIDEO_TITLE_MARKER,
+  });
+
+  return {
+    playlistId,
+    playlistTitle: playlist.title,
+    playlistChannelId: playlist.channelId,
+    totalFetched: videos.length,
+    upserted,
+    skippedUnregisteredChannel,
+    skippedNotApproved,
+    skippedDisabled,
+    skippedTitle,
+    titleMarker: GENSIN_VIDEO_TITLE_MARKER,
+    skippedChannelIds: [...skippedChannelIds],
+    note:
+      "映像解析は自動実行しません。動画モジュールから個別に解析し、承認後に公開してください。タイトルに「【原神】」を含む動画のみ取り込みます。",
+  };
 }
 
 export async function setVisualEvidenceStatus(input: {
@@ -299,13 +517,105 @@ export async function setRecommendationStatus(input: {
     if (existing.status !== "approved" && existing.status !== "published") {
       throw new Error("notApproved");
     }
+
+    // 公開中の作業下書きがあればそれを昇格してから検証・公開する
+  }
+
+  let nextStructuredPayload = existing.structuredPayload;
+  let nextTargetsPayload = existing.targetsPayload;
+  let nextMainStatsPayload = existing.mainStatsPayload;
+  let nextPriorityPayload = existing.priorityPayload;
+  let nextContextPayload = existing.contextPayload;
+  let nextAdminNotes = input.adminNotes ?? existing.adminNotes;
+
+  if (input.status === "published") {
+    const structuredRaw = safeJson<Record<string, unknown>>(existing.structuredPayload, {});
+    const working = readAdminWorkingDraft(structuredRaw);
+    const structured = working?.structured
+      ? stripAdminWorkingDraft(working.structured)
+      : stripAdminWorkingDraft(structuredRaw);
+    if (working?.targets != null) {
+      nextTargetsPayload = JSON.stringify(working.targets);
+    }
+    if (working?.mainStats != null) {
+      nextMainStatsPayload = JSON.stringify(working.mainStats);
+    }
+    if (working?.priority != null) {
+      nextPriorityPayload = JSON.stringify(working.priority);
+    }
+    if (working?.context != null) {
+      nextContextPayload = JSON.stringify(working.context);
+    }
+    if (working?.adminNotes != null) {
+      nextAdminNotes = working.adminNotes;
+    }
+    structured.structuredReviewStatus = "admin_confirmed";
+    structured.publishedContentUpdatedAt = new Date().toISOString();
+    nextStructuredPayload = JSON.stringify(structured);
+
+    const weaponRows = await prisma.weapon.findMany({ select: { id: true } });
+    const knownWeaponIds = new Set(weaponRows.map((w) => w.id));
+    const artifactSets = await fetchArtifactSets().catch(() => []);
+    const knownSetIds = new Set(artifactSets.map((s) => s.id));
+    const publishIssues = validateStructuredForPublish({
+      characterId: existing.characterId,
+      structured,
+      mainStats: safeJson(nextMainStatsPayload, []),
+      targets: safeJson(nextTargetsPayload, []),
+      sources: existing.contributions.map((c, index) => ({
+        id: `source-${c.videoId || index}`,
+        videoId: c.videoId,
+      })),
+      knownWeaponIds,
+      knownSetIds,
+    });
+    const fatal = publishIssues.filter((i) => i.level === "error");
+    if (fatal.length > 0) {
+      // DB 更新前に拒否 → 旧公開スナップショット維持
+      throw new Error(`structuredPublishBlocked:${fatal.map((f) => f.message).join(" | ")}`);
+    }
+  }
+
+  if (input.status === "approved") {
+    const structured = stripAdminWorkingDraft(
+      safeJson<Record<string, unknown>>(
+        typeof nextStructuredPayload === "string"
+          ? nextStructuredPayload
+          : existing.structuredPayload,
+        {},
+      ),
+    );
+    // 承認は作業下書き側を優先
+    const working = readAdminWorkingDraft(
+      safeJson(existing.structuredPayload, {}),
+    );
+    const base = working?.structured
+      ? stripAdminWorkingDraft(working.structured)
+      : structured;
+    base.structuredReviewStatus = "admin_confirmed";
+    if (working) {
+      nextStructuredPayload = JSON.stringify({
+        ...stripAdminWorkingDraft(safeJson(existing.structuredPayload, {})),
+        [ADMIN_WORKING_DRAFT_KEY]: {
+          ...working,
+          structured: base,
+        },
+      });
+    } else {
+      nextStructuredPayload = JSON.stringify(base);
+    }
   }
 
   const row = await prisma.characterBuildRecommendation.update({
     where: { id: input.recommendationId },
     data: {
       status: input.status,
-      adminNotes: input.adminNotes ?? existing.adminNotes,
+      adminNotes: nextAdminNotes,
+      structuredPayload: nextStructuredPayload,
+      targetsPayload: nextTargetsPayload,
+      mainStatsPayload: nextMainStatsPayload,
+      priorityPayload: nextPriorityPayload,
+      contextPayload: nextContextPayload,
       publishedAt: input.status === "published" ? new Date() : existing.publishedAt,
       lastVerifiedAt:
         input.status === "approved" || input.status === "published"
@@ -345,41 +655,364 @@ export async function setRecommendationStatus(input: {
   return row;
 }
 
+export async function unpublishRecommendation(recommendationId: string) {
+  const existing = await prisma.characterBuildRecommendation.findUnique({
+    where: { id: recommendationId },
+  });
+  if (!existing) throw new Error("recommendationNotFound");
+  const row = await prisma.characterBuildRecommendation.update({
+    where: { id: recommendationId },
+    data: { status: "approved", publishedAt: null },
+  });
+  await prisma.recommendationVisualContribution.updateMany({
+    where: { recommendationId: row.id },
+    data: { usedInPublishedResult: false },
+  });
+  await prisma.guideRecommendationRevision.create({
+    data: {
+      recommendationId: row.id,
+      action: "unpublish",
+      beforePayload: JSON.stringify({
+        status: existing.status,
+        publishedAt: existing.publishedAt,
+        structured: safeJson(existing.structuredPayload, {}),
+        targets: safeJson(existing.targetsPayload, []),
+        mainStats: safeJson(existing.mainStatsPayload, []),
+      }),
+      afterPayload: JSON.stringify({
+        status: row.status,
+        publishedAt: null,
+        structured: safeJson(row.structuredPayload, {}),
+        targets: safeJson(row.targetsPayload, []),
+        mainStats: safeJson(row.mainStatsPayload, []),
+      }),
+    },
+  });
+  await audit("unpublishRecommendation", "ok", { recommendationId: row.id });
+  return row;
+}
+
 export async function overrideRecommendation(input: {
   recommendationId: string;
   targetsPayload: unknown;
   mainStatsPayload?: unknown;
   priorityPayload?: unknown;
   contextPayload?: unknown;
+  structuredPayload?: unknown;
   adminNotes?: string;
+  expectedUpdatedAt?: string;
+  keepPublished?: boolean;
 }) {
   const existing = await prisma.characterBuildRecommendation.findUnique({
     where: { id: input.recommendationId },
   });
   if (!existing) throw new Error("recommendationNotFound");
+
+  if (input.expectedUpdatedAt) {
+    const expected = new Date(input.expectedUpdatedAt).getTime();
+    const actual = existing.updatedAt.getTime();
+    if (!Number.isFinite(expected) || Math.abs(expected - actual) > 1000) {
+      throw new Error("conflictUpdatedAt");
+    }
+  }
+
+  const incomingStructured =
+    input.structuredPayload === undefined
+      ? stripAdminWorkingDraft(safeJson(existing.structuredPayload, {}))
+      : typeof input.structuredPayload === "string"
+        ? stripAdminWorkingDraft(safeJson(input.structuredPayload, {}))
+        : stripAdminWorkingDraft(asRecord(input.structuredPayload));
+
+  const weaponRows = await prisma.weapon.findMany({ select: { id: true } });
+  const artifactSets = await fetchArtifactSets().catch(() => []);
+  const draftIssues = validateStructuredDraft({
+    characterId: existing.characterId,
+    structured: incomingStructured,
+    mainStats: input.mainStatsPayload ?? safeJson(existing.mainStatsPayload, []),
+    targets: input.targetsPayload,
+    knownWeaponIds: new Set(weaponRows.map((w) => w.id)),
+    knownSetIds: new Set(artifactSets.map((s) => s.id)),
+  });
+  if (draftIssues.some((i) => i.level === "error")) {
+    throw new Error(
+      `structuredDraftInvalid:${draftIssues
+        .filter((i) => i.level === "error")
+        .map((i) => i.message)
+        .join(" | ")}`,
+    );
+  }
+
+  const keepPublishedLive =
+    Boolean(input.keepPublished) && existing.status === "published";
+
+  let nextStructuredPayload: string;
+  let nextTargets = existing.targetsPayload;
+  let nextMainStats = existing.mainStatsPayload;
+  let nextPriority = existing.priorityPayload;
+  let nextContext = existing.contextPayload;
+  let nextStatus = existing.status;
+  let nextPublishedAt = existing.publishedAt;
+
+  if (keepPublishedLive) {
+    // 公開中レスポンスは据え置き。編集内容は adminWorkingDraft のみに保存。
+    // publishedContentUpdatedAt は触らない（公開 API の updatedAt / ETag を維持）。
+    const publishedStructured = stripAdminWorkingDraft(
+      safeJson(existing.structuredPayload, {}),
+    );
+    nextStructuredPayload = JSON.stringify({
+      ...publishedStructured,
+      [ADMIN_WORKING_DRAFT_KEY]: {
+        structured: incomingStructured,
+        targets: input.targetsPayload,
+        mainStats:
+          input.mainStatsPayload ?? safeJson(existing.mainStatsPayload, []),
+        priority:
+          input.priorityPayload ?? safeJson(existing.priorityPayload, []),
+        context:
+          input.contextPayload ?? safeJson(existing.contextPayload, {}),
+        adminNotes: input.adminNotes ?? existing.adminNotes,
+        savedAt: new Date().toISOString(),
+      },
+    });
+  } else {
+    nextStructuredPayload = JSON.stringify(incomingStructured);
+    nextTargets = JSON.stringify(input.targetsPayload);
+    nextMainStats = JSON.stringify(
+      input.mainStatsPayload ?? safeJson(existing.mainStatsPayload, []),
+    );
+    nextPriority = JSON.stringify(
+      input.priorityPayload ?? safeJson(existing.priorityPayload, []),
+    );
+    nextContext = JSON.stringify(
+      input.contextPayload ?? safeJson(existing.contextPayload, {}),
+    );
+    if (existing.status === "published") {
+      nextStatus = "pending_review";
+      nextPublishedAt = null;
+    }
+  }
+
   const row = await prisma.characterBuildRecommendation.update({
     where: { id: input.recommendationId },
     data: {
-      targetsPayload: JSON.stringify(input.targetsPayload),
-      mainStatsPayload: JSON.stringify(input.mainStatsPayload ?? safeJson(existing.mainStatsPayload, [])),
-      priorityPayload: JSON.stringify(input.priorityPayload ?? safeJson(existing.priorityPayload, [])),
-      contextPayload: JSON.stringify(input.contextPayload ?? safeJson(existing.contextPayload, {})),
+      targetsPayload: nextTargets,
+      mainStatsPayload: nextMainStats,
+      priorityPayload: nextPriority,
+      contextPayload: nextContext,
+      structuredPayload: nextStructuredPayload,
       adminNotes: input.adminNotes ?? existing.adminNotes,
-      status: "pending_review",
-      publishedAt: null,
+      status: nextStatus,
+      publishedAt: nextPublishedAt,
     },
   });
   await prisma.guideRecommendationRevision.create({
     data: {
       recommendationId: row.id,
-      action: "override",
-      beforePayload: existing.targetsPayload,
-      afterPayload: JSON.stringify(input.targetsPayload),
+      action: keepPublishedLive ? "override_draft" : "override",
+      beforePayload: JSON.stringify({
+        targets: safeJson(existing.targetsPayload, []),
+        mainStats: safeJson(existing.mainStatsPayload, []),
+        structured: safeJson(existing.structuredPayload, {}),
+        status: existing.status,
+      }),
+      afterPayload: JSON.stringify({
+        targets: input.targetsPayload,
+        mainStats: input.mainStatsPayload ?? safeJson(existing.mainStatsPayload, []),
+        structured: incomingStructured,
+        status: row.status,
+        keepPublished: keepPublishedLive,
+      }),
     },
   });
-  await audit("overrideRecommendation", "ok", { recommendationId: row.id });
-  return row;
+  await audit("overrideRecommendation", "ok", {
+    recommendationId: row.id,
+    keepPublished: keepPublishedLive,
+    warnings: draftIssues.filter((i) => i.level === "warning").length,
+  });
+  return { recommendation: row, warnings: draftIssues, keepPublished: keepPublishedLive };
 }
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+export async function validateStructuredRecommendationDto(input: {
+  recommendationId: string;
+  targetsPayload?: unknown;
+  mainStatsPayload?: unknown;
+  structuredPayload?: unknown;
+}) {
+  const row = await prisma.characterBuildRecommendation.findUnique({
+    where: { id: input.recommendationId },
+    include: {
+      contributions: { include: { video: { include: { channel: true } } } },
+    },
+  });
+  if (!row) throw new Error("recommendationNotFound");
+
+  const structuredRaw =
+    input.structuredPayload === undefined
+      ? safeJson<Record<string, unknown>>(row.structuredPayload, {})
+      : typeof input.structuredPayload === "string"
+        ? safeJson<Record<string, unknown>>(input.structuredPayload, {})
+        : asRecord(input.structuredPayload);
+  const working =
+    input.structuredPayload === undefined
+      ? readAdminWorkingDraft(structuredRaw)
+      : null;
+  const structured = working?.structured
+    ? stripAdminWorkingDraft(working.structured)
+    : stripAdminWorkingDraft(structuredRaw);
+  const mainStats =
+    input.mainStatsPayload ??
+    working?.mainStats ??
+    safeJson(row.mainStatsPayload, []);
+  const targets =
+    input.targetsPayload ?? working?.targets ?? safeJson(row.targetsPayload, []);
+  const weaponRows = await prisma.weapon.findMany({ select: { id: true } });
+  const knownWeaponIds = new Set(weaponRows.map((w) => w.id));
+  const artifactSets = await fetchArtifactSets().catch(() => []);
+  const knownSetIds = new Set(artifactSets.map((s) => s.id));
+  const sources = row.contributions.map((c, index) => ({
+    id: `source-${c.videoId || index}`,
+    videoId: c.videoId,
+    title: c.video.title,
+    channelId: c.video.channel.channelId,
+    channelTitle: c.video.channel.title,
+    sourceUrl: c.video.sourceUrl,
+    publishedAt: c.video.publishedAt?.toISOString() ?? null,
+  }));
+
+  const draftIssues = validateStructuredDraft({
+    characterId: row.characterId,
+    structured,
+    mainStats,
+    targets,
+    knownWeaponIds,
+    knownSetIds,
+  });
+  const publishIssues = validateStructuredForPublish({
+    characterId: row.characterId,
+    structured,
+    mainStats,
+    targets,
+    sources,
+    knownWeaponIds,
+    knownSetIds,
+  });
+  const preview = previewNormalizedRecommendation({
+    characterId: row.characterId,
+    origin: row.origin,
+    overallConfidence: row.overallConfidence,
+    context: safeJson(row.contextPayload, {}),
+    mainStats,
+    substatPriority: safeJson(row.priorityPayload, []),
+    targets,
+    structured,
+    sources,
+    lastVerifiedAt: row.lastVerifiedAt?.toISOString() ?? null,
+    publishedAt: row.publishedAt?.toISOString() ?? null,
+    updatedAt: row.updatedAt.toISOString(),
+  });
+
+  return {
+    draftIssues,
+    publishIssues,
+    canPublish: !publishIssues.some((i) => i.level === "error"),
+    preview,
+  };
+}
+
+export async function previewRecommendationPublicDto(recommendationId: string) {
+  const row = await prisma.characterBuildRecommendation.findUnique({
+    where: { id: recommendationId },
+    include: {
+      contributions: { include: { video: { include: { channel: true } } } },
+    },
+  });
+  if (!row) throw new Error("recommendationNotFound");
+  const structuredRaw = safeJson<Record<string, unknown>>(row.structuredPayload, {});
+  const working = readAdminWorkingDraft(structuredRaw);
+  const structured = working?.structured
+    ? stripAdminWorkingDraft(working.structured)
+    : stripAdminWorkingDraft(structuredRaw);
+  return previewNormalizedRecommendation({
+    characterId: row.characterId,
+    origin: row.origin,
+    overallConfidence: row.overallConfidence,
+    context: working?.context
+      ? asRecord(working.context)
+      : safeJson(row.contextPayload, {}),
+    mainStats: working?.mainStats ?? safeJson(row.mainStatsPayload, []),
+    substatPriority: working?.priority ?? safeJson(row.priorityPayload, []),
+    targets: working?.targets ?? safeJson(row.targetsPayload, []),
+    structured,
+    sources: row.contributions.map((c) => ({
+      videoId: c.video.videoId,
+      title: c.video.title,
+      channelId: c.video.channel.channelId,
+      channelTitle: c.video.channel.title,
+      sourceUrl: c.video.sourceUrl,
+      publishedAt: c.video.publishedAt?.toISOString() ?? null,
+      reviewedAt: row.lastVerifiedAt?.toISOString() ?? null,
+      gameVersion:
+        typeof structured.gameVersion === "string" ? structured.gameVersion : null,
+    })),
+    evidence: row.contributions.map((c) => ({
+      fieldPath: "visual",
+      exactVisibleText: c.exactVisibleText.slice(0, 200),
+      startSeconds: c.startSeconds,
+      endSeconds: c.endSeconds,
+      videoId: c.videoId,
+    })),
+    lastVerifiedAt: row.lastVerifiedAt?.toISOString() ?? null,
+    publishedAt: row.publishedAt?.toISOString() ?? null,
+    updatedAt: row.updatedAt.toISOString(),
+  });
+}
+
+export async function restoreRecommendationRevision(input: {
+  recommendationId: string;
+  revisionId: string;
+  expectedUpdatedAt?: string;
+}) {
+  const existing = await prisma.characterBuildRecommendation.findUnique({
+    where: { id: input.recommendationId },
+  });
+  if (!existing) throw new Error("recommendationNotFound");
+  if (input.expectedUpdatedAt) {
+    const expected = new Date(input.expectedUpdatedAt).getTime();
+    if (Math.abs(expected - existing.updatedAt.getTime()) > 1000) {
+      throw new Error("conflictUpdatedAt");
+    }
+  }
+  const revision = await prisma.guideRecommendationRevision.findFirst({
+    where: { id: input.revisionId, recommendationId: input.recommendationId },
+  });
+  if (!revision) throw new Error("revisionNotFound");
+  const before = safeJson<{
+    targets?: unknown;
+    mainStats?: unknown;
+    structured?: unknown;
+  }>(revision.beforePayload, {});
+  if (before.targets == null && before.structured == null) {
+    throw new Error("revisionNotRestorable");
+  }
+  // 公開中は予告なく公開スナップショットを上書きしない（working draft へ復元）
+  return overrideRecommendation({
+    recommendationId: input.recommendationId,
+    targetsPayload: before.targets ?? safeJson(existing.targetsPayload, []),
+    mainStatsPayload: before.mainStats,
+    structuredPayload: before.structured,
+    expectedUpdatedAt: input.expectedUpdatedAt,
+    keepPublished: existing.status === "published",
+  });
+}
+
+export { listGuideMasterOptions };
 
 export async function mergeVisualRecommendations(input: {
   characterId: string;
@@ -448,6 +1081,13 @@ export async function mergeVisualRecommendations(input: {
     },
   });
 
+  const structuredPayload = buildStructuredPayloadFromEvidences(
+    evidences.map((e) => ({
+      videoId: e.videoId,
+      normalizedPayload: e.normalizedPayload,
+    })),
+  );
+
   const recommendation = await prisma.characterBuildRecommendation.create({
     data: {
       characterId: input.characterId,
@@ -458,6 +1098,7 @@ export async function mergeVisualRecommendations(input: {
       mainStatsPayload: JSON.stringify(merged.mainStats),
       priorityPayload: JSON.stringify(merged.substatPriority),
       targetsPayload: JSON.stringify(merged.targets),
+      structuredPayload,
       overallConfidence: merged.overallConfidence,
       notes: merged.caveats.join("\n"),
     },
@@ -517,27 +1158,45 @@ export async function getPublishedBuildRecommendation(
     unit: t.unit,
   }));
 
-  const dto = {
+  const structured = stripAdminWorkingDraft(
+    safeJson<Record<string, unknown>>(row.structuredPayload, {}),
+  );
+  // working draft 保存で row.updatedAt が動いても公開 ETag を動かさない
+  const publicUpdatedAt =
+    typeof structured.publishedContentUpdatedAt === "string"
+      ? structured.publishedContentUpdatedAt
+      : (row.publishedAt?.toISOString() ?? row.updatedAt.toISOString());
+
+  const { data: normalized } = normalizePublicBuildRecommendation({
     characterId: row.characterId,
-    label: "動画内推奨目安" as const,
-    status: "published" as const,
-    origin: row.origin === "merged" ? ("merged" as const) : ("single_video" as const),
+    origin: row.origin === "merged" ? "merged" : "single_video",
     overallConfidence: row.overallConfidence,
     context: safeJson(row.contextPayload, {}),
     mainStats: safeJson(row.mainStatsPayload, []),
     substatPriority: safeJson(row.priorityPayload, []),
     targets,
+    structured,
+    weapons: structured.weapons,
+    artifactRecommendations: structured.artifactRecommendations,
+    investmentPriority: structured.investmentPriority,
+    gameVersion: structured.gameVersion,
+    recommendedStats: structured.recommendedStats,
     caveats: row.notes
       ? row.notes.split("\n").filter(Boolean)
       : ["条件付き効果・編成バフは含みません。動画画面内で確認した目安です。"],
     lastVerifiedAt: row.lastVerifiedAt?.toISOString() ?? null,
     publishedAt: row.publishedAt?.toISOString() ?? null,
+    updatedAt: publicUpdatedAt,
     sources: row.contributions.map((c) => ({
       videoId: c.video.videoId,
       title: c.video.title,
+      channelId: c.video.channel.channelId ?? null,
       channelTitle: c.video.channel.title,
       sourceUrl: c.video.sourceUrl,
       publishedAt: c.video.publishedAt?.toISOString() ?? null,
+      reviewedAt: row.lastVerifiedAt?.toISOString() ?? null,
+      gameVersion:
+        typeof structured.gameVersion === "string" ? structured.gameVersion : null,
     })),
     evidence: row.contributions.map((c) => ({
       fieldPath: "visual",
@@ -546,9 +1205,9 @@ export async function getPublishedBuildRecommendation(
       endSeconds: c.endSeconds,
       videoId: c.videoId,
     })),
-  };
+  });
 
-  return publicBuildRecommendationSchema.parse(dto);
+  return publicBuildRecommendationSchema.parse(normalized);
 }
 
 export async function getPublishedBuildRecommendationSources(characterId: string) {

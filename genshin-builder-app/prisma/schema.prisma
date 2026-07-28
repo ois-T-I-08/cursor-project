@@ -557,6 +557,8 @@ model CharacterBuildRecommendation {
   mainStatsPayload   String    @default("[]")
   priorityPayload    String    @default("[]")
   targetsPayload     String    @default("[]")
+  /// weapons / artifactRecommendations / investmentPriority / gameVersion
+  structuredPayload  String    @default("{}")
   overallConfidence  Float     @default(0)
   notes              String    @default("")
   adminNotes         String    @default("")

@@ -8,12 +8,13 @@ describe("admin build-guides route hardening", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     process.env = { ...env };
     vi.restoreAllMocks();
   });
 
   it("fails closed without secret and rejects missing/wrong bearer", async () => {
-    delete process.env.BUILD_GUIDE_ADMIN_SECRET;
+    vi.stubEnv("BUILD_GUIDE_ADMIN_SECRET", "");
     const { GET } = await import("../../app/api/admin/build-guides/route");
 
     const unavailable = await GET(
@@ -21,7 +22,7 @@ describe("admin build-guides route hardening", () => {
     );
     expect(unavailable.status).toBe(503);
 
-    process.env.BUILD_GUIDE_ADMIN_SECRET = "guide-secret-for-route-test";
+    vi.stubEnv("BUILD_GUIDE_ADMIN_SECRET", "guide-secret-for-route-test");
     vi.resetModules();
     const mod = await import("../../app/api/admin/build-guides/route");
 
@@ -42,7 +43,7 @@ describe("admin build-guides route hardening", () => {
   });
 
   it("rejects oversized POST bodies", async () => {
-    process.env.BUILD_GUIDE_ADMIN_SECRET = "guide-secret-for-route-test";
+    vi.stubEnv("BUILD_GUIDE_ADMIN_SECRET", "guide-secret-for-route-test");
     const { POST } = await import("../../app/api/admin/build-guides/route");
     const huge = await POST(
       new Request("http://localhost/api/admin/build-guides", {

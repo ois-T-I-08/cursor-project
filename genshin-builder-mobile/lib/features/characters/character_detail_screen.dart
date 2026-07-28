@@ -290,7 +290,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
                 Tab(text: '武器'),
                 Tab(text: '聖遺物'),
                 Tab(text: '天賦'),
-                Tab(text: '想定'),
+                Tab(text: 'ステータス'),
                 Tab(text: 'HoYoLAB'),
               ],
             ),

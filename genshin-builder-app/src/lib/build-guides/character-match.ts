@@ -3,11 +3,17 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import {
   resolveCharacterCandidates,
+  resolvePrimaryCharacterFromTitle,
+  isCharacterBuildGuideTitle,
   type CharacterHint,
 } from "./character-match-logic";
 
 export type { CharacterHint };
-export { resolveCharacterCandidates };
+export {
+  resolveCharacterCandidates,
+  resolvePrimaryCharacterFromTitle,
+  isCharacterBuildGuideTitle,
+};
 
 export async function loadCharacterHints(): Promise<CharacterHint[]> {
   const rows = await prisma.character.findMany({

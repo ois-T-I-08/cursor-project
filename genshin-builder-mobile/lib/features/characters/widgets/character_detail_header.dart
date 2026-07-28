@@ -7,6 +7,7 @@ import '../../../domain/models/master_models.dart';
 import '../../../providers/character_detail_providers.dart';
 import '../../shared/game_icon_image.dart';
 import 'constellation_icons_row.dart';
+import 'investment_priority_badge.dart';
 
 /// Character detail header: icon, name, constellations, level, element
 class CharacterDetailHeader extends ConsumerWidget {
@@ -55,13 +56,22 @@ class CharacterDetailHeader extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  character.name,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        character.name,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    InvestmentPriorityBadge(characterId: character.id),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 ConstellationIconsRow(

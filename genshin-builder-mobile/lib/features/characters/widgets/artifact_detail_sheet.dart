@@ -7,12 +7,15 @@ import '../../../domain/artifact_config.dart';
 import '../../../domain/artifact_score.dart';
 import '../../../domain/character_stats.dart';
 import '../../../domain/models/artifact_state.dart';
+import '../../../providers/build_recommendation_providers.dart';
 import '../../../providers/character_detail_providers.dart';
 import '../../shared/game_icon_image.dart';
+import 'guide_main_stats_panel.dart';
 
 /// Artifact detail bottom sheet
 Future<void> showArtifactDetailSheet({
   required BuildContext context,
+  required String characterId,
   required ArtifactSlotKey slot,
   required ArtifactPiece piece,
   required ArtifactScoreType scoreType,
@@ -28,6 +31,7 @@ Future<void> showArtifactDetailSheet({
       minChildSize: 0.4,
       maxChildSize: 0.95,
       builder: (context, scrollController) => ArtifactDetailSheet(
+        characterId: characterId,
         slot: slot,
         piece: piece,
         scoreType: scoreType,
@@ -41,6 +45,7 @@ Future<void> showArtifactDetailSheet({
 class ArtifactDetailSheet extends ConsumerWidget {
   const ArtifactDetailSheet({
     super.key,
+    required this.characterId,
     required this.slot,
     required this.piece,
     required this.scoreType,
@@ -48,6 +53,7 @@ class ArtifactDetailSheet extends ConsumerWidget {
     this.scrollController,
   });
 
+  final String characterId;
   final ArtifactSlotKey slot;
   final ArtifactPiece piece;
   final ArtifactScoreType scoreType;
@@ -57,6 +63,7 @@ class ArtifactDetailSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final setsAsync = ref.watch(artifactSetsProvider);
+    final guideAsync = ref.watch(buildRecommendationProvider(characterId));
     ArtifactSetDetail? matched;
     for (final s in setsAsync.valueOrNull ?? const <ArtifactSetDetail>[]) {
       if (s.name == piece.setName) {
@@ -73,6 +80,7 @@ class ArtifactDetailSheet extends ConsumerWidget {
     final mainValue = piece.mainStat.isEmpty
         ? null
         : artifactMainStatValue(piece.mainStat, piece.level);
+    final guideSlot = guideSlotFromArtifactSlotKey(slot);
 
     return ListView(
       controller: scrollController,
@@ -120,6 +128,37 @@ class ArtifactDetailSheet extends ConsumerWidget {
                 : '${piece.mainStat} ${_formatMain(piece.mainStat, mainValue)}',
           ),
         _kv(theme, '聖遺物スコア', score.toStringAsFixed(1)),
+        if (guideSlot != null) ...[
+          const SizedBox(height: 12),
+          guideAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (rec) {
+              if (rec == null || rec.mainStats.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              final forSlot =
+                  rec.mainStats.where((e) => e.slot == guideSlot).toList();
+              if (forSlot.isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '動画内メイン目安',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  GuideMainStatsPanel(
+                    mainStats: forSlot,
+                    freshnessCaption: rec.freshnessCaption,
+                    compact: true,
+                    filterSlot: guideSlot,
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
         const SizedBox(height: 8),
         Text('サブステータス', style: theme.textTheme.titleSmall),
         const SizedBox(height: 6),

@@ -6,23 +6,31 @@ import {
   authorizationHttpStatus,
 } from "@/lib/build-guides/admin-auth";
 import {
+  analyzePendingGenshinVideos,
   analyzeVideoVisuals,
   GuideVisualAnalysisError,
 } from "@/lib/build-guides/visual-analysis-service";
 import { permissionStatusSchema } from "@/lib/build-guides/visual-schemas";
 import {
   getGuideAdminOverview,
+  listGuideMasterOptions,
   mapYoutubeError,
   mergeVisualRecommendations,
   overrideRecommendation,
   overrideVisualEvidencePurpose,
+  previewRecommendationPublicDto,
   registerGuideChannel,
+  restoreRecommendationRevision,
   setRecommendationStatus,
   setVisualEvidenceStatus,
   syncChannelVideos,
+  syncPlaylistVideos,
+  unpublishRecommendation,
   updateGuideChannel,
+  validateStructuredRecommendationDto,
 } from "@/lib/build-guides/store";
 import { prisma } from "@/lib/db";
+import { parseYoutubePlaylistId } from "@/lib/build-guides/youtube-client";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -30,6 +38,14 @@ export const maxDuration = 300;
 const channelId = z.string().regex(/^UC[\w-]{20,24}$/);
 const videoId = z.string().regex(/^[\w-]{11}$/);
 const cuid = z.string().regex(/^[a-z0-9_-]{20,40}$/i);
+const playlistIdInput = z
+  .string()
+  .min(10)
+  .max(200)
+  .refine((value) => parseYoutubePlaylistId(value) != null, {
+    message: "invalidPlaylistId",
+  });
+
 
 const rangeSchema = z.strictObject({
   startSeconds: z.number().nonnegative(),
@@ -60,10 +76,21 @@ const actionSchema = z.discriminatedUnion("action", [
     maxPages: z.number().int().min(1).max(10).optional(),
   }),
   z.strictObject({
+    action: z.literal("syncPlaylistVideos"),
+    playlistId: playlistIdInput,
+    maxPages: z.number().int().min(1).max(10).optional(),
+  }),
+  z.strictObject({
     action: z.literal("analyzeVideoVisuals"),
     videoId,
     force: z.boolean().optional(),
     targetCharacterIds: z.array(z.string().max(64)).max(20).optional(),
+  }),
+  z.strictObject({
+    action: z.literal("analyzePendingGenshinVideos"),
+    limit: z.number().int().min(1).max(10).optional(),
+    mode: z.enum(["newest", "uncoveredCharacters"]).optional(),
+    raiseDailyLimitTo: z.number().int().min(1).max(1000).optional(),
   }),
   z.strictObject({
     action: z.literal("reanalyzeVideoVisuals"),
@@ -122,7 +149,30 @@ const actionSchema = z.discriminatedUnion("action", [
     mainStatsPayload: z.unknown().optional(),
     priorityPayload: z.unknown().optional(),
     contextPayload: z.unknown().optional(),
+    structuredPayload: z.unknown().optional(),
     adminNotes: z.string().max(2_000).optional(),
+    expectedUpdatedAt: z.string().datetime().optional(),
+    keepPublished: z.boolean().optional(),
+  }),
+  z.strictObject({
+    action: z.literal("previewRecommendationPublic"),
+    recommendationId: cuid,
+  }),
+  z.strictObject({
+    action: z.literal("listGuideMasterOptions"),
+  }),
+  z.strictObject({
+    action: z.literal("restoreRecommendationRevision"),
+    recommendationId: cuid,
+    revisionId: cuid,
+    expectedUpdatedAt: z.string().datetime().optional(),
+  }),
+  z.strictObject({
+    action: z.literal("validateStructuredRecommendation"),
+    recommendationId: cuid,
+    targetsPayload: z.unknown().optional(),
+    mainStatsPayload: z.unknown().optional(),
+    structuredPayload: z.unknown().optional(),
   }),
 ]);
 
@@ -142,12 +192,12 @@ export async function POST(request: Request): Promise<Response> {
   const denied = authorize(request);
   if (denied) return denied;
   const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > 65_536) {
+  if (contentLength > 262_144) {
     return NextResponse.json({ error: "requestTooLarge" }, { status: 413 });
   }
   try {
     const text = await request.text();
-    if (Buffer.byteLength(text, "utf8") > 65_536) {
+    if (Buffer.byteLength(text, "utf8") > 262_144) {
       return NextResponse.json({ error: "requestTooLarge" }, { status: 413 });
     }
     const input = actionSchema.parse(JSON.parse(text) as unknown);
@@ -158,12 +208,22 @@ export async function POST(request: Request): Promise<Response> {
         return NextResponse.json({ channel: await updateGuideChannel(input) });
       case "syncChannelVideos":
         return NextResponse.json(await syncChannelVideos(input));
+      case "syncPlaylistVideos":
+        return NextResponse.json(await syncPlaylistVideos(input));
       case "analyzeVideoVisuals":
         return NextResponse.json(
           await analyzeVideoVisuals({
             videoId: input.videoId,
             force: input.force,
             targetCharacterIds: input.targetCharacterIds,
+          }),
+        );
+      case "analyzePendingGenshinVideos":
+        return NextResponse.json(
+          await analyzePendingGenshinVideos({
+            limit: input.limit,
+            mode: input.mode,
+            raiseDailyLimitTo: input.raiseDailyLimitTo,
           }),
         );
       case "reanalyzeVideoVisuals":
@@ -227,27 +287,20 @@ export async function POST(request: Request): Promise<Response> {
             status: "published",
           }),
         });
-      case "unpublishRecommendation": {
-        const existing = await prisma.characterBuildRecommendation.findUnique({
-          where: { id: input.recommendationId },
-        });
-        if (!existing) {
-          return NextResponse.json({ error: "recommendationNotFound" }, { status: 404 });
-        }
-        const row = await prisma.characterBuildRecommendation.update({
-          where: { id: input.recommendationId },
-          data: { status: "approved", publishedAt: null },
-        });
-        await prisma.recommendationVisualContribution.updateMany({
-          where: { recommendationId: row.id },
-          data: { usedInPublishedResult: false },
-        });
-        return NextResponse.json({ recommendation: row });
-      }
-      case "overrideRecommendation":
+      case "unpublishRecommendation":
         return NextResponse.json({
-          recommendation: await overrideRecommendation(input),
+          recommendation: await unpublishRecommendation(input.recommendationId),
         });
+      case "overrideRecommendation":
+        return NextResponse.json(await overrideRecommendation(input));
+      case "previewRecommendationPublic":
+        return NextResponse.json(await previewRecommendationPublicDto(input.recommendationId));
+      case "listGuideMasterOptions":
+        return NextResponse.json(await listGuideMasterOptions());
+      case "restoreRecommendationRevision":
+        return NextResponse.json(await restoreRecommendationRevision(input));
+      case "validateStructuredRecommendation":
+        return NextResponse.json(await validateStructuredRecommendationDto(input));
     }
   } catch (error) {
     if (error instanceof z.ZodError || error instanceof SyntaxError) {
@@ -256,9 +309,33 @@ export async function POST(request: Request): Promise<Response> {
     if (error instanceof GuideVisualAnalysisError) {
       return NextResponse.json({ error: error.code }, { status: 422 });
     }
+    if (error instanceof Error) {
+      if (error.message === "conflictUpdatedAt") {
+        return NextResponse.json({ error: "conflictUpdatedAt" }, { status: 409 });
+      }
+      if (error.message.startsWith("structuredPublishBlocked:")) {
+        return NextResponse.json(
+          { error: "structuredPublishBlocked", detail: error.message.slice(25) },
+          { status: 422 },
+        );
+      }
+      if (error.message.startsWith("structuredDraftInvalid:")) {
+        return NextResponse.json(
+          { error: "structuredDraftInvalid", detail: error.message.slice(23) },
+          { status: 422 },
+        );
+      }
+    }
     const youtubeCode = mapYoutubeError(error);
-    if (youtubeCode.startsWith("youtube") || youtubeCode === "channelNotFound") {
+    if (
+      youtubeCode.startsWith("youtube") ||
+      youtubeCode === "channelNotFound" ||
+      youtubeCode === "playlistNotFound"
+    ) {
       return NextResponse.json({ error: youtubeCode }, { status: 502 });
+    }
+    if (error instanceof Error && error.message === "invalidPlaylistId") {
+      return NextResponse.json({ error: "invalidPlaylistId" }, { status: 400 });
     }
     return safeError(error);
   }

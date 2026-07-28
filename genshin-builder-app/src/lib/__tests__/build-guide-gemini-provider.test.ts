@@ -265,9 +265,11 @@ describe("GeminiYouTubeVisualAnalysisProvider", () => {
       fps: 1,
       clip: null,
     });
-    expect(full.video_metadata).toEqual({ fps: 1 });
-    expect(full.video_metadata).not.toHaveProperty("start_offset");
-    expect(full.video_metadata).not.toHaveProperty("end_offset");
+    expect(full.file_data).toEqual({
+      file_uri: "https://www.youtube.com/watch?v=abcdefghijk",
+      mime_type: "video/*",
+    });
+    expect(full).not.toHaveProperty("video_metadata");
 
     const clipped = buildVideoPart({
       youtubeUrl: "https://www.youtube.com/watch?v=abcdefghijk",

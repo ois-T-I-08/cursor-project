@@ -15,8 +15,14 @@
 ## データフロー
 
 1. `/admin/guides` でチャンネル登録（`permissionStatus=approved_for_processing`）
-2. YouTube Data API で動画一覧同期（タイトル・公開日・時間・privacy 等）
-3. `analyzeVideoVisuals` で Gemini に公開 URL を渡し一次探索（既定 1 FPS）
+2. YouTube Data API で動画一覧同期
+  - チャンネルの投稿一覧（uploads）、または **特定プレイリスト URL/ID**
+  - プレイリスト同期は、承認済みチャンネルに属する動画のみ取り込み（未登録チャンネルはスキップ）
+  - タイトルに `【原神】` を含む動画のみ取り込み・管理画面の動画一覧に表示
+3. `analyzeVideoVisuals` / **`analyzePendingGenshinVideos`** で Gemini に公開 URL を渡し一次探索（既定 1 FPS）
+   - 管理画面「最新の未解析を N 件解析」はタイトルに `【原神】` を含む未解析動画を公開日新しい順に処理
+   - **「全キャラ解析（未カバー優先）」**は育成ガイド寄りの動画から、まだ推奨のないキャラを1人1本ずつ連続解析（日次上限を最大300まで自動引き上げ）
+   - 成功時は映像証拠（pending_review）とキャラ別推奨ドラフトまで作成（自動公開はしない）
 4. 候補時刻周辺を `analyzeSelectedRanges` / `reanalyzeVideoVisuals(ranges)` でクリップ再解析（既定 3 FPS、`video_metadata`）
 5. Zod + 決定論的検証（用途分類、timestamp、数値、マスター ID）
 6. DeepSeek で候補構造化 → `pending_review`
@@ -94,3 +100,25 @@ Gemini 3.6 Flash リクエストでは非推奨 sampling パラメータ（`temp
 ## Neon / PostgreSQL
 
 現行は SQLite。Neon 移行時は provider 変更後に migration を再生成してください。
+
+## 公開 API（Flutter）
+
+`GET /api/build-recommendations/[characterId]`
+
+* `schemaVersion: 1`
+* 正式フィールド: `weapons` / `artifactRecommendations` / `mainStats` / `recommendedStats` / `investmentPriority` / `sources` / `updatedAt`
+* 出典はトップレベル `sources[].id` へ正規化し、候補は `citationId` で参照
+* `investmentPriority` は明示登録時のみ（`overallConfidence` から推定しない）
+* 構造化 `weapons` が無い場合のみ `context.weaponPreference` を legacy 候補へ変換（`dataOrigin: legacy_preference`）
+* 映像証拠の `weaponMentions` / `artifactSetMentions` は `structuredPayload.pendingMentions` のみへ格納（正式 `weapons` / `artifactRecommendations` には自動昇格しない。pieces・推奨順位は捏造しない）
+* `dataOrigin: evidence_mention` および `adminConfirmed: false` は公開正規化で除外
+* 管理画面「構造化編集」で確認・編集・承認・公開（聖遺物は Amber `/reliquary` マスター検索、目標ステは専用フォーム。JSON 手編集は読み取り専用）
+* 公開中の編集は `structuredPayload.adminWorkingDraft` に分離（`keepPublished`）。公開 API は下書きを返さない
+* 公開前は `validateStructuredForPublish`（pendingMentions・未確定 pieces・未知 setId で拒否）
+* 2+2 構成は管理 override の `structuredPayload` で配列として登録可能
+* HTTP: 内容指紋ベースの `ETag` + `Cache-Control: max-age=60, stale-while-revalidate=300`
+* 公開内容の時刻は `structuredPayload.publishedContentUpdatedAt`（working draft 保存では変更しない）
+* ratio は公開 JSON に含められるがモバイル表示は未対応（管理画面で警告、公開はブロックしない）
+
+正規化実装: `src/lib/build-guides/public-recommendation-normalize.ts`  
+管理バリデーション: `src/lib/build-guides/structured-admin.ts`

@@ -75,6 +75,57 @@ describe("YoutubeGuideClient", () => {
     expect(videos[0]?.privacyStatus).toBe("public");
   });
 
+  it("parses playlist URLs and IDs", async () => {
+    const { parseYoutubePlaylistId } = await import("../build-guides/youtube-client");
+    expect(parseYoutubePlaylistId("PLabcdefghijklmnop")).toBe("PLabcdefghijklmnop");
+    expect(
+      parseYoutubePlaylistId(
+        "https://www.youtube.com/playlist?list=PLabcdefghijklmnop",
+      ),
+    ).toBe("PLabcdefghijklmnop");
+    expect(
+      parseYoutubePlaylistId(
+        "https://www.youtube.com/watch?v=abcdefghijk&list=PLabcdefghijklmnop",
+      ),
+    ).toBe("PLabcdefghijklmnop");
+    expect(parseYoutubePlaylistId("https://evil.example/playlist?list=PL1")).toBeNull();
+  });
+
+  it("fetches arbitrary playlist metadata and items", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/playlists?")) {
+        return Response.json({
+          items: [
+            {
+              id: "PLabcdefghijklmnop",
+              snippet: {
+                title: "Hu Tao builds",
+                channelId: "UCxxxxxxxxxxxxxxxxxxxxxx",
+                description: "curated",
+              },
+            },
+          ],
+        });
+      }
+      if (url.includes("/playlistItems?")) {
+        expect(url).toContain("playlistId=PLabcdefghijklmnop");
+        return Response.json({
+          items: [{ contentDetails: { videoId: "abcdefghijk" } }],
+        });
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+    const client = new YoutubeGuideClient({
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      apiKey: "test-key",
+    });
+    const playlist = await client.fetchPlaylist("PLabcdefghijklmnop");
+    expect(playlist.title).toBe("Hu Tao builds");
+    const ids = await client.listPlaylistVideoIds("PLabcdefghijklmnop");
+    expect(ids).toEqual(["abcdefghijk"]);
+  });
+
   it("fails closed when disabled", async () => {
     process.env.YOUTUBE_GUIDE_ENABLED = "false";
     const client = new YoutubeGuideClient({ apiKey: "test-key" });

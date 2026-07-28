@@ -1,4 +1,7 @@
 import '../character_stats.dart';
+import 'guide_insight.dart';
+
+export 'guide_insight.dart';
 
 enum BuildRecommendationOrigin { singleVideo, merged }
 
@@ -8,14 +11,34 @@ class BuildRecommendationSource {
     required this.title,
     required this.channelTitle,
     required this.sourceUrl,
+    this.id,
     this.publishedAt,
+    this.channelId,
+    this.reviewedAt,
+    this.gameVersion,
   });
 
+  /// 公開 API の sources[].id（citationId 参照用）
+  final String? id;
   final String videoId;
   final String title;
   final String channelTitle;
   final String sourceUrl;
   final DateTime? publishedAt;
+  final String? channelId;
+  final DateTime? reviewedAt;
+  final String? gameVersion;
+
+  GuideCitation toCitation() => GuideCitation(
+        videoId: videoId.isEmpty ? null : videoId,
+        videoTitle: title.isEmpty ? null : title,
+        channelId: channelId,
+        channelName: channelTitle.isEmpty ? null : channelTitle,
+        publishedAt: publishedAt,
+        reviewedAt: reviewedAt,
+        gameVersion: gameVersion,
+        sourceUrl: sourceUrl.isEmpty ? null : sourceUrl,
+      );
 }
 
 class BuildRecommendationEvidence {
@@ -61,25 +84,57 @@ class CharacterBuildRecommendation {
     required this.caveats,
     required this.sources,
     required this.evidence,
+    this.mainStats = const [],
+    this.weapons = const [],
+    this.artifactRecommendations = const [],
     this.lastVerifiedAt,
     this.publishedAt,
     this.role,
     this.teamArchetype,
+    this.weaponPreference,
+    this.notes,
+    this.investmentPriority = InvestmentPriority.none,
+    this.gameVersion,
   });
 
   final String characterId;
   final String label;
   final BuildRecommendationOrigin origin;
+
+  /// 情報の信頼度。育成優先度とは別概念。
   final double overallConfidence;
   final List<BuildStatTarget> targets;
   final List<StatKey> substatPriority;
   final List<String> caveats;
   final List<BuildRecommendationSource> sources;
   final List<BuildRecommendationEvidence> evidence;
+  final List<GuideMainStatRecommendation> mainStats;
+  final List<GuideWeaponRecommendation> weapons;
+  final List<GuideArtifactRecommendation> artifactRecommendations;
   final DateTime? lastVerifiedAt;
   final DateTime? publishedAt;
   final String? role;
   final String? teamArchetype;
+
+  /// 旧 API 互換。構造化 [weapons] が空のときだけ legacy 候補生成に使う。
+  final String? weaponPreference;
+  final String? notes;
+
+  /// API 明示値のみ。未設定・未知は [InvestmentPriority.none]。
+  final InvestmentPriority investmentPriority;
+  final String? gameVersion;
+
+  /// 構造化優先、なければ legacy `weaponPreference`。
+  List<GuideWeaponRecommendation> get youtubeWeapons => resolveYoutubeWeapons(
+        structured: weapons,
+        legacyWeaponPreference: weaponPreference,
+      );
+
+  /// 鮮度表示用（「最新」とは断定しない）
+  String? get freshnessCaption => formatFreshnessCaption(
+        gameVersion: gameVersion,
+        reviewedAt: lastVerifiedAt,
+      );
 }
 
 enum BuildRecommendationFailure {

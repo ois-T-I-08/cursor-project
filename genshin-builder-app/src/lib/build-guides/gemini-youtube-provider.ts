@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { GEMINI_PROVIDER_ID } from "./versions";
 import { GeminiError, geminiVideoSettings } from "./gemini-settings";
+import { parseGeminiVisualResult } from "./normalize-gemini-visual";
 import {
   buildVisualUserPrompt,
   VISUAL_SYSTEM_PROMPT,
@@ -105,7 +106,7 @@ export class GeminiYouTubeVisualAnalysisProvider
           } catch {
             throw new GeminiError("invalidJson", false);
           }
-          const result = videoVisualAnalysisResultSchema.parse(decoded);
+          const result = parseGeminiVisualResult(decoded, input.videoId);
           partialResults.push(result);
           rawParts.push(completion.content);
           for (const [key, value] of Object.entries(completion.usage)) {
@@ -206,7 +207,24 @@ export class GeminiYouTubeVisualAnalysisProvider
       if (Buffer.byteLength(raw, "utf8") > 4_000_000) {
         throw new GeminiError("responseTooLarge", false);
       }
-      const envelope = envelopeSchema.parse(JSON.parse(raw) as unknown);
+      let decodedJson: unknown;
+      try {
+        decodedJson = JSON.parse(raw) as unknown;
+      } catch {
+        throw new GeminiError("invalidEnvelope", false);
+      }
+      if (
+        isRecord(decodedJson) &&
+        isRecord(decodedJson.error) &&
+        !Array.isArray(decodedJson.candidates)
+      ) {
+        throw new GeminiError("geminiApiError", true);
+      }
+      const envelopeParsed = envelopeSchema.safeParse(decodedJson);
+      if (!envelopeParsed.success) {
+        throw new GeminiError("invalidEnvelope", false);
+      }
+      const envelope = envelopeParsed.data;
       const text =
         envelope.candidates[0]?.content?.parts
           ?.map((part) => part.text ?? "")
@@ -222,7 +240,10 @@ export class GeminiYouTubeVisualAnalysisProvider
       };
     } catch (error) {
       if (error instanceof GeminiError) throw error;
-      if (error instanceof DOMException && error.name === "AbortError") {
+      if (
+        (error instanceof DOMException && error.name === "AbortError") ||
+        (error instanceof Error && error.name === "AbortError")
+      ) {
         throw new GeminiError("timeout", true);
       }
       if (error instanceof z.ZodError || error instanceof SyntaxError) {
@@ -241,19 +262,22 @@ export function buildVideoPart(input: {
   fps: number;
   clip: ClipWindow | null;
 }): Record<string, unknown> {
-  const videoMetadata: Record<string, unknown> = {
-    fps: input.fps,
+  const fileData = {
+    file_uri: input.youtubeUrl,
+    mime_type: "video/*",
   };
-  if (input.clip) {
-    videoMetadata.start_offset = `${input.clip.startSeconds}s`;
-    videoMetadata.end_offset = `${input.clip.endSeconds}s`;
+  // Full-video discovery: omit video_metadata (Gemini defaults ~1 FPS).
+  // Clipped detail: send start/end offsets + detail FPS.
+  if (!input.clip) {
+    return { file_data: fileData };
   }
   return {
-    file_data: {
-      file_uri: input.youtubeUrl,
-      mime_type: "video/*",
+    file_data: fileData,
+    video_metadata: {
+      start_offset: `${input.clip.startSeconds}s`,
+      end_offset: `${input.clip.endSeconds}s`,
+      fps: input.fps,
     },
-    video_metadata: videoMetadata,
   };
 }
 
@@ -302,4 +326,8 @@ function stripJsonFence(value: string): string {
   const trimmed = value.trim();
   const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
   return fenced?.[1]?.trim() ?? trimmed;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value != null && !Array.isArray(value);
 }

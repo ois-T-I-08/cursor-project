@@ -4,6 +4,10 @@ import { prisma } from "@/lib/db";
 import { buildVisualRequestHash } from "./cache-key";
 import { loadCharacterHints, resolveCharacterCandidates } from "./character-match";
 import {
+  isCharacterBuildGuideTitle,
+  resolvePrimaryCharacterFromTitle,
+} from "./character-match-logic";
+import {
   mergeVisualRecommendationsDeterministic,
   mergeVisualRecommendationsWithDeepSeek,
 } from "./deepseek-visual-merge";
@@ -11,16 +15,21 @@ import {
   AnalysisRangeError,
   normalizeAnalysisRanges,
 } from "./analysis-ranges";
-import { GeminiError, geminiVideoSettings } from "./gemini-settings";
+import { GeminiError } from "./gemini-settings";
 import { GeminiYouTubeVisualAnalysisProvider } from "./gemini-youtube-provider";
+import { geminiVideoSettings } from "./gemini-settings";
 import type { VideoVisualAnalysisProvider } from "./visual-provider";
-import { validateVisualAnalysisResult } from "./visual-validator";
+import {
+  validateVisualAnalysisResult,
+  VisualValidationError,
+} from "./visual-validator";
 import {
   GUIDE_GAME_DATA_VERSION,
   GEMINI_PROVIDER_ID,
   VISUAL_PROMPT_VERSION,
   VISUAL_SCHEMA_VERSION,
 } from "./versions";
+import { GENSIN_VIDEO_TITLE_MARKER } from "./genshin-video-title";
 
 export class GuideVisualAnalysisError extends Error {
   constructor(public readonly code: string) {
@@ -300,13 +309,10 @@ export async function analyzeVideoVisuals(input: {
       fps,
     };
   } catch (error) {
-    const code =
-      error instanceof GuideVisualAnalysisError ||
-      error instanceof AnalysisRangeError ||
-      error instanceof GeminiError ||
-      (error instanceof Error && /^[a-zA-Z][a-zA-Z0-9]{0,63}$/.test(error.message))
-        ? (error as Error).message
-        : "analysisFailed";
+    const code = resolveAnalysisErrorCode(error);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[build-guide-analysis]", video.videoId, code, error);
+    }
     await prisma.guideVisualAnalysisJob.update({
       where: { id: job.id },
       data: { status: "failed", errorCode: code, completedAt: new Date() },
@@ -325,6 +331,29 @@ export async function analyzeVideoVisuals(input: {
   } finally {
     activeJobs.delete(video.videoId);
   }
+}
+
+function resolveAnalysisErrorCode(error: unknown): string {
+  if (error instanceof GuideVisualAnalysisError) return error.message;
+  if (error instanceof AnalysisRangeError) return error.code;
+  if (error instanceof GeminiError) return error.code;
+  if (error instanceof VisualValidationError) return error.code;
+  if (error instanceof Error) {
+    const maybeCode = (error as Error & { code?: unknown }).code;
+    if (typeof maybeCode === "string" && /^P\d{4}$/.test(maybeCode)) {
+      return `prisma${maybeCode}`;
+    }
+    const message = error.message;
+    if (/^[a-zA-Z][a-zA-Z0-9]{0,63}$/.test(message)) return message;
+    if (message.includes("Unique constraint")) return "prismaUniqueConstraint";
+    if (message.includes("ON CONFLICT clause")) return "prismaMissingUniqueIndex";
+    if (message.includes("Foreign key constraint")) return "prismaForeignKey";
+    if (message.includes("does not exist")) return "prismaMissingTable";
+    if (message.includes("AbortError") || message.includes("aborted")) {
+      return "timeout";
+    }
+  }
+  return "analysisFailed";
 }
 
 async function createPendingRecommendationsFromVisuals(input: {
@@ -389,6 +418,16 @@ async function createPendingRecommendationsFromVisuals(input: {
       merged = mergeVisualRecommendationsDeterministic(mergeInput);
     }
 
+    const { buildStructuredPayloadFromEvidences } = await import(
+      "./public-recommendation-normalize"
+    );
+    const structuredPayload = buildStructuredPayloadFromEvidences(
+      list.map((e) => ({
+        videoId: e.videoId,
+        normalizedPayload: e.normalizedPayload,
+      })),
+    );
+
     const recommendation = await prisma.characterBuildRecommendation.create({
       data: {
         characterId,
@@ -398,6 +437,7 @@ async function createPendingRecommendationsFromVisuals(input: {
         mainStatsPayload: JSON.stringify(merged.mainStats),
         priorityPayload: JSON.stringify(merged.substatPriority),
         targetsPayload: JSON.stringify(merged.targets),
+        structuredPayload,
         overallConfidence: merged.overallConfidence,
         notes: [...merged.caveats, merged.adminSummary].filter(Boolean).join("\n"),
       },
@@ -422,6 +462,163 @@ async function createPendingRecommendationsFromVisuals(input: {
     recommendationIds.push(recommendation.id);
   }
   return recommendationIds;
+}
+
+/**
+ * タイトルに「【原神】」を含み未解析の公開動画を解析する。
+ * mode=uncoveredCharacters: 育成ガイド寄り・未カバーキャラ優先で1キャラ1本。
+ * 各動画の成功時は証拠 + キャラ別 pending 推奨ドラフトまで作成する。
+ */
+export async function analyzePendingGenshinVideos(input: {
+  limit?: number;
+  mode?: "newest" | "uncoveredCharacters";
+  /** 全キャラ実行時にチャンネル日次上限を引き上げる（既定 true for uncovered） */
+  raiseDailyLimitTo?: number;
+} = {}): Promise<{
+  titleMarker: string;
+  mode: "newest" | "uncoveredCharacters";
+  limit: number;
+  attempted: number;
+  succeeded: number;
+  failed: number;
+  remainingUncoveredEstimate: number | null;
+  results: Array<{
+    videoId: string;
+    title: string;
+    characterId?: string | null;
+    ok: boolean;
+    status?: string;
+    evidenceCount?: number;
+    recommendationIds?: string[];
+    error?: string;
+  }>;
+  note: string;
+}> {
+  const mode = input.mode ?? "newest";
+  const limit = Math.min(Math.max(input.limit ?? 1, 1), 10);
+  const raiseTo =
+    input.raiseDailyLimitTo ??
+    (mode === "uncoveredCharacters" ? 300 : undefined);
+
+  if (raiseTo != null && raiseTo > 0) {
+    await prisma.guideChannel.updateMany({
+      where: {
+        enabled: true,
+        permissionStatus: "approved_for_processing",
+        dailyAnalysisLimit: { lt: raiseTo },
+      },
+      data: { dailyAnalysisLimit: raiseTo },
+    });
+  }
+
+  const pending = await prisma.guideVideo.findMany({
+    where: {
+      title: { contains: GENSIN_VIDEO_TITLE_MARKER },
+      analysisStatus: { not: "analyzed" },
+      privacyStatus: "public",
+      channel: {
+        enabled: true,
+        permissionStatus: "approved_for_processing",
+      },
+    },
+    orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+    take: mode === "uncoveredCharacters" ? 500 : limit,
+    select: { videoId: true, title: true },
+  });
+
+  let selected: Array<{ videoId: string; title: string; characterId?: string | null }> =
+    [];
+  let remainingUncoveredEstimate: number | null = null;
+
+  if (mode === "uncoveredCharacters") {
+    const hints = await loadCharacterHints();
+    const coveredRows = await prisma.characterBuildRecommendation.findMany({
+      where: { status: { not: "rejected" } },
+      distinct: ["characterId"],
+      select: { characterId: true },
+    });
+    const claimed = new Set(coveredRows.map((r) => r.characterId));
+    const queue: Array<{ videoId: string; title: string; characterId: string }> =
+      [];
+    for (const video of pending) {
+      if (!isCharacterBuildGuideTitle(video.title)) continue;
+      const characterId = resolvePrimaryCharacterFromTitle(video.title, hints);
+      if (!characterId || claimed.has(characterId)) continue;
+      claimed.add(characterId);
+      queue.push({ ...video, characterId });
+    }
+    remainingUncoveredEstimate = Math.max(0, queue.length - limit);
+    selected = queue.slice(0, limit);
+  } else {
+    selected = pending.slice(0, limit).map((v) => ({ ...v, characterId: null }));
+  }
+
+  const results: Array<{
+    videoId: string;
+    title: string;
+    characterId?: string | null;
+    ok: boolean;
+    status?: string;
+    evidenceCount?: number;
+    recommendationIds?: string[];
+    error?: string;
+  }> = [];
+
+  for (const video of selected) {
+    try {
+      const outcome = await analyzeVideoVisuals({
+        videoId: video.videoId,
+        targetCharacterIds: video.characterId ? [video.characterId] : undefined,
+      });
+      results.push({
+        videoId: video.videoId,
+        title: video.title,
+        characterId: video.characterId,
+        ok: true,
+        status: outcome.status,
+        evidenceCount: outcome.evidenceCount,
+        recommendationIds: outcome.recommendationIds,
+      });
+    } catch (error) {
+      const code =
+        error instanceof GuideVisualAnalysisError
+          ? error.code
+          : error instanceof Error
+            ? error.message
+            : "analysisFailed";
+      results.push({
+        videoId: video.videoId,
+        title: video.title,
+        characterId: video.characterId,
+        ok: false,
+        error: code,
+      });
+      if (
+        code === "channelDailyLimit" ||
+        code === "geminiDisabled" ||
+        code === "analysisAlreadyRunning"
+      ) {
+        break;
+      }
+    }
+  }
+
+  const succeeded = results.filter((r) => r.ok).length;
+  const failed = results.filter((r) => !r.ok).length;
+  return {
+    titleMarker: GENSIN_VIDEO_TITLE_MARKER,
+    mode,
+    limit,
+    attempted: results.length,
+    succeeded,
+    failed,
+    remainingUncoveredEstimate,
+    results,
+    note:
+      mode === "uncoveredCharacters"
+        ? "未カバーキャラの育成ガイド動画を優先解析しました。HTTPタイムアウト回避のため1回あたり最大10件です。管理画面の全キャラボタンは残件がなくなるまで繰り返します。公開には証拠確認→構造化→publishが必要です。"
+        : "解析成功分は証拠（pending_review）と推奨ドラフトまで作成済みです。公開するには証拠確認→構造化編集→publish が必要です。",
+  };
 }
 
 function safeJson<T>(raw: string, fallback: T): T {
