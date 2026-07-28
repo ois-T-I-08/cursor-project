@@ -54,8 +54,7 @@ function safeJson<T>(raw: string, fallback: T): T {
   }
 }
 
-function parseExpectedUpdatedAt(raw: string | undefined): Date | null {
-  if (raw === undefined) return null;
+function parseExpectedUpdatedAt(raw: string): Date {
   const parsed = new Date(raw);
   if (!Number.isFinite(parsed.getTime())) {
     throw new Error("conflictUpdatedAt");
@@ -502,7 +501,7 @@ export async function setRecommendationStatus(input: {
   recommendationId: string;
   status: "approved" | "rejected" | "published" | "pending_review";
   adminNotes?: string;
-  expectedUpdatedAt?: string;
+  expectedUpdatedAt: string;
 }) {
   const existing = await prisma.characterBuildRecommendation.findUnique({
     where: { id: input.recommendationId },
@@ -512,7 +511,7 @@ export async function setRecommendationStatus(input: {
   });
   if (!existing) throw new Error("recommendationNotFound");
   const expectedUpdatedAt = parseExpectedUpdatedAt(input.expectedUpdatedAt);
-  if (expectedUpdatedAt && expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
+  if (expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
     throw new Error("conflictUpdatedAt");
   }
 
@@ -635,6 +634,9 @@ export async function setRecommendationStatus(input: {
     }
   }
 
+  const updateLastVerifiedAt =
+    revisionAction !== "approve_draft" &&
+    (input.status === "approved" || input.status === "published");
   const updateData = {
       status: input.status,
       adminNotes: nextAdminNotes,
@@ -649,32 +651,23 @@ export async function setRecommendationStatus(input: {
             ? new Date()
             : existing.publishedAt
           : null,
-      lastVerifiedAt:
-        input.status === "approved" || input.status === "published"
-          ? new Date()
-          : existing.lastVerifiedAt,
+      lastVerifiedAt: updateLastVerifiedAt
+        ? new Date()
+        : existing.lastVerifiedAt,
     } as const;
   const row = await prisma.$transaction(async (tx) => {
-    let updated;
-    if (expectedUpdatedAt) {
-      const result = await tx.characterBuildRecommendation.updateMany({
-        where: {
-          id: input.recommendationId,
-          updatedAt: expectedUpdatedAt,
-        },
-        data: { ...updateData, status: nextStatus },
-      });
-      if (result.count !== 1) throw new Error("conflictUpdatedAt");
-      updated = await tx.characterBuildRecommendation.findUnique({
-        where: { id: input.recommendationId },
-      });
-      if (!updated) throw new Error("recommendationNotFound");
-    } else {
-      updated = await tx.characterBuildRecommendation.update({
-        where: { id: input.recommendationId },
-        data: { ...updateData, status: nextStatus },
-      });
-    }
+    const result = await tx.characterBuildRecommendation.updateMany({
+      where: {
+        id: input.recommendationId,
+        updatedAt: expectedUpdatedAt,
+      },
+      data: { ...updateData, status: nextStatus },
+    });
+    if (result.count !== 1) throw new Error("conflictUpdatedAt");
+    const updated = await tx.characterBuildRecommendation.findUnique({
+      where: { id: input.recommendationId },
+    });
+    if (!updated) throw new Error("recommendationNotFound");
 
     if (input.status === "published") {
       await tx.recommendationVisualContribution.updateMany({
@@ -721,34 +714,26 @@ export async function setRecommendationStatus(input: {
 
 export async function unpublishRecommendation(
   recommendationId: string,
-  expectedUpdatedAtRaw?: string,
+  expectedUpdatedAtRaw: string,
 ) {
   const existing = await prisma.characterBuildRecommendation.findUnique({
     where: { id: recommendationId },
   });
   if (!existing) throw new Error("recommendationNotFound");
   const expectedUpdatedAt = parseExpectedUpdatedAt(expectedUpdatedAtRaw);
-  if (expectedUpdatedAt && expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
+  if (expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
     throw new Error("conflictUpdatedAt");
   }
   const row = await prisma.$transaction(async (tx) => {
-    let updated;
-    if (expectedUpdatedAt) {
-      const result = await tx.characterBuildRecommendation.updateMany({
-        where: { id: recommendationId, updatedAt: expectedUpdatedAt },
-        data: { status: "approved", publishedAt: null },
-      });
-      if (result.count !== 1) throw new Error("conflictUpdatedAt");
-      updated = await tx.characterBuildRecommendation.findUnique({
-        where: { id: recommendationId },
-      });
-      if (!updated) throw new Error("recommendationNotFound");
-    } else {
-      updated = await tx.characterBuildRecommendation.update({
-        where: { id: recommendationId },
-        data: { status: "approved", publishedAt: null },
-      });
-    }
+    const result = await tx.characterBuildRecommendation.updateMany({
+      where: { id: recommendationId, updatedAt: expectedUpdatedAt },
+      data: { status: "approved", publishedAt: null },
+    });
+    if (result.count !== 1) throw new Error("conflictUpdatedAt");
+    const updated = await tx.characterBuildRecommendation.findUnique({
+      where: { id: recommendationId },
+    });
+    if (!updated) throw new Error("recommendationNotFound");
     await tx.recommendationVisualContribution.updateMany({
       where: { recommendationId: updated.id },
       data: { usedInPublishedResult: false },
@@ -793,7 +778,7 @@ export async function overrideRecommendation(input: {
   contextPayload?: unknown;
   structuredPayload?: unknown;
   adminNotes?: string;
-  expectedUpdatedAt?: string;
+  expectedUpdatedAt: string;
   keepPublished?: boolean;
 }) {
   const existing = await prisma.characterBuildRecommendation.findUnique({
@@ -802,7 +787,7 @@ export async function overrideRecommendation(input: {
   if (!existing) throw new Error("recommendationNotFound");
 
   const expectedUpdatedAt = parseExpectedUpdatedAt(input.expectedUpdatedAt);
-  if (expectedUpdatedAt && expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
+  if (expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
     throw new Error("conflictUpdatedAt");
   }
 
@@ -894,26 +879,18 @@ export async function overrideRecommendation(input: {
       publishedAt: nextPublishedAt,
     } as const;
   const row = await prisma.$transaction(async (tx) => {
-    let updated;
-    if (expectedUpdatedAt) {
-      const result = await tx.characterBuildRecommendation.updateMany({
-        where: {
-          id: input.recommendationId,
-          updatedAt: expectedUpdatedAt,
-        },
-        data: updateData,
-      });
-      if (result.count !== 1) throw new Error("conflictUpdatedAt");
-      updated = await tx.characterBuildRecommendation.findUnique({
-        where: { id: input.recommendationId },
-      });
-      if (!updated) throw new Error("recommendationNotFound");
-    } else {
-      updated = await tx.characterBuildRecommendation.update({
-        where: { id: input.recommendationId },
-        data: updateData,
-      });
-    }
+    const result = await tx.characterBuildRecommendation.updateMany({
+      where: {
+        id: input.recommendationId,
+        updatedAt: expectedUpdatedAt,
+      },
+      data: updateData,
+    });
+    if (result.count !== 1) throw new Error("conflictUpdatedAt");
+    const updated = await tx.characterBuildRecommendation.findUnique({
+      where: { id: input.recommendationId },
+    });
+    if (!updated) throw new Error("recommendationNotFound");
     await tx.guideRecommendationRevision.create({
       data: {
         recommendationId: updated.id,
@@ -1103,14 +1080,14 @@ export async function previewRecommendationPublicDto(recommendationId: string) {
 export async function restoreRecommendationRevision(input: {
   recommendationId: string;
   revisionId: string;
-  expectedUpdatedAt?: string;
+  expectedUpdatedAt: string;
 }) {
   const existing = await prisma.characterBuildRecommendation.findUnique({
     where: { id: input.recommendationId },
   });
   if (!existing) throw new Error("recommendationNotFound");
   const expectedUpdatedAt = parseExpectedUpdatedAt(input.expectedUpdatedAt);
-  if (expectedUpdatedAt && expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
+  if (expectedUpdatedAt.getTime() !== existing.updatedAt.getTime()) {
     throw new Error("conflictUpdatedAt");
   }
   const revision = await prisma.guideRecommendationRevision.findFirst({

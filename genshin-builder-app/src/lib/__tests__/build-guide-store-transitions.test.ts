@@ -133,6 +133,7 @@ describe("build guide recommendation status transitions", () => {
       data: {
         status: string;
         publishedAt: Date | null;
+        lastVerifiedAt: Date | null;
         structuredPayload: string;
       };
     };
@@ -146,6 +147,7 @@ describe("build guide recommendation status transitions", () => {
 
     expect(update.data.status).toBe("published");
     expect(update.data.publishedAt).toEqual(publishedAt);
+    expect(update.data.lastVerifiedAt).toBeNull();
     expect(payload.weapons).toEqual([{ weaponId: "live-weapon" }]);
     expect(working.structured.structuredReviewStatus).toBe("admin_confirmed");
     expect(txMock.guideRecommendationRevision.create).toHaveBeenCalledWith(
@@ -198,6 +200,25 @@ describe("build guide recommendation status transitions", () => {
 
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
+
+  it.each(["pending_review", "rejected"])(
+    "does not publish a %s recommendation",
+    async (status) => {
+      prismaMock.characterBuildRecommendation.findUnique.mockResolvedValue(
+        recommendation({ status }),
+      );
+
+      await expect(
+        setRecommendationStatus({
+          recommendationId: "recommendation-1",
+          status: "published",
+          expectedUpdatedAt: updatedAt.toISOString(),
+        }),
+      ).rejects.toThrow("notApproved");
+
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    },
+  );
 
   it("does not auto-confirm a review-required draft during publication", async () => {
     prismaMock.characterBuildRecommendation.findUnique.mockResolvedValue(

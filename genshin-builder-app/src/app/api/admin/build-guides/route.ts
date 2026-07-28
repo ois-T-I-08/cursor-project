@@ -127,23 +127,23 @@ const actionSchema = z.discriminatedUnion("action", [
     action: z.literal("approveRecommendation"),
     recommendationId: cuid,
     adminNotes: z.string().max(2_000).optional(),
-    expectedUpdatedAt: z.string().datetime().optional(),
+    expectedUpdatedAt: z.string().datetime(),
   }),
   z.strictObject({
     action: z.literal("rejectRecommendation"),
     recommendationId: cuid,
     adminNotes: z.string().max(2_000).optional(),
-    expectedUpdatedAt: z.string().datetime().optional(),
+    expectedUpdatedAt: z.string().datetime(),
   }),
   z.strictObject({
     action: z.literal("publishRecommendation"),
     recommendationId: cuid,
-    expectedUpdatedAt: z.string().datetime().optional(),
+    expectedUpdatedAt: z.string().datetime(),
   }),
   z.strictObject({
     action: z.literal("unpublishRecommendation"),
     recommendationId: cuid,
-    expectedUpdatedAt: z.string().datetime().optional(),
+    expectedUpdatedAt: z.string().datetime(),
   }),
   z.strictObject({
     action: z.literal("overrideRecommendation"),
@@ -154,7 +154,7 @@ const actionSchema = z.discriminatedUnion("action", [
     contextPayload: z.unknown().optional(),
     structuredPayload: z.unknown().optional(),
     adminNotes: z.string().max(2_000).optional(),
-    expectedUpdatedAt: z.string().datetime().optional(),
+    expectedUpdatedAt: z.string().datetime(),
     keepPublished: z.boolean().optional(),
   }),
   z.strictObject({
@@ -168,7 +168,7 @@ const actionSchema = z.discriminatedUnion("action", [
     action: z.literal("restoreRecommendationRevision"),
     recommendationId: cuid,
     revisionId: cuid,
-    expectedUpdatedAt: z.string().datetime().optional(),
+    expectedUpdatedAt: z.string().datetime(),
   }),
   z.strictObject({
     action: z.literal("validateStructuredRecommendation"),
