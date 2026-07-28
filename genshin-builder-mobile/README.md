@@ -54,7 +54,7 @@ Android エミュレーターでローカル Web 版へ接続する場合は、�
 
 攻略情報は `GET /api/build-recommendations/{characterId}` から取得します。各セクションはローディング・空・エラーを独立して表示し、取得失敗時は再試行できます。
 
-出典として起動できる URL は HTTPS の `youtube.com`（サブドメインを含む）または `youtu.be` だけです。パーサーと起動直前の両方で検証し、不正・未知の URL は表示データから除外します。
+出典として起動できる URL は HTTPS の `youtube.com`、`www.youtube.com`、`m.youtube.com`、`youtu.be` だけです。パーサーと起動直前の両方で検証し、不正・未知の URL は表示データから除外します。
 
 Akasha は利用統計、YouTube は攻略おすすめとして別ラベル・別リストで扱います。未知の武器 ID / 聖遺物 setId や未対応 ratio があっても画面全体をクラッシュさせず、既知のセクションを表示し続けます。
 

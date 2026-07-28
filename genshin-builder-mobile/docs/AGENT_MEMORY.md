@@ -5,7 +5,7 @@
 ## 2026-07-28 — 全体品質仕上げと攻略出典の安全化
 
 - **範囲:** Build Recommendationの出典起動、セクション単位エラーUI、全リポジトリformat、既存lint負債、README/リリース検証。
-- **決定事項:** 起動可能な出典はuserinfoなしのHTTPS `youtube.com`（サブドメイン含む）/`youtu.be`だけ。APIパーサーと`launchUrl`直前の二段階で検証し、不正URLは候補全体を壊さず除外する。攻略セクションのネットワークエラーにはRiverpod invalidateの「再試行」を表示する。
+- **決定事項:** 起動可能な出典はuserinfoなしのHTTPS `youtube.com` / `www.youtube.com` / `m.youtube.com` / `youtu.be`だけ。APIパーサーと`launchUrl`直前の二段階で検証し、不正URLは候補全体を壊さず除外する。攻略セクションのネットワークエラーにはRiverpod invalidateの「再試行」を表示する。
 - **非破壊:** Akasha利用率とYouTubeおすすめの分離、未知ID fallback、ratio安全処理、ドメイン計算、Drift schema/migrationを変更していない。新規パッケージなし。
 - **品質:** Dart標準formatterを全436ファイルへ適用。改行で顕在化した`curly_braces_in_flow_control_structures` 8件も波括弧で解消。
 - **検証:** build_runner成功、format 436/0差分、`flutter analyze` 0 issue、全756 tests成功、Android debug APK成功。

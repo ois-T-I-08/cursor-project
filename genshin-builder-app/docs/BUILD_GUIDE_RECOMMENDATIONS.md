@@ -169,7 +169,7 @@ Gemini 3.6 Flash リクエストでは非推奨 sampling パラメータ（`temp
 * 2+2 構成は管理 override の `structuredPayload` で配列として登録可能
 * HTTP: 内容指紋ベースの `ETag` + `Cache-Control: max-age=60, stale-while-revalidate=300`
 * 公開内容の時刻は `structuredPayload.publishedContentUpdatedAt`（working draft 保存では変更しない）
-* `sources[].sourceUrl` は HTTPS の `youtube.com`（サブドメイン含む）または `youtu.be` のみ。サーバー正規化と Flutter 起動前の両方で検証
+* `sources[].sourceUrl` は HTTPS の `youtube.com` / `www.youtube.com` / `m.youtube.com` / `youtu.be` のみ。サーバー正規化と Flutter 起動前の両方で検証
 * ratio は公開 JSON に含められるがモバイル表示は未対応（管理画面で警告、公開はブロックしない）
 
 正規化実装: `src/lib/build-guides/public-recommendation-normalize.ts`  
