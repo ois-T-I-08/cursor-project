@@ -10,11 +10,14 @@
 ```bash
 cd genshin-builder-app
 npm ci
-cp .env.example .env          # DATABASE_URL="file:./dev.db"
+cp .env.example .env          # DATABASE_URL / DIRECT_URL = local PostgreSQL
 npx prisma generate
 npx prisma migrate deploy
 npm run dev                     # http://localhost:3000
 ```
+
+Node.js は **20.x**（リポジトリ直下の `.nvmrc` / `.node-version`）に固定する。
+PostgreSQL migration の詳細は `docs/POSTGRES_MIGRATION.md`。
 
 ### よくある問題
 

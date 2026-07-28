@@ -16,19 +16,22 @@ Next.js 16（App Router）、TypeScript、Prisma で構成する Genshin Builder
 
 ## ローカル起動
 
-必要環境は Node.js 20 と npm です。
+必要環境は Node.js 20 と npm、および **PostgreSQL** です（SQLite は開発対象外）。
 
 ```powershell
 Copy-Item .env.example .env
+# DATABASE_URL / DIRECT_URL をローカル Postgres に合わせて編集
 npm ci
 npx prisma generate
 npx prisma migrate deploy
 npm run dev
 ```
 
+PostgreSQL 運用の詳細は [docs/POSTGRES_MIGRATION.md](../docs/POSTGRES_MIGRATION.md)、staging は [docs/STAGING_SETUP.md](../docs/STAGING_SETUP.md) を参照してください。
+
 `http://localhost:3000` を開きます。初回のゲームマスター同期は「設定」画面または認証済み `POST /api/sync` から実行します。
 
-SQLite の既定 DB は `prisma/dev.db` です。既存 migration の状態確認と適用:
+PostgreSQL への接続確認と migration 適用:
 
 ```powershell
 npx prisma validate
@@ -42,7 +45,8 @@ npx prisma migrate deploy
 
 正本は [`.env.example`](.env.example) です。
 
-- `DATABASE_URL` — Prisma 接続先
+- `DATABASE_URL` — Prisma 接続先（PostgreSQL）
+- `DIRECT_URL` — Migrate 用 direct 接続（ローカルでは `DATABASE_URL` と同じで可）
 - `SYNC_API_SECRET` — `/api/sync` の Bearer secret
 - `BUILD_GUIDE_ADMIN_SECRET` — Build Guide 管理 API。未設定は 503
 - `TEAM_TEMPLATE_ADMIN_SECRET` — 編成テンプレート管理 API
@@ -79,7 +83,7 @@ Vitest は正規化、同期、認証、公開情報漏えい、ETag、楽観ロ
 外部 API
   -> src/lib/api（取得・タイムアウト・検証・正規化）
   -> src/lib/sync / service（整合性とキャッシュ）
-  -> Prisma（SQLite。運用判断なしに別 DB へ変更しない）
+  -> Prisma（PostgreSQL）
   -> App Router / 公開 API
   -> Flutter
 ```
