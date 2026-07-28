@@ -4,6 +4,25 @@ import 'package:genshin_builder_mobile/domain/build_recommendations/build_recomm
 import 'package:genshin_builder_mobile/domain/character_stats.dart';
 
 void main() {
+  test('accepts only safe HTTPS YouTube guide URLs', () {
+    expect(
+      isSafeYoutubeGuideUrl('https://www.youtube.com/watch?v=abcdefghijk'),
+      isTrue,
+    );
+    expect(isSafeYoutubeGuideUrl('https://youtu.be/abcdefghijk'), isTrue);
+    expect(
+      isSafeYoutubeGuideUrl('http://www.youtube.com/watch?v=abcdefghijk'),
+      isFalse,
+    );
+    expect(
+      isSafeYoutubeGuideUrl(
+        'https://youtube.com.evil.example/watch?v=abcdefghijk',
+      ),
+      isFalse,
+    );
+    expect(isSafeYoutubeGuideUrl('javascript:alert(1)'), isFalse);
+  });
+
   test('parses visual recommendation payload', () {
     final parsed = parseBuildRecommendation({
       'characterId': 'hu-tao',
@@ -49,6 +68,27 @@ void main() {
     expect(parsed.label, '動画内推奨目安');
     expect(parsed.evidence.single.exactVisibleText, 'ER 150～160%');
     expect(parsed.evidence.single.startSeconds, 530);
+  });
+
+  test('drops unsafe source URLs from an otherwise valid payload', () {
+    final parsed = parseBuildRecommendation({
+      'characterId': 'hu-tao',
+      'sources': <Object?>[
+        {
+          'videoId': 'unsafe',
+          'title': 'unsafe',
+          'channelTitle': 'channel',
+          'sourceUrl': 'https://youtube.com.evil.example/watch?v=unsafe',
+        },
+        {
+          'videoId': 'safe',
+          'title': 'safe',
+          'channelTitle': 'channel',
+          'sourceUrl': 'https://www.youtube.com/watch?v=safe',
+        },
+      ],
+    });
+    expect(parsed.sources.map((source) => source.videoId), ['safe']);
   });
 
   test('compareStatToTarget classifies ranges', () {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildStructuredPayloadFromEvidences,
   compareGameVersions,
+  isSafeYoutubeSourceUrl,
   normalizePublicBuildRecommendation,
   parseInvestmentPriority,
 } from "../build-guides/public-recommendation-normalize";
@@ -42,6 +43,21 @@ describe("compareGameVersions", () => {
     expect(compareGameVersions("5.10", "5.9")).toBeGreaterThan(0);
     expect(compareGameVersions("5.8.1", "5.8")).toBeGreaterThan(0);
     expect(compareGameVersions("bad", "5.8")).toBeNull();
+  });
+});
+
+describe("isSafeYoutubeSourceUrl", () => {
+  it("allows only HTTPS YouTube sources without user info", () => {
+    expect(isSafeYoutubeSourceUrl("https://www.youtube.com/watch?v=abc")).toBe(true);
+    expect(isSafeYoutubeSourceUrl("https://youtu.be/abc")).toBe(true);
+    expect(isSafeYoutubeSourceUrl("http://www.youtube.com/watch?v=abc")).toBe(false);
+    expect(isSafeYoutubeSourceUrl("https://youtube.com.evil.example/watch?v=abc")).toBe(
+      false,
+    );
+    expect(isSafeYoutubeSourceUrl("javascript:alert(1)")).toBe(false);
+    expect(isSafeYoutubeSourceUrl("https://user:pass@youtube.com/watch?v=abc")).toBe(
+      false,
+    );
   });
 });
 
@@ -217,6 +233,12 @@ describe("normalizePublicBuildRecommendation", () => {
       targets: [{ stat: "not_a_stat" }, { stat: "er", min: 140, unit: "percent" }],
       sources: [
         { videoId: "bad", title: "x", channelTitle: "y", sourceUrl: "not-a-url" },
+        {
+          videoId: "evil",
+          title: "x",
+          channelTitle: "y",
+          sourceUrl: "https://youtube.com.evil.example/watch?v=evil",
+        },
         baseSources[0],
       ],
       publishedAt: "2026-07-20T10:00:00.000Z",

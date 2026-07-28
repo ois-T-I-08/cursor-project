@@ -10,6 +10,7 @@ import 'package:genshin_builder_mobile/features/characters/widgets/character_art
 import 'package:genshin_builder_mobile/features/characters/widgets/character_detail_header.dart';
 import 'package:genshin_builder_mobile/features/characters/widgets/character_weapon_insights_section.dart';
 import 'package:genshin_builder_mobile/features/characters/widgets/guide_main_stats_panel.dart';
+import 'package:genshin_builder_mobile/features/characters/widgets/recommended_stats_card.dart';
 import 'package:genshin_builder_mobile/providers/build_recommendation_providers.dart';
 import 'package:genshin_builder_mobile/providers/character_detail_providers.dart';
 
@@ -414,11 +415,34 @@ void main() {
     });
 
     testWidgets('empty main stats', (tester) async {
+      await _pump(tester, child: const GuideMainStatsPanel(mainStats: []));
+      expect(find.textContaining('まだ登録されていません'), findsOneWidget);
+    });
+  });
+
+  group('RecommendedStatsCard states', () {
+    testWidgets('section error offers retry without blocking the screen', (
+      tester,
+    ) async {
       await _pump(
         tester,
-        child: const GuideMainStatsPanel(mainStats: []),
+        overrides: [
+          buildRecommendationProvider(_character.id).overrideWith(
+            (ref) async =>
+                throw const BuildRecommendationException(
+                  BuildRecommendationFailure.networkError,
+                ),
+          ),
+        ],
+        child: RecommendedStatsCard(
+          characterId: _character.id,
+          currentStats: {},
+        ),
       );
-      expect(find.textContaining('まだ登録されていません'), findsOneWidget);
+
+      expect(find.textContaining('取得できませんでした'), findsOneWidget);
+      expect(find.text('再試行'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 }
