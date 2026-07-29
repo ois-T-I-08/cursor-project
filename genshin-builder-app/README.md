@@ -16,7 +16,7 @@ Next.js 16（App Router）、TypeScript、Prisma で構成する Genshin Builder
 
 ## ローカル起動
 
-必要環境は Node.js 20 と npm、および **PostgreSQL** です（SQLite は開発対象外）。
+必要環境は Node.js 24 と npm、および **PostgreSQL** です（SQLite は開発対象外）。
 
 ```powershell
 Copy-Item .env.example .env

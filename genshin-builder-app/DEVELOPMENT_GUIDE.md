@@ -16,7 +16,7 @@ npx prisma migrate deploy
 npm run dev                     # http://localhost:3000
 ```
 
-Node.js は **20.x**（リポジトリ直下の `.nvmrc` / `.node-version`）に固定する。
+Node.js は **24.x**（リポジトリ直下の `.nvmrc` / `.node-version`）に固定する。
 PostgreSQL migration の詳細は `docs/POSTGRES_MIGRATION.md`。
 
 ### よくある問題
