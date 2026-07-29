@@ -16,7 +16,7 @@
 
 ## 必要環境
 
-- Node.js 20（Web CI と同じメジャー）
+- Node.js 24（Web CI と同じメジャー）
 - npm（`package-lock.json` を使用）
 - Flutter 3.44.5（モバイル CI と同じ版。対応 Dart SDK を同梱）
 - Android の実機・release build を行う場合は Android SDK / Java / 署名鍵
