@@ -91,21 +91,30 @@ export class AzaAbyssStatisticsProvider
     } catch (error) {
       if (error instanceof AbyssStatisticsError) throw error;
       if (error instanceof UpstreamFetchError) {
+        const diagnostic = [
+          error.code,
+          error.status !== undefined ? `http_${error.status}` : undefined,
+          error.causeKind,
+        ]
+          .filter((part): part is string => typeof part === "string" && part.length > 0)
+          .join("/")
+          .slice(0, 120);
         if (error.code === "timeout") {
-          throw new AbyssStatisticsError("timeout", undefined, error.causeKind);
+          throw new AbyssStatisticsError("timeout", undefined, diagnostic);
         }
         if (error.code === "httpStatus" && error.status === 429) {
-          throw new AbyssStatisticsError("rateLimited", 429, error.causeKind);
+          throw new AbyssStatisticsError("rateLimited", 429, diagnostic);
         }
         if (
           error.code === "invalidJson" ||
           error.code === "invalidData" ||
           error.code === "invalidEncoding" ||
-          error.code === "bodyTooLarge"
+          error.code === "bodyTooLarge" ||
+          error.code === "httpStatus"
         ) {
-          throw new AbyssStatisticsError("invalidResponse", error.status, error.causeKind);
+          throw new AbyssStatisticsError("invalidResponse", error.status, diagnostic);
         }
-        throw new AbyssStatisticsError("networkError", error.status, error.causeKind);
+        throw new AbyssStatisticsError("networkError", error.status, diagnostic || "network");
       }
       throw new AbyssStatisticsError("unknownError");
     }
