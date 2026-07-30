@@ -55,8 +55,9 @@ export class AzaAbyssStatisticsProvider
         cache: "no-store",
         headers: {
           Accept: "application/json",
+          // AZA returns 403 to some datacenter clients with a custom UA; use a plain browser-like UA.
           "User-Agent":
-            "GenshinBuilder-Web/0.1 (AZA.GG statistics proxy)",
+            "Mozilla/5.0 (compatible; GenshinBuilder/0.1; +https://github.com/ois-T-I-08/cursor-project)",
         },
       });
       const identity = readAzaResponseIdentity(input);
