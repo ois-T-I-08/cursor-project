@@ -7,7 +7,7 @@ import 'package:genshin_builder_mobile/providers/app_providers.dart';
 import 'package:genshin_builder_mobile/providers/team_recommendation_providers.dart';
 
 void main() {
-  testWidgets('shows theoretical value warning and credits', (tester) async {
+  testWidgets('shows AZA credit and recommendation disclaimer', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [charactersProvider.overrideWith((ref) async => [])],
@@ -21,30 +21,28 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.textContaining('シミュレーション結果は理論値です'), findsOneWidget);
-    expect(find.textContaining('gcsim'), findsWidgets);
+    expect(find.textContaining('AZA.GG の使用実績'), findsOneWidget);
     expect(find.textContaining('AZA.GG'), findsWidgets);
-    expect(find.text('シミュレーション: gcsim（MITライセンス）／利用統計: AZA.GG'), findsOneWidget);
+    expect(find.text('利用統計: AZA.GG'), findsOneWidget);
+    expect(find.textContaining('gcsim'), findsNothing);
     expect(find.textContaining('Simulation:'), findsNothing);
-    expect(find.textContaining('Usage statistics:'), findsNothing);
     expect(find.text('所持キャラのみ'), findsOneWidget);
   });
 
-  testWidgets('recommendation card shows stale, quality and alternatives', (
+  testWidgets('recommendation card shows quality and alternatives', (
     tester,
   ) async {
     const recommendation = TeamRecommendation(
       members: ['10000089', '10000087', '10000025', '10000054'],
       score: 0.92,
-      estimatedDps: 78543.2,
-      simulationStatus: 'simulated',
-      sourceTypes: ['aza', 'gcsim'],
+      simulationStatus: 'observed',
+      sourceTypes: ['aza'],
       rotationConfidence: 'medium',
       observedByAza: true,
-      isCached: true,
-      isStale: true,
+      isCached: false,
+      isStale: false,
       inputQuality: SimulationInputQuality.partial,
-      reasons: ['前回の正常値'],
+      reasons: ['AZA.GGの深境螺旋で使用実績があります'],
       alternatives: {
         '10000054': ['10000032'],
       },
@@ -68,8 +66,8 @@ void main() {
         ),
       ),
     );
-    expect(find.textContaining('推定DPS: 78543'), findsOneWidget);
-    expect(find.textContaining('前回値'), findsOneWidget);
+    expect(find.textContaining('推定DPS'), findsNothing);
+    expect(find.textContaining('AZA.GG使用実績'), findsOneWidget);
     expect(find.textContaining('入力品質: 一部不足'), findsOneWidget);
     expect(find.textContaining('ローテーション信頼度: 中'), findsOneWidget);
     expect(find.textContaining('partial'), findsNothing);

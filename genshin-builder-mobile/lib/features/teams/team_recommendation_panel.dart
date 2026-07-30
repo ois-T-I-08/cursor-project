@@ -128,12 +128,12 @@ class _TeamRecommendationPanelState
             ),
             const Divider(height: 24),
             Text(
-              'シミュレーション結果は理論値です。\n実際の戦闘では操作、敵の行動、被弾、移動、回線状況などにより結果が異なります。',
+              'おすすめ編成は AZA.GG の使用実績と元素反応・役割ルールに基づく候補です。\n実際の戦闘では操作、敵の行動、被弾、移動、回線状況などにより結果が異なります。',
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'シミュレーション: gcsim（MITライセンス）／利用統計: AZA.GG',
+              '利用統計: AZA.GG',
               style: theme.textTheme.labelSmall,
             ),
           ],
@@ -144,7 +144,7 @@ class _TeamRecommendationPanelState
 
   Widget _jobContent(TeamSimulationJob? job, Map<String, String> names) {
     if (job == null) {
-      return const Text('アタッカーを基準に、AZA.GG実績・元素反応ルール・gcsimを組み合わせて候補を生成します。');
+      return const Text('アタッカーを基準に、AZA.GG実績と元素反応ルールから候補を生成します。');
     }
     if (job.status == TeamSimulationJobStatus.queued) {
       return const _JobProgress(label: '待機中です');
@@ -172,15 +172,6 @@ class _TeamRecommendationPanelState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (result.warning != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              result.warning == 'staleSimulation'
-                  ? '前回の正常なシミュレーション結果を表示しています。'
-                  : 'gcsimでシミュレーションできませんでした（未対応キャラ／武器、または育成データ不足）。AZA.GG実績とルールに基づく候補を表示しています。',
-            ),
-          ),
         for (final recommendation in result.recommendations)
           TeamRecommendationCard(
             recommendation: recommendation,
@@ -297,14 +288,7 @@ class TeamRecommendationCard extends StatelessWidget {
               'おすすめスコア ${(recommendation.score * 100).toStringAsFixed(0)} / 100',
             ),
             Text(
-              recommendation.estimatedDps == null
-                  ? '推定DPS: 未シミュレーション'
-                  : '推定DPS: ${recommendation.estimatedDps!.toStringAsFixed(0)}',
-            ),
-            Text(
-              '評価: ${recommendation.simulationStatus == 'simulated'
-                  ? 'シミュレーション済み'
-                  : recommendation.observedByAza
+              '評価: ${recommendation.observedByAza
                   ? 'AZA.GG使用実績'
                   : 'ルールベース'}${recommendation.isCached ? '（キャッシュ）' : ''}${recommendation.isStale ? '（前回値）' : ''}',
             ),

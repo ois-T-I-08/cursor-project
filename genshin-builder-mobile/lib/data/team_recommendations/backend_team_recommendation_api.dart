@@ -284,21 +284,16 @@ TeamSimulationJob _parseJob(Map<String, Object?> json) {
 }
 
 TeamRecommendationResult _parseResult(Map<String, Object?> json) {
-  final gcsim = _map(json['gcsim']);
   final rawRecommendations = _list(json['recommendations'], 20);
   return TeamRecommendationResult(
     attackerId: _string(json['attackerId'], RegExp(r'^\d{5,12}$')),
     generatedAt: DateTime.parse(
       _string(json['generatedAt'], RegExp(r'^.{1,40}$')),
     ),
-    gcsimVersion: _string(gcsim['version'], RegExp(r'^v[0-9.]{1,20}$')),
-    iterations: _int(gcsim['iterations'], 1, 100000),
-    gcsimEnabled: _bool(gcsim['enabled']),
     recommendations:
         rawRecommendations
             .map((raw) => _parseRecommendation(_map(raw)))
             .toList(),
-    warning: json['warning'] is String ? json['warning'] as String : null,
   );
 }
 
@@ -322,13 +317,9 @@ TeamRecommendation _parseRecommendation(Map<String, Object?> json) {
   return TeamRecommendation(
     members: members,
     score: _double(json['score'], 0, 1),
-    estimatedDps:
-        json['estimatedDps'] == null
-            ? null
-            : _double(json['estimatedDps'], 0, 1000000000),
     simulationStatus: _string(
       json['simulationStatus'],
-      RegExp(r'^(simulated|observed|ruleBased|manual)$'),
+      RegExp(r'^(observed|ruleBased|manual)$'),
     ),
     sourceTypes:
         _list(

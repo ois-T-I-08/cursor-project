@@ -9,28 +9,30 @@ Quality meanings:
 - `exact`: every transmitted combat field came from the current normalized source.
 - `partial`: optional combat fields are absent, such as artifact set ID.
 - `defaulted`: an explicit documented default was used.
-- `unsupported`: a safe recommendation may be shown, but gcsim must not infer the missing build.
+- `unsupported`: a safe recommendation may be shown; missing builds are not invented.
 
 The current HoYoLAB relic model retains localized set name but no stable set ID. The client deliberately sends no set in that case and marks `artifactSets`; localized-name conversion is prohibited.
 
 ## Candidate generation
 
-The attacker remains fixed. The other three members are treated as a set for deduplication. Sources and hard caps are AZA.GG observed teams (10), bounded co-occurrence candidates (20), bounded element/role rules (20), and final gcsim candidates (20). There is no full roster Cartesian search.
+The attacker remains fixed. The other three members are treated as a set for deduplication. Sources and hard caps are AZA.GG observed teams (10), bounded co-occurrence candidates (20), and bounded element/role rules (20). Final result size is capped by `TEAM_RECOMMENDATION_MAX_CANDIDATES` (default 20). There is no full roster Cartesian search.
 
-Common rules require four distinct members, attacker inclusion, an elemental reaction or mono composition, and apply small explicit constraints for Nilou, Chevreuse, Gorou, Faruzan and Kujou Sara. Unknown characters still receive bounded rule candidates; unsupported gcsim mappings are shown as observed/rule-based rather than assigned fabricated performance.
+**gcsim has been removed.** Recommendations are AZA.GG observed usage and element/role rules only. There is no combat simulator, pinned binary, or DPS estimate in this pipeline.
 
-Ranking combines configurable performance 35%, AZA usage 20%, current build 15%, sustain 10%, energy 10%, and accessibility 10%. A result distinguishes `simulated`, `observed`, `ruleBased`, and `manual`; no gcsim result is required to display a recommendation.
+Common rules require four distinct members, attacker inclusion, an elemental reaction or mono composition, and apply small explicit constraints for Nilou, Chevreuse, Gorou, Faruzan and Kujou Sara. Unknown characters still receive bounded rule candidates.
 
-## Job, cache, and fallback
+Ranking combines configurable AZA usage, current build, sustain, energy, and accessibility weights (`TEAM_RECOMMENDATION_SCORE_*`). A result distinguishes `observed`, `ruleBased`, and `manual`.
 
-`POST /api/team-recommendations` validates the DTO and returns an unpredictable UUIDv4 Job capability. `GET /api/team-recommendations/jobs/{jobId}` returns queued/running/completed/failed/expired without persisting the submitted build. Identical non-expired requests reuse the request hash, and concurrent enqueue within one process shares a Promise. Expired Job rows are deleted during enqueue; result caches retain last success for one additional cache TTL as stale fallback and are then purged. Only successful simulations update `TeamSimulationCache`.
+## Job and reuse
 
-Fallback order is current gcsim result, last successful stale simulation, AZA.GG observed/rule result, then pure rule result. `GCSIM_ENABLED=false` skips the runner. An error in this feature must not affect `/api/abyss/statistics`, app startup, saved teams or domain calculations.
+`POST /api/team-recommendations` validates the DTO and returns an unpredictable UUIDv4 Job capability. `GET /api/team-recommendations/jobs/{jobId}` returns queued/running/completed/failed/expired without persisting the submitted build. Identical non-expired requests reuse the request hash, and concurrent enqueue within one process shares a Promise. Expired Job rows are deleted during enqueue.
 
-Initial background work is process-local, capped at eight active Jobs by default, and is not a durable distributed queue. A production topology that can terminate request processes must move `GcsimRunner` behind a worker/queue before enabling the kill switch.
+An error in this feature must not affect `/api/abyss/statistics`, app startup, saved teams or domain calculations.
 
-## Migration and pre-production checks
+Initial background work is process-local, capped at eight active Jobs by default (`TEAM_RECOMMENDATION_MAX_ACTIVE_JOBS`), and is not a durable distributed queue.
 
-Migration `20260720120000_add_team_simulation_jobs` only creates two tables and indexes; it does not alter/drop existing data. Review with `npx prisma validate`, `npx prisma generate`, and migration SQL. Do not run `db push`, `migrate reset`, or apply to production during feature development.
+## Migration notes
 
-Before production: apply migration to staging, install and verify the fixed binary, test first Job/cache hit/stale/kill switch, inspect concurrency and CPU, confirm logs contain no Cookie/UID/Config, exercise unsupported/new characters, and verify the theoretical-value warning and credits. Re-evaluate a durable distributed worker when instances or duplicate simulations increase.
+- Historical: `20260720120000_add_team_simulation_jobs` created Job + Cache tables (SQLite-era / archived).
+- PostgreSQL baseline includes those tables.
+- `20260730120000_drop_team_simulation_cache` drops `TeamSimulationCache` after gcsim removal. Apply on staging with `migrate deploy` in a separate ops step; do not run `db push` / `migrate reset` / production apply from feature development.
