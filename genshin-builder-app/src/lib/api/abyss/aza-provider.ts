@@ -52,6 +52,7 @@ export class AzaAbyssStatisticsProvider
         timeoutMs: readTimeout(this.environment.AZA_REQUEST_TIMEOUT_MS),
         maxBytes: MAX_RESPONSE_BYTES,
         retries: 1,
+        cache: "no-store",
         headers: {
           Accept: "application/json",
           "User-Agent":
@@ -91,10 +92,10 @@ export class AzaAbyssStatisticsProvider
       if (error instanceof AbyssStatisticsError) throw error;
       if (error instanceof UpstreamFetchError) {
         if (error.code === "timeout") {
-          throw new AbyssStatisticsError("timeout");
+          throw new AbyssStatisticsError("timeout", undefined, error.causeKind);
         }
         if (error.code === "httpStatus" && error.status === 429) {
-          throw new AbyssStatisticsError("rateLimited", 429);
+          throw new AbyssStatisticsError("rateLimited", 429, error.causeKind);
         }
         if (
           error.code === "invalidJson" ||
@@ -102,9 +103,9 @@ export class AzaAbyssStatisticsProvider
           error.code === "invalidEncoding" ||
           error.code === "bodyTooLarge"
         ) {
-          throw new AbyssStatisticsError("invalidResponse");
+          throw new AbyssStatisticsError("invalidResponse", error.status, error.causeKind);
         }
-        throw new AbyssStatisticsError("networkError", error.status);
+        throw new AbyssStatisticsError("networkError", error.status, error.causeKind);
       }
       throw new AbyssStatisticsError("unknownError");
     }
