@@ -31,6 +31,8 @@ export class AbyssStatisticsService {
       now?: () => Date;
       ttlSeconds?: number;
       enabled?: () => boolean;
+      /** When false, never call the upstream provider; serve cache only. */
+      liveFetchEnabled?: () => boolean;
       log?: Logger;
     } = {},
   ) {}
@@ -57,6 +59,18 @@ export class AbyssStatisticsService {
         fallbackUsed: false,
       });
       return fresh(cached);
+    }
+
+    const liveFetch = (this.options.liveFetchEnabled ?? isLiveFetchEnabled)();
+    if (!liveFetch) {
+      this.log("live_fetch_disabled", {
+        cacheState: cached === null ? "missing" : "expired",
+        fallbackUsed: cached !== null,
+      });
+      if (cached !== null) {
+        return stale(cached, "notConfigured");
+      }
+      throw new AbyssStatisticsError("noData");
     }
 
     this.log(cached === null ? "cache_miss" : "cache_expired", {
@@ -194,6 +208,18 @@ function stale(
 
 function isFeatureEnabled(): boolean {
   return process.env.AZA_ABYSS_ENABLED?.trim().toLowerCase() !== "false";
+}
+
+/**
+ * Live AZA fetch from this runtime.
+ * - `"true"` → enabled
+ * - unset / empty → enabled (local default)
+ * - any other value (including `"false"`) → disabled (staging: cache via ingest only)
+ */
+function isLiveFetchEnabled(): boolean {
+  const value = process.env.AZA_LIVE_FETCH_ENABLED?.trim().toLowerCase();
+  if (value === undefined || value === "") return true;
+  return value === "true";
 }
 
 function readTtlSeconds(): number {
