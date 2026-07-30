@@ -4,6 +4,14 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-07-30 — gcsim 完全廃止（おすすめ編成は維持）
+
+- **決定:** gcsim シミュレーション層を削除。AZA.GG / 共起 / ルールベースのおすすめ編成と Job API は維持。
+- **削除:** runner / Config 生成 / IDマップ / rotation / `GCSIM_*` / `TeamSimulationCache` / `docs/GCSIM_INTEGRATION.md` / vendor 想定パス。
+- **環境変数:** `TEAM_RECOMMENDATION_MAX_*` / `TEAM_RECOMMENDATION_JOB_TTL_SECONDS` / `TEAM_RECOMMENDATION_SCORE_*`（旧 `GCSIM_*` は互換読取しない）。
+- **Migration:** `20260730120000_drop_team_simulation_cache`（staging/production への apply は別 ops）。
+- **未完了:** staging での migrate deploy、Vercel 環境からの旧 `GCSIM_*` 削除確認。
+
 ## 2026-07-28 — 全体品質仕上げとBuild Guide公開安全性
 
 - **目的:** 既存機能・ドメイン計算を維持し、公開中の編集、楽観ロック、公開前検証、管理UI、外部URL、開発手順をリリース前品質へ揃える。

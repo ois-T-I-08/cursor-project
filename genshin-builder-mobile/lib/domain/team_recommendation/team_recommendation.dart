@@ -78,7 +78,6 @@ class TeamRecommendation {
   const TeamRecommendation({
     required this.members,
     required this.score,
-    this.estimatedDps,
     required this.simulationStatus,
     required this.sourceTypes,
     required this.rotationConfidence,
@@ -91,7 +90,6 @@ class TeamRecommendation {
   });
   final List<String> members;
   final double score;
-  final double? estimatedDps;
   final String simulationStatus;
   final List<String> sourceTypes;
   final String rotationConfidence;
@@ -107,19 +105,11 @@ class TeamRecommendationResult {
   const TeamRecommendationResult({
     required this.attackerId,
     required this.generatedAt,
-    required this.gcsimVersion,
-    required this.iterations,
-    required this.gcsimEnabled,
     required this.recommendations,
-    this.warning,
   });
   final String attackerId;
   final DateTime generatedAt;
-  final String gcsimVersion;
-  final int iterations;
-  final bool gcsimEnabled;
   final List<TeamRecommendation> recommendations;
-  final String? warning;
 }
 
 class TeamSimulationJob {

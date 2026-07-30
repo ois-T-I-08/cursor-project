@@ -7,7 +7,7 @@ Next.js 16（App Router）、TypeScript、Prisma で構成する Genshin Builder
 - Project Amber のゲームマスター同期と Prisma への保存
 - 匿名ユーザーの育成状況、編成、素材計画
 - AZA.GG の深境螺旋統計を安全な内部 DTO へ正規化・キャッシュ
-- gcsim を使う編成推薦（既定無効）
+- AZA.GG / ルールベースの編成推薦
 - 承認済み YouTube 映像証拠から作る育成おすすめ
 - `/admin/guides` の構造化編集、検証、承認、公開、revision 復元
 - Flutter 向け公開 API
@@ -51,7 +51,7 @@ npx prisma migrate deploy
 - `BUILD_GUIDE_ADMIN_SECRET` — Build Guide 管理 API。未設定は 503
 - `TEAM_TEMPLATE_ADMIN_SECRET` — 編成テンプレート管理 API
 - `AZA_*` — 統計 upstream、TTL、kill switch
-- `GCSIM_*` — 編成シミュレーション。既定無効
+- `TEAM_RECOMMENDATION_*` — 編成推薦（候補数・Job TTL・スコア重み）
 - `YOUTUBE_*` / `GEMINI_*` / `DEEPSEEK_GUIDE_*` — 動画メタデータ・映像解析・証拠統合。既定無効
 
 secret はクライアント bundle、公開 API、ログ、URL、ドキュメントへ含めないでください。

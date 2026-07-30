@@ -1,5 +1,4 @@
 import { getAbyssStatisticsService } from "@/lib/abyss/statistics-service";
-import { SecureGcsimRunner } from "./gcsim-runner";
 import { TeamRecommendationService } from "./service";
 import { readTeamRecommendationSettings } from "./settings";
 import { PrismaSimulationStore } from "./store";
@@ -10,7 +9,6 @@ export function getTeamRecommendationService(): TeamRecommendationService {
     const settings = readTeamRecommendationSettings();
     service = new TeamRecommendationService(
       new PrismaSimulationStore(),
-      new SecureGcsimRunner(settings),
       () => getAbyssStatisticsService().load(),
       settings,
     );
