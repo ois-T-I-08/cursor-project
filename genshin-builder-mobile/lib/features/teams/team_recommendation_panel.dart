@@ -132,10 +132,7 @@ class _TeamRecommendationPanelState
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
-            Text(
-              '利用統計: AZA.GG',
-              style: theme.textTheme.labelSmall,
-            ),
+            Text('利用統計: AZA.GG', style: theme.textTheme.labelSmall),
           ],
         ),
       ),
@@ -288,9 +285,7 @@ class TeamRecommendationCard extends StatelessWidget {
               'おすすめスコア ${(recommendation.score * 100).toStringAsFixed(0)} / 100',
             ),
             Text(
-              '評価: ${recommendation.observedByAza
-                  ? 'AZA.GG使用実績'
-                  : 'ルールベース'}${recommendation.isCached ? '（キャッシュ）' : ''}${recommendation.isStale ? '（前回値）' : ''}',
+              '評価: ${recommendation.observedByAza ? 'AZA.GG使用実績' : 'ルールベース'}${recommendation.isCached ? '（キャッシュ）' : ''}${recommendation.isStale ? '（前回値）' : ''}',
             ),
             Text(
               '入力品質: ${_inputQualityLabel(recommendation.inputQuality)}'
