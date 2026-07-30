@@ -93,11 +93,12 @@ Vercel ランタイムから AZA への outbound が 403 になるため、stagi
 3. Workflow: `.github/workflows/abyss-aza-ingest-staging.yml`
    - `schedule`（4時間ごと）と `workflow_dispatch`
    - AZA KV を取得 → Bearer 付きで ingest POST
+   - **注意:** GitHub は default ブランチ上に workflow ファイルがあるときだけ `schedule` / `workflow_dispatch` が有効になる。feature マージ後、default へ載せるまで手動で同等の curl ingest を使う
 4. 確認
-   - Actions で1回 `workflow_dispatch`
+   - Actions で1回 `workflow_dispatch`（default ブランチ上にある場合）または手動 curl ingest
    - `GET /api/abyss/statistics` が HTTP 200（キャッシュ配信）
 
-ingest API は正規化済みキャッシュ本文をレスポンスに含めない。ログは件数・所要時間のみ（URL / Bearer / 本文なし）。
+2026-07-30 staging 確認: 手動 AZA fetch → ingest HTTP 200 → GET HTTP 200（`source=AZA.GG`, fresh）。`AZA_LIVE_FETCH_ENABLED=false` / `ABYSS_INGEST_SECRET` を Vercel staging に設定済み。GitHub secrets `STAGING_ABYSS_INGEST_*` 登録済み。
 
 ## 障害対応とロールバック
 
