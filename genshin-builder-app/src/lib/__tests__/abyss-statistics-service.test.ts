@@ -86,6 +86,44 @@ describe("AbyssStatisticsService", () => {
     });
   });
 
+  it("serves expired cache as stale when live fetch is disabled", async () => {
+    const provider = mockProvider();
+    const cache = memoryCache(
+      cachedStatistics({ expiresAt: "2026-07-19T00:00:00.000Z" }),
+    );
+    const service = createService(provider, cache, true, vi.fn(), false);
+
+    await expect(service.load()).resolves.toMatchObject({
+      metadata: {
+        isStale: true,
+        warningCode: "staleCache",
+        upstreamErrorCode: "notConfigured",
+      },
+    });
+    expect(provider.fetchStatistics).not.toHaveBeenCalled();
+  });
+
+  it("returns noData when live fetch is disabled without a cache", async () => {
+    const provider = mockProvider();
+    const service = createService(provider, memoryCache(null), true, vi.fn(), false);
+
+    await expect(service.load()).rejects.toMatchObject({ code: "noData" });
+    expect(provider.fetchStatistics).not.toHaveBeenCalled();
+  });
+
+  it("still returns a fresh cache hit when live fetch is disabled", async () => {
+    const provider = mockProvider();
+    const cache = memoryCache(
+      cachedStatistics({ expiresAt: "2026-07-20T06:00:00.000Z" }),
+    );
+    const service = createService(provider, cache, true, vi.fn(), false);
+
+    await expect(service.load()).resolves.toMatchObject({
+      metadata: { isStale: false },
+    });
+    expect(provider.fetchStatistics).not.toHaveBeenCalled();
+  });
+
   it("deduplicates concurrent refreshes", async () => {
     let resolveFetch: (() => void) | undefined;
     const provider = mockProvider();
@@ -134,11 +172,13 @@ function createService(
   cache: AbyssStatisticsCacheStore,
   enabled = true,
   log = vi.fn(),
+  liveFetchEnabled = true,
 ) {
   return new AbyssStatisticsService(provider, cache, {
     now: () => new Date("2026-07-19T03:00:00.000Z"),
     ttlSeconds: 21_600,
     enabled: () => enabled,
+    liveFetchEnabled: () => liveFetchEnabled,
     log,
   });
 }

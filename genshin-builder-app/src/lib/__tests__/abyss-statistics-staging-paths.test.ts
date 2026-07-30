@@ -94,17 +94,50 @@ describe("abyss statistics staging paths", () => {
     expect(provider.fetchStatistics).not.toHaveBeenCalled();
     expect(cache.write).not.toHaveBeenCalled();
   });
+
+  it("E: live fetch disabled serves cache only (no upstream)", async () => {
+    const provider = mockProvider();
+    const cache = memoryCache(
+      cachedStatistics({
+        fetchedAt: "2026-07-18T00:00:00.000Z",
+        expiresAt: "2026-07-19T00:00:00.000Z",
+      }),
+    );
+    const response = await request(provider, cache, true, false);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.metadata).toMatchObject({
+      isStale: true,
+      warningCode: "staleCache",
+      upstreamErrorCode: "notConfigured",
+    });
+    expect(provider.fetchStatistics).not.toHaveBeenCalled();
+    expect(cache.write).not.toHaveBeenCalled();
+  });
+
+  it("E: live fetch disabled without cache returns safe HTTP 503 noData", async () => {
+    const provider = mockProvider();
+    const response = await request(provider, memoryCache(null), true, false);
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("noData");
+    expect(provider.fetchStatistics).not.toHaveBeenCalled();
+  });
 });
 
 async function request(
   provider: AbyssStatisticsProvider,
   cache: AbyssStatisticsCacheStore,
   enabled = true,
+  liveFetchEnabled = true,
 ) {
   const service = new AbyssStatisticsService(provider, cache, {
     now: () => new Date("2026-07-19T03:00:00.000Z"),
     ttlSeconds: 21_600,
     enabled: () => enabled,
+    liveFetchEnabled: () => liveFetchEnabled,
     log: vi.fn(),
   });
   return createAbyssStatisticsGet(() => service.load())();
