@@ -115,6 +115,9 @@ export class AbyssStatisticsService {
       this.log("fetch_failed", {
         durationMs: Date.now() - started,
         invalidField: safeError.code,
+        ...(safeError.diagnostic
+          ? { missingField: safeError.diagnostic.slice(0, 120) }
+          : {}),
         cacheState: cached === null ? "missing" : "expired",
         fallbackUsed: cached !== null,
       });
