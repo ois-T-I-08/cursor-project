@@ -136,7 +136,7 @@ describe("YouTube automation Phase 2", () => {
     [
       "schema",
       (value: ReturnType<typeof validAnalysis>) => ({ ...value, extra: true }),
-      "BLOCKED_ANALYSIS_SCHEMA_INVALID",
+      "BLOCKED_INVALID_ANALYSIS",
     ],
     [
       "timestamp range",
@@ -144,7 +144,7 @@ describe("YouTube automation Phase 2", () => {
         ...value,
         claims: [{ ...value.claims[0]!, timestampStart: -1 }],
       }),
-      "BLOCKED_ANALYSIS_SCHEMA_INVALID",
+      "BLOCKED_INVALID_ANALYSIS",
     ],
     [
       "character",

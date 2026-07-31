@@ -6,6 +6,7 @@ import {
 import { evaluateAutomaticPublicationGate } from "@/lib/build-guides/automation/publication-gate";
 import type { ValidatedTranscriptClaim } from "@/lib/build-guides/automation/analysis-schema";
 import type { YoutubeAutomationFlags } from "@/lib/build-guides/automation/feature-flags";
+import { readYoutubeAutomationControl } from "@/lib/build-guides/automation/automation-control";
 
 const enabledFlags: YoutubeAutomationFlags = {
   enabled: true,
@@ -20,7 +21,6 @@ const enabledFlags: YoutubeAutomationFlags = {
 };
 
 const quality = {
-  sourceCount: 1,
   channelAllowed: true,
   videoPublic: true,
   transcriptAvailable: true,
@@ -41,6 +41,7 @@ describe("YouTube automation Phase 3", () => {
         flags: enabledFlags,
         dryRun: false,
         emergencyStopped: false,
+        sourceCount: 1,
         quality,
       }),
     ).toEqual({
@@ -53,6 +54,7 @@ describe("YouTube automation Phase 3", () => {
         flags: { ...enabledFlags, autoPublishEnabled: false },
         dryRun: false,
         emergencyStopped: false,
+        sourceCount: 1,
         quality,
       }),
     ).toMatchObject({
@@ -65,12 +67,13 @@ describe("YouTube automation Phase 3", () => {
         flags: enabledFlags,
         dryRun: false,
         emergencyStopped: false,
-        quality: { ...quality, sourceCount: 2 },
+        sourceCount: 2,
+        quality,
       }),
     ).toMatchObject({
       allowed: false,
       status: "READY_TO_PUBLISH",
-      blockCodes: ["MULTI_SOURCE_REQUIRES_REVIEW"],
+      blockCodes: ["MULTI_SOURCE_REVIEW_REQUIRED"],
     });
   });
 
@@ -79,6 +82,7 @@ describe("YouTube automation Phase 3", () => {
       flags: enabledFlags,
       dryRun: false,
       emergencyStopped: true,
+      sourceCount: 1,
       quality: {
         ...quality,
         minClaimConfidence: 0.5,
@@ -127,6 +131,21 @@ describe("YouTube automation Phase 3", () => {
         publishedContentUpdatedAt: new Date(),
       }),
     ).toThrow(AutomaticSnapshotError);
+  });
+
+  it("fails closed when the control database read fails", async () => {
+    const control = await readYoutubeAutomationControl({
+      guideAutomationControl: {
+        findUnique: async () => {
+          throw new Error("database unavailable");
+        },
+      },
+    } as never);
+    expect(control).toEqual({
+      emergencyStopped: true,
+      reason: "CONTROL_READ_FAILED",
+      version: -1,
+    });
   });
 });
 
