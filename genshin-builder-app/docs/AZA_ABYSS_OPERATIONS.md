@@ -105,9 +105,10 @@ Vercel ランタイムから AZA への outbound が 403 になるため、stagi
 3. Workflow: `.github/workflows/abyss-aza-ingest-staging.yml`
    - `schedule`（4時間ごと）と `workflow_dispatch`
    - AZA KV を取得 → Bearer 付きで ingest POST
-   - **注意:** GitHub は **default ブランチ**上に workflow があるときだけ `schedule` / `workflow_dispatch` が有効。main への workflow 専用 PR（例: #35）をマージするまで GHA は使えない
+   - **注意:** GitHub は **default ブランチ**上に workflow があるときだけ `schedule` / `workflow_dispatch` が有効（#35 で main に追加済み）
+   - **注意:** AZA は GitHub-hosted runner から **HTTP 403** を返すことがある（Vercel と同様の datacenter 制限）。その場合は下記ローカルスクリプトを使う
 4. 確認
-   - Actions で1回 `workflow_dispatch`（default ブランチ上にある場合）または下記ローカルスクリプト
+   - Actions で1回 `workflow_dispatch`（AZA が GHA から 200 のとき）または下記ローカルスクリプト
    - `GET /api/abyss/statistics` が HTTP 200 かつ `isStale=false`
 
 ## staging: ローカル手動 ingest スクリプト
