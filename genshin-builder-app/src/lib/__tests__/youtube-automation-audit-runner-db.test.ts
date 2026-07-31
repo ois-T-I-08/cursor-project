@@ -217,6 +217,10 @@ describe.runIf(runDbTests).sequential(
           },
           include: { revisions: { orderBy: { createdAt: "asc" } } },
         });
+      const beforeItem = await prisma.guidePipelineItem.findUniqueOrThrow({
+        where: { discoveryKey: fixture.candidate.discoveryKey },
+        select: { analysisIdempotencyKey: true },
+      });
 
       const unchangedTranscript = new CountingTranscriptProvider(
         fixture.document,
@@ -270,24 +274,26 @@ describe.runIf(runDbTests).sequential(
         }),
       ).resolves.toMatchObject({ published: 1, blocked: 0, retryable: 0 });
       expect(changedAnalysis.calls).toBe(1);
-      const after =
-        await prisma.characterBuildRecommendation.findUniqueOrThrow({
-          where: { id: before.id },
-          include: { revisions: { orderBy: { createdAt: "asc" } } },
-        });
-      expect(after.revisions).toHaveLength(before.revisions.length + 1);
-      expect(after.revisions.at(-1)?.etag).not.toBe(
-        before.revisions.at(-1)?.etag,
-      );
-      await expect(
-        prisma.guidePipelineItem.findUniqueOrThrow({
-          where: { discoveryKey: fixture.candidate.discoveryKey },
-          select: { transcriptHash: true, status: true },
-        }),
-      ).resolves.toEqual({
+      const changedItem = await prisma.guidePipelineItem.findUniqueOrThrow({
+        where: { discoveryKey: fixture.candidate.discoveryKey },
+        select: {
+          transcriptHash: true,
+          analysisIdempotencyKey: true,
+          status: true,
+        },
+      });
+      expect(changedItem).toMatchObject({
         transcriptHash: normalizeTranscript(changed.document).transcriptHash,
         status: "PUBLISHED",
       });
+      expect(changedItem.analysisIdempotencyKey).not.toBe(
+        beforeItem.analysisIdempotencyKey,
+      );
+      await expect(
+        prisma.guideVisualAnalysisResult.count({
+          where: { videoId: fixture.video.videoId },
+        }),
+      ).resolves.toBe(2);
     });
 
     it("keeps the published snapshot unchanged when current transcript verification fails", async () => {
