@@ -84,6 +84,9 @@ const videosListSchema = z.object({
           description: z.string().optional().default(""),
           publishedAt: z.string().optional(),
           channelId: z.string(),
+          defaultAudioLanguage: z.string().optional(),
+          defaultLanguage: z.string().optional(),
+          liveBroadcastContent: z.string().optional().default("none"),
           thumbnails: z
             .object({
               default: z.object({ url: z.string() }).optional(),
@@ -134,6 +137,8 @@ export interface YoutubeVideoInfo {
   metadataHash: string;
   durationSeconds: number | null;
   privacyStatus: string;
+  language: string;
+  liveBroadcastContent: string;
 }
 
 export interface YoutubeClientOptions {
@@ -292,6 +297,12 @@ export class YoutubeGuideClient {
           item.contentDetails?.duration ?? "",
         );
         const privacyStatus = item.status?.privacyStatus ?? "unknown";
+        const language =
+          item.snippet.defaultAudioLanguage ??
+          item.snippet.defaultLanguage ??
+          "";
+        const liveBroadcastContent =
+          item.snippet.liveBroadcastContent ?? "none";
         const metadataHash = createHash("sha256")
           .update(
             JSON.stringify({
@@ -301,6 +312,8 @@ export class YoutubeGuideClient {
               thumbnailUrl,
               durationSeconds,
               privacyStatus,
+              language,
+              liveBroadcastContent,
             }),
             "utf8",
           )
@@ -317,6 +330,8 @@ export class YoutubeGuideClient {
           metadataHash,
           durationSeconds,
           privacyStatus,
+          language,
+          liveBroadcastContent,
         });
       }
     }
