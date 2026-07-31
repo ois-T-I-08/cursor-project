@@ -8,11 +8,15 @@
 `false` です。Cookie、非公式 scraping、動画ファイルのダウンロードは
 実装していません。
 
-初期の自動公開対象は、許可済みチャンネルの単一動画から得たデータだけです。
+runner は全候補を検証して `READY_TO_PUBLISH` にする Pass 1 と、character
+単位で公開可否を決める Pass 2 に分かれます。初期の自動公開対象は、
+許可済みチャンネルの単一動画から得たデータだけです。
 字幕、厳格 JSON Schema、既知 ID、引用、タイムスタンプ、証拠一致、
-confidence、競合なしの全条件を満たさなければ公開しません。複数動画の
-決定論的統合は競合検出まで行いますが、常に
-`READY_TO_PUBLISH` / review-only です。
+confidence、競合なしの全条件を満たさなければ公開しません。source 数は
+caller の値を使わず、character publication lease の内側で候補 item と
+既存 published contribution の distinct videoId を transaction 内で
+再計算します。2 source 以上は `REVIEW_REQUIRED` /
+`MULTI_SOURCE_REVIEW_REQUIRED` となり、既存 snapshot と ETag は維持します。
 
 ## 状態と再開
 
@@ -27,13 +31,19 @@ DISCOVERED
 
 任意の処理中状態 -> RETRYABLE_ERROR -> METADATA_FETCHED（有限回の再開）
 任意の未公開状態 -> BLOCKED
+複数 source -> REVIEW_REQUIRED
+緊急停止 -> STOPPED
 ```
 
 `GuidePipelineRun.pipelineRunId`、discovery key、transcript identity/hash、
 analysis key、`publicationKey`、revision/audit action key は PostgreSQL の
 UNIQUE 制約でも重複を防ぎます。worker は DB lease の
 `leaseOwner`、`leaseAcquiredAt`、`leaseExpiresAt`、`leaseVersion` を
-compare-and-set し、期限切れ lease だけを再取得します。
+compare-and-set し、期限切れ lease だけを再取得します。各 item は
+`pipeline-item:<itemId>` を `<pipelineRunId>:<workerId>` で claim し、
+状態更新は active run、owner、leaseVersion、stateVersion の一致を必須に
+します。origin run は保持し、別 run の resume は active/last run だけを
+原子的に更新します。stale worker と lease 取得の敗者は status を変更できません。
 
 retry は指数 backoff、上限回数、`nextRetryAt`、`resumeStatus` を持ちます。
 provider circuit は `closed` / `open` / `half_open` を DB に保存し、
@@ -61,10 +71,16 @@ job summary、通常ログ、provider error、audit detail には本文を入れ
 - safe error code
 
 保持期間は quality policy の `transcriptRetentionDays`（現在 30 日）です。
-`deleteExpiredTranscripts` は期限切れ transcript を最大 1,000 件ずつ削除し、
-segment は cascade delete します。検証済み公開 snapshot、revision、
-本文を含まない citation timestamp は残ります。削除は maintenance flag を
-有効化した保守 run からのみ呼び出し、実行件数だけを監査します。
+検証後の永続 payload は `evidenceText` を除去した canonical 型です。
+segment ID、evidence hash、timestamp、transcript hash だけを保存し、
+provider response や verbatim 抜粋は analysis、draft、revision、audit、
+event に残しません。`deleteExpiredTranscripts` は期限切れに加え、関連 item
+が terminal、retry 予定なし、active item lease なしであることを同じ
+transaction 内で row lock 後に再確認します。segment は cascade delete
+します。検証済み公開 snapshot、revision、本文を含まない citation
+timestamp/hash は残ります。削除は
+`YOUTUBE_GUIDE_MAINTENANCE_ENABLED=true` の保守 run からのみ呼び出し、
+実行件数だけを監査します。
 
 ## 解析と公開
 
@@ -76,13 +92,14 @@ strict Zod schema と意味検証を行います。自由文 provider response �
 
 自動公開 transaction は次を一括処理します。
 
-1. 完成した公開 DTO の事前 schema 検証
-2. item、channel permission、source availability、evidence の再確認
-3. published snapshot 作成
-4. item-level contribution 作成（字幕本文はコピーしない）
-5. revision / ETag / validation metadata 作成
-6. item を `PUBLISHED` へ compare-and-set
-7. pipeline event / audit 作成
+1. control singleton row lock と emergency stop 再確認
+2. item lease/fence、active run、input hash、policy/schema の再確認
+3. candidate/contribution source cohort のDB再計算
+4. canonical validation hash の再検証と validated result 作成
+5. working draft と published snapshot 作成
+6. contribution 作成（字幕本文はコピーしない）
+7. revision / ETag / validation metadata 作成
+8. audit、recommendation/item status、pipeline event 更新
 
 途中失敗は全て rollback します。外部 provider 失敗、source unavailable、
 低品質な再解析は、既存の公開済み snapshot を削除・非公開化しません。
@@ -99,8 +116,11 @@ maintenance は source の availability と `unavailableSince` だけを更新�
 v2 は `verificationMode`、source の `availability` /
 `unavailableSince`、evidence の `timestampStart` / `timestampEnd` を返し、
 `exactVisibleText` を返しません。Flutter は v2 を先に取得し、v2 endpoint が
-404 の旧 server では v1 へ fallback します。source unavailable は表示し、
-公開済み snapshot の内容は引き続き閲覧できます。
+404 の旧 server だけで v1 へ fallback します。401/403/500、timeout、
+malformed payload、未対応 schemaVersion では fallback しません。
+source unavailable は source と evidence timestamp の両リンクを無効にし、
+semantic label で利用不能を通知します。公開済み snapshot の内容は引き続き
+閲覧できます。
 
 ## 管理と緊急停止
 
@@ -108,9 +128,13 @@ v2 は `verificationMode`、source の `availability` /
 circuit、active lease、安全な failure code を表示します。字幕本文と
 provider response は返しません。管理 API は既存の Bearer 認証、サイズ制限、
 rate limit を共有し、secret 未設定 503、認証なし 401、不正 Bearer 403 です。
+pipeline run POST は `application/json` または
+`application/json; charset=utf-8` だけを受け付け、それ以外は 415 です。
 
-緊急停止は `GuideAutomationControl` に version 付きで保存します。解除しても
-環境フラグが自動で有効になることはありません。
+緊急停止は `GuideAutomationControl` に version 付きで保存します。runner
+入口と各外部 stage/maintenance の直前に fail-closed で確認し、publish と
+stop 更新は同じ singleton row を `FOR UPDATE` します。row missing/読取失敗も
+停止です。解除しても環境フラグが自動で有効になることはありません。
 
 ## GitHub Actions と段階導入
 
