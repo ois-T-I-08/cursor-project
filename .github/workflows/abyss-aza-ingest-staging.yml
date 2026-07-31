@@ -1,10 +1,10 @@
-# AZA.GG abyss statistics 竊・staging ingest (outside Vercel)
+# AZA.GG abyss statistics → staging ingest (outside Vercel)
 #
 # Vercel staging cannot reach AZA (HTTP 403). GitHub Actions fetches AZA
 # and POSTs the raw JSON to the staging ingest API, which normalizes and
 # writes ExternalApiCache. Clients then GET /api/abyss/statistics from cache.
 #
-# Required repository secrets (staging only 窶・do not reuse production values):
+# Required repository secrets (staging only — do not reuse production values):
 #   STAGING_ABYSS_INGEST_URL    e.g. https://staging-sable.vercel.app/api/abyss/statistics/ingest
 #   STAGING_ABYSS_INGEST_SECRET same value as Vercel staging ABYSS_INGEST_SECRET
 
