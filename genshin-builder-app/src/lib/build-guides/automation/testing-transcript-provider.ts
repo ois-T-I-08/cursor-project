@@ -39,4 +39,3 @@ export class DeterministicTranscriptProvider implements TranscriptProvider {
     };
   }
 }
-

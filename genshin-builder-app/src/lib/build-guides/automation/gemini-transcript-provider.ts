@@ -174,4 +174,3 @@ export class GeminiTranscriptAnalysisProvider
     }
   }
 }
-

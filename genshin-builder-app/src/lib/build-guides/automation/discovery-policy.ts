@@ -66,4 +66,3 @@ export function evaluateDiscoveryCandidate(input: {
     reason: "APPROVED_CHANNEL_EXACT_CHARACTER_BUILD_GUIDE",
   };
 }
-

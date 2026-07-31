@@ -55,4 +55,3 @@ export function toSafeProviderError(
   }
   return new SafeProviderError(providerId, "NETWORK_ERROR", true, true);
 }
-

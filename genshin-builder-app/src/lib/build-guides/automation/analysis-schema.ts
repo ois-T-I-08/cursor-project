@@ -245,4 +245,3 @@ export const TRANSCRIPT_ANALYSIS_JSON_SCHEMA = Object.freeze({
     },
   },
 });
-

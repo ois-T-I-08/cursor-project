@@ -159,4 +159,3 @@ export async function recordProviderFailure(input: {
       "updatedAt" = ${input.now}
   `);
 }
-

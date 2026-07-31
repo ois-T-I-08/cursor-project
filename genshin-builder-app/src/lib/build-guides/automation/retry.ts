@@ -56,4 +56,3 @@ function isSafeProviderError(error: unknown): error is SafeProviderError {
     typeof error.retryable === "boolean"
   );
 }
-

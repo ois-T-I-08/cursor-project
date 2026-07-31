@@ -22,10 +22,11 @@ class RecommendedStatsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(buildRecommendationProvider(characterId));
     return async.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.only(top: 16),
-        child: LinearProgressIndicator(minHeight: 2),
-      ),
+      loading:
+          () => const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: LinearProgressIndicator(minHeight: 2),
+          ),
       error: (error, _) {
         if (error is BuildRecommendationException &&
             (error.failure == BuildRecommendationFailure.notConfigured ||
@@ -45,8 +46,10 @@ class RecommendedStatsCard extends ConsumerWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed: () =>
-                      ref.invalidate(buildRecommendationProvider(characterId)),
+                  onPressed:
+                      () => ref.invalidate(
+                        buildRecommendationProvider(characterId),
+                      ),
                   child: const Text('再試行'),
                 ),
               ],
@@ -59,8 +62,8 @@ class RecommendedStatsCard extends ConsumerWidget {
         return _RecommendationBody(
           recommendation: recommendation,
           currentStats: currentStats,
-          onRetry: () =>
-              ref.invalidate(buildRecommendationProvider(characterId)),
+          onRetry:
+              () => ref.invalidate(buildRecommendationProvider(characterId)),
         );
       },
     );
@@ -139,9 +142,10 @@ class _RecommendationBody extends StatelessWidget {
             else
               ...recommendation.targets.map((target) {
                 final current = currentStats[target.stat] ?? 0;
-                final displayCurrent = percentStatKeys.contains(target.stat)
-                    ? current * 100
-                    : current;
+                final displayCurrent =
+                    percentStatKeys.contains(target.stat)
+                        ? current * 100
+                        : current;
                 final verdict = compareStatToTarget(
                   current: displayCurrent,
                   target: target,
@@ -192,9 +196,8 @@ class _RecommendationBody extends StatelessWidget {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-                trailing: canOpen
-                    ? const Icon(Icons.open_in_new, size: 18)
-                    : null,
+                trailing:
+                    canOpen ? const Icon(Icons.open_in_new, size: 18) : null,
                 onTap: canOpen ? () => _openUrl(source.sourceUrl) : null,
               );
             }),

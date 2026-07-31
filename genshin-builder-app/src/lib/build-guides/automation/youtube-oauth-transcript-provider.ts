@@ -176,4 +176,3 @@ function assertTrackId(trackId: string): string {
   }
   return trackId;
 }
-

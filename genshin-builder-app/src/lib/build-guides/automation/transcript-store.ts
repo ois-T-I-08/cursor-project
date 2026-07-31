@@ -132,4 +132,3 @@ export function safeTranscriptMetadata(
     transcriptHash: transcript.transcriptHash,
   };
 }
-

@@ -122,9 +122,10 @@ void main() {
     for (final c in _cases(suites, 'getNextStageRequirements')) {
       test(c['id'] as String, () {
         final input = c['input'] as Map<String, dynamic>;
-        final promotes = (input['promotes'] as List)
-            .map((p) => _parsePromote(p as Map<String, dynamic>))
-            .toList();
+        final promotes =
+            (input['promotes'] as List)
+                .map((p) => _parsePromote(p as Map<String, dynamic>))
+                .toList();
         final stage = getNextStageRequirements(
           input['currentLevel'] as int,
           promotes,
@@ -157,9 +158,10 @@ void main() {
     for (final c in _cases(suites, 'getRangeLevelRequirements')) {
       test(c['id'] as String, () {
         final input = c['input'] as Map<String, dynamic>;
-        final promotes = (input['promotes'] as List)
-            .map((p) => _parsePromote(p as Map<String, dynamic>))
-            .toList();
+        final promotes =
+            (input['promotes'] as List)
+                .map((p) => _parsePromote(p as Map<String, dynamic>))
+                .toList();
         final lines = getRangeLevelRequirements(
           input['fromLevel'] as int,
           input['toLevel'] as int,
@@ -193,9 +195,10 @@ void main() {
     for (final c in _cases(suites, 'getRangeTalentRequirements')) {
       test(c['id'] as String, () {
         final input = c['input'] as Map<String, dynamic>;
-        final upgrades = (input['upgrades'] as List)
-            .map((u) => _parseTalentUpgrade(u as Map<String, dynamic>))
-            .toList();
+        final upgrades =
+            (input['upgrades'] as List)
+                .map((u) => _parseTalentUpgrade(u as Map<String, dynamic>))
+                .toList();
         final lines = getRangeTalentRequirements(
           input['fromLevel'] as int,
           input['toLevel'] as int,

@@ -87,4 +87,3 @@ describe.runIf(runDbTests)("YouTube automation Phase 2 PostgreSQL", () => {
 async function cleanup(): Promise<void> {
   await prisma.guideProviderCircuit.deleteMany({ where: { providerId } });
 }
-
