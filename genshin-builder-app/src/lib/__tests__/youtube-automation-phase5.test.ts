@@ -43,6 +43,7 @@ describe("YouTube automation internal pipeline API", () => {
         method: "POST",
         headers: {
           Authorization: "Bearer phase5-secret",
+          "content-type": "application/json; charset=utf-8",
           "content-length": "20000",
           "x-forwarded-for": "203.0.113.51",
         },
@@ -66,6 +67,35 @@ describe("YouTube automation internal pipeline API", () => {
       }),
     );
     expect(invalid.status).toBe(400);
+  });
+
+  it("requires JSON Content-Type and accepts only the explicit UTF-8 variant", async () => {
+    vi.stubEnv("BUILD_GUIDE_ADMIN_SECRET", "phase5-secret");
+    const { POST } = await import(
+      "../../app/api/admin/youtube/pipeline/run/route"
+    );
+    const rejected = [
+      null,
+      "text/plain",
+      "application/x-www-form-urlencoded",
+      "multipart/form-data; boundary=x",
+      "application/json; charset=shift_jis",
+    ];
+    for (const [index, contentType] of rejected.entries()) {
+      const headers = new Headers({
+        Authorization: "Bearer phase5-secret",
+        "x-forwarded-for": `203.0.113.${60 + index}`,
+      });
+      if (contentType) headers.set("content-type", contentType);
+      const response = await POST(
+        new Request("http://localhost/api/admin/youtube/pipeline/run", {
+          method: "POST",
+          headers,
+          body: "{}",
+        }),
+      );
+      expect(response.status).toBe(415);
+    }
   });
 
   it("returns only the safe pipeline summary", async () => {

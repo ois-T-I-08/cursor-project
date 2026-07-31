@@ -140,6 +140,12 @@ bool _isLocalDevelopmentHttp(Uri uri) {
 CharacterBuildRecommendation parseBuildRecommendation(
   Map<String, Object?> json,
 ) {
+  final schemaVersion = _optionalInt(json['schemaVersion']) ?? 1;
+  if (schemaVersion != 1 && schemaVersion != 2) {
+    throw const BuildRecommendationException(
+      BuildRecommendationFailure.invalidResponse,
+    );
+  }
   final context = _object(json['context']);
   final targets = <BuildStatTarget>[];
   for (final item in _list(json['targets'], maxLength: 20)) {
@@ -372,7 +378,7 @@ CharacterBuildRecommendation parseBuildRecommendation(
               : null);
 
   return CharacterBuildRecommendation(
-    schemaVersion: _optionalInt(json['schemaVersion']) ?? 1,
+    schemaVersion: schemaVersion,
     characterId: _string(json['characterId']),
     label: _string(json['label'], fallback: '動画内推奨目安'),
     origin: origin,

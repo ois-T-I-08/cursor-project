@@ -205,30 +205,48 @@ class _RecommendationBody extends StatelessWidget {
               const SizedBox(height: 4),
               Text('動画内で確認', style: theme.textTheme.labelMedium),
               ...recommendation.evidence.take(3).map((e) {
+                BuildRecommendationSource? source;
+                for (final item in recommendation.sources) {
+                  if (item.videoId == e.videoId) {
+                    source = item;
+                    break;
+                  }
+                }
+                final canOpen =
+                    source != null &&
+                    source.availability !=
+                        BuildRecommendationSourceAvailability.unavailable &&
+                    isSafeYoutubeGuideUrl(source.sourceUrl);
                 return Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: InkWell(
-                    onTap: () {
-                      BuildRecommendationSource? source;
-                      for (final item in recommendation.sources) {
-                        if (item.videoId == e.videoId) {
-                          source = item;
-                          break;
-                        }
-                      }
-                      if (source == null ||
-                          !isSafeYoutubeGuideUrl(source.sourceUrl)) {
-                        return;
-                      }
-                      _openUrl(_youtubeAt(source.sourceUrl, e.startSeconds));
-                    },
-                    child: Text(
-                      e.exactVisibleText.isEmpty
-                          ? '${_formatTimestamp(e.startSeconds)} 根拠タイムスタンプ'
-                          : '${_formatTimestamp(e.startSeconds)} 画面表示「${e.exactVisibleText}」',
-                      style: theme.textTheme.bodySmall,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                  child: Semantics(
+                    enabled: canOpen,
+                    button: canOpen,
+                    label: canOpen ? '根拠動画のタイムスタンプを開く' : '根拠動画は現在利用できません',
+                    child: InkWell(
+                      onTap:
+                          canOpen
+                              ? () => _openUrl(
+                                _youtubeAt(source!.sourceUrl, e.startSeconds),
+                              )
+                              : null,
+                      child: Text(
+                        e.exactVisibleText.isEmpty
+                            ? '${_formatTimestamp(e.startSeconds)} 根拠タイムスタンプ'
+                            : '${_formatTimestamp(e.startSeconds)} 画面表示「${e.exactVisibleText}」',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color:
+                              canOpen
+                                  ? null
+                                  : theme.colorScheme.onSurfaceVariant,
+                          decoration:
+                              canOpen
+                                  ? TextDecoration.underline
+                                  : TextDecoration.none,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 );

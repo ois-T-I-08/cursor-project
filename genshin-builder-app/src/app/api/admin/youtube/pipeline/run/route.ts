@@ -30,6 +30,15 @@ export async function POST(request: Request): Promise<Response> {
       { status: 429, headers: { "Retry-After": "60" } },
     );
   }
+  const contentType = request.headers.get("content-type")?.trim() ?? "";
+  if (
+    !/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(contentType)
+  ) {
+    return NextResponse.json(
+      { error: "unsupportedMediaType" },
+      { status: 415 },
+    );
+  }
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > 16_384) {
     return NextResponse.json({ error: "requestTooLarge" }, { status: 413 });

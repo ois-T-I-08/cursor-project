@@ -181,6 +181,88 @@ void main() {
     ]);
   });
 
+  test('never falls back for a non-404 v2 response', () async {
+    for (final status in [401, 403, 500]) {
+      final requests = <Uri>[];
+      final api = BackendBuildRecommendationApi(
+        baseUrl: 'https://example.com',
+        client: MockClient((request) async {
+          requests.add(request.url);
+          return http.Response(
+            jsonEncode({'ok': false, 'error': 'fixture'}),
+            status,
+          );
+        }),
+      );
+      await expectLater(
+        api.fetchPublished('raiden-shogun'),
+        throwsA(
+          isA<BuildRecommendationException>().having(
+            (error) => error.failure,
+            'failure',
+            BuildRecommendationFailure.invalidResponse,
+          ),
+        ),
+      );
+      expect(requests, hasLength(1), reason: 'status=$status');
+      expect(requests.single.path, startsWith('/api/v2/'));
+    }
+  });
+
+  test('malformed v2 and unsupported schema never fall back', () async {
+    for (final body in [
+      '{not-json',
+      jsonEncode({
+        'ok': true,
+        'data': {'schemaVersion': 99, 'characterId': 'raiden-shogun'},
+      }),
+    ]) {
+      var calls = 0;
+      final api = BackendBuildRecommendationApi(
+        baseUrl: 'https://example.com',
+        client: MockClient((_) async {
+          calls += 1;
+          return http.Response(body, 200);
+        }),
+      );
+      await expectLater(
+        api.fetchPublished('raiden-shogun'),
+        throwsA(
+          isA<BuildRecommendationException>().having(
+            (error) => error.failure,
+            'failure',
+            BuildRecommendationFailure.invalidResponse,
+          ),
+        ),
+      );
+      expect(calls, 1);
+    }
+  });
+
+  test('v2 timeout never falls back', () async {
+    var calls = 0;
+    final api = BackendBuildRecommendationApi(
+      baseUrl: 'https://example.com',
+      timeout: const Duration(milliseconds: 1),
+      client: MockClient((_) async {
+        calls += 1;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        return http.Response('{}', 200);
+      }),
+    );
+    await expectLater(
+      api.fetchPublished('raiden-shogun'),
+      throwsA(
+        isA<BuildRecommendationException>().having(
+          (error) => error.failure,
+          'failure',
+          BuildRecommendationFailure.timeout,
+        ),
+      ),
+    );
+    expect(calls, 1);
+  });
+
   test('compareStatToTarget classifies ranges', () {
     const target = BuildStatTarget(
       stat: StatKey.critRate,
