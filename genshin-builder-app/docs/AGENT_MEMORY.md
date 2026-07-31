@@ -4,6 +4,14 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-07-31 — YouTube自動化PR #34 最終安全監査修正
+
+- **目的:** 最終監査で残ったHIGH 1件（half-open probe固着）とsafety-related MEDIUM 2件（公開済み字幕差分、要約保持期限E2E）をfail-closedで解消。
+- **決定事項:** provider circuit probeをowner/token/acquired/expires/stateVersion付きの期限付きpermitへ変更し、取得・期限切れ再取得・結果反映をCASでフェンスする。`PUBLISHED` / `REVIEW_REQUIRED`も現在字幕を必ず再取得し、metadata/transcript/analyzer/prompt/schema/policyの完全キー一致時だけAIを省略する。run/API/Job Summaryはstrict allowlistのみ。
+- **Migration:** `20260731180000_fence_provider_circuit_probe`をforward-onlyで追加。旧half-open行は即時再取得可能なopenへ戻す。旧`20260731120000_add_youtube_automation_pipeline`は変更せずSHA-256 `7928117E523BD141317073E1C31B34785AB7873988A079DC5FA2BFDEAA8E47AD`を維持。
+- **検証:** Prisma generate/validate、typecheck、lint、Vitest 374成功・DB専用46 skip、Next production build、production dependency audit 0、Flutter analyze 0件・764テスト成功。PostgreSQL DB E2E・migration中断再試行はCI disposable PostgreSQLで実行する（ローカルにDocker/PostgreSQLなし）。Flutter契約変更なし。
+- **未完了 / 次回:** PR #34はDraftのまま。通常push後にGitHub Actions全完了を待ち、BLOCKER/HIGH/safety-related MEDIUMが0件か再監査する。staging/production migration、provider、cron/dispatch、flag有効化は未実施。
+
 ## 2026-07-30 — gcsim 完全廃止（おすすめ編成は維持）
 
 - **決定:** gcsim シミュレーション層を削除。AZA.GG / 共起 / ルールベースのおすすめ編成と Job API は維持。

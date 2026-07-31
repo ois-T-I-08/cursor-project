@@ -47,7 +47,13 @@ compare-and-set し、期限切れ lease だけを再取得します。各 item 
 
 retry は指数 backoff、上限回数、`nextRetryAt`、`resumeStatus` を持ちます。
 provider circuit は `closed` / `open` / `half_open` を DB に保存し、
-cooldown 後の probe を一 worker だけへ許可します。
+cooldown 後の probe を一 worker だけへ許可します。probe は
+`probeOwner`、単調増加する `probeToken`、`probeAcquiredAt`、
+`probeExpiresAt`、`stateVersion` を持ち、取得と期限切れ再取得は DB の
+compare-and-set です。成功／失敗の反映にも同じ permit と有効期限を必須とし、
+期限切れまたは旧 owner の結果は破棄します。worker が probe 中に停止しても
+期限後に一 worker だけが再取得できます。half-open 中の circuit 対象外エラーは
+失敗回数へ加算せず closed に戻します。
 
 ## 字幕
 
@@ -56,6 +62,13 @@ cooldown 後の probe を一 worker だけへ許可します。
 資格情報または track がなければ `BLOCKED_TRANSCRIPT_UNAVAILABLE` となり、
 別経路へ fallback しません。実行主体が字幕へアクセスできる OAuth 権限を
 持つ場合だけ取得できます。
+
+`PUBLISHED` / `REVIEW_REQUIRED` の item も再実行時に現在の字幕を取得し、
+正規化した transcript hash、metadata hash、analyzer / prompt / schema /
+policy version から完全な analysis key を再計算します。全入力が一致する場合
+だけ解析 provider を省略します。字幕または解析入力が変わった場合だけ再解析し、
+現在字幕を確認できない場合は item を `BLOCKED` / `RETRYABLE_ERROR` にして、
+既存の公開 snapshot、ETag、`publishedAt` は更新しません。
 
 字幕本文と segment 本文は `GuideTranscript` /
 `GuideTranscriptSegment` に保存する内部データです。アクセス経路は
@@ -144,7 +157,12 @@ workflow_dispatch を定義しますが、Repository Variable
 schedule 制御に secret は使いません。認証には staging 専用 secret を使い、
 production secret は参照しません。concurrency は 1、timeout は 10 分です。
 job summary は件数と `pipelineRunId` だけで、字幕や provider response を
-含みません。
+含みません。runner の戻り値、`GuidePipelineRun.summaryPayload`、管理 API
+成功レスポンスは同じ strict allowlist schema を通過した
+`pipelineRunId`、実行状態の boolean、状態別件数だけです。workflow は
+`format-youtube-guide-job-summary.mjs` を実際の API レスポンスへ適用し、
+未知フィールド、本文、provider raw response、自由形式 error message を
+含むレスポンスを fail-closed で拒否します。
 
 段階導入順:
 
