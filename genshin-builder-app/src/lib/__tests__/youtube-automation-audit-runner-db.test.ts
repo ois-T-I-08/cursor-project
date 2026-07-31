@@ -144,6 +144,213 @@ describe.runIf(runDbTests).sequential(
           where: { characterId: "audit-same-run-character" },
         }),
       ).resolves.toBe(0);
+
+      const unchangedTranscript = new CountingTranscriptProvider(first.document);
+      const unchangedAnalysis = new CountingAnalysisProvider(
+        "audit-analysis-same-run-v1",
+        validAnalysis(first),
+      );
+      await expect(
+        runPipeline({
+          runId: "audit-same-run-unchanged",
+          fixture: first,
+          transcript: unchangedTranscript,
+          analysis: unchangedAnalysis,
+          now: new Date("2026-07-31T03:31:00.000Z"),
+        }),
+      ).resolves.toMatchObject({ reviewRequired: 1, published: 0 });
+      expect(unchangedTranscript.fetchCalls).toBe(1);
+      expect(unchangedAnalysis.calls).toBe(0);
+
+      const changedFirst = withTranscriptText(
+        first,
+        `漁獲がおすすめです 更新版 ${first.video.videoId}`,
+      );
+      const changedAnalysis = new CountingAnalysisProvider(
+        "audit-analysis-same-run-v1",
+        validAnalysis(changedFirst),
+      );
+      await expect(
+        runPipeline({
+          runId: "audit-same-run-changed",
+          fixture: changedFirst,
+          transcript: new CountingTranscriptProvider(changedFirst.document),
+          analysis: changedAnalysis,
+          now: new Date("2026-07-31T03:32:00.000Z"),
+        }),
+      ).resolves.toMatchObject({ reviewRequired: 1, published: 0 });
+      expect(changedAnalysis.calls).toBe(1);
+      await expect(
+        prisma.guidePipelineItem.findUniqueOrThrow({
+          where: { discoveryKey: first.candidate.discoveryKey },
+          select: { transcriptHash: true, status: true },
+        }),
+      ).resolves.toEqual({
+        transcriptHash: normalizeTranscript(changedFirst.document).transcriptHash,
+        status: "REVIEW_REQUIRED",
+      });
+    });
+
+    it("revalidates a published transcript hash before reuse and reanalyzes only changes", async () => {
+      await setStop(false);
+      const fixture = await createCandidate(
+        "published-revalidation",
+        "audit-published-revalidation",
+      );
+      await expect(
+        runPipeline({
+          runId: "audit-published-revalidation-first",
+          fixture,
+          transcript: new CountingTranscriptProvider(fixture.document),
+          analysis: new CountingAnalysisProvider(
+            "audit-analysis-revalidation-v1",
+            validAnalysis(fixture),
+          ),
+          now: new Date("2026-07-31T03:33:00.000Z"),
+        }),
+      ).resolves.toMatchObject({ published: 1 });
+      const before =
+        await prisma.characterBuildRecommendation.findFirstOrThrow({
+          where: {
+            characterId: fixture.characterId,
+            status: "published",
+          },
+          include: { revisions: { orderBy: { createdAt: "asc" } } },
+        });
+
+      const unchangedTranscript = new CountingTranscriptProvider(
+        fixture.document,
+      );
+      const unchangedAnalysis = new CountingAnalysisProvider(
+        "audit-analysis-revalidation-v1",
+        validAnalysis(fixture),
+      );
+      await expect(
+        runPipeline({
+          runId: "audit-published-revalidation-unchanged",
+          fixture,
+          transcript: unchangedTranscript,
+          analysis: unchangedAnalysis,
+          now: new Date("2026-07-31T03:34:00.000Z"),
+        }),
+      ).resolves.toMatchObject({ published: 1, blocked: 0, retryable: 0 });
+      expect(unchangedTranscript.fetchCalls).toBe(1);
+      expect(unchangedAnalysis.calls).toBe(0);
+      const unchanged =
+        await prisma.characterBuildRecommendation.findUniqueOrThrow({
+          where: { id: before.id },
+          include: { revisions: { orderBy: { createdAt: "asc" } } },
+        });
+      expect(unchanged.structuredPayload).toBe(before.structuredPayload);
+      expect(unchanged.publishedAt?.toISOString()).toBe(
+        before.publishedAt?.toISOString(),
+      );
+      expect(unchanged.updatedAt.toISOString()).toBe(
+        before.updatedAt.toISOString(),
+      );
+      expect(unchanged.revisions.map(({ etag }) => etag)).toEqual(
+        before.revisions.map(({ etag }) => etag),
+      );
+
+      const changed = withTranscriptText(
+        fixture,
+        `漁獲がおすすめです 改訂版 ${fixture.video.videoId}`,
+      );
+      const changedAnalysis = new CountingAnalysisProvider(
+        "audit-analysis-revalidation-v1",
+        validAnalysis(changed),
+      );
+      await expect(
+        runPipeline({
+          runId: "audit-published-revalidation-changed",
+          fixture: changed,
+          transcript: new CountingTranscriptProvider(changed.document),
+          analysis: changedAnalysis,
+          now: new Date("2026-07-31T03:35:00.000Z"),
+        }),
+      ).resolves.toMatchObject({ published: 1, blocked: 0, retryable: 0 });
+      expect(changedAnalysis.calls).toBe(1);
+      const after =
+        await prisma.characterBuildRecommendation.findUniqueOrThrow({
+          where: { id: before.id },
+          include: { revisions: { orderBy: { createdAt: "asc" } } },
+        });
+      expect(after.revisions).toHaveLength(before.revisions.length + 1);
+      expect(after.revisions.at(-1)?.etag).not.toBe(
+        before.revisions.at(-1)?.etag,
+      );
+      await expect(
+        prisma.guidePipelineItem.findUniqueOrThrow({
+          where: { discoveryKey: fixture.candidate.discoveryKey },
+          select: { transcriptHash: true, status: true },
+        }),
+      ).resolves.toEqual({
+        transcriptHash: normalizeTranscript(changed.document).transcriptHash,
+        status: "PUBLISHED",
+      });
+    });
+
+    it("keeps the published snapshot unchanged when current transcript verification fails", async () => {
+      await setStop(false);
+      const fixture = await createCandidate(
+        "published-unavailable",
+        "audit-published-unavailable",
+      );
+      await expect(
+        runPipeline({
+          runId: "audit-published-unavailable-first",
+          fixture,
+          transcript: new CountingTranscriptProvider(fixture.document),
+          analysis: new CountingAnalysisProvider(
+            "audit-analysis-unavailable-v1",
+            validAnalysis(fixture),
+          ),
+          now: new Date("2026-07-31T03:36:00.000Z"),
+        }),
+      ).resolves.toMatchObject({ published: 1 });
+      const before =
+        await prisma.characterBuildRecommendation.findFirstOrThrow({
+          where: {
+            characterId: fixture.characterId,
+            status: "published",
+          },
+          include: { revisions: { orderBy: { createdAt: "asc" } } },
+        });
+
+      await expect(
+        runPipeline({
+          runId: "audit-published-unavailable-failed",
+          fixture,
+          transcript: new UnavailableTranscriptProvider(),
+          analysis: new CountingAnalysisProvider(
+            "audit-analysis-unavailable-v1",
+            validAnalysis(fixture),
+          ),
+          now: new Date("2026-07-31T03:37:00.000Z"),
+        }),
+      ).resolves.toMatchObject({ published: 0, blocked: 1, retryable: 0 });
+      const after =
+        await prisma.characterBuildRecommendation.findUniqueOrThrow({
+          where: { id: before.id },
+          include: { revisions: { orderBy: { createdAt: "asc" } } },
+        });
+      expect(after.structuredPayload).toBe(before.structuredPayload);
+      expect(after.publishedAt?.toISOString()).toBe(
+        before.publishedAt?.toISOString(),
+      );
+      expect(after.updatedAt.toISOString()).toBe(before.updatedAt.toISOString());
+      expect(after.revisions.map(({ etag }) => etag)).toEqual(
+        before.revisions.map(({ etag }) => etag),
+      );
+      await expect(
+        prisma.guidePipelineItem.findUniqueOrThrow({
+          where: { discoveryKey: fixture.candidate.discoveryKey },
+          select: { status: true, blockCode: true },
+        }),
+      ).resolves.toEqual({
+        status: "BLOCKED",
+        blockCode: "BLOCKED_TRANSCRIPT_UNAVAILABLE",
+      });
     });
 
     it("keeps an earlier-run snapshot when the next run discovers another video", async () => {
@@ -541,6 +748,20 @@ function validAnalysis(fixture: CandidateFixture) {
   };
 }
 
+function withTranscriptText(
+  fixture: CandidateFixture,
+  text: string,
+): CandidateFixture {
+  return {
+    ...fixture,
+    document: {
+      ...fixture.document,
+      fetchedAt: new Date(fixture.document.fetchedAt.getTime() + 1),
+      segments: [{ startSeconds: 10, durationSeconds: 5, text }],
+    },
+  };
+}
+
 class CountingTranscriptProvider implements TranscriptProvider {
   readonly providerId = "audit-transcript-v1";
   listCalls = 0;
@@ -569,6 +790,18 @@ class CountingTranscriptProvider implements TranscriptProvider {
   async fetchTrack(): Promise<TranscriptDocument> {
     this.fetchCalls += 1;
     return this.document;
+  }
+}
+
+class UnavailableTranscriptProvider implements TranscriptProvider {
+  readonly providerId = "audit-transcript-v1";
+
+  async listTracks(): Promise<readonly TranscriptTrack[]> {
+    return [];
+  }
+
+  async fetchTrack(): Promise<TranscriptDocument> {
+    throw new Error("unexpectedTranscriptFetch");
   }
 }
 

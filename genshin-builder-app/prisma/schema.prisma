@@ -807,17 +807,21 @@ model GuidePipelineLease {
 }
 
 model GuideProviderCircuit {
-  providerId      String   @id
-  state           String   @default("closed")
-  failureCount    Int      @default(0)
-  lastErrorCode   String   @default("")
+  providerId      String    @id
+  state           String    @default("closed")
+  failureCount    Int       @default(0)
+  lastErrorCode   String    @default("")
   openedAt        DateTime?
   openUntil       DateTime?
-  halfOpenProbeAt DateTime?
-  version         Int      @default(0)
-  updatedAt       DateTime @updatedAt
+  probeOwner      String    @default("")
+  probeToken      Int       @default(0)
+  probeAcquiredAt DateTime?
+  probeExpiresAt  DateTime?
+  stateVersion    Int       @default(0)
+  updatedAt       DateTime  @updatedAt
 
   @@index([state, openUntil])
+  @@index([state, probeExpiresAt])
 }
 
 model GuideAutomationControl {

@@ -1,3 +1,11 @@
+import { execFileSync } from "node:child_process";
+import {
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
 import { runYoutubeGuidePipeline } from "@/lib/build-guides/automation/pipeline-runner";
@@ -12,6 +20,10 @@ import {
   releasePipelineItemClaim,
 } from "@/lib/build-guides/automation/pipeline-item-lease";
 import { automationHash } from "@/lib/build-guides/automation/idempotency";
+import {
+  buildPipelineRunSuccessResponse,
+  parsePipelineRunSummary,
+} from "@/lib/build-guides/automation/pipeline-summary";
 import { getPublishedBuildRecommendationV2 } from "@/lib/build-guides/public-v2";
 import type { YoutubeAutomationFlags } from "@/lib/build-guides/automation/feature-flags";
 import type { YoutubeVideoInfo } from "@/lib/build-guides/youtube-client";
@@ -149,7 +161,8 @@ describe.runIf(runDbTests)("YouTube automation Phase 5 end-to-end PostgreSQL", (
         loadKnownEntityIds: async () => new Set(["the-catch"]),
         now: new Date("2026-07-31T03:00:00.000Z"),
       });
-    await expect(run()).resolves.toMatchObject({
+    const firstSummary = await run();
+    expect(firstSummary).toMatchObject({
       discovered: 1,
       published: 1,
       blocked: 0,
@@ -223,8 +236,26 @@ describe.runIf(runDbTests)("YouTube automation Phase 5 end-to-end PostgreSQL", (
       where: { discoveryKey: "phase5-discovery-key" },
     });
     expect(item.transcriptHash).toBe(storedTranscript.transcriptHash);
+    const storedRun = await prisma.guidePipelineRun.findUniqueOrThrow({
+      where: { pipelineRunId },
+      select: { summaryPayload: true },
+    });
+    const persistedSummary = parsePipelineRunSummary(storedRun.summaryPayload);
+    expect(persistedSummary).toEqual(firstSummary);
+    const jobSummary = formatActualJobSummary(
+      buildPipelineRunSuccessResponse(persistedSummary),
+    );
+    expect(jobSummary).toContain('"published": 1');
+    expect(jobSummary).not.toContain(rawMarker);
 
     const persistentStores = await Promise.all([
+      prisma.guideChannel.findMany({ where: { channelId } }),
+      prisma.guideVideo.findMany({ where: { videoId } }),
+      prisma.guidePipelineRun.findMany({ where: { pipelineRunId } }),
+      prisma.guideTranscript.findMany({ where: { videoId } }),
+      prisma.guideTranscriptSegment.findMany({
+        where: { transcript: { videoId } },
+      }),
       prisma.guideVisualAnalysisResult.findMany({ where: { videoId } }),
       prisma.guideVisualEvidence.findMany({ where: { videoId } }),
       prisma.guidePipelineItem.findMany({ where: { videoId } }),
@@ -235,9 +266,24 @@ describe.runIf(runDbTests)("YouTube automation Phase 5 end-to-end PostgreSQL", (
       prisma.guideRecommendationRevision.findMany({
         where: { pipelineRunId },
       }),
+      prisma.recommendationVisualContribution.findMany({ where: { videoId } }),
       prisma.guideAdminAuditLog.findMany({ where: { pipelineRunId } }),
+      prisma.guideProviderCircuit.findMany({
+        where: {
+          providerId: {
+            in: [
+              "deterministic-transcript-test-v1",
+              "deterministic-transcript-analysis-test-v1",
+            ],
+          },
+        },
+      }),
+      prisma.guidePipelineLease.findMany({
+        where: { lockKey: { contains: "phase5" } },
+      }),
       getPublishedBuildRecommendationV2("phase5-character"),
       getYoutubeAutomationAdminOverview(),
+      jobSummary,
     ]);
     expect(JSON.stringify(persistentStores)).not.toContain(rawMarker);
     const analysisAfterCleanup =
@@ -246,6 +292,76 @@ describe.runIf(runDbTests)("YouTube automation Phase 5 end-to-end PostgreSQL", (
       });
     expect(analysisAfterCleanup.transcriptId).toBeNull();
     expect(analysisAfterCleanup.validatedPayload).not.toContain("evidenceText");
+  });
+
+  it("never copies provider payloads or error messages into persisted or job summaries", async () => {
+    const transcriptProvider = new DeterministicTranscriptProvider(
+      new Map([[videoId, transcriptDocument]]),
+    );
+    const unsafeAnalysisProvider = {
+      providerId: "phase5-marker-analysis",
+      supportsStrictSchema: true as const,
+      async analyze() {
+        return {
+          value: {
+            rawProviderResponse: rawMarker,
+            error: { message: rawMarker },
+          },
+          modelIdentifier: "marker-fixture",
+          attempts: 1,
+          usage: {},
+        };
+      },
+    };
+    const providerSummary = await runYoutubeGuidePipeline({
+      pipelineRunId: "phase5-summary-provider-marker",
+      trigger: "test",
+      dryRun: false,
+      flags,
+      discover: async () => [
+        {
+          video,
+          characterId: "phase5-character",
+          discoveryKey: "phase5-discovery-key",
+          discoveryReason: "test",
+        },
+      ],
+      transcriptProvider,
+      analysisProvider: unsafeAnalysisProvider,
+      loadKnownEntityIds: async () => new Set(["the-catch"]),
+      now: new Date("2026-08-01T01:00:00.000Z"),
+    });
+    expect(providerSummary).toMatchObject({ blocked: 1, published: 0 });
+
+    const errorSummary = await runYoutubeGuidePipeline({
+      pipelineRunId: "phase5-summary-error-marker",
+      trigger: "test",
+      dryRun: false,
+      flags,
+      discover: async () => {
+        throw new Error(rawMarker);
+      },
+      transcriptProvider,
+      analysisProvider: unsafeAnalysisProvider,
+      loadKnownEntityIds: async () => new Set(["the-catch"]),
+      now: new Date("2026-08-01T01:01:00.000Z"),
+    });
+    expect(errorSummary).toMatchObject({ retryable: 1 });
+
+    const runs = await prisma.guidePipelineRun.findMany({
+      where: { pipelineRunId: { startsWith: "phase5-summary-" } },
+      select: { summaryPayload: true },
+      orderBy: { pipelineRunId: "asc" },
+    });
+    expect(runs).toHaveLength(2);
+    for (const run of runs) {
+      expect(run.summaryPayload).not.toContain(rawMarker);
+      const summary = parsePipelineRunSummary(run.summaryPayload);
+      expect(summary).not.toBeNull();
+      expect(
+        formatActualJobSummary(buildPipelineRunSuccessResponse(summary)),
+      ).not.toContain(rawMarker);
+    }
   });
 
   it("keeps active, leased, and scheduled-retry transcripts", async () => {
@@ -303,6 +419,28 @@ describe.runIf(runDbTests)("YouTube automation Phase 5 end-to-end PostgreSQL", (
     ).resolves.toBe(2);
   });
 });
+
+function formatActualJobSummary(response: unknown): string {
+  const temp = mkdtempSync(join(tmpdir(), "phase5-job-summary-"));
+  const responsePath = join(temp, "response.json");
+  const outputPath = join(temp, "job-summary.md");
+  writeFileSync(responsePath, JSON.stringify(response), "utf8");
+  writeFileSync(outputPath, "", "utf8");
+  execFileSync(
+    process.execPath,
+    [
+      resolve(
+        process.cwd(),
+        "scripts",
+        "format-youtube-guide-job-summary.mjs",
+      ),
+      responsePath,
+      outputPath,
+    ],
+    { stdio: "pipe" },
+  );
+  return readFileSync(outputPath, "utf8");
+}
 
 async function createExpiredFixture(
   label: string,
@@ -382,6 +520,7 @@ async function cleanup(): Promise<void> {
         in: [
           "deterministic-transcript-test-v1",
           "deterministic-transcript-analysis-test-v1",
+          "phase5-marker-analysis",
         ],
       },
     },
@@ -390,6 +529,9 @@ async function cleanup(): Promise<void> {
     where: { lockKey: { contains: "phase5" } },
   });
   await prisma.guideAdminAuditLog.deleteMany({ where: { pipelineRunId } });
+  await prisma.guideAdminAuditLog.deleteMany({
+    where: { pipelineRunId: { startsWith: "phase5-summary-" } },
+  });
   await prisma.guideAdminAuditLog.deleteMany({
     where: { pipelineRunId: { startsWith: "phase5-cleanup-" } },
   });
@@ -400,6 +542,7 @@ async function cleanup(): Promise<void> {
     where: {
       OR: [
         { pipelineRunId },
+        { pipelineRunId: { startsWith: "phase5-summary-" } },
         { pipelineRunId: { startsWith: "phase5-cleanup-" } },
       ],
     },

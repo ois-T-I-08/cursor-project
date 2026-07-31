@@ -6,6 +6,7 @@ import {
   authorizationHttpStatus,
 } from "@/lib/build-guides/admin-auth";
 import { runDefaultYoutubeGuidePipeline } from "@/lib/build-guides/automation/pipeline-entry";
+import { buildPipelineRunSuccessResponse } from "@/lib/build-guides/automation/pipeline-summary";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -51,7 +52,7 @@ export async function POST(request: Request): Promise<Response> {
     const input = requestSchema.parse(JSON.parse(raw) as unknown);
     const summary = await runDefaultYoutubeGuidePipeline(input);
     return NextResponse.json(
-      { ok: true, summary },
+      buildPipelineRunSuccessResponse(summary),
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

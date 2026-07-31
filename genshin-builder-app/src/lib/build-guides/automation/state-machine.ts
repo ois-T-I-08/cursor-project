@@ -52,8 +52,18 @@ const NEXT: Readonly<Record<PipelineStatus, ReadonlySet<PipelineStatus>>> = {
     "STOPPED",
     "BLOCKED",
   ]),
-  REVIEW_REQUIRED: new Set(["METADATA_FETCHED", "STOPPED"]),
-  PUBLISHED: new Set(["METADATA_FETCHED", "STOPPED"]),
+  REVIEW_REQUIRED: new Set([
+    "METADATA_FETCHED",
+    "RETRYABLE_ERROR",
+    "STOPPED",
+    "BLOCKED",
+  ]),
+  PUBLISHED: new Set([
+    "METADATA_FETCHED",
+    "RETRYABLE_ERROR",
+    "STOPPED",
+    "BLOCKED",
+  ]),
   RETRYABLE_ERROR: new Set([
     "METADATA_FETCHED",
     "TRANSCRIPT_FETCHED",

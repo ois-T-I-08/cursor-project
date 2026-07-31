@@ -29,6 +29,12 @@ import {
   releasePipelineLease,
 } from "./lease-store";
 import {
+  buildPipelineRunSummary,
+  parsePipelineRunSummary,
+  serializePipelineRunSummary,
+  type PipelineRunSummary,
+} from "./pipeline-summary";
+import {
   claimPipelineItem,
   releasePipelineItemClaim,
   renewPipelineItemClaim,
@@ -53,18 +59,7 @@ import {
 } from "./transcript-provider";
 import { persistNormalizedTranscript } from "./transcript-store";
 
-export type PipelineRunSummary = Readonly<{
-  pipelineRunId: string;
-  skipped: boolean;
-  dryRun: boolean;
-  discovered: number;
-  published: number;
-  ready: number;
-  reviewRequired: number;
-  blocked: number;
-  stopped: number;
-  retryable: number;
-}>;
+export type { PipelineRunSummary } from "./pipeline-summary";
 
 type PipelineItemOutcome =
   | "published"
@@ -147,10 +142,10 @@ export async function runYoutubeGuidePipeline(input: {
 
   const entryControl = await readYoutubeAutomationControl();
   if (entryControl.emergencyStopped) {
-    const summary = {
+    const summary = buildPipelineRunSummary({
       ...emptySummary(input.pipelineRunId, input.dryRun, true),
       stopped: 1,
-    };
+    });
     await finishStoppedRun(run.id, input.pipelineRunId, summary, now);
     return summary;
   }
@@ -166,10 +161,10 @@ export async function runYoutubeGuidePipeline(input: {
     ]);
   } catch (error) {
     if (error instanceof EmergencyStoppedError) {
-      const summary = {
+      const summary = buildPipelineRunSummary({
         ...emptySummary(input.pipelineRunId, input.dryRun, true),
         stopped: 1,
-      };
+      });
       await finishStoppedRun(
         run.id,
         input.pipelineRunId,
@@ -270,13 +265,13 @@ export async function runYoutubeGuidePipeline(input: {
   const outcomes = await loadFinalOutcomes(itemIds);
   const counts = countOutcomes(outcomes);
   counts.retryable += materializationFailures;
-  const summary: PipelineRunSummary = {
+  const summary = buildPipelineRunSummary({
     pipelineRunId: input.pipelineRunId,
     skipped: false,
     dryRun: input.dryRun,
     discovered: uniqueCandidates.length,
     ...counts,
-  };
+  });
   await prisma.guidePipelineRun.update({
     where: { id: run.id },
     data: {
@@ -286,7 +281,7 @@ export async function runYoutubeGuidePipeline(input: {
           : counts.retryable > 0
             ? "retryable"
             : "completed",
-      summaryPayload: JSON.stringify(summary),
+      summaryPayload: serializePipelineRunSummary(summary),
       completedAt: stageNow(input.now),
     },
   });
@@ -381,17 +376,10 @@ async function processCandidatePassOne(input: {
   ) {
     return;
   }
-  const currentAnalysis = isCurrentAnalysis(
+  const currentAnalysis = isCurrentAnalysisVersion(
     initial,
     input.analysisProvider.providerId,
   );
-  if (
-    (initial.status === "PUBLISHED" ||
-      initial.status === "REVIEW_REQUIRED") &&
-    currentAnalysis
-  ) {
-    return;
-  }
   if (initial.status === "BLOCKED" && (!initial.analyzerVersion || currentAnalysis)) {
     return;
   }
@@ -409,26 +397,58 @@ async function processCandidatePassOne(input: {
     let item = await prisma.guidePipelineItem.findUniqueOrThrow({
       where: { id: input.itemId },
     });
-    const claimedAnalysisCurrent = isCurrentAnalysis(
+    const claimedAnalysisCurrent = isCurrentAnalysisVersion(
       item,
       input.analysisProvider.providerId,
     );
-    if (
-      (item.status === "PUBLISHED" ||
-        item.status === "REVIEW_REQUIRED") &&
-      claimedAnalysisCurrent
-    ) {
-      return;
-    }
     if (
       item.status === "BLOCKED" &&
       (!item.analyzerVersion || claimedAnalysisCurrent)
     ) {
       return;
     }
+    let fetchedTerminalTranscript: NormalizedTranscript | null = null;
+    if (item.status === "PUBLISHED" || item.status === "REVIEW_REQUIRED") {
+      await input.testStageHook?.("before_transcript");
+      await checkpoint(claim, input.now);
+      fetchedTerminalTranscript = await fetchTranscriptForClaim({
+        claim,
+        candidate,
+        transcriptProvider: input.transcriptProvider,
+        now: input.now,
+      });
+      if (!fetchedTerminalTranscript) return;
+      if (
+        isCurrentAnalysisInput({
+          item,
+          candidate,
+          transcript: fetchedTerminalTranscript,
+          analyzerVersion: input.analysisProvider.providerId,
+        })
+      ) {
+        return;
+      }
+      const transcriptChanged =
+        item.transcriptHash !== fetchedTerminalTranscript.transcriptHash;
+      await transitionPipelineItem({
+        claim,
+        now: stageNow(input.now),
+        toStatus: "METADATA_FETCHED",
+        safeCode: transcriptChanged
+          ? "TRANSCRIPT_HASH_CHANGED"
+          : "ANALYSIS_INPUT_CHANGED",
+        safeDetail: {
+          transcriptChanged,
+          previousTranscriptHash: item.transcriptHash,
+          currentTranscriptHash: fetchedTerminalTranscript.transcriptHash,
+        },
+      });
+      item = await prisma.guidePipelineItem.findUniqueOrThrow({
+        where: { id: input.itemId },
+      });
+    }
     const shouldReanalyze =
-      ["PUBLISHED", "REVIEW_REQUIRED", "BLOCKED"].includes(item.status) &&
-      !claimedAnalysisCurrent;
+      item.status === "BLOCKED" && !claimedAnalysisCurrent;
     if (shouldReanalyze || item.status === "STOPPED") {
       await transitionPipelineItem({
         claim,
@@ -437,26 +457,6 @@ async function processCandidatePassOne(input: {
         safeCode: shouldReanalyze
           ? "ANALYZER_VERSION_CHANGED"
           : "PIPELINE_RESUMED_AFTER_STOP",
-      });
-      await updatePipelineItemWithClaim({
-        claim,
-        now: stageNow(input.now),
-        data: {
-          transcriptId: null,
-          transcriptHash: "",
-          analysisIdempotencyKey: null,
-          publicationKey: null,
-          analyzerVersion: "",
-          promptVersion: "",
-          schemaVersion: "",
-          qualityPayload: "{}",
-          canonicalAnalysisPayload: "{}",
-          validationHash: "",
-          snapshotPayload: "{}",
-          policyHash: "",
-          blockCode: "",
-          safeErrorCode: "",
-        },
       });
       item = await prisma.guidePipelineItem.findUniqueOrThrow({
         where: { id: input.itemId },
@@ -521,61 +521,20 @@ async function processCandidatePassOne(input: {
       transcript = stored;
       transcriptId = item.transcriptId;
     } else {
-      await input.testStageHook?.("before_transcript");
-      await checkpoint(claim, input.now);
-      const transcriptCircuit = await claimProviderCircuitPermission({
-        providerId: input.transcriptProvider.providerId,
-        now: stageNow(input.now),
-      });
-      if (!transcriptCircuit.allowed) {
-        await transitionPipelineItem({
+      if (!fetchedTerminalTranscript) {
+        await input.testStageHook?.("before_transcript");
+        await checkpoint(claim, input.now);
+      }
+      const fetchedTranscript =
+        fetchedTerminalTranscript ??
+        (await fetchTranscriptForClaim({
           claim,
-          now: stageNow(input.now),
-          toStatus: "RETRYABLE_ERROR",
-          safeCode: "PROVIDER_CIRCUIT_OPEN",
-          resumeStatus: "METADATA_FETCHED",
-          nextRetryAt: transcriptCircuit.retryAt,
-        });
-        return;
-      }
-      const transcriptOutcome = await fetchPreferredTranscript(
-        input.transcriptProvider,
-        candidate.video.videoId,
-        [candidate.video.language || "ja", "ja", "en"],
-      );
-      await checkpoint(claim, input.now);
-      if (!transcriptOutcome.ok) {
-        await recordProviderFailure({
-          providerId: input.transcriptProvider.providerId,
-          safeErrorCode: transcriptOutcome.error.safeCode,
-          opensCircuit: transcriptOutcome.error.opensCircuit,
-          now: stageNow(input.now),
-        });
-        if (transcriptOutcome.error.retryable) {
-          await transitionPipelineItem({
-            claim,
-            now: stageNow(input.now),
-            toStatus: "RETRYABLE_ERROR",
-            safeCode: transcriptOutcome.error.safeCode,
-            resumeStatus: "METADATA_FETCHED",
-            nextRetryAt: retryAt(input.now),
-          });
-        } else {
-          await transitionPipelineItem({
-            claim,
-            now: stageNow(input.now),
-            toStatus: "BLOCKED",
-            safeCode: transcriptOutcome.error.safeCode,
-            blockCode: transcriptOutcome.blockCode,
-          });
-        }
-        return;
-      }
-      await recordProviderSuccess({
-        providerId: input.transcriptProvider.providerId,
-        now: stageNow(input.now),
-      });
-      transcript = normalizeTranscript(transcriptOutcome.document);
+          candidate,
+          transcriptProvider: input.transcriptProvider,
+          now: input.now,
+        }));
+      if (!fetchedTranscript) return;
+      transcript = fetchedTranscript;
       const stored = await persistNormalizedTranscript({
         transcript,
         now: stageNow(input.now),
@@ -591,6 +550,25 @@ async function processCandidatePassOne(input: {
         return;
       }
       transcriptId = stored.transcriptId;
+      await updatePipelineItemWithClaim({
+        claim,
+        now: stageNow(input.now),
+        data: {
+          metadataHash: candidate.video.metadataHash,
+          analysisIdempotencyKey: null,
+          publicationKey: null,
+          analyzerVersion: "",
+          promptVersion: "",
+          schemaVersion: "",
+          qualityPayload: "{}",
+          canonicalAnalysisPayload: "{}",
+          validationHash: "",
+          snapshotPayload: "{}",
+          policyHash: "",
+          blockCode: "",
+          safeErrorCode: "",
+        },
+      });
       await transitionPipelineItem({
         claim,
         now: stageNow(input.now),
@@ -625,6 +603,7 @@ async function processCandidatePassOne(input: {
     });
     const analysisCircuit = await claimProviderCircuitPermission({
       providerId: input.analysisProvider.providerId,
+      probeOwner: `${claim.lease.leaseOwner}:analysis`,
       now: stageNow(input.now),
     });
     if (!analysisCircuit.allowed) {
@@ -648,19 +627,19 @@ async function processCandidatePassOne(input: {
         allowedEntityIds: [...input.knownEntityIds].sort(),
       });
       await checkpoint(claim, input.now);
-      await recordProviderSuccess({
-        providerId: input.analysisProvider.providerId,
+      assertCircuitResultRecorded(await recordProviderSuccess({
+        permit: analysisCircuit.permit,
         now: stageNow(input.now),
-      });
+      }));
     } catch (error) {
       const providerError = asSafeProviderError(error);
       if (providerError) {
-        await recordProviderFailure({
-          providerId: input.analysisProvider.providerId,
+        assertCircuitResultRecorded(await recordProviderFailure({
+          permit: analysisCircuit.permit,
           safeErrorCode: providerError.safeCode,
           opensCircuit: providerError.opensCircuit,
           now: stageNow(input.now),
-        });
+        }));
         if (!providerError.retryable) {
           await transitionPipelineItem({
             claim,
@@ -773,6 +752,72 @@ async function processCandidatePassOne(input: {
   }
 }
 
+async function fetchTranscriptForClaim(input: {
+  claim: ItemLeaseClaim;
+  candidate: DiscoveredGuideCandidate;
+  transcriptProvider: TranscriptProvider;
+  now?: Date;
+}): Promise<NormalizedTranscript | null> {
+  const circuit = await claimProviderCircuitPermission({
+    providerId: input.transcriptProvider.providerId,
+    probeOwner: `${input.claim.lease.leaseOwner}:transcript`,
+    now: stageNow(input.now),
+  });
+  if (!circuit.allowed) {
+    await transitionPipelineItem({
+      claim: input.claim,
+      now: stageNow(input.now),
+      toStatus: "RETRYABLE_ERROR",
+      safeCode: "PROVIDER_CIRCUIT_OPEN",
+      resumeStatus: "METADATA_FETCHED",
+      nextRetryAt: circuit.retryAt,
+    });
+    return null;
+  }
+  const outcome = await fetchPreferredTranscript(
+    input.transcriptProvider,
+    input.candidate.video.videoId,
+    [input.candidate.video.language || "ja", "ja", "en"],
+  );
+  await checkpoint(input.claim, input.now);
+  if (!outcome.ok) {
+    assertCircuitResultRecorded(
+      await recordProviderFailure({
+        permit: circuit.permit,
+        safeErrorCode: outcome.error.safeCode,
+        opensCircuit: outcome.error.opensCircuit,
+        now: stageNow(input.now),
+      }),
+    );
+    if (outcome.error.retryable) {
+      await transitionPipelineItem({
+        claim: input.claim,
+        now: stageNow(input.now),
+        toStatus: "RETRYABLE_ERROR",
+        safeCode: outcome.error.safeCode,
+        resumeStatus: "METADATA_FETCHED",
+        nextRetryAt: retryAt(input.now),
+      });
+    } else {
+      await transitionPipelineItem({
+        claim: input.claim,
+        now: stageNow(input.now),
+        toStatus: "BLOCKED",
+        safeCode: outcome.error.safeCode,
+        blockCode: outcome.blockCode,
+      });
+    }
+    return null;
+  }
+  assertCircuitResultRecorded(
+    await recordProviderSuccess({
+      permit: circuit.permit,
+      now: stageNow(input.now),
+    }),
+  );
+  return normalizeTranscript(outcome.document);
+}
+
 async function checkpoint(
   claim: ItemLeaseClaim,
   fixedNow?: Date,
@@ -821,8 +866,6 @@ async function safelyTransitionRetryable(
   if (
     !current ||
     [
-      "PUBLISHED",
-      "REVIEW_REQUIRED",
       "BLOCKED",
       "RETRYABLE_ERROR",
       "STOPPED",
@@ -919,6 +962,14 @@ function countOutcomes(
   return result;
 }
 
+function assertCircuitResultRecorded(
+  result: "recorded" | "stale",
+): asserts result is "recorded" {
+  if (result !== "recorded") {
+    throw new Error("PROVIDER_CIRCUIT_PERMIT_STALE");
+  }
+}
+
 async function finishRunDiscoveryFailure(input: {
   runDatabaseId: string;
   pipelineRunId: string;
@@ -926,10 +977,10 @@ async function finishRunDiscoveryFailure(input: {
   error: unknown;
 }): Promise<PipelineRunSummary> {
   const safeCode = safeCodeOf(input.error, "DISCOVERY_OR_MASTER_FAILED");
-  const summary: PipelineRunSummary = {
+  const summary = buildPipelineRunSummary({
     ...emptySummary(input.pipelineRunId, input.dryRun, false),
     retryable: 1,
-  };
+  });
   const actionKey = automationHash("youtube-run-failure-v1", {
     pipelineRunId: input.pipelineRunId,
     safeCode,
@@ -939,7 +990,7 @@ async function finishRunDiscoveryFailure(input: {
       where: { id: input.runDatabaseId },
       data: {
         status: "retryable",
-        summaryPayload: JSON.stringify(summary),
+        summaryPayload: serializePipelineRunSummary(summary),
         completedAt: new Date(),
       },
     }),
@@ -972,7 +1023,7 @@ async function finishStoppedRun(
       where: { id: runDatabaseId },
       data: {
         status: "stopped",
-        summaryPayload: JSON.stringify(summary),
+        summaryPayload: serializePipelineRunSummary(summary),
         completedAt: now,
       },
     }),
@@ -995,12 +1046,7 @@ function parseCompletedSummary(
   state: { status: string; completedAt: Date | null },
 ): PipelineRunSummary | null {
   if (!state.completedAt || state.status !== "completed") return null;
-  try {
-    const value = JSON.parse(payload) as PipelineRunSummary;
-    return value.pipelineRunId ? value : null;
-  } catch {
-    return null;
-  }
+  return parsePipelineRunSummary(payload);
 }
 
 function asSafeProviderError(error: unknown): SafeProviderError | null {
@@ -1062,7 +1108,7 @@ function retryAt(fixedNow?: Date): Date {
   );
 }
 
-function isCurrentAnalysis(
+function isCurrentAnalysisVersion(
   item: {
     analyzerVersion: string;
     promptVersion: string;
@@ -1079,6 +1125,40 @@ function isCurrentAnalysis(
   );
 }
 
+function isCurrentAnalysisInput(input: {
+  item: {
+    metadataHash: string;
+    transcriptHash: string;
+    analysisIdempotencyKey: string | null;
+    analyzerVersion: string;
+    promptVersion: string;
+    schemaVersion: string;
+    policyHash: string;
+  };
+  candidate: DiscoveredGuideCandidate;
+  transcript: NormalizedTranscript;
+  analyzerVersion: string;
+}): boolean {
+  if (
+    !isCurrentAnalysisVersion(input.item, input.analyzerVersion) ||
+    input.item.metadataHash !== input.candidate.video.metadataHash ||
+    input.item.transcriptHash !== input.transcript.transcriptHash
+  ) {
+    return false;
+  }
+  return (
+    input.item.analysisIdempotencyKey ===
+    analysisIdempotencyKey({
+      videoId: input.candidate.video.videoId,
+      metadataHash: input.candidate.video.metadataHash,
+      transcriptHash: input.transcript.transcriptHash,
+      analyzerVersion: input.analyzerVersion,
+      promptVersion: "youtube-transcript-claims-v1",
+      schemaVersion: TRANSCRIPT_ANALYSIS_SCHEMA_VERSION,
+    })
+  );
+}
+
 function stageNow(fixedNow?: Date): Date {
   return fixedNow ? new Date(fixedNow) : new Date();
 }
@@ -1088,7 +1168,7 @@ function emptySummary(
   dryRun: boolean,
   skipped: boolean,
 ): PipelineRunSummary {
-  return {
+  return buildPipelineRunSummary({
     pipelineRunId,
     skipped,
     dryRun,
@@ -1099,5 +1179,5 @@ function emptySummary(
     blocked: 0,
     stopped: 0,
     retryable: 0,
-  };
+  });
 }

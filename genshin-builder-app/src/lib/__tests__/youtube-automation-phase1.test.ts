@@ -58,6 +58,12 @@ describe("YouTube automation Phase 1", () => {
     expect(() =>
       assertPipelineTransition("DISCOVERED", "PUBLISHED"),
     ).toThrow("invalidPipelineTransition");
+    expect(() =>
+      assertPipelineTransition("PUBLISHED", "RETRYABLE_ERROR"),
+    ).not.toThrow();
+    expect(() =>
+      assertPipelineTransition("REVIEW_REQUIRED", "BLOCKED"),
+    ).not.toThrow();
     expect(retryDelayMs(1)).toBe(30_000);
     expect(retryDelayMs(3)).toBe(120_000);
     expect(retryDelayMs(20)).toBeLessThanOrEqual(3_600_000);

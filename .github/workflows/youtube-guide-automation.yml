@@ -68,25 +68,6 @@ jobs:
               "${STAGING_API_BASE_URL%/}/api/admin/youtube/pipeline/run"
           )"
           test "${http_code}" = "200"
-          node -e '
-            const fs = require("fs");
-            const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-            if (value.ok !== true || !value.summary) process.exit(1);
-            const s = value.summary;
-            const safe = {
-              pipelineRunId: s.pipelineRunId,
-              skipped: s.skipped,
-              dryRun: s.dryRun,
-              discovered: s.discovered,
-              published: s.published,
-              ready: s.ready,
-              blocked: s.blocked,
-              retryable: s.retryable,
-            };
-            fs.appendFileSync(
-              process.env.GITHUB_STEP_SUMMARY,
-              "## YouTube guide pipeline\n\n```json\n" +
-                JSON.stringify(safe, null, 2) +
-                "\n```\n",
-            );
-          ' "${response_file}"
+          node genshin-builder-app/scripts/format-youtube-guide-job-summary.mjs \
+            "${response_file}" \
+            "${GITHUB_STEP_SUMMARY}"

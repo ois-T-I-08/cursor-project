@@ -183,6 +183,7 @@ export async function assertPipelineItemClaim(
 
 type FencedItemData = Partial<{
   characterId: string;
+  metadataHash: string;
   transcriptId: string | null;
   transcriptHash: string;
   analysisIdempotencyKey: string | null;

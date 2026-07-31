@@ -40,9 +40,15 @@ const hardening = resolve(
   "20260731153000_harden_youtube_automation_pipeline",
   "migration.sql",
 );
+const circuitFencing = resolve(
+  migrations,
+  "20260731180000_fence_provider_circuit_probe",
+  "migration.sql",
+);
 const temp = mkdtempSync(join(tmpdir(), "youtube-hardening-"));
 const fixtureSql = join(temp, "fixture.sql");
 const interruptedSql = join(temp, "interrupted.sql");
+const circuitInterruptedSql = join(temp, "circuit-interrupted.sql");
 const npx = process.platform === "win32" ? "npx.cmd" : "npx";
 
 const admin = new PrismaClient();
@@ -96,6 +102,24 @@ try {
         'migration-discovery',
         CURRENT_TIMESTAMP
       );
+    INSERT INTO "GuideProviderCircuit"
+      (
+        "providerId",
+        "state",
+        "failureCount",
+        "halfOpenProbeAt",
+        "version",
+        "updatedAt"
+      )
+    VALUES
+      (
+        'migration-provider',
+        'half_open',
+        3,
+        CURRENT_TIMESTAMP,
+        7,
+        CURRENT_TIMESTAMP
+      );
   `;
   writeFileSync(fixtureSql, fixture, "utf8");
 
@@ -108,6 +132,7 @@ try {
   }
 
   executeSql(schemaUrl(upgradeSchema), hardening);
+  executeSql(schemaUrl(upgradeSchema), circuitFencing);
   const upgraded = clientFor(upgradeSchema);
   try {
     const item = await upgraded.guidePipelineItem.findUniqueOrThrow({
@@ -125,6 +150,20 @@ try {
       item.stateVersion !== 0
     ) {
       throw new Error("hardeningBackfillFailed");
+    }
+    const circuit = await upgraded.guideProviderCircuit.findUniqueOrThrow({
+      where: { providerId: "migration-provider" },
+    });
+    if (
+      circuit.state !== "open" ||
+      circuit.openUntil === null ||
+      circuit.probeOwner !== "" ||
+      circuit.probeToken !== 0 ||
+      circuit.probeAcquiredAt !== null ||
+      circuit.probeExpiresAt !== null ||
+      circuit.stateVersion !== 8
+    ) {
+      throw new Error("circuitFencingBackfillFailed");
     }
   } finally {
     await upgraded.$disconnect();
@@ -220,6 +259,92 @@ try {
     }
   } finally {
     await retried.$disconnect();
+  }
+
+  const circuitFencingSql = readFileSync(circuitFencing, "utf8");
+  if (
+    !/\bBEGIN;\s/i.test(circuitFencingSql) ||
+    !/\bCOMMIT;\s*$/i.test(circuitFencingSql)
+  ) {
+    throw new Error("circuitFencingMigrationMustBeTransactional");
+  }
+  writeFileSync(
+    circuitInterruptedSql,
+    circuitFencingSql.replace(
+      /\bCOMMIT;\s*$/i,
+      "SELECT 1 / 0;\n\nCOMMIT;\n",
+    ),
+    "utf8",
+  );
+  let circuitInterrupted = false;
+  try {
+    executeSql(schemaUrl(interruptedSchema), circuitInterruptedSql);
+  } catch {
+    circuitInterrupted = true;
+  }
+  if (!circuitInterrupted) {
+    throw new Error("interruptedCircuitFencingMigrationDidNotFail");
+  }
+
+  const interruptedCircuitClient = clientFor(interruptedSchema);
+  try {
+    const columns = await interruptedCircuitClient.$queryRawUnsafe(
+      `SELECT "column_name"
+       FROM "information_schema"."columns"
+       WHERE "table_schema" = '${interruptedSchema}'
+         AND "table_name" = 'GuideProviderCircuit'
+         AND "column_name" IN (
+           'probeOwner',
+           'probeToken',
+           'probeAcquiredAt',
+           'probeExpiresAt',
+           'stateVersion'
+         )`,
+    );
+    const oldColumns = await interruptedCircuitClient.$queryRawUnsafe(
+      `SELECT "column_name"
+       FROM "information_schema"."columns"
+       WHERE "table_schema" = '${interruptedSchema}'
+         AND "table_name" = 'GuideProviderCircuit'
+         AND "column_name" IN ('halfOpenProbeAt', 'version')`,
+    );
+    const rows = await interruptedCircuitClient.$queryRawUnsafe(
+      `SELECT "state", "version", "halfOpenProbeAt"
+       FROM "GuideProviderCircuit"
+       WHERE "providerId" = 'migration-provider'`,
+    );
+    if (
+      columns.length !== 0 ||
+      oldColumns.length !== 2 ||
+      rows.length !== 1 ||
+      rows[0]?.state !== "half_open" ||
+      rows[0]?.version !== 7 ||
+      rows[0]?.halfOpenProbeAt === null
+    ) {
+      throw new Error("interruptedCircuitFencingLeftPartialState");
+    }
+  } finally {
+    await interruptedCircuitClient.$disconnect();
+  }
+
+  executeSql(schemaUrl(interruptedSchema), circuitFencing);
+  const retriedCircuitClient = clientFor(interruptedSchema);
+  try {
+    const circuit =
+      await retriedCircuitClient.guideProviderCircuit.findUniqueOrThrow({
+        where: { providerId: "migration-provider" },
+      });
+    if (
+      circuit.state !== "open" ||
+      circuit.openUntil === null ||
+      circuit.stateVersion !== 8 ||
+      circuit.probeAcquiredAt !== null ||
+      circuit.probeExpiresAt !== null
+    ) {
+      throw new Error("circuitFencingRetryFailed");
+    }
+  } finally {
+    await retriedCircuitClient.$disconnect();
   }
 } finally {
   await admin.$disconnect();

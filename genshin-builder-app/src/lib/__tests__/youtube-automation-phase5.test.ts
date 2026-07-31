@@ -108,7 +108,9 @@ describe("YouTube automation internal pipeline API", () => {
         discovered: 0,
         published: 0,
         ready: 0,
+        reviewRequired: 0,
         blocked: 0,
+        stopped: 0,
         retryable: 0,
       }),
     }));
