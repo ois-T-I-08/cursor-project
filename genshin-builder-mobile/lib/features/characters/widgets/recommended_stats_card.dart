@@ -22,11 +22,10 @@ class RecommendedStatsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(buildRecommendationProvider(characterId));
     return async.when(
-      loading:
-          () => const Padding(
-            padding: EdgeInsets.only(top: 16),
-            child: LinearProgressIndicator(minHeight: 2),
-          ),
+      loading: () => const Padding(
+        padding: EdgeInsets.only(top: 16),
+        child: LinearProgressIndicator(minHeight: 2),
+      ),
       error: (error, _) {
         if (error is BuildRecommendationException &&
             (error.failure == BuildRecommendationFailure.notConfigured ||
@@ -46,10 +45,8 @@ class RecommendedStatsCard extends ConsumerWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed:
-                      () => ref.invalidate(
-                        buildRecommendationProvider(characterId),
-                      ),
+                  onPressed: () =>
+                      ref.invalidate(buildRecommendationProvider(characterId)),
                   child: const Text('再試行'),
                 ),
               ],
@@ -62,8 +59,8 @@ class RecommendedStatsCard extends ConsumerWidget {
         return _RecommendationBody(
           recommendation: recommendation,
           currentStats: currentStats,
-          onRetry:
-              () => ref.invalidate(buildRecommendationProvider(characterId)),
+          onRetry: () =>
+              ref.invalidate(buildRecommendationProvider(characterId)),
         );
       },
     );
@@ -109,7 +106,14 @@ class _RecommendationBody extends StatelessWidget {
             const GuideSourceLabel(source: GuideInsightSource.youtube),
             const SizedBox(height: 4),
             Text(
-              '攻略動画の画面内で確認された目安です。公式推奨や最適値ではありません。'
+              '検証: ${recommendation.verificationCaption}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '攻略動画の根拠箇所から確認された目安です。公式推奨や最適値ではありません。'
               '条件付き効果・編成バフは含みません。',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -135,10 +139,9 @@ class _RecommendationBody extends StatelessWidget {
             else
               ...recommendation.targets.map((target) {
                 final current = currentStats[target.stat] ?? 0;
-                final displayCurrent =
-                    percentStatKeys.contains(target.stat)
-                        ? current * 100
-                        : current;
+                final displayCurrent = percentStatKeys.contains(target.stat)
+                    ? current * 100
+                    : current;
                 final verdict = compareStatToTarget(
                   current: displayCurrent,
                   target: target,
@@ -169,7 +172,11 @@ class _RecommendationBody extends StatelessWidget {
             const SizedBox(height: 8),
             Text('根拠動画', style: theme.textTheme.labelMedium),
             ...recommendation.sources.map((source) {
-              final canOpen = isSafeYoutubeGuideUrl(source.sourceUrl);
+              final unavailable =
+                  source.availability ==
+                  BuildRecommendationSourceAvailability.unavailable;
+              final canOpen =
+                  !unavailable && isSafeYoutubeGuideUrl(source.sourceUrl);
               return ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
@@ -181,12 +188,13 @@ class _RecommendationBody extends StatelessWidget {
                 subtitle: Text(
                   '${source.channelTitle}'
                   '${recommendation.lastVerifiedAt != null ? ' · 確認 ${recommendation.lastVerifiedAt!.toLocal().toIso8601String().split('T').first}' : ''}'
-                  ' · 管理者確認済み',
+                  ' · ${unavailable ? '現在利用不可（公開済みスナップショット）' : recommendation.verificationCaption}',
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-                trailing:
-                    canOpen ? const Icon(Icons.open_in_new, size: 18) : null,
+                trailing: canOpen
+                    ? const Icon(Icons.open_in_new, size: 18)
+                    : null,
                 onTap: canOpen ? () => _openUrl(source.sourceUrl) : null,
               );
             }),
@@ -212,7 +220,9 @@ class _RecommendationBody extends StatelessWidget {
                       _openUrl(_youtubeAt(source.sourceUrl, e.startSeconds));
                     },
                     child: Text(
-                      '${_formatTimestamp(e.startSeconds)} 画面表示「${e.exactVisibleText}」',
+                      e.exactVisibleText.isEmpty
+                          ? '${_formatTimestamp(e.startSeconds)} 根拠タイムスタンプ'
+                          : '${_formatTimestamp(e.startSeconds)} 画面表示「${e.exactVisibleText}」',
                       style: theme.textTheme.bodySmall,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,

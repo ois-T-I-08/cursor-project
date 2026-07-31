@@ -6,6 +6,7 @@ import {
 import {
   classifyProviderHttpStatus,
   SafeProviderError,
+  toSafeProviderError,
 } from "@/lib/build-guides/automation/provider-error";
 import {
   chunkTranscript,
@@ -22,6 +23,7 @@ import { runWithFiniteRetry } from "@/lib/build-guides/automation/retry";
 import { evaluateDiscoveryCandidate } from "@/lib/build-guides/automation/discovery-policy";
 import { youtubeAutomationFlags } from "@/lib/build-guides/automation/feature-flags";
 import type { YoutubeVideoInfo } from "@/lib/build-guides/youtube-client";
+import { GeminiTranscriptAnalysisProvider } from "@/lib/build-guides/automation/gemini-transcript-provider";
 
 const document: TranscriptDocument = {
   providerId: "fixture",
@@ -48,18 +50,26 @@ describe("YouTube automation Phase 2", () => {
   it("fails every automation flag closed unless explicitly enabled", () => {
     expect(youtubeAutomationFlags({})).toEqual({
       enabled: false,
+      guideEnabled: false,
       discoveryEnabled: false,
       transcriptEnabled: false,
       analysisEnabled: false,
+      geminiAnalysisEnabled: false,
+      deepseekAnalysisEnabled: false,
       autoPublishEnabled: false,
       maintenanceEnabled: false,
     });
     expect(
       youtubeAutomationFlags({
-        YOUTUBE_GUIDE_AUTOMATION_ENABLED: "true",
-        YOUTUBE_GUIDE_TRANSCRIPT_ENABLED: "true",
+        YOUTUBE_AUTOMATION_ENABLED: "true",
+        YOUTUBE_GUIDE_ENABLED: "true",
       }),
-    ).toMatchObject({ enabled: true, transcriptEnabled: true });
+    ).toMatchObject({
+      enabled: true,
+      guideEnabled: true,
+      transcriptEnabled: true,
+      analysisEnabled: false,
+    });
   });
 
   it("selects a deterministic official transcript and blocks when absent", async () => {
@@ -129,6 +139,14 @@ describe("YouTube automation Phase 2", () => {
       "BLOCKED_ANALYSIS_SCHEMA_INVALID",
     ],
     [
+      "timestamp range",
+      (value: ReturnType<typeof validAnalysis>) => ({
+        ...value,
+        claims: [{ ...value.claims[0]!, timestampStart: -1 }],
+      }),
+      "BLOCKED_ANALYSIS_SCHEMA_INVALID",
+    ],
+    [
       "character",
       (value: ReturnType<typeof validAnalysis>) => ({
         ...value,
@@ -189,6 +207,12 @@ describe("YouTube automation Phase 2", () => {
       safeCode: "UPSTREAM_5XX",
       retryable: true,
     });
+    expect(
+      toSafeProviderError(
+        "x",
+        new DOMException("provider body must not be copied", "AbortError"),
+      ),
+    ).toMatchObject({ safeCode: "TIMEOUT", retryable: true });
     let calls = 0;
     const sleeps: number[] = [];
     const result = await runWithFiniteRetry({
@@ -204,6 +228,33 @@ describe("YouTube automation Phase 2", () => {
     expect(result).toMatchObject({ ok: false, attempts: 3, exhausted: true });
     expect(calls).toBe(3);
     expect(sleeps).toEqual([30_000, 60_000]);
+  });
+
+  it("rejects invalid provider JSON without embedding the response", async () => {
+    const provider = new GeminiTranscriptAnalysisProvider({
+      apiKey: "test-only-key",
+      fetchImpl: vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            candidates: [{ content: { parts: [{ text: "{invalid" }] } }],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ) as typeof fetch,
+    });
+    await expect(
+      provider.analyze({
+        videoId: "video_12345",
+        characterId: "raiden-shogun",
+        language: "ja",
+        chunks: [],
+        allowedEntityIds: ["the-catch"],
+      }),
+    ).rejects.toMatchObject({
+      safeCode: "INVALID_RESPONSE",
+      retryable: false,
+      message: "gemini-transcript-strict-v1:INVALID_RESPONSE",
+    });
   });
 
   it("filters non-allowlisted, live, short, and unresolved discovery candidates", () => {

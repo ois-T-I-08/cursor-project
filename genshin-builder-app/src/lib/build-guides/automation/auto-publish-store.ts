@@ -63,6 +63,26 @@ export async function publishAutomaticRecommendation(input: {
       blockCodes: gate.blockCodes,
     };
   }
+  const currentPublished =
+    await client.characterBuildRecommendation.findFirst({
+      where: {
+        characterId: input.snapshot.characterId,
+        status: "published",
+      },
+      orderBy: { publishedAt: "desc" },
+      select: { publicationKey: true, qualityScore: true },
+    });
+  if (
+    currentPublished &&
+    currentPublished.publicationKey !== input.publicationKey &&
+    currentPublished.qualityScore > input.quality.overallConfidence
+  ) {
+    return {
+      published: false,
+      status: "BLOCKED",
+      blockCodes: ["QUALITY_REGRESSION"],
+    };
+  }
 
   // Build and schema-check the complete public DTO before any write.
   const preview = buildPublicPreview(input.snapshot, input.now);

@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import type { PublicBuildRecommendation } from "./visual-schemas";
 
 /**
  * 公開レスポンスの ETag。
@@ -7,7 +6,7 @@ import type { PublicBuildRecommendation } from "./visual-schemas";
  */
 export function buildPublicRecommendationEtag(
   characterId: string,
-  data: PublicBuildRecommendation,
+  data: unknown,
 ): string {
   const fingerprint = createHash("sha256")
     .update(

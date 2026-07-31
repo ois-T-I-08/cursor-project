@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { publishAutomaticRecommendation } from "@/lib/build-guides/automation/auto-publish-store";
 import { buildAutomaticRecommendationSnapshot } from "@/lib/build-guides/automation/automatic-snapshot";
 import { getPublishedBuildRecommendation } from "@/lib/build-guides/store";
+import { getPublishedBuildRecommendationV2 } from "@/lib/build-guides/public-v2";
 import type { YoutubeAutomationFlags } from "@/lib/build-guides/automation/feature-flags";
 
 const runDbTests =
@@ -18,9 +19,12 @@ let evidenceId = "";
 
 const flags: YoutubeAutomationFlags = {
   enabled: true,
+  guideEnabled: true,
   discoveryEnabled: true,
   transcriptEnabled: true,
   analysisEnabled: true,
+  geminiAnalysisEnabled: true,
+  deepseekAnalysisEnabled: false,
   autoPublishEnabled: true,
   maintenanceEnabled: true,
 };
@@ -184,6 +188,13 @@ describe.runIf(runDbTests)("YouTube automation Phase 3 PostgreSQL", () => {
     expect(publicDto).not.toBeNull();
     expect(JSON.stringify(publicDto)).not.toContain("internal transcript text");
     expect(publicDto?.sources).toHaveLength(1);
+    const publicV2 = await getPublishedBuildRecommendationV2("raiden-shogun");
+    expect(publicV2).toMatchObject({
+      schemaVersion: 2,
+      verificationMode: "automatic_strict",
+      sources: [{ availability: "available" }],
+    });
+    expect(JSON.stringify(publicV2)).not.toContain("exactVisibleText");
   });
 
   it("keeps the published snapshot untouched when a later gate fails", async () => {
@@ -233,6 +244,68 @@ describe.runIf(runDbTests)("YouTube automation Phase 3 PostgreSQL", () => {
       before.publishedAt?.toISOString(),
     );
   });
+
+  it("rolls back recommendation, contribution, and revision on item CAS conflict", async () => {
+    const original = await prisma.characterBuildRecommendation.findUniqueOrThrow({
+      where: { publicationKey },
+    });
+    await prisma.guidePipelineItem.update({
+      where: { id: itemId },
+      data: { status: "READY_TO_PUBLISH" },
+    });
+    const rollbackPublicationKey = "phase3-rollback-publication";
+    await expect(
+      publishAutomaticRecommendation({
+        pipelineRunId,
+        pipelineItemId: itemId,
+        publicationKey: rollbackPublicationKey,
+        analysisIdempotencyKey: "phase3-rollback-analysis",
+        evidenceId,
+        snapshot: buildAutomaticRecommendationSnapshot({
+          characterId: "raiden-shogun",
+          videoId,
+          claims: [
+            {
+              claimId: "weapon",
+              kind: "weapon",
+              entityId: "the-catch",
+              slot: null,
+              value: "漁獲",
+              condition: "",
+              confidence: 0.95,
+              evidenceSegmentIds: ["segment"],
+              evidenceText: "rollback-only internal text",
+              startSeconds: 10,
+              endSeconds: 25,
+            },
+          ],
+          overallConfidence: 0.96,
+          publishedContentUpdatedAt: new Date(),
+        }),
+        quality,
+        flags,
+        dryRun: false,
+        now: new Date(),
+        leaseOwner: "worker-rollback",
+      }),
+    ).rejects.toThrow("automaticPublishItemConflict");
+    await expect(
+      prisma.characterBuildRecommendation.count({
+        where: { publicationKey: rollbackPublicationKey },
+      }),
+    ).resolves.toBe(0);
+    await expect(
+      prisma.guideRecommendationRevision.count({
+        where: { publicationKey: rollbackPublicationKey },
+      }),
+    ).resolves.toBe(0);
+    const unchanged =
+      await prisma.characterBuildRecommendation.findUniqueOrThrow({
+        where: { publicationKey },
+      });
+    expect(unchanged.id).toBe(original.id);
+    expect(unchanged.structuredPayload).toBe(original.structuredPayload);
+  });
 });
 
 async function cleanup(): Promise<void> {
@@ -247,6 +320,7 @@ async function cleanup(): Promise<void> {
       OR: [
         { publicationKey },
         { publicationKey: "phase3-blocked-publication" },
+        { publicationKey: "phase3-rollback-publication" },
       ],
     },
   });

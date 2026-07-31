@@ -285,6 +285,104 @@
           "expected": 50
         }
       ]
+    },
+    "buildRecommendationCompatibility": {
+      "cases": [
+        {
+          "id": "schema-v1-manual",
+          "input": {
+            "schemaVersion": 1,
+            "characterId": "raiden-shogun",
+            "label": "動画内推奨目安",
+            "status": "published",
+            "origin": "single_video",
+            "overallConfidence": 0.9,
+            "context": {},
+            "weapons": [],
+            "artifactRecommendations": [],
+            "mainStats": [],
+            "recommendedStats": [],
+            "substatPriority": [],
+            "targets": [],
+            "caveats": [],
+            "lastVerifiedAt": "2026-07-31T00:00:00.000Z",
+            "publishedAt": "2026-07-31T00:00:00.000Z",
+            "updatedAt": "2026-07-31T00:00:00.000Z",
+            "sources": [
+              {
+                "id": "source-phase4Video",
+                "videoId": "phase4Video",
+                "title": "guide",
+                "channelTitle": "channel",
+                "sourceUrl": "https://www.youtube.com/watch?v=phase4Video"
+              }
+            ],
+            "evidence": [
+              {
+                "fieldPath": "visual",
+                "exactVisibleText": "ER 220%",
+                "videoId": "phase4Video",
+                "startSeconds": 10,
+                "endSeconds": 15
+              }
+            ]
+          },
+          "expected": {
+            "schemaVersion": 1,
+            "verificationMode": "unknown",
+            "availability": "unknown",
+            "timestampStart": 10
+          }
+        },
+        {
+          "id": "schema-v2-automatic-unavailable",
+          "input": {
+            "schemaVersion": 2,
+            "verificationMode": "automatic_strict",
+            "characterId": "raiden-shogun",
+            "label": "動画内推奨目安",
+            "status": "published",
+            "origin": "single_video",
+            "overallConfidence": 0.96,
+            "context": {},
+            "weapons": [],
+            "artifactRecommendations": [],
+            "mainStats": [],
+            "recommendedStats": [],
+            "substatPriority": [],
+            "targets": [],
+            "caveats": [],
+            "lastVerifiedAt": "2026-07-31T00:00:00.000Z",
+            "publishedAt": "2026-07-31T00:00:00.000Z",
+            "updatedAt": "2026-07-31T00:00:00.000Z",
+            "sources": [
+              {
+                "id": "source-phase4Video",
+                "videoId": "phase4Video",
+                "title": "guide",
+                "channelTitle": "channel",
+                "sourceUrl": "https://www.youtube.com/watch?v=phase4Video",
+                "availability": "unavailable",
+                "unavailableSince": "2026-07-31T01:00:00.000Z"
+              }
+            ],
+            "evidence": [
+              {
+                "fieldPath": "transcript",
+                "videoId": "phase4Video",
+                "timestampStart": 20,
+                "timestampEnd": 25
+              }
+            ]
+          },
+          "expected": {
+            "schemaVersion": 2,
+            "verificationMode": "automaticStrict",
+            "availability": "unavailable",
+            "timestampStart": 20
+          }
+        }
+      ]
     }
   }
 }

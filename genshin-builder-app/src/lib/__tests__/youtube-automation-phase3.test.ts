@@ -9,9 +9,12 @@ import type { YoutubeAutomationFlags } from "@/lib/build-guides/automation/featu
 
 const enabledFlags: YoutubeAutomationFlags = {
   enabled: true,
+  guideEnabled: true,
   discoveryEnabled: true,
   transcriptEnabled: true,
   analysisEnabled: true,
+  geminiAnalysisEnabled: true,
+  deepseekAnalysisEnabled: false,
   autoPublishEnabled: true,
   maintenanceEnabled: true,
 };

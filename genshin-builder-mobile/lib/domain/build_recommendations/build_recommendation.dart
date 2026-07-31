@@ -5,6 +5,14 @@ export 'guide_insight.dart';
 
 enum BuildRecommendationOrigin { singleVideo, merged }
 
+enum BuildRecommendationVerificationMode {
+  manualReview,
+  automaticStrict,
+  unknown,
+}
+
+enum BuildRecommendationSourceAvailability { available, unavailable, unknown }
+
 bool isSafeYoutubeGuideUrl(String raw) {
   final uri = Uri.tryParse(raw.trim());
   if (uri == null ||
@@ -33,6 +41,8 @@ class BuildRecommendationSource {
     this.channelId,
     this.reviewedAt,
     this.gameVersion,
+    this.availability = BuildRecommendationSourceAvailability.unknown,
+    this.unavailableSince,
   });
 
   /// 公開 API の sources[].id（citationId 参照用）
@@ -45,6 +55,8 @@ class BuildRecommendationSource {
   final String? channelId;
   final DateTime? reviewedAt;
   final String? gameVersion;
+  final BuildRecommendationSourceAvailability availability;
+  final DateTime? unavailableSince;
 
   GuideCitation toCitation() => GuideCitation(
     videoId: videoId.isEmpty ? null : videoId,
@@ -101,6 +113,8 @@ class CharacterBuildRecommendation {
     required this.caveats,
     required this.sources,
     required this.evidence,
+    this.schemaVersion = 1,
+    this.verificationMode = BuildRecommendationVerificationMode.unknown,
     this.mainStats = const [],
     this.weapons = const [],
     this.artifactRecommendations = const [],
@@ -115,8 +129,10 @@ class CharacterBuildRecommendation {
   });
 
   final String characterId;
+  final int schemaVersion;
   final String label;
   final BuildRecommendationOrigin origin;
+  final BuildRecommendationVerificationMode verificationMode;
 
   /// 情報の信頼度。育成優先度とは別概念。
   final double overallConfidence;
@@ -152,6 +168,17 @@ class CharacterBuildRecommendation {
     gameVersion: gameVersion,
     reviewedAt: lastVerifiedAt,
   );
+
+  String get verificationCaption {
+    switch (verificationMode) {
+      case BuildRecommendationVerificationMode.automaticStrict:
+        return '公式字幕を自動検証';
+      case BuildRecommendationVerificationMode.manualReview:
+        return '管理者が確認';
+      case BuildRecommendationVerificationMode.unknown:
+        return '検証方式不明';
+    }
+  }
 }
 
 enum BuildRecommendationFailure {

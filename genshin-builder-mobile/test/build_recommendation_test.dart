@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:genshin_builder_mobile/data/build_recommendations/backend_build_recommendation_api.dart';
 import 'package:genshin_builder_mobile/domain/build_recommendations/build_recommendation.dart';
 import 'package:genshin_builder_mobile/domain/character_stats.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 void main() {
   test('accepts only the explicit HTTPS YouTube guide hosts', () {
@@ -102,6 +106,79 @@ void main() {
       ],
     });
     expect(parsed.sources.map((source) => source.videoId), ['safe']);
+  });
+
+  test('parses schema v2 verification, availability, and timestamps', () {
+    final parsed = parseBuildRecommendation({
+      'schemaVersion': 2,
+      'verificationMode': 'automatic_strict',
+      'characterId': 'raiden-shogun',
+      'sources': <Object?>[
+        {
+          'videoId': 'phase4Video',
+          'title': 'guide',
+          'channelTitle': 'channel',
+          'sourceUrl': 'https://www.youtube.com/watch?v=phase4Video',
+          'availability': 'unavailable',
+          'unavailableSince': '2026-07-31T01:00:00.000Z',
+        },
+      ],
+      'evidence': <Object?>[
+        {
+          'fieldPath': 'transcript',
+          'videoId': 'phase4Video',
+          'timestampStart': 20,
+          'timestampEnd': 25,
+        },
+      ],
+    });
+    expect(parsed.schemaVersion, 2);
+    expect(
+      parsed.verificationMode,
+      BuildRecommendationVerificationMode.automaticStrict,
+    );
+    expect(
+      parsed.sources.single.availability,
+      BuildRecommendationSourceAvailability.unavailable,
+    );
+    expect(parsed.evidence.single.exactVisibleText, isEmpty);
+    expect(parsed.evidence.single.startSeconds, 20);
+    expect(parsed.evidence.single.endSeconds, 25);
+  });
+
+  test('prefers v2 and falls back to the unchanged v1 endpoint', () async {
+    final requests = <Uri>[];
+    final client = MockClient((request) async {
+      requests.add(request.url);
+      if (request.url.path.startsWith('/api/v2/')) {
+        return http.Response(
+          jsonEncode({'ok': false, 'error': 'notFound'}),
+          404,
+        );
+      }
+      return http.Response(
+        jsonEncode({
+          'ok': true,
+          'data': {
+            'schemaVersion': 1,
+            'characterId': 'raiden-shogun',
+            'sources': <Object?>[],
+            'evidence': <Object?>[],
+          },
+        }),
+        200,
+      );
+    });
+    final api = BackendBuildRecommendationApi(
+      baseUrl: 'https://example.com',
+      client: client,
+    );
+    final result = await api.fetchPublished('raiden-shogun');
+    expect(result?.schemaVersion, 1);
+    expect(requests.map((uri) => uri.path), [
+      '/api/v2/build-recommendations/raiden-shogun',
+      '/api/build-recommendations/raiden-shogun',
+    ]);
   });
 
   test('compareStatToTarget classifies ranges', () {

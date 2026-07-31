@@ -30,6 +30,7 @@ import {
   validateStructuredRecommendationDto,
 } from "@/lib/build-guides/store";
 import { parseYoutubePlaylistId } from "@/lib/build-guides/youtube-client";
+import { setYoutubeAutomationEmergencyStop } from "@/lib/build-guides/automation/admin-overview";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -163,6 +164,11 @@ const actionSchema = z.discriminatedUnion("action", [
   }),
   z.strictObject({
     action: z.literal("listGuideMasterOptions"),
+  }),
+  z.strictObject({
+    action: z.literal("setYoutubeAutomationEmergencyStop"),
+    emergencyStopped: z.boolean(),
+    reason: z.string().max(200).default(""),
   }),
   z.strictObject({
     action: z.literal("restoreRecommendationRevision"),
@@ -306,6 +312,10 @@ export async function POST(request: Request): Promise<Response> {
         return NextResponse.json(await previewRecommendationPublicDto(input.recommendationId));
       case "listGuideMasterOptions":
         return NextResponse.json(await listGuideMasterOptions());
+      case "setYoutubeAutomationEmergencyStop":
+        return NextResponse.json({
+          control: await setYoutubeAutomationEmergencyStop(input),
+        });
       case "restoreRecommendationRevision":
         return NextResponse.json(await restoreRecommendationRevision(input));
       case "validateStructuredRecommendation":

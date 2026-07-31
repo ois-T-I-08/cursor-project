@@ -12,6 +12,7 @@ import 'package:genshin_builder_mobile/domain/models/bookmark.dart';
 import 'package:genshin_builder_mobile/domain/models/calculation_models.dart';
 import 'package:genshin_builder_mobile/domain/talent_progression.dart';
 import 'package:genshin_builder_mobile/domain/weapon_exp.dart';
+import 'package:genshin_builder_mobile/data/build_recommendations/backend_build_recommendation_api.dart';
 
 /// shared/domain-golden/cases.json を読み、Dart ドメイン実装とパリティ検証する。
 void main() {
@@ -121,10 +122,9 @@ void main() {
     for (final c in _cases(suites, 'getNextStageRequirements')) {
       test(c['id'] as String, () {
         final input = c['input'] as Map<String, dynamic>;
-        final promotes =
-            (input['promotes'] as List)
-                .map((p) => _parsePromote(p as Map<String, dynamic>))
-                .toList();
+        final promotes = (input['promotes'] as List)
+            .map((p) => _parsePromote(p as Map<String, dynamic>))
+            .toList();
         final stage = getNextStageRequirements(
           input['currentLevel'] as int,
           promotes,
@@ -157,10 +157,9 @@ void main() {
     for (final c in _cases(suites, 'getRangeLevelRequirements')) {
       test(c['id'] as String, () {
         final input = c['input'] as Map<String, dynamic>;
-        final promotes =
-            (input['promotes'] as List)
-                .map((p) => _parsePromote(p as Map<String, dynamic>))
-                .toList();
+        final promotes = (input['promotes'] as List)
+            .map((p) => _parsePromote(p as Map<String, dynamic>))
+            .toList();
         final lines = getRangeLevelRequirements(
           input['fromLevel'] as int,
           input['toLevel'] as int,
@@ -194,10 +193,9 @@ void main() {
     for (final c in _cases(suites, 'getRangeTalentRequirements')) {
       test(c['id'] as String, () {
         final input = c['input'] as Map<String, dynamic>;
-        final upgrades =
-            (input['upgrades'] as List)
-                .map((u) => _parseTalentUpgrade(u as Map<String, dynamic>))
-                .toList();
+        final upgrades = (input['upgrades'] as List)
+            .map((u) => _parseTalentUpgrade(u as Map<String, dynamic>))
+            .toList();
         final lines = getRangeTalentRequirements(
           input['fromLevel'] as int,
           input['toLevel'] as int,
@@ -280,6 +278,26 @@ void main() {
           ],
         );
         expect(calcArtifactPieceScore(piece, type), c['expected']);
+      });
+    }
+  });
+
+  group('buildRecommendationCompatibility', () {
+    for (final c in _cases(suites, 'buildRecommendationCompatibility')) {
+      test(c['id'] as String, () {
+        final input = Map<String, Object?>.from(c['input'] as Map);
+        final expected = c['expected'] as Map<String, dynamic>;
+        final parsed = parseBuildRecommendation(input);
+        expect(parsed.schemaVersion, expected['schemaVersion']);
+        expect(parsed.verificationMode.name, expected['verificationMode']);
+        expect(
+          parsed.sources.first.availability.name,
+          expected['availability'],
+        );
+        expect(
+          parsed.evidence.first.startSeconds,
+          (expected['timestampStart'] as num).toDouble(),
+        );
       });
     }
   });
