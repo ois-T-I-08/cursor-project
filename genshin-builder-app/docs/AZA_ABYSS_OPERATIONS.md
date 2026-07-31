@@ -80,6 +80,18 @@ npx prisma migrate status
 
 確認後は staging の到達先と kill switch を元の承認済み値へ戻す。失敗レスポンスで `ExternalApiCache` の `payload`、`fetchedAt`、`expiresAt` が変わっていないことも確認する。
 
+## staging: live fetch OFF と stale の意味
+
+staging では `AZA_LIVE_FETCH_ENABLED=false` のため、Vercel は AZA を呼ばず DB キャッシュのみ返す。
+
+| GET 結果 | 意味 |
+|---|---|
+| 200 / `isStale=false` | 期限内キャッシュ（fresh） |
+| 200 / `isStale=true` | **期限切れキャッシュを継続配信**（壊れているのではない。更新が必要） |
+| 503 `noData` | 利用可能なキャッシュがない |
+
+鮮度を戻すには ingest（下記 GHA またはローカルスクリプト）でキャッシュを書き直す。`AZA_LIVE_FETCH_ENABLED=true` にはしない（Vercel→AZA が 403）。
+
 ## staging: GHA ingest（推奨経路）
 
 Vercel ランタイムから AZA への outbound が 403 になるため、staging では次の構成を使う。
@@ -93,10 +105,29 @@ Vercel ランタイムから AZA への outbound が 403 になるため、stagi
 3. Workflow: `.github/workflows/abyss-aza-ingest-staging.yml`
    - `schedule`（4時間ごと）と `workflow_dispatch`
    - AZA KV を取得 → Bearer 付きで ingest POST
-   - **注意:** GitHub は default ブランチ上に workflow ファイルがあるときだけ `schedule` / `workflow_dispatch` が有効になる。feature マージ後、default へ載せるまで手動で同等の curl ingest を使う
+   - **注意:** GitHub は **default ブランチ**上に workflow があるときだけ `schedule` / `workflow_dispatch` が有効（#35 で main に追加済み）
+   - **注意:** AZA は GitHub-hosted runner から **HTTP 403** を返すことがある（Vercel と同様の datacenter 制限）。その場合は下記ローカルスクリプトを使う
 4. 確認
-   - Actions で1回 `workflow_dispatch`（default ブランチ上にある場合）または手動 curl ingest
-   - `GET /api/abyss/statistics` が HTTP 200（キャッシュ配信）
+   - Actions で1回 `workflow_dispatch`（AZA が GHA から 200 のとき）または下記ローカルスクリプト
+   - `GET /api/abyss/statistics` が HTTP 200 かつ `isStale=false`
+
+## staging: ローカル手動 ingest スクリプト
+
+リポジトリ直下の [`scripts/abyss-aza-ingest-staging.ps1`](../../scripts/abyss-aza-ingest-staging.ps1) を使う（秘密値は表示しない）。
+
+```powershell
+# 値はチャット・commit・履歴に残さないこと
+$env:STAGING_ABYSS_INGEST_SECRET = '<staging-only-secret>'
+.\scripts\abyss-aza-ingest-staging.ps1
+Remove-Item Env:STAGING_ABYSS_INGEST_SECRET
+```
+
+前提:
+
+- staging に ingest ルート付き tip がデプロイ済み（未認証 POST が 404 ではなく 401 など）
+- デプロイは必ず `genshin-builder-app` ディレクトリから行う（リポジトリ直下からだと Next.js 未検出で失敗する）
+
+Sensitive な Vercel env は `vercel env pull` / `env run` では取得できない。手元または GitHub Secrets 側の staging 専用値を使う。
 
 2026-07-30 staging 確認: 手動 AZA fetch → ingest HTTP 200 → GET HTTP 200（`source=AZA.GG`, fresh）。`AZA_LIVE_FETCH_ENABLED=false` / `ABYSS_INGEST_SECRET` を Vercel staging に設定済み。GitHub secrets `STAGING_ABYSS_INGEST_*` 登録済み。
 
