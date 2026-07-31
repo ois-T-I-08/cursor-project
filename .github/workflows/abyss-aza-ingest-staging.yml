@@ -1,0 +1,67 @@
+# AZA.GG abyss statistics 竊・staging ingest (outside Vercel)
+#
+# Vercel staging cannot reach AZA (HTTP 403). GitHub Actions fetches AZA
+# and POSTs the raw JSON to the staging ingest API, which normalizes and
+# writes ExternalApiCache. Clients then GET /api/abyss/statistics from cache.
+#
+# Required repository secrets (staging only 窶・do not reuse production values):
+#   STAGING_ABYSS_INGEST_URL    e.g. https://staging-sable.vercel.app/api/abyss/statistics/ingest
+#   STAGING_ABYSS_INGEST_SECRET same value as Vercel staging ABYSS_INGEST_SECRET
+
+name: Abyss AZA ingest (staging)
+
+on:
+  schedule:
+    # Every 4 hours (UTC)
+    - cron: "17 */4 * * *"
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch AZA abyss statistics
+        id: fetch
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            --retry 2 \
+            --retry-delay 5 \
+            --max-time 30 \
+            -H "Accept: application/json" \
+            -H "User-Agent: Mozilla/5.0 (compatible; GenshinBuilder-GHA/0.1; +https://github.com/ois-T-I-08/cursor-project)" \
+            "https://c1-api.aza.gg/kv/read?key_id=genshin_abyss_statistics" \
+            -o aza-abyss.json
+          bytes=$(wc -c < aza-abyss.json)
+          echo "aza_bytes=${bytes}"
+          if [ "$bytes" -lt 100 ] || [ "$bytes" -gt 2097152 ]; then
+            echo "unexpected AZA payload size" >&2
+            exit 1
+          fi
+          python3 -c 'import json,sys; json.load(open("aza-abyss.json",encoding="utf-8"))'
+
+      - name: POST ingest to staging
+        env:
+          STAGING_ABYSS_INGEST_URL: ${{ secrets.STAGING_ABYSS_INGEST_URL }}
+          STAGING_ABYSS_INGEST_SECRET: ${{ secrets.STAGING_ABYSS_INGEST_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STAGING_ABYSS_INGEST_URL:-}" ] || [ -z "${STAGING_ABYSS_INGEST_SECRET:-}" ]; then
+            echo "missing staging ingest secrets" >&2
+            exit 1
+          fi
+          # Do not echo URL, secret, or response body.
+          code=$(curl -sS -o ingest-response.json -w "%{http_code}" \
+            --max-time 60 \
+            -X POST \
+            -H "Authorization: Bearer ${STAGING_ABYSS_INGEST_SECRET}" \
+            -H "Content-Type: application/json" \
+            --data-binary @aza-abyss.json \
+            "${STAGING_ABYSS_INGEST_URL}")
+          echo "ingest_http_status=${code}"
+          if [ "$code" != "200" ]; then
+            echo "ingest failed" >&2
+            exit 1
+          fi
+          python3 -c 'import json; d=json.load(open("ingest-response.json",encoding="utf-8")); assert d.get("ok") is True; print("sampleSize=", d.get("sampleSize")); print("expiresAt=", d.get("expiresAt"))'
