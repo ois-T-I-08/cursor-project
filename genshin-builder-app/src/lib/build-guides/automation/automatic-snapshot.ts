@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
+import { z } from "zod";
 import type { ValidatedTranscriptClaim } from "./analysis-schema";
+import type { CanonicalValidatedClaim } from "./canonical-analysis";
 
 const STAT_KEYS = new Set([
   "hp",
@@ -27,12 +29,36 @@ export type AutomaticRecommendationSnapshot = Readonly<{
   evidenceEndSeconds: number;
 }>;
 
+export const automaticRecommendationSnapshotSchema = z
+  .object({
+    characterId: z.string().min(1).max(100),
+    contextPayload: z.record(z.string(), z.unknown()),
+    mainStatsPayload: z.array(z.record(z.string(), z.unknown())),
+    priorityPayload: z.array(z.string()),
+    targetsPayload: z.array(z.record(z.string(), z.unknown())),
+    structuredPayload: z.record(z.string(), z.unknown()),
+    overallConfidence: z.number().min(0).max(1),
+    notes: z.string().max(2_000),
+    evidenceStartSeconds: z.number().nonnegative(),
+    evidenceEndSeconds: z.number().positive(),
+  })
+  .strict()
+  .refine(
+    (snapshot) =>
+      snapshot.evidenceEndSeconds >= snapshot.evidenceStartSeconds,
+    { message: "invalidEvidenceRange" },
+  );
+
 export class AutomaticSnapshotError extends Error {
   constructor(public readonly safeCode: string) {
     super(safeCode);
     this.name = "AutomaticSnapshotError";
   }
 }
+
+type AutomaticSnapshotClaim =
+  | ValidatedTranscriptClaim
+  | CanonicalValidatedClaim;
 
 /**
  * Maps only locally validated fields. Evidence text is deliberately omitted:
@@ -41,7 +67,7 @@ export class AutomaticSnapshotError extends Error {
 export function buildAutomaticRecommendationSnapshot(input: {
   characterId: string;
   videoId: string;
-  claims: readonly ValidatedTranscriptClaim[];
+  claims: readonly AutomaticSnapshotClaim[];
   overallConfidence: number;
   publishedContentUpdatedAt: Date;
 }): AutomaticRecommendationSnapshot {
@@ -165,6 +191,14 @@ export function buildAutomaticRecommendationSnapshot(input: {
       ...input.claims.map((claim) => claim.endSeconds),
     ),
   };
+}
+
+export function parseAutomaticRecommendationSnapshot(
+  payload: string,
+): AutomaticRecommendationSnapshot {
+  return automaticRecommendationSnapshotSchema.parse(
+    JSON.parse(payload),
+  ) as AutomaticRecommendationSnapshot;
 }
 
 function inferArtifactPieces(value: string): number {

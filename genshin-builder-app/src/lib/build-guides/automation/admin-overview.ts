@@ -1,6 +1,11 @@
 import "server-only";
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import {
+  lockYoutubeAutomationControl,
+  YOUTUBE_AUTOMATION_CONTROL_ID,
+} from "./automation-control";
 import { youtubeAutomationFlags } from "./feature-flags";
 
 export async function getYoutubeAutomationAdminOverview() {
@@ -26,8 +31,14 @@ export async function getYoutubeAutomationAdminOverview() {
       select: {
         id: true,
         runId: true,
+        activeRunId: true,
+        lastRunId: true,
         videoId: true,
+        characterId: true,
         status: true,
+        stateVersion: true,
+        leaseOwner: true,
+        leaseVersion: true,
         attempts: true,
         maxAttempts: true,
         nextRetryAt: true,
@@ -74,9 +85,9 @@ export async function getYoutubeAutomationAdminOverview() {
   return {
     flags: youtubeAutomationFlags(),
     control: control ?? {
-      emergencyStopped: false,
-      reason: "",
-      version: 0,
+      emergencyStopped: true,
+      reason: "CONTROL_ROW_MISSING",
+      version: -1,
       updatedAt: null,
     },
     runs,
@@ -93,16 +104,17 @@ export async function setYoutubeAutomationEmergencyStop(input: {
   const reason = input.reason.trim().slice(0, 200);
   const now = new Date();
   return prisma.$transaction(async (transaction) => {
-    const control = await transaction.guideAutomationControl.upsert({
-      where: { id: "youtube-guide" },
-      create: {
-        id: "youtube-guide",
-        emergencyStopped: input.emergencyStopped,
-        reason,
-        version: 1,
-        updatedAt: now,
-      },
-      update: {
+    await transaction.$executeRaw(Prisma.sql`
+      INSERT INTO "GuideAutomationControl"
+        ("id", "emergencyStopped", "reason", "version", "updatedAt")
+      VALUES
+        (${YOUTUBE_AUTOMATION_CONTROL_ID}, true, 'CONTROL_INITIALIZING', 0, ${now})
+      ON CONFLICT ("id") DO NOTHING
+    `);
+    await lockYoutubeAutomationControl(transaction);
+    const control = await transaction.guideAutomationControl.update({
+      where: { id: YOUTUBE_AUTOMATION_CONTROL_ID },
+      data: {
         emergencyStopped: input.emergencyStopped,
         reason,
         version: { increment: 1 },

@@ -63,7 +63,7 @@ export type AnalysisValidationResult =
   | {
       ok: false;
       blockCode:
-        | "BLOCKED_ANALYSIS_SCHEMA_INVALID"
+        | "BLOCKED_INVALID_ANALYSIS"
         | "BLOCKED_CHARACTER_MISMATCH"
         | "BLOCKED_UNKNOWN_ENTITY"
         | "BLOCKED_EVIDENCE_MISSING"
@@ -84,7 +84,7 @@ export function validateTranscriptAnalysis(
   if (!parsed.success) {
     return {
       ok: false,
-      blockCode: "BLOCKED_ANALYSIS_SCHEMA_INVALID",
+      blockCode: "BLOCKED_INVALID_ANALYSIS",
       safeIssues: parsed.error.issues.map(
         (issue) => `schema:${issue.path.join(".")}:${issue.code}`,
       ),

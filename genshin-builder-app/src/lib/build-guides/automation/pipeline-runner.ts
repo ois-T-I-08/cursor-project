@@ -1,37 +1,57 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
 import {
   TRANSCRIPT_ANALYSIS_SCHEMA_VERSION,
   validateTranscriptAnalysis,
 } from "./analysis-schema";
+import { readYoutubeAutomationControl } from "./automation-control";
 import { publishAutomaticRecommendation } from "./auto-publish-store";
 import { buildAutomaticRecommendationSnapshot } from "./automatic-snapshot";
-import type { DiscoveredGuideCandidate } from "./discovery-service";
-import { youtubeAutomationFlags, type YoutubeAutomationFlags } from "./feature-flags";
-import {
-  analysisIdempotencyKey,
-  automationHash,
-  publicationKey as buildPublicationKey,
-} from "./idempotency";
-import { transitionPipelineItem } from "./pipeline-item-store";
-import {
-  YOUTUBE_AUTOMATION_POLICY,
-  YOUTUBE_AUTOMATION_POLICY_HASH,
-} from "./quality-policy";
-import { normalizeTranscript, chunkTranscript } from "./transcript-normalize";
-import {
-  fetchPreferredTranscript,
-  type TranscriptProvider,
-} from "./transcript-provider";
-import type { TranscriptAnalysisProvider } from "./transcript-analysis-provider";
-import { persistNormalizedTranscript } from "./transcript-store";
+import { canonicalizeValidatedAnalysis } from "./canonical-analysis";
 import {
   claimProviderCircuitPermission,
   recordProviderFailure,
   recordProviderSuccess,
 } from "./circuit-breaker";
+import type { DiscoveredGuideCandidate } from "./discovery-service";
+import {
+  youtubeAutomationFlags,
+  type YoutubeAutomationFlags,
+} from "./feature-flags";
+import {
+  analysisIdempotencyKey,
+  automationHash,
+  publicationKey as buildPublicationKey,
+} from "./idempotency";
+import {
+  acquirePipelineLease,
+  releasePipelineLease,
+} from "./lease-store";
+import {
+  claimPipelineItem,
+  releasePipelineItemClaim,
+  renewPipelineItemClaim,
+  updatePipelineItemWithClaim,
+  type ItemLeaseClaim,
+} from "./pipeline-item-lease";
+import { transitionPipelineItem } from "./pipeline-item-store";
+import type { SafeProviderError } from "./provider-error";
+import {
+  YOUTUBE_AUTOMATION_POLICY,
+  YOUTUBE_AUTOMATION_POLICY_HASH,
+} from "./quality-policy";
+import type { TranscriptAnalysisProvider } from "./transcript-analysis-provider";
+import {
+  chunkTranscript,
+  type NormalizedTranscript,
+  normalizeTranscript,
+} from "./transcript-normalize";
+import {
+  fetchPreferredTranscript,
+  type TranscriptProvider,
+} from "./transcript-provider";
+import { persistNormalizedTranscript } from "./transcript-store";
 
 export type PipelineRunSummary = Readonly<{
   pipelineRunId: string;
@@ -40,9 +60,40 @@ export type PipelineRunSummary = Readonly<{
   discovered: number;
   published: number;
   ready: number;
+  reviewRequired: number;
   blocked: number;
+  stopped: number;
   retryable: number;
 }>;
+
+type PipelineItemOutcome =
+  | "published"
+  | "ready"
+  | "reviewRequired"
+  | "blocked"
+  | "stopped"
+  | "retryable";
+
+export type PipelineTestStage =
+  | "before_discovery"
+  | "before_transcript"
+  | "before_analysis"
+  | "before_validation_ready"
+  | "before_publish";
+
+class EmergencyStoppedError extends Error {
+  constructor() {
+    super("EMERGENCY_STOPPED");
+    this.name = "EmergencyStoppedError";
+  }
+}
+
+class ItemLeaseLostError extends Error {
+  constructor() {
+    super("PIPELINE_ITEM_LEASE_LOST");
+    this.name = "ItemLeaseLostError";
+  }
+}
 
 export async function runYoutubeGuidePipeline(input: {
   pipelineRunId: string;
@@ -54,24 +105,20 @@ export async function runYoutubeGuidePipeline(input: {
   analysisProvider: TranscriptAnalysisProvider;
   loadKnownEntityIds: () => Promise<ReadonlySet<string>>;
   now?: Date;
+  workerId?: string;
+  testStageHook?: (stage: PipelineTestStage) => Promise<void>;
 }): Promise<PipelineRunSummary> {
   const flags = input.flags ?? youtubeAutomationFlags();
   if (
     !flags.enabled ||
     !flags.discoveryEnabled ||
     !flags.transcriptEnabled ||
-    !flags.analysisEnabled
+    !flags.analysisEnabled ||
+    (flags.deepseekAnalysisEnabled && !flags.geminiAnalysisEnabled)
   ) {
     return emptySummary(input.pipelineRunId, input.dryRun, true);
   }
-  if (
-    flags.deepseekAnalysisEnabled &&
-    !flags.geminiAnalysisEnabled
-  ) {
-    // DeepSeek JSON mode is not accepted as a strict-schema automatic path.
-    return emptySummary(input.pipelineRunId, input.dryRun, true);
-  }
-  const now = input.now ?? new Date();
+  const now = stageNow(input.now);
   const runIdempotencyKey = automationHash("youtube-pipeline-run-v1", {
     pipelineRunId: input.pipelineRunId,
     policyHash: YOUTUBE_AUTOMATION_POLICY_HASH,
@@ -92,239 +139,485 @@ export async function runYoutubeGuidePipeline(input: {
     },
     update: {},
   });
+  const completed = parseCompletedSummary(run.summaryPayload, {
+    status: run.status,
+    completedAt: run.completedAt,
+  });
+  if (completed) return completed;
+
+  const entryControl = await readYoutubeAutomationControl();
+  if (entryControl.emergencyStopped) {
+    const summary = {
+      ...emptySummary(input.pipelineRunId, input.dryRun, true),
+      stopped: 1,
+    };
+    await finishStoppedRun(run.id, input.pipelineRunId, summary, now);
+    return summary;
+  }
+
   let candidates: readonly DiscoveredGuideCandidate[];
   let knownEntityIds: ReadonlySet<string>;
   try {
+    await input.testStageHook?.("before_discovery");
+    await assertRunnerMayProceed();
     [candidates, knownEntityIds] = await Promise.all([
       input.discover(),
       input.loadKnownEntityIds(),
     ]);
   } catch (error) {
-    const errorWithSafeCode = error as { safeCode?: unknown };
-    const safeCode =
-      typeof errorWithSafeCode.safeCode === "string" &&
-      /^[A-Z][A-Z0-9_]{1,63}$/.test(errorWithSafeCode.safeCode)
-        ? errorWithSafeCode.safeCode
-        : "DISCOVERY_OR_MASTER_FAILED";
-    const summary: PipelineRunSummary = {
-      ...emptySummary(input.pipelineRunId, input.dryRun, false),
-      retryable: 1,
-    };
-    await prisma.$transaction([
-      prisma.guidePipelineRun.update({
-        where: { id: run.id },
-        data: {
-          status: "retryable",
-          summaryPayload: JSON.stringify(summary),
-          completedAt: new Date(),
-        },
-      }),
-      prisma.guidePipelineEvent.upsert({
-        where: {
-          actionKey: automationHash("youtube-run-failure-v1", {
-            pipelineRunId: input.pipelineRunId,
-            safeCode,
-          }),
-        },
-        create: {
-          actionKey: automationHash("youtube-run-failure-v1", {
-            pipelineRunId: input.pipelineRunId,
-            safeCode,
-          }),
-          runId: run.id,
-          toStatus: "RETRYABLE_ERROR",
-          safeCode,
-          detailPayload: "{}",
-        },
-        update: {},
-      }),
-    ]);
-    return summary;
+    if (error instanceof EmergencyStoppedError) {
+      const summary = {
+        ...emptySummary(input.pipelineRunId, input.dryRun, true),
+        stopped: 1,
+      };
+      await finishStoppedRun(
+        run.id,
+        input.pipelineRunId,
+        summary,
+        stageNow(input.now),
+      );
+      return summary;
+    }
+    return finishRunDiscoveryFailure({
+      runDatabaseId: run.id,
+      pipelineRunId: input.pipelineRunId,
+      dryRun: input.dryRun,
+      error,
+    });
   }
-  const counts = { published: 0, ready: 0, blocked: 0, retryable: 0 };
-  for (const candidate of candidates) {
-    const outcome = await processCandidate({
+
+  const uniqueCandidates = [
+    ...new Map(
+      candidates.map((candidate) => [candidate.discoveryKey, candidate]),
+    ).values(),
+  ];
+  const workerId =
+    input.workerId ??
+    automationHash("youtube-worker-v1", {
+      pipelineRunId: input.pipelineRunId,
+      startedAt: now.toISOString(),
+    }).slice(0, 16);
+  const itemIds: string[] = [];
+  let materializationFailures = 0;
+
+  // Pass 0: materialize every source before any item can publish. Candidate
+  // insertion and character publication use the same lease namespace.
+  for (const candidate of uniqueCandidates) {
+    const item = await materializeCandidate({
       runDatabaseId: run.id,
       pipelineRunId: input.pipelineRunId,
       candidate,
+      now: stageNow(input.now),
+    });
+    if (item) itemIds.push(item.id);
+    else materializationFailures += 1;
+  }
+
+  // Pass 1: discovery -> transcript -> analysis -> strict validation -> READY.
+  for (const itemId of itemIds) {
+    await processCandidatePassOne({
+      itemId,
+      runDatabaseId: run.id,
+      pipelineRunId: input.pipelineRunId,
+      workerId,
+      candidates: uniqueCandidates,
       transcriptProvider: input.transcriptProvider,
       analysisProvider: input.analysisProvider,
       knownEntityIds,
-      flags,
-      dryRun: input.dryRun,
-      now,
+      now: input.now,
+      testStageHook: input.testStageHook,
     });
-    counts[outcome] += 1;
   }
+
+  // Pass 2: publish only after every candidate in this run reached a safe
+  // pass-one state. The transaction independently recalculates all sources.
+  for (const itemId of itemIds) {
+    const item = await prisma.guidePipelineItem.findUnique({
+      where: { id: itemId },
+      select: { status: true },
+    });
+    if (item?.status !== "READY_TO_PUBLISH") continue;
+    const claim = await claimPipelineItem({
+      itemId,
+      runDatabaseId: run.id,
+      pipelineRunId: input.pipelineRunId,
+      workerId: `${workerId}:publish`,
+      now: stageNow(input.now),
+    });
+    if (!claim) continue;
+    try {
+      await input.testStageHook?.("before_publish");
+      await checkpoint(claim, input.now);
+      await publishAutomaticRecommendation({
+        pipelineRunId: input.pipelineRunId,
+        itemClaim: claim,
+        flags,
+        dryRun: input.dryRun,
+        now: stageNow(input.now),
+      });
+    } catch (error) {
+      if (
+        !(error instanceof EmergencyStoppedError) &&
+        !(error instanceof ItemLeaseLostError)
+      ) {
+        await safelyTransitionRetryable(claim, input.now, error);
+      }
+    } finally {
+      await releasePipelineItemClaim({ claim }).catch(() => undefined);
+    }
+  }
+
+  const outcomes = await loadFinalOutcomes(itemIds);
+  const counts = countOutcomes(outcomes);
+  counts.retryable += materializationFailures;
   const summary: PipelineRunSummary = {
     pipelineRunId: input.pipelineRunId,
     skipped: false,
     dryRun: input.dryRun,
-    discovered: candidates.length,
+    discovered: uniqueCandidates.length,
     ...counts,
   };
   await prisma.guidePipelineRun.update({
     where: { id: run.id },
     data: {
-      status: counts.retryable > 0 ? "retryable" : "completed",
+      status:
+        counts.stopped > 0
+          ? "stopped"
+          : counts.retryable > 0
+            ? "retryable"
+            : "completed",
       summaryPayload: JSON.stringify(summary),
-      completedAt: new Date(),
+      completedAt: stageNow(input.now),
     },
   });
   return summary;
 }
 
-async function processCandidate(input: {
+async function materializeCandidate(input: {
   runDatabaseId: string;
   pipelineRunId: string;
   candidate: DiscoveredGuideCandidate;
+  now: Date;
+}): Promise<{ id: string } | null> {
+  const lockKey = `youtube-character-publication:${input.candidate.characterId}`;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const now = new Date(input.now.getTime() + attempt);
+    const lease = await acquirePipelineLease({
+      lockKey,
+      leaseOwner: `${input.pipelineRunId}:materialize:${input.candidate.video.videoId}`,
+      now,
+      ttlMs: 60_000,
+    });
+    if (!lease) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 20));
+      continue;
+    }
+    try {
+      const existing = await prisma.guidePipelineItem.findUnique({
+        where: { discoveryKey: input.candidate.discoveryKey },
+        select: { id: true, videoId: true, characterId: true },
+      });
+      if (existing) {
+        if (
+          existing.videoId !== input.candidate.video.videoId ||
+          (existing.characterId &&
+            existing.characterId !== input.candidate.characterId)
+        ) {
+          return null;
+        }
+        if (!existing.characterId) {
+          await prisma.guidePipelineItem.update({
+            where: { id: existing.id },
+            data: { characterId: input.candidate.characterId },
+          });
+        }
+        return { id: existing.id };
+      }
+      return await prisma.guidePipelineItem.create({
+        data: {
+          runId: input.runDatabaseId,
+          activeRunId: "",
+          lastRunId: input.runDatabaseId,
+          videoId: input.candidate.video.videoId,
+          characterId: input.candidate.characterId,
+          discoveryKey: input.candidate.discoveryKey,
+          status: "DISCOVERED",
+          metadataHash: input.candidate.video.metadataHash,
+          maxAttempts: YOUTUBE_AUTOMATION_POLICY.maxAttempts.analyzer,
+        },
+        select: { id: true },
+      });
+    } finally {
+      await releasePipelineLease({ lease }).catch(() => false);
+    }
+  }
+  return null;
+}
+
+async function processCandidatePassOne(input: {
+  itemId: string;
+  runDatabaseId: string;
+  pipelineRunId: string;
+  workerId: string;
+  candidates: readonly DiscoveredGuideCandidate[];
   transcriptProvider: TranscriptProvider;
   analysisProvider: TranscriptAnalysisProvider;
   knownEntityIds: ReadonlySet<string>;
-  flags: YoutubeAutomationFlags;
-  dryRun: boolean;
-  now: Date;
-}): Promise<"published" | "ready" | "blocked" | "retryable"> {
-  const existing = await prisma.guidePipelineItem.findUnique({
-    where: { discoveryKey: input.candidate.discoveryKey },
+  now?: Date;
+  testStageHook?: (stage: PipelineTestStage) => Promise<void>;
+}): Promise<void> {
+  const initial = await prisma.guidePipelineItem.findUnique({
+    where: { id: input.itemId },
   });
-  if (existing?.status === "PUBLISHED") return "published";
-  if (existing?.status === "BLOCKED") return "blocked";
-  const item =
-    existing ??
-    (await prisma.guidePipelineItem.create({
-      data: {
-        runId: input.runDatabaseId,
-        videoId: input.candidate.video.videoId,
-        discoveryKey: input.candidate.discoveryKey,
-        status: "DISCOVERED",
-        metadataHash: input.candidate.video.metadataHash,
-        maxAttempts: YOUTUBE_AUTOMATION_POLICY.maxAttempts.analyzer,
-      },
-    }));
-  if (item.status === "RETRYABLE_ERROR") {
-    if (item.attempts >= item.maxAttempts) {
-      await transitionPipelineItem({
-        itemId: item.id,
-        toStatus: "BLOCKED",
-        safeCode: "RETRY_LIMIT_REACHED",
-        blockCode: "BLOCKED_RETRY_EXHAUSTED",
-      });
-      return "blocked";
-    }
-    if (item.nextRetryAt && item.nextRetryAt.getTime() > input.now.getTime()) {
-      return "retryable";
-    }
-    await transitionPipelineItem({
-      itemId: item.id,
-      toStatus: "METADATA_FETCHED",
-      safeCode: "PIPELINE_RESUMED",
-    });
-  } else if (
-    item.status !== "DISCOVERED" &&
-    item.status !== "METADATA_FETCHED"
+  if (!initial) return;
+  const candidate = input.candidates.find(
+    (value) => value.discoveryKey === initial.discoveryKey,
+  );
+  if (!candidate) return;
+  if (
+    initial.status === "RETRYABLE_ERROR" &&
+    initial.nextRetryAt &&
+    initial.nextRetryAt.getTime() > stageNow(input.now).getTime()
   ) {
-    // An interrupted in-flight stage is left visible for the next recovery
-    // sweep; never skip validation or jump directly to publication.
-    return "retryable";
+    return;
   }
+  const currentAnalysis = isCurrentAnalysis(
+    initial,
+    input.analysisProvider.providerId,
+  );
+  if (
+    (initial.status === "PUBLISHED" ||
+      initial.status === "REVIEW_REQUIRED") &&
+    currentAnalysis
+  ) {
+    return;
+  }
+  if (initial.status === "BLOCKED" && (!initial.analyzerVersion || currentAnalysis)) {
+    return;
+  }
+
+  const claim = await claimPipelineItem({
+    itemId: input.itemId,
+    runDatabaseId: input.runDatabaseId,
+    pipelineRunId: input.pipelineRunId,
+    workerId: `${input.workerId}:pass1`,
+    now: stageNow(input.now),
+  });
+  if (!claim) return;
   try {
+    await checkpoint(claim, input.now);
+    let item = await prisma.guidePipelineItem.findUniqueOrThrow({
+      where: { id: input.itemId },
+    });
+    const claimedAnalysisCurrent = isCurrentAnalysis(
+      item,
+      input.analysisProvider.providerId,
+    );
+    if (
+      (item.status === "PUBLISHED" ||
+        item.status === "REVIEW_REQUIRED") &&
+      claimedAnalysisCurrent
+    ) {
+      return;
+    }
+    if (
+      item.status === "BLOCKED" &&
+      (!item.analyzerVersion || claimedAnalysisCurrent)
+    ) {
+      return;
+    }
+    const shouldReanalyze =
+      ["PUBLISHED", "REVIEW_REQUIRED", "BLOCKED"].includes(item.status) &&
+      !claimedAnalysisCurrent;
+    if (shouldReanalyze || item.status === "STOPPED") {
+      await transitionPipelineItem({
+        claim,
+        now: stageNow(input.now),
+        toStatus: "METADATA_FETCHED",
+        safeCode: shouldReanalyze
+          ? "ANALYZER_VERSION_CHANGED"
+          : "PIPELINE_RESUMED_AFTER_STOP",
+      });
+      await updatePipelineItemWithClaim({
+        claim,
+        now: stageNow(input.now),
+        data: {
+          transcriptId: null,
+          transcriptHash: "",
+          analysisIdempotencyKey: null,
+          publicationKey: null,
+          analyzerVersion: "",
+          promptVersion: "",
+          schemaVersion: "",
+          qualityPayload: "{}",
+          canonicalAnalysisPayload: "{}",
+          validationHash: "",
+          snapshotPayload: "{}",
+          policyHash: "",
+          blockCode: "",
+          safeErrorCode: "",
+        },
+      });
+      item = await prisma.guidePipelineItem.findUniqueOrThrow({
+        where: { id: input.itemId },
+      });
+    } else if (item.status === "RETRYABLE_ERROR") {
+      if (item.attempts >= item.maxAttempts) {
+        await transitionPipelineItem({
+          claim,
+          now: stageNow(input.now),
+          toStatus: "BLOCKED",
+          safeCode: "RETRY_LIMIT_REACHED",
+          blockCode: "BLOCKED_RETRY_EXHAUSTED",
+        });
+        return;
+      }
+      await transitionPipelineItem({
+        claim,
+        now: stageNow(input.now),
+        toStatus: "METADATA_FETCHED",
+        safeCode: "PIPELINE_RESUMED",
+      });
+      item = await prisma.guidePipelineItem.findUniqueOrThrow({
+        where: { id: input.itemId },
+      });
+    } else if (item.status === "ANALYZING" || item.status === "VALIDATING") {
+      await transitionPipelineItem({
+        claim,
+        now: stageNow(input.now),
+        toStatus: "RETRYABLE_ERROR",
+        safeCode: "INTERRUPTED_STAGE_RECOVERED",
+        resumeStatus: "METADATA_FETCHED",
+        nextRetryAt: null,
+      });
+      await transitionPipelineItem({
+        claim,
+        now: stageNow(input.now),
+        toStatus: "METADATA_FETCHED",
+        safeCode: "PIPELINE_RESUMED",
+      });
+      item = await prisma.guidePipelineItem.findUniqueOrThrow({
+        where: { id: input.itemId },
+      });
+    }
+    if (item.status === "READY_TO_PUBLISH") return;
     if (item.status === "DISCOVERED") {
       await transitionPipelineItem({
-        itemId: item.id,
+        claim,
+        now: stageNow(input.now),
         toStatus: "METADATA_FETCHED",
         safeCode: "METADATA_VALIDATED",
       });
-    }
-    const transcriptCircuit = await claimProviderCircuitPermission({
-      providerId: input.transcriptProvider.providerId,
-      now: input.now,
-    });
-    if (!transcriptCircuit.allowed) {
-      await transitionPipelineItem({
-        itemId: item.id,
-        toStatus: "RETRYABLE_ERROR",
-        safeCode: "PROVIDER_CIRCUIT_OPEN",
-        resumeStatus: "METADATA_FETCHED",
-        nextRetryAt: transcriptCircuit.retryAt,
+      item = await prisma.guidePipelineItem.findUniqueOrThrow({
+        where: { id: input.itemId },
       });
-      return "retryable";
     }
-    const transcriptOutcome = await fetchPreferredTranscript(
-      input.transcriptProvider,
-      input.candidate.video.videoId,
-      [input.candidate.video.language || "ja", "ja", "en"],
-    );
-    if (!transcriptOutcome.ok) {
-      await recordProviderFailure({
+
+    let transcript: NormalizedTranscript;
+    let transcriptId: string;
+    if (item.status === "TRANSCRIPT_FETCHED" && item.transcriptId) {
+      const stored = await loadNormalizedTranscript(item.transcriptId);
+      if (!stored) throw new Error("STORED_TRANSCRIPT_MISSING");
+      transcript = stored;
+      transcriptId = item.transcriptId;
+    } else {
+      await input.testStageHook?.("before_transcript");
+      await checkpoint(claim, input.now);
+      const transcriptCircuit = await claimProviderCircuitPermission({
         providerId: input.transcriptProvider.providerId,
-        safeErrorCode: transcriptOutcome.error.safeCode,
-        opensCircuit: transcriptOutcome.error.opensCircuit,
-        now: input.now,
+        now: stageNow(input.now),
       });
-      if (transcriptOutcome.error.retryable) {
+      if (!transcriptCircuit.allowed) {
         await transitionPipelineItem({
-          itemId: item.id,
+          claim,
+          now: stageNow(input.now),
           toStatus: "RETRYABLE_ERROR",
-          safeCode: transcriptOutcome.error.safeCode,
+          safeCode: "PROVIDER_CIRCUIT_OPEN",
           resumeStatus: "METADATA_FETCHED",
-          nextRetryAt: new Date(
-            input.now.getTime() +
-              YOUTUBE_AUTOMATION_POLICY.retryBaseSeconds * 1_000,
-          ),
+          nextRetryAt: transcriptCircuit.retryAt,
         });
-        return "retryable";
+        return;
       }
-      await transitionPipelineItem({
-        itemId: item.id,
-        toStatus: "BLOCKED",
-        safeCode: transcriptOutcome.error.safeCode,
-        blockCode: transcriptOutcome.blockCode,
+      const transcriptOutcome = await fetchPreferredTranscript(
+        input.transcriptProvider,
+        candidate.video.videoId,
+        [candidate.video.language || "ja", "ja", "en"],
+      );
+      await checkpoint(claim, input.now);
+      if (!transcriptOutcome.ok) {
+        await recordProviderFailure({
+          providerId: input.transcriptProvider.providerId,
+          safeErrorCode: transcriptOutcome.error.safeCode,
+          opensCircuit: transcriptOutcome.error.opensCircuit,
+          now: stageNow(input.now),
+        });
+        if (transcriptOutcome.error.retryable) {
+          await transitionPipelineItem({
+            claim,
+            now: stageNow(input.now),
+            toStatus: "RETRYABLE_ERROR",
+            safeCode: transcriptOutcome.error.safeCode,
+            resumeStatus: "METADATA_FETCHED",
+            nextRetryAt: retryAt(input.now),
+          });
+        } else {
+          await transitionPipelineItem({
+            claim,
+            now: stageNow(input.now),
+            toStatus: "BLOCKED",
+            safeCode: transcriptOutcome.error.safeCode,
+            blockCode: transcriptOutcome.blockCode,
+          });
+        }
+        return;
+      }
+      await recordProviderSuccess({
+        providerId: input.transcriptProvider.providerId,
+        now: stageNow(input.now),
       });
-      return "blocked";
-    }
-    await recordProviderSuccess({
-      providerId: input.transcriptProvider.providerId,
-      now: input.now,
-    });
-    const transcript = normalizeTranscript(transcriptOutcome.document);
-    const stored = await persistNormalizedTranscript({
-      transcript,
-      now: input.now,
-    });
-    if (!stored.stored) {
-      await transitionPipelineItem({
-        itemId: item.id,
-        toStatus: "BLOCKED",
-        blockCode: stored.blockCode,
+      transcript = normalizeTranscript(transcriptOutcome.document);
+      const stored = await persistNormalizedTranscript({
+        transcript,
+        now: stageNow(input.now),
+        itemClaim: claim,
       });
-      return "blocked";
+      if (!stored.stored) {
+        await transitionPipelineItem({
+          claim,
+          now: stageNow(input.now),
+          toStatus: "BLOCKED",
+          blockCode: stored.blockCode,
+        });
+        return;
+      }
+      transcriptId = stored.transcriptId;
+      await transitionPipelineItem({
+        claim,
+        now: stageNow(input.now),
+        toStatus: "TRANSCRIPT_FETCHED",
+        safeCode: "TRANSCRIPT_STORED",
+        safeDetail: {
+          language: transcript.language,
+          segmentCount: transcript.segments.length,
+          provider: transcript.providerId,
+          transcriptHash: transcript.transcriptHash,
+        },
+      });
     }
-    await prisma.guidePipelineItem.update({
-      where: { id: item.id },
-      data: { transcriptHash: transcript.transcriptHash },
-    });
+
+    await input.testStageHook?.("before_analysis");
+    await checkpoint(claim, input.now);
     await transitionPipelineItem({
-      itemId: item.id,
-      toStatus: "TRANSCRIPT_FETCHED",
-      safeCode: "TRANSCRIPT_STORED",
-      safeDetail: {
-        language: transcript.language,
-        segmentCount: transcript.segments.length,
-        provider: transcript.providerId,
-        transcriptHash: transcript.transcriptHash,
-      },
-    });
-    await transitionPipelineItem({
-      itemId: item.id,
+      claim,
+      now: stageNow(input.now),
       toStatus: "ANALYZING",
       safeCode: "ANALYSIS_STARTED",
     });
     const analyzerVersion = input.analysisProvider.providerId;
     const promptVersion = "youtube-transcript-claims-v1";
     const analysisKey = analysisIdempotencyKey({
-      videoId: input.candidate.video.videoId,
-      metadataHash: input.candidate.video.metadataHash,
+      videoId: candidate.video.videoId,
+      metadataHash: candidate.video.metadataHash,
       transcriptHash: transcript.transcriptHash,
       analyzerVersion,
       promptVersion,
@@ -332,229 +625,462 @@ async function processCandidate(input: {
     });
     const analysisCircuit = await claimProviderCircuitPermission({
       providerId: input.analysisProvider.providerId,
-      now: input.now,
+      now: stageNow(input.now),
     });
     if (!analysisCircuit.allowed) {
-      throw Object.assign(new Error("PROVIDER_CIRCUIT_OPEN"), {
+      await transitionPipelineItem({
+        claim,
+        now: stageNow(input.now),
+        toStatus: "RETRYABLE_ERROR",
         safeCode: "PROVIDER_CIRCUIT_OPEN",
+        resumeStatus: "TRANSCRIPT_FETCHED",
+        nextRetryAt: analysisCircuit.retryAt,
       });
+      return;
     }
     let completion;
     try {
       completion = await input.analysisProvider.analyze({
-        videoId: input.candidate.video.videoId,
-        characterId: input.candidate.characterId,
+        videoId: candidate.video.videoId,
+        characterId: candidate.characterId,
         language: transcript.language,
         chunks: chunkTranscript(transcript),
         allowedEntityIds: [...input.knownEntityIds].sort(),
       });
+      await checkpoint(claim, input.now);
       await recordProviderSuccess({
         providerId: input.analysisProvider.providerId,
-        now: input.now,
+        now: stageNow(input.now),
       });
     } catch (error) {
-      const providerError = error as {
-        safeCode?: unknown;
-        opensCircuit?: unknown;
-      };
-      await recordProviderFailure({
-        providerId: input.analysisProvider.providerId,
-        safeErrorCode:
-          typeof providerError.safeCode === "string"
-            ? providerError.safeCode
-            : "PROVIDER_FAILURE",
-        opensCircuit: providerError.opensCircuit === true,
-        now: input.now,
-      });
+      const providerError = asSafeProviderError(error);
+      if (providerError) {
+        await recordProviderFailure({
+          providerId: input.analysisProvider.providerId,
+          safeErrorCode: providerError.safeCode,
+          opensCircuit: providerError.opensCircuit,
+          now: stageNow(input.now),
+        });
+        if (!providerError.retryable) {
+          await transitionPipelineItem({
+            claim,
+            now: stageNow(input.now),
+            toStatus: "BLOCKED",
+            safeCode: providerError.safeCode,
+            blockCode: blockCodeForProviderError(providerError),
+          });
+          return;
+        }
+      }
       throw error;
     }
+
     await transitionPipelineItem({
-      itemId: item.id,
+      claim,
+      now: stageNow(input.now),
       toStatus: "VALIDATING",
       safeCode: "ANALYSIS_COMPLETED",
     });
+    await input.testStageHook?.("before_validation_ready");
+    await checkpoint(claim, input.now);
     const validation = validateTranscriptAnalysis(completion.value, {
-      expectedCharacterId: input.candidate.characterId,
+      expectedCharacterId: candidate.characterId,
       knownEntityIds: input.knownEntityIds,
       transcript,
     });
     if (!validation.ok) {
       await transitionPipelineItem({
-        itemId: item.id,
+        claim,
+        now: stageNow(input.now),
         toStatus: "BLOCKED",
         blockCode: validation.blockCode,
       });
-      return "blocked";
+      return;
     }
-    const analysisResult = await persistValidatedAnalysis({
-      analysisKey,
-      transcriptId: stored.transcriptId,
-      videoId: input.candidate.video.videoId,
+    const canonical = canonicalizeValidatedAnalysis({
+      validation,
+      transcriptHash: transcript.transcriptHash,
+      analysisIdempotencyKey: analysisKey,
       providerId: input.analysisProvider.providerId,
       modelIdentifier: completion.modelIdentifier,
       promptVersion,
-      validation,
-      now: input.now,
     });
     const publicationKey = buildPublicationKey({
-      characterId: input.candidate.characterId,
+      characterId: candidate.characterId,
       analysisKeys: [analysisKey],
       policyVersion: YOUTUBE_AUTOMATION_POLICY.version,
       schemaVersion: TRANSCRIPT_ANALYSIS_SCHEMA_VERSION,
     });
-    await prisma.guidePipelineItem.update({
-      where: { id: item.id },
+    const snapshot = buildAutomaticRecommendationSnapshot({
+      characterId: candidate.characterId,
+      videoId: candidate.video.videoId,
+      claims: canonical.canonical.claims,
+      overallConfidence: canonical.canonical.overallConfidence,
+      publishedContentUpdatedAt: stageNow(input.now),
+    });
+    await checkpoint(claim, input.now);
+    await updatePipelineItemWithClaim({
+      claim,
+      now: stageNow(input.now),
       data: {
+        characterId: candidate.characterId,
+        transcriptId,
+        transcriptHash: transcript.transcriptHash,
         analysisIdempotencyKey: analysisKey,
         publicationKey,
         analyzerVersion,
         promptVersion,
         schemaVersion: TRANSCRIPT_ANALYSIS_SCHEMA_VERSION,
-        qualityPayload: JSON.stringify(validation.quality),
+        qualityPayload: JSON.stringify({
+          channelAllowed: true,
+          videoPublic: candidate.video.privacyStatus === "public",
+          transcriptAvailable: true,
+          schemaValid: true,
+          entityCoverage: validation.quality.entityCoverage,
+          citationCoverage: validation.quality.citationCoverage,
+          timestampCoverage: validation.quality.timestampCoverage,
+          evidenceMatches: true,
+          minClaimConfidence: validation.quality.minClaimConfidence,
+          overallConfidence: validation.quality.overallConfidence,
+          conflicts: [],
+        }),
+        canonicalAnalysisPayload: canonical.payload,
+        validationHash: canonical.validationHash,
+        snapshotPayload: JSON.stringify(snapshot),
+        policyHash: YOUTUBE_AUTOMATION_POLICY_HASH,
       },
     });
     await transitionPipelineItem({
-      itemId: item.id,
+      claim,
+      now: stageNow(input.now),
       toStatus: "READY_TO_PUBLISH",
       safeCode: "STRICT_VALIDATION_PASSED",
     });
-    const snapshot = buildAutomaticRecommendationSnapshot({
-      characterId: input.candidate.characterId,
-      videoId: input.candidate.video.videoId,
-      claims: validation.claims,
-      overallConfidence: validation.analysis.overallConfidence,
-      publishedContentUpdatedAt: input.now,
-    });
-    const publication = await publishAutomaticRecommendation({
-      pipelineRunId: input.pipelineRunId,
-      pipelineItemId: item.id,
-      publicationKey,
-      analysisIdempotencyKey: analysisKey,
-      evidenceId: analysisResult.evidenceId,
-      snapshot,
-      quality: {
-        sourceCount: 1,
-        channelAllowed: true,
-        videoPublic: input.candidate.video.privacyStatus === "public",
-        transcriptAvailable: true,
-        schemaValid: true,
-        entityCoverage: validation.quality.entityCoverage,
-        citationCoverage: validation.quality.citationCoverage,
-        timestampCoverage: validation.quality.timestampCoverage,
-        evidenceMatches: true,
-        minClaimConfidence: validation.quality.minClaimConfidence,
-        overallConfidence: validation.quality.overallConfidence,
-        conflicts: [],
-      },
-      flags: input.flags,
-      dryRun: input.dryRun,
-      now: input.now,
-      leaseOwner: `${input.pipelineRunId}:${item.id}`,
-    });
-    return publication.published ? "published" : "ready";
   } catch (error) {
-    const errorWithSafeCode = error as { safeCode?: unknown };
-    const safeCode =
-      typeof errorWithSafeCode.safeCode === "string" &&
-      /^[A-Z][A-Z0-9_]{1,63}$/.test(errorWithSafeCode.safeCode)
-        ? errorWithSafeCode.safeCode
-        : error instanceof Error &&
-      /^[A-Z][A-Z0-9_]{1,63}$/.test(error.message)
-        ? error.message
-        : "PIPELINE_ITEM_FAILED";
-    const current = await prisma.guidePipelineItem.findUnique({
-      where: { id: item.id },
-      select: { status: true },
-    });
     if (
-      current &&
-      !["PUBLISHED", "BLOCKED", "RETRYABLE_ERROR"].includes(current.status)
+      error instanceof EmergencyStoppedError ||
+      error instanceof ItemLeaseLostError ||
+      (error instanceof Error &&
+        ["PIPELINE_ITEM_LEASE_LOST", "PIPELINE_ITEM_FENCE_STALE"].includes(
+          error.message,
+        ))
     ) {
-      await transitionPipelineItem({
-        itemId: item.id,
-        toStatus: "RETRYABLE_ERROR",
-        safeCode,
-        resumeStatus: "METADATA_FETCHED",
-        nextRetryAt: new Date(
-          input.now.getTime() +
-            YOUTUBE_AUTOMATION_POLICY.retryBaseSeconds * 1_000,
-        ),
-      });
+      return;
     }
-    return "retryable";
+    await safelyTransitionRetryable(claim, input.now, error);
+  } finally {
+    await releasePipelineItemClaim({ claim }).catch(() => undefined);
   }
 }
 
-async function persistValidatedAnalysis(input: {
-  analysisKey: string;
-  transcriptId: string;
-  videoId: string;
-  providerId: string;
-  modelIdentifier: string;
-  promptVersion: string;
-  validation: Extract<
-    ReturnType<typeof validateTranscriptAnalysis>,
-    { ok: true }
-  >;
-  now: Date;
-}): Promise<{ resultId: string; evidenceId: string }> {
-  const existing = await prisma.guideVisualAnalysisResult.findUnique({
-    where: { analysisIdempotencyKey: input.analysisKey },
-    include: { evidences: { select: { id: true }, take: 1 } },
+async function checkpoint(
+  claim: ItemLeaseClaim,
+  fixedNow?: Date,
+): Promise<void> {
+  const now = stageNow(fixedNow);
+  const renewed = await renewPipelineItemClaim({ claim, now });
+  if (!renewed) throw new ItemLeaseLostError();
+  const control = await readYoutubeAutomationControl();
+  if (!control.emergencyStopped) return;
+  const item = await prisma.guidePipelineItem.findUnique({
+    where: { id: claim.itemId },
+    select: { status: true },
   });
-  if (existing?.evidences[0]) {
-    return { resultId: existing.id, evidenceId: existing.evidences[0].id };
+  if (item && item.status !== "STOPPED") {
+    await transitionPipelineItem({
+      claim,
+      now,
+      toStatus: "STOPPED",
+      safeCode:
+        control.reason === "CONTROL_ROW_MISSING"
+          ? "AUTOMATION_CONTROL_MISSING"
+          : "EMERGENCY_STOPPED",
+      blockCode:
+        control.reason === "CONTROL_ROW_MISSING"
+          ? "AUTOMATION_CONTROL_MISSING"
+          : "EMERGENCY_STOPPED",
+    });
   }
-  const startSeconds = Math.min(
-    ...input.validation.claims.map((claim) => claim.startSeconds),
-  );
-  const endSeconds = Math.max(
-    ...input.validation.claims.map((claim) => claim.endSeconds),
-  );
-  const payload: Prisma.InputJsonObject = {
-    analysis: input.validation.analysis as unknown as Prisma.InputJsonObject,
-    claims: input.validation.claims as unknown as Prisma.InputJsonArray,
-    quality: input.validation.quality,
-  };
-  const result = await prisma.guideVisualAnalysisResult.create({
-    data: {
-      cacheKey: input.analysisKey,
-      videoId: input.videoId,
-      requestHash: input.analysisKey,
-      providerId: input.providerId,
-      modelIdentifier: input.modelIdentifier,
-      promptVersion: input.promptVersion,
-      schemaVersion: TRANSCRIPT_ANALYSIS_SCHEMA_VERSION,
-      gameDataVersion: "master-current",
-      inputKind: "transcript",
-      transcriptId: input.transcriptId,
-      analysisIdempotencyKey: input.analysisKey,
-      status: "validated",
-      rawAiOutput: "",
-      validatedPayload: JSON.stringify(payload),
-      generatedAt: input.now,
-      evidences: {
-        create: {
-          videoId: input.videoId,
-          startSeconds,
-          endSeconds,
-          evidenceType: "transcript_citation",
-          normalizedPayload: JSON.stringify({
-            claimCount: input.validation.claims.length,
-          }),
-          exactVisibleText: "",
-          confidence: input.validation.quality.overallConfidence,
-          validationStatus: "valid",
-          approvalStatus: "automatic_strict",
-          purposeSummary: "validated_official_transcript",
-        },
-      },
-    },
-    include: { evidences: { select: { id: true }, take: 1 } },
+  throw new EmergencyStoppedError();
+}
+
+async function assertRunnerMayProceed(): Promise<void> {
+  const control = await readYoutubeAutomationControl();
+  if (control.emergencyStopped) throw new EmergencyStoppedError();
+}
+
+async function safelyTransitionRetryable(
+  claim: ItemLeaseClaim,
+  fixedNow: Date | undefined,
+  error: unknown,
+): Promise<void> {
+  const current = await prisma.guidePipelineItem.findUnique({
+    where: { id: claim.itemId },
+    select: { status: true },
   });
-  const evidence = result.evidences[0];
-  if (!evidence) throw new Error("ANALYSIS_EVIDENCE_MISSING");
-  return { resultId: result.id, evidenceId: evidence.id };
+  if (
+    !current ||
+    [
+      "PUBLISHED",
+      "REVIEW_REQUIRED",
+      "BLOCKED",
+      "RETRYABLE_ERROR",
+      "STOPPED",
+    ].includes(current.status)
+  ) {
+    return;
+  }
+  const providerError = asSafeProviderError(error);
+  if (providerError && !providerError.retryable) {
+    await transitionPipelineItem({
+      claim,
+      now: stageNow(fixedNow),
+      toStatus: "BLOCKED",
+      safeCode: providerError.safeCode,
+      blockCode: blockCodeForProviderError(providerError),
+    }).catch(() => undefined);
+    return;
+  }
+  await transitionPipelineItem({
+    claim,
+    now: stageNow(fixedNow),
+    toStatus: "RETRYABLE_ERROR",
+    safeCode: safeCodeOf(error),
+    resumeStatus: "METADATA_FETCHED",
+    nextRetryAt: retryAt(fixedNow),
+  }).catch(() => undefined);
+}
+
+async function loadNormalizedTranscript(
+  transcriptId: string,
+): Promise<NormalizedTranscript | null> {
+  const transcript = await prisma.guideTranscript.findUnique({
+    where: { id: transcriptId },
+    include: { segments: { orderBy: { segmentIndex: "asc" } } },
+  });
+  if (!transcript) return null;
+  return {
+    providerId: transcript.providerId,
+    videoId: transcript.videoId,
+    language: transcript.language,
+    trackKind: transcript.trackKind as "manual" | "asr",
+    sourceTrackId: transcript.sourceTrackId,
+    fetchedAt: transcript.fetchedAt,
+    transcriptHash: transcript.transcriptHash,
+    segments: transcript.segments.map((segment) => ({
+      index: segment.segmentIndex,
+      segmentKey: segment.segmentKey,
+      startSeconds: segment.startSeconds,
+      durationSeconds: segment.durationSeconds,
+      text: segment.text,
+      textHash: segment.textHash,
+    })),
+  };
+}
+
+async function loadFinalOutcomes(
+  itemIds: readonly string[],
+): Promise<PipelineItemOutcome[]> {
+  if (itemIds.length === 0) return [];
+  const items = await prisma.guidePipelineItem.findMany({
+    where: { id: { in: [...itemIds] } },
+    select: { status: true },
+  });
+  return items.map(({ status }) => {
+    switch (status) {
+      case "PUBLISHED":
+        return "published";
+      case "READY_TO_PUBLISH":
+        return "ready";
+      case "REVIEW_REQUIRED":
+        return "reviewRequired";
+      case "BLOCKED":
+        return "blocked";
+      case "STOPPED":
+        return "stopped";
+      default:
+        return "retryable";
+    }
+  });
+}
+
+function countOutcomes(
+  outcomes: readonly PipelineItemOutcome[],
+): Record<PipelineItemOutcome, number> {
+  const result = {
+    published: 0,
+    ready: 0,
+    reviewRequired: 0,
+    blocked: 0,
+    stopped: 0,
+    retryable: 0,
+  };
+  for (const outcome of outcomes) result[outcome] += 1;
+  return result;
+}
+
+async function finishRunDiscoveryFailure(input: {
+  runDatabaseId: string;
+  pipelineRunId: string;
+  dryRun: boolean;
+  error: unknown;
+}): Promise<PipelineRunSummary> {
+  const safeCode = safeCodeOf(input.error, "DISCOVERY_OR_MASTER_FAILED");
+  const summary: PipelineRunSummary = {
+    ...emptySummary(input.pipelineRunId, input.dryRun, false),
+    retryable: 1,
+  };
+  const actionKey = automationHash("youtube-run-failure-v1", {
+    pipelineRunId: input.pipelineRunId,
+    safeCode,
+  });
+  await prisma.$transaction([
+    prisma.guidePipelineRun.update({
+      where: { id: input.runDatabaseId },
+      data: {
+        status: "retryable",
+        summaryPayload: JSON.stringify(summary),
+        completedAt: new Date(),
+      },
+    }),
+    prisma.guidePipelineEvent.upsert({
+      where: { actionKey },
+      create: {
+        actionKey,
+        runId: input.runDatabaseId,
+        toStatus: "RETRYABLE_ERROR",
+        safeCode,
+        detailPayload: "{}",
+      },
+      update: {},
+    }),
+  ]);
+  return summary;
+}
+
+async function finishStoppedRun(
+  runDatabaseId: string,
+  pipelineRunId: string,
+  summary: PipelineRunSummary,
+  now: Date,
+): Promise<void> {
+  const actionKey = automationHash("youtube-run-stopped-v1", {
+    pipelineRunId,
+  });
+  await prisma.$transaction([
+    prisma.guidePipelineRun.update({
+      where: { id: runDatabaseId },
+      data: {
+        status: "stopped",
+        summaryPayload: JSON.stringify(summary),
+        completedAt: now,
+      },
+    }),
+    prisma.guidePipelineEvent.upsert({
+      where: { actionKey },
+      create: {
+        actionKey,
+        runId: runDatabaseId,
+        toStatus: "STOPPED",
+        safeCode: "EMERGENCY_STOPPED",
+        detailPayload: "{}",
+      },
+      update: {},
+    }),
+  ]);
+}
+
+function parseCompletedSummary(
+  payload: string,
+  state: { status: string; completedAt: Date | null },
+): PipelineRunSummary | null {
+  if (!state.completedAt || state.status !== "completed") return null;
+  try {
+    const value = JSON.parse(payload) as PipelineRunSummary;
+    return value.pipelineRunId ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function asSafeProviderError(error: unknown): SafeProviderError | null {
+  if (
+    error instanceof Error &&
+    error.name === "SafeProviderError" &&
+    "safeCode" in error &&
+    typeof error.safeCode === "string" &&
+    "retryable" in error &&
+    typeof error.retryable === "boolean" &&
+    "opensCircuit" in error &&
+    typeof error.opensCircuit === "boolean"
+  ) {
+    return error as SafeProviderError;
+  }
+  return null;
+}
+
+function blockCodeForProviderError(error: SafeProviderError): string {
+  switch (error.safeCode) {
+    case "AUTH_NOT_CONFIGURED":
+    case "AUTH_REJECTED":
+      return "BLOCKED_PROVIDER_AUTH";
+    case "INVALID_RESPONSE":
+    case "RESPONSE_TOO_LARGE":
+      return "BLOCKED_INVALID_ANALYSIS";
+    case "TRANSCRIPT_UNAVAILABLE":
+      return "BLOCKED_TRANSCRIPT_UNAVAILABLE";
+    case "NOT_FOUND":
+      return "BLOCKED_PROVIDER_REQUEST";
+    default:
+      return "BLOCKED_PROVIDER_REQUEST";
+  }
+}
+
+function safeCodeOf(error: unknown, fallback = "PIPELINE_ITEM_FAILED"): string {
+  const provider = asSafeProviderError(error);
+  if (provider) return provider.safeCode;
+  const withCode = error as { safeCode?: unknown };
+  if (
+    typeof withCode?.safeCode === "string" &&
+    /^[A-Z][A-Z0-9_]{1,63}$/.test(withCode.safeCode)
+  ) {
+    return withCode.safeCode;
+  }
+  if (
+    error instanceof Error &&
+    /^[A-Z][A-Z0-9_]{1,63}$/.test(error.message)
+  ) {
+    return error.message;
+  }
+  return fallback;
+}
+
+function retryAt(fixedNow?: Date): Date {
+  return new Date(
+    stageNow(fixedNow).getTime() +
+      YOUTUBE_AUTOMATION_POLICY.retryBaseSeconds * 1_000,
+  );
+}
+
+function isCurrentAnalysis(
+  item: {
+    analyzerVersion: string;
+    promptVersion: string;
+    schemaVersion: string;
+    policyHash: string;
+  },
+  analyzerVersion: string,
+): boolean {
+  return (
+    item.analyzerVersion === analyzerVersion &&
+    item.promptVersion === "youtube-transcript-claims-v1" &&
+    item.schemaVersion === TRANSCRIPT_ANALYSIS_SCHEMA_VERSION &&
+    item.policyHash === YOUTUBE_AUTOMATION_POLICY_HASH
+  );
+}
+
+function stageNow(fixedNow?: Date): Date {
+  return fixedNow ? new Date(fixedNow) : new Date();
 }
 
 function emptySummary(
@@ -569,7 +1095,9 @@ function emptySummary(
     discovered: 0,
     published: 0,
     ready: 0,
+    reviewRequired: 0,
     blocked: 0,
+    stopped: 0,
     retryable: 0,
   };
 }

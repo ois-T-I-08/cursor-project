@@ -1,20 +1,28 @@
 import type { YoutubeAutomationFlags } from "./feature-flags";
+import { z } from "zod";
 import { YOUTUBE_AUTOMATION_POLICY } from "./quality-policy";
 
-export type AutomaticPublicationQuality = Readonly<{
-  sourceCount: number;
-  channelAllowed: boolean;
-  videoPublic: boolean;
-  transcriptAvailable: boolean;
-  schemaValid: boolean;
-  entityCoverage: number;
-  citationCoverage: number;
-  timestampCoverage: number;
-  evidenceMatches: boolean;
-  minClaimConfidence: number;
-  overallConfidence: number;
-  conflicts: readonly string[];
-}>;
+export const automaticPublicationQualitySchema = z
+  .object({
+    channelAllowed: z.boolean(),
+    videoPublic: z.boolean(),
+    transcriptAvailable: z.boolean(),
+    schemaValid: z.boolean(),
+    entityCoverage: z.number().min(0).max(1),
+    citationCoverage: z.number().min(0).max(1),
+    timestampCoverage: z.number().min(0).max(1),
+    evidenceMatches: z.boolean(),
+    minClaimConfidence: z.number().min(0).max(1),
+    overallConfidence: z.number().min(0).max(1),
+    conflicts: z.array(z.string().max(200)).max(100),
+  })
+  .strict();
+
+export type AutomaticPublicationQuality = Readonly<
+  Omit<z.infer<typeof automaticPublicationQualitySchema>, "conflicts"> & {
+    conflicts: readonly string[];
+  }
+>;
 
 export type AutomaticPublicationGate =
   | { allowed: true; status: "READY_TO_PUBLISH"; blockCodes: readonly [] }
@@ -28,6 +36,7 @@ export function evaluateAutomaticPublicationGate(input: {
   flags: YoutubeAutomationFlags;
   dryRun: boolean;
   emergencyStopped: boolean;
+  sourceCount: number;
   quality: AutomaticPublicationQuality;
 }): AutomaticPublicationGate {
   const blockCodes: string[] = [];
@@ -37,10 +46,10 @@ export function evaluateAutomaticPublicationGate(input: {
   }
   if (input.dryRun) blockCodes.push("DRY_RUN");
   if (input.emergencyStopped) blockCodes.push("EMERGENCY_STOPPED");
-  if (quality.sourceCount !== 1) {
+  if (input.sourceCount !== 1) {
     blockCodes.push(
-      quality.sourceCount > 1
-        ? "MULTI_SOURCE_REQUIRES_REVIEW"
+      input.sourceCount > 1
+        ? "MULTI_SOURCE_REVIEW_REQUIRED"
         : "SOURCE_REQUIRED",
     );
   }
@@ -49,7 +58,7 @@ export function evaluateAutomaticPublicationGate(input: {
   if (!quality.transcriptAvailable) {
     blockCodes.push("BLOCKED_TRANSCRIPT_UNAVAILABLE");
   }
-  if (!quality.schemaValid) blockCodes.push("BLOCKED_ANALYSIS_SCHEMA_INVALID");
+  if (!quality.schemaValid) blockCodes.push("BLOCKED_INVALID_ANALYSIS");
   if (
     quality.entityCoverage < YOUTUBE_AUTOMATION_POLICY.requiredEntityCoverage
   ) {
@@ -84,7 +93,7 @@ export function evaluateAutomaticPublicationGate(input: {
     [
       "AUTO_PUBLISH_DISABLED",
       "DRY_RUN",
-      "MULTI_SOURCE_REQUIRES_REVIEW",
+      "MULTI_SOURCE_REVIEW_REQUIRED",
     ].includes(code),
   );
   return {

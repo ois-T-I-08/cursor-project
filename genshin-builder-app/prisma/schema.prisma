@@ -692,13 +692,21 @@ model GuidePipelineItem {
   id                 String    @id @default(cuid())
   runId              String
   run                GuidePipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  activeRunId        String    @default("")
+  lastRunId          String    @default("")
   videoId            String
   video              GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  characterId        String    @default("")
   discoveryKey       String    @unique
   analysisIdempotencyKey String? @unique
   publicationKey     String?   @unique
+  transcriptId       String?
+  transcript         GuideTranscript? @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
   status             String    @default("DISCOVERED")
   resumeStatus       String    @default("")
+  stateVersion       Int       @default(0)
+  leaseOwner         String    @default("")
+  leaseVersion       Int       @default(0)
   attempts           Int       @default(0)
   maxAttempts        Int       @default(3)
   nextRetryAt        DateTime?
@@ -710,6 +718,10 @@ model GuidePipelineItem {
   blockCode          String    @default("")
   safeErrorCode      String    @default("")
   qualityPayload     String    @default("{}")
+  canonicalAnalysisPayload String @default("{}")
+  validationHash     String    @default("")
+  snapshotPayload    String    @default("{}")
+  policyHash         String    @default("")
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -718,6 +730,9 @@ model GuidePipelineItem {
   @@unique([runId, videoId])
   @@index([status, nextRetryAt])
   @@index([videoId, status])
+  @@index([characterId, status])
+  @@index([activeRunId, status])
+  @@index([transcriptId])
 }
 
 model GuidePipelineEvent {
@@ -757,6 +772,7 @@ model GuideTranscript {
 
   segments        GuideTranscriptSegment[]
   analysisResults GuideVisualAnalysisResult[]
+  pipelineItems   GuidePipelineItem[]
 
   @@unique([videoId, language, transcriptHash])
   @@index([videoId, fetchedAt])

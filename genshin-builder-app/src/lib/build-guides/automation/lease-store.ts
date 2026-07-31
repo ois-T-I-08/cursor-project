@@ -71,11 +71,15 @@ export async function releasePipelineLease(input: {
 }): Promise<boolean> {
   const client = input.client ?? prisma;
   const count = await client.$executeRaw(Prisma.sql`
-    DELETE FROM "GuidePipelineLease"
+    UPDATE "GuidePipelineLease"
+    SET
+      "leaseExpiresAt" = "leaseAcquiredAt",
+      "updatedAt" = "leaseAcquiredAt"
     WHERE
       "lockKey" = ${input.lease.lockKey}
       AND "leaseOwner" = ${input.lease.leaseOwner}
       AND "leaseVersion" = ${input.lease.leaseVersion}
+      AND "leaseExpiresAt" > "leaseAcquiredAt"
   `);
   return count === 1;
 }

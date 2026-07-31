@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { fetchArtifactSets } from "@/lib/api/amber-details";
+import { readYoutubeAutomationControl } from "./automation-control";
 import { discoverApprovedChannelVideos } from "./discovery-service";
 import { youtubeAutomationFlags } from "./feature-flags";
 import { GeminiTranscriptAnalysisProvider } from "./gemini-transcript-provider";
@@ -52,6 +53,18 @@ export async function runDefaultYoutubeGuidePipeline(input: {
   if (!flags.enabled || !flags.maintenanceEnabled || input.dryRun) {
     return summary;
   }
+  const maintenanceControl = await readYoutubeAutomationControl();
+  if (maintenanceControl.emergencyStopped) {
+    return {
+      ...summary,
+      maintenance: {
+        status: "stopped" as const,
+        checked: 0,
+        unavailable: 0,
+        transcriptsDeleted: 0,
+      },
+    };
+  }
 
   let transcriptsDeleted = 0;
   let checked = 0;
@@ -59,6 +72,18 @@ export async function runDefaultYoutubeGuidePipeline(input: {
   let status: "completed" | "retryable" = "completed";
   try {
     transcriptsDeleted = await deleteExpiredTranscripts({ now: new Date() });
+    const beforeAvailability = await readYoutubeAutomationControl();
+    if (beforeAvailability.emergencyStopped) {
+      return {
+        ...summary,
+        maintenance: {
+          status: "stopped" as const,
+          checked: 0,
+          unavailable: 0,
+          transcriptsDeleted,
+        },
+      };
+    }
     const publishedSources =
       await prisma.recommendationVisualContribution.findMany({
         where: {

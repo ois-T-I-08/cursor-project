@@ -5,30 +5,66 @@ export const PIPELINE_STATUSES = [
   "ANALYZING",
   "VALIDATING",
   "READY_TO_PUBLISH",
+  "REVIEW_REQUIRED",
   "PUBLISHED",
   "RETRYABLE_ERROR",
+  "STOPPED",
   "BLOCKED",
 ] as const;
 
 export type PipelineStatus = (typeof PIPELINE_STATUSES)[number];
 
 const NEXT: Readonly<Record<PipelineStatus, ReadonlySet<PipelineStatus>>> = {
-  DISCOVERED: new Set(["METADATA_FETCHED", "RETRYABLE_ERROR", "BLOCKED"]),
-  METADATA_FETCHED: new Set(["TRANSCRIPT_FETCHED", "RETRYABLE_ERROR", "BLOCKED"]),
-  TRANSCRIPT_FETCHED: new Set(["ANALYZING", "RETRYABLE_ERROR", "BLOCKED"]),
-  ANALYZING: new Set(["VALIDATING", "RETRYABLE_ERROR", "BLOCKED"]),
-  VALIDATING: new Set(["READY_TO_PUBLISH", "RETRYABLE_ERROR", "BLOCKED"]),
-  READY_TO_PUBLISH: new Set(["PUBLISHED", "RETRYABLE_ERROR", "BLOCKED"]),
-  PUBLISHED: new Set([]),
+  DISCOVERED: new Set([
+    "METADATA_FETCHED",
+    "RETRYABLE_ERROR",
+    "STOPPED",
+    "BLOCKED",
+  ]),
+  METADATA_FETCHED: new Set([
+    "TRANSCRIPT_FETCHED",
+    "RETRYABLE_ERROR",
+    "STOPPED",
+    "BLOCKED",
+  ]),
+  TRANSCRIPT_FETCHED: new Set([
+    "ANALYZING",
+    "RETRYABLE_ERROR",
+    "STOPPED",
+    "BLOCKED",
+  ]),
+  ANALYZING: new Set([
+    "VALIDATING",
+    "RETRYABLE_ERROR",
+    "STOPPED",
+    "BLOCKED",
+  ]),
+  VALIDATING: new Set([
+    "READY_TO_PUBLISH",
+    "RETRYABLE_ERROR",
+    "STOPPED",
+    "BLOCKED",
+  ]),
+  READY_TO_PUBLISH: new Set([
+    "REVIEW_REQUIRED",
+    "PUBLISHED",
+    "RETRYABLE_ERROR",
+    "STOPPED",
+    "BLOCKED",
+  ]),
+  REVIEW_REQUIRED: new Set(["METADATA_FETCHED", "STOPPED"]),
+  PUBLISHED: new Set(["METADATA_FETCHED", "STOPPED"]),
   RETRYABLE_ERROR: new Set([
     "METADATA_FETCHED",
     "TRANSCRIPT_FETCHED",
     "ANALYZING",
     "VALIDATING",
     "READY_TO_PUBLISH",
+    "STOPPED",
     "BLOCKED",
   ]),
-  BLOCKED: new Set([]),
+  STOPPED: new Set(["METADATA_FETCHED", "BLOCKED"]),
+  BLOCKED: new Set(["METADATA_FETCHED", "STOPPED"]),
 };
 
 export class PipelineTransitionError extends Error {
