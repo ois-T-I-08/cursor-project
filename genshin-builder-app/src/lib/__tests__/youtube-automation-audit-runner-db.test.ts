@@ -492,7 +492,7 @@ async function createCandidate(label: string, characterId: string) {
       {
         startSeconds: 10,
         durationSeconds: 5,
-        text: "漁獲がおすすめです",
+        text: `漁獲がおすすめです ${videoId}`,
       },
     ],
   };
