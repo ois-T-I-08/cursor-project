@@ -1,8 +1,11 @@
-# AZA.GG abyss statistics → staging ingest (outside Vercel)
+# AZA.GG abyss statistics -> staging ingest (outside Vercel)
 #
-# Vercel staging cannot reach AZA (HTTP 403). GitHub Actions fetches AZA
-# and POSTs the raw JSON to the staging ingest API, which normalizes and
-# writes ExternalApiCache. Clients then GET /api/abyss/statistics from cache.
+# Vercel staging cannot reach AZA (HTTP 403). This job fetches AZA and POSTs
+# raw JSON to the staging ingest API, which normalizes into ExternalApiCache.
+#
+# Note: AZA may also return 403 to GitHub-hosted runners (datacenter IP).
+# If fetch fails with 403, use scripts/abyss-aza-ingest-staging.ps1 locally
+# (residential/local network) with STAGING_ABYSS_INGEST_SECRET set in the shell.
 #
 # Required repository secrets (staging only — do not reuse production values):
 #   STAGING_ABYSS_INGEST_URL    e.g. https://staging-sable.vercel.app/api/abyss/statistics/ingest
@@ -25,14 +28,30 @@ jobs:
         id: fetch
         run: |
           set -euo pipefail
-          curl -fsSL \
-            --retry 2 \
-            --retry-delay 5 \
-            --max-time 30 \
-            -H "Accept: application/json" \
-            -H "User-Agent: Mozilla/5.0 (compatible; GenshinBuilder-GHA/0.1; +https://github.com/ois-T-I-08/cursor-project)" \
-            "https://c1-api.aza.gg/kv/read?key_id=genshin_abyss_statistics" \
-            -o aza-abyss.json
+          UA_LIST=(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (compatible; GenshinBuilder-GHA/0.1; +https://github.com/ois-T-I-08/cursor-project)"
+          )
+          ok=0
+          for ua in "${UA_LIST[@]}"; do
+            code=$(curl -sS -o aza-abyss.json -w "%{http_code}" \
+              --retry 2 \
+              --retry-delay 5 \
+              --max-time 30 \
+              -H "Accept: application/json" \
+              -H "User-Agent: ${ua}" \
+              "https://c1-api.aza.gg/kv/read?key_id=genshin_abyss_statistics" || true)
+            echo "aza_http_status=${code}"
+            if [ "$code" = "200" ]; then
+              ok=1
+              break
+            fi
+          done
+          if [ "$ok" != "1" ]; then
+            echo "AZA fetch failed from GitHub-hosted runner (often HTTP 403)." >&2
+            echo "Use local script scripts/abyss-aza-ingest-staging.ps1 instead." >&2
+            exit 1
+          fi
           bytes=$(wc -c < aza-abyss.json)
           echo "aza_bytes=${bytes}"
           if [ "$bytes" -lt 100 ] || [ "$bytes" -gt 2097152 ]; then
