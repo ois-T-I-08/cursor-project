@@ -1,0 +1,73 @@
+name: YouTube Guide Automation (staging)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Keep publication disabled"
+        required: true
+        default: true
+        type: boolean
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: youtube-guide-automation-staging
+  cancel-in-progress: false
+
+jobs:
+  run-staging-pipeline:
+    # Repository Variables are non-secret controls. The workflow safely skips
+    # scheduled and manual events until explicitly enabled after merge.
+    if: ${{ vars.YOUTUBE_AUTOMATION_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+    env:
+      STAGING_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
+      BUILD_GUIDE_ADMIN_SECRET: ${{ secrets.STAGING_BUILD_GUIDE_ADMIN_SECRET }}
+      REPOSITORY_DRY_RUN: ${{ vars.YOUTUBE_AUTOMATION_DRY_RUN }}
+      DISPATCH_DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - name: Validate staging-only configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${STAGING_API_BASE_URL}"
+          test -n "${BUILD_GUIDE_ADMIN_SECRET}"
+          case "${STAGING_API_BASE_URL}" in
+            https://*) ;;
+            *) exit 1 ;;
+          esac
+
+      - name: Run resumable pipeline
+        id: pipeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          pipeline_run_id="gha:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
+          dry_run="true"
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" && "${REPOSITORY_DRY_RUN}" == "false" ]]; then
+            dry_run="false"
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${DISPATCH_DRY_RUN}" == "false" && "${REPOSITORY_DRY_RUN}" == "false" ]]; then
+            dry_run="false"
+          fi
+          trigger="${GITHUB_EVENT_NAME}"
+          response_file="${RUNNER_TEMP}/youtube-guide-summary.json"
+          http_code="$(
+            curl --silent --show-error --max-time 300 \
+              --output "${response_file}" \
+              --write-out "%{http_code}" \
+              --request POST \
+              --header "Authorization: Bearer ${BUILD_GUIDE_ADMIN_SECRET}" \
+              --header "Content-Type: application/json" \
+              --data "{\"pipelineRunId\":\"${pipeline_run_id}\",\"trigger\":\"${trigger}\",\"dryRun\":${dry_run}}" \
+              "${STAGING_API_BASE_URL%/}/api/admin/youtube/pipeline/run"
+          )"
+          test "${http_code}" = "200"
+          node genshin-builder-app/scripts/format-youtube-guide-job-summary.mjs \
+            "${response_file}" \
+            "${GITHUB_STEP_SUMMARY}"

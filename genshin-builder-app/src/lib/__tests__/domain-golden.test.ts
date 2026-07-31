@@ -31,6 +31,8 @@ import type { TalentLevelUpgrade } from "@/lib/talent-progression";
 import { snapTalentLevel } from "@/lib/talent-progression";
 import { getWeaponExpBetweenMarks } from "@/lib/weapon-exp";
 import type { CultivationKind } from "@/types/bookmark";
+import { publicBuildRecommendationSchema } from "@/lib/build-guides/visual-schemas";
+import { publicBuildRecommendationV2Schema } from "@/lib/build-guides/public-v2";
 
 const GOLDEN_PATH = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -300,6 +302,40 @@ describe("domain golden parity (shared/domain-golden)", () => {
           substats: input.substats,
         };
         expect(calcPieceScore(piece, input.type)).toBe(c.expected);
+      });
+    }
+  });
+
+  describe("buildRecommendationCompatibility", () => {
+    for (const c of golden.suites.buildRecommendationCompatibility.cases) {
+      it(c.id, () => {
+        const input = c.input as Record<string, unknown>;
+        const expected = c.expected as {
+          schemaVersion: number;
+          verificationMode: string;
+          availability: string;
+          timestampStart: number;
+        };
+        if (expected.schemaVersion === 1) {
+          const parsed = publicBuildRecommendationSchema.parse(input);
+          expect({
+            schemaVersion: parsed.schemaVersion,
+            verificationMode: "unknown",
+            availability: "unknown",
+            timestampStart: parsed.evidence[0]?.startSeconds,
+          }).toEqual(expected);
+          return;
+        }
+        const parsed = publicBuildRecommendationV2Schema.parse(input);
+        expect({
+          schemaVersion: parsed.schemaVersion,
+          verificationMode:
+            parsed.verificationMode === "automatic_strict"
+              ? "automaticStrict"
+              : "manualReview",
+          availability: parsed.sources[0]?.availability,
+          timestampStart: parsed.evidence[0]?.timestampStart,
+        }).toEqual(expected);
       });
     }
   });

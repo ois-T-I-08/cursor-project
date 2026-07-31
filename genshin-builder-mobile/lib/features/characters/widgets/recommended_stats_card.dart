@@ -109,7 +109,14 @@ class _RecommendationBody extends StatelessWidget {
             const GuideSourceLabel(source: GuideInsightSource.youtube),
             const SizedBox(height: 4),
             Text(
-              '攻略動画の画面内で確認された目安です。公式推奨や最適値ではありません。'
+              '検証: ${recommendation.verificationCaption}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '攻略動画の根拠箇所から確認された目安です。公式推奨や最適値ではありません。'
               '条件付き効果・編成バフは含みません。',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -169,7 +176,11 @@ class _RecommendationBody extends StatelessWidget {
             const SizedBox(height: 8),
             Text('根拠動画', style: theme.textTheme.labelMedium),
             ...recommendation.sources.map((source) {
-              final canOpen = isSafeYoutubeGuideUrl(source.sourceUrl);
+              final unavailable =
+                  source.availability ==
+                  BuildRecommendationSourceAvailability.unavailable;
+              final canOpen =
+                  !unavailable && isSafeYoutubeGuideUrl(source.sourceUrl);
               return ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
@@ -181,7 +192,7 @@ class _RecommendationBody extends StatelessWidget {
                 subtitle: Text(
                   '${source.channelTitle}'
                   '${recommendation.lastVerifiedAt != null ? ' · 確認 ${recommendation.lastVerifiedAt!.toLocal().toIso8601String().split('T').first}' : ''}'
-                  ' · 管理者確認済み',
+                  ' · ${unavailable ? '現在利用不可（公開済みスナップショット）' : recommendation.verificationCaption}',
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -194,28 +205,48 @@ class _RecommendationBody extends StatelessWidget {
               const SizedBox(height: 4),
               Text('動画内で確認', style: theme.textTheme.labelMedium),
               ...recommendation.evidence.take(3).map((e) {
+                BuildRecommendationSource? source;
+                for (final item in recommendation.sources) {
+                  if (item.videoId == e.videoId) {
+                    source = item;
+                    break;
+                  }
+                }
+                final canOpen =
+                    source != null &&
+                    source.availability !=
+                        BuildRecommendationSourceAvailability.unavailable &&
+                    isSafeYoutubeGuideUrl(source.sourceUrl);
                 return Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: InkWell(
-                    onTap: () {
-                      BuildRecommendationSource? source;
-                      for (final item in recommendation.sources) {
-                        if (item.videoId == e.videoId) {
-                          source = item;
-                          break;
-                        }
-                      }
-                      if (source == null ||
-                          !isSafeYoutubeGuideUrl(source.sourceUrl)) {
-                        return;
-                      }
-                      _openUrl(_youtubeAt(source.sourceUrl, e.startSeconds));
-                    },
-                    child: Text(
-                      '${_formatTimestamp(e.startSeconds)} 画面表示「${e.exactVisibleText}」',
-                      style: theme.textTheme.bodySmall,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                  child: Semantics(
+                    enabled: canOpen,
+                    button: canOpen,
+                    label: canOpen ? '根拠動画のタイムスタンプを開く' : '根拠動画は現在利用できません',
+                    child: InkWell(
+                      onTap:
+                          canOpen
+                              ? () => _openUrl(
+                                _youtubeAt(source!.sourceUrl, e.startSeconds),
+                              )
+                              : null,
+                      child: Text(
+                        e.exactVisibleText.isEmpty
+                            ? '${_formatTimestamp(e.startSeconds)} 根拠タイムスタンプ'
+                            : '${_formatTimestamp(e.startSeconds)} 画面表示「${e.exactVisibleText}」',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color:
+                              canOpen
+                                  ? null
+                                  : theme.colorScheme.onSurfaceVariant,
+                          decoration:
+                              canOpen
+                                  ? TextDecoration.underline
+                                  : TextDecoration.none,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 );

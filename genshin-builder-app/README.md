@@ -61,6 +61,7 @@ secret はクライアント bundle、公開 API、ログ、URL、ドキュメ�
 - 管理画面: `http://localhost:3000/admin/guides`
 - 管理 API: `/api/admin/build-guides`（Bearer 認証、サイズ上限、レート制限、fail-closed）
 - 公開おすすめ: `GET /api/build-recommendations/{characterId}`
+- 公開おすすめ v2: `GET /api/v2/build-recommendations/{characterId}`
 - 出典: `GET /api/build-recommendations/{characterId}/sources`
 - 深境螺旋統計: `GET /api/abyss/statistics`
 
@@ -110,6 +111,7 @@ Build Guide は次の境界を追加します。
 | [`DEVELOPMENT_GUIDE.md`](DEVELOPMENT_GUIDE.md) | 実装規約と検証 |
 | [`AI_AGENT_RULES.md`](AI_AGENT_RULES.md) | 変更時の安全ルール |
 | [`docs/BUILD_GUIDE_RECOMMENDATIONS.md`](docs/BUILD_GUIDE_RECOMMENDATIONS.md) | 構造化攻略情報の公開フロー |
+| [`../docs/YOUTUBE_GUIDE_AUTOMATION.md`](../docs/YOUTUBE_GUIDE_AUTOMATION.md) | 自動化、字幕保持、API v2、障害対応 |
 | [`docs/AZA_ABYSS_OPERATIONS.md`](docs/AZA_ABYSS_OPERATIONS.md) | AZA.GG の運用・障害対応 |
 
 ## Windows で Prisma がロックされる場合

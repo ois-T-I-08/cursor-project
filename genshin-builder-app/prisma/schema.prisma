@@ -379,6 +379,11 @@ model GuideVideo {
   privacyStatus    String    @default("unknown")
   metadataHash     String    @default("")
   sourceUrl        String
+  language         String    @default("")
+  discoveredAt     DateTime  @default(now())
+  discoveryReason  String    @default("")
+  availabilityStatus String  @default("available")
+  unavailableSince DateTime?
   analysisStatus   String    @default("pending")
   lastAnalyzedAt   DateTime?
   createdAt        DateTime  @default(now())
@@ -390,6 +395,8 @@ model GuideVideo {
   claims          GuideVisualExtractedClaim[]
   sourceLinks     GuideAnalysisSourceVideo[]
   contributions   RecommendationVisualContribution[]
+  transcripts     GuideTranscript[]
+  pipelineItems   GuidePipelineItem[]
 
   @@index([channelId, publishedAt])
   @@index([analysisStatus])
@@ -432,6 +439,10 @@ model GuideVisualAnalysisResult {
   promptVersion    String
   schemaVersion    String
   gameDataVersion  String
+  inputKind        String   @default("visual")
+  transcriptId     String?
+  transcript       GuideTranscript? @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
+  analysisIdempotencyKey String? @unique
   status           String
   rawAiOutput      String   @default("")
   validatedPayload String   @default("")
@@ -443,6 +454,7 @@ model GuideVisualAnalysisResult {
 
   @@index([videoId, status])
   @@index([status])
+  @@index([transcriptId])
 }
 
 model GuideVisualEvidence {
@@ -549,6 +561,11 @@ model CharacterBuildRecommendation {
   overallConfidence  Float     @default(0)
   notes              String    @default("")
   adminNotes         String    @default("")
+  automationKey      String?   @unique
+  publicationKey     String?   @unique
+  verificationMode  String    @default("manual")
+  qualityScore       Float     @default(0)
+  validationPayload  String    @default("{}")
   publishedAt        DateTime?
   lastVerifiedAt     DateTime?
   createdAt          DateTime  @default(now())
@@ -587,22 +604,34 @@ model GuideRecommendationRevision {
   recommendationId String
   recommendation   CharacterBuildRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
   action           String
+  actionKey        String?  @unique
   actor            String   @default("admin")
+  pipelineRunId    String?
+  publicationKey   String?
+  snapshotHash     String   @default("")
+  etag             String   @default("")
+  validationPayload String  @default("{}")
   beforePayload    String   @default("")
   afterPayload     String   @default("")
   createdAt        DateTime @default(now())
 
   @@index([recommendationId, createdAt])
+  @@index([pipelineRunId])
+  @@index([publicationKey])
 }
 
 model GuideAdminAuditLog {
   id        Int      @id @default(autoincrement())
+  actionKey String?  @unique
+  pipelineRunId String?
+  actor     String   @default("admin")
   action    String
   status    String
   detail    String
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+  @@index([pipelineRunId])
 }
 
 model GuideImportLog {
@@ -629,4 +658,176 @@ model GuideVisualUsageLog {
   @@index([createdAt])
   @@index([channelId, createdAt])
   @@index([videoId, createdAt])
+}
+
+// ============================================================
+// Durable YouTube guide automation pipeline.
+// Transcript text is internal-only and must never be returned by public DTOs.
+// ============================================================
+
+model GuidePipelineRun {
+  id             String    @id @default(cuid())
+  pipelineRunId  String    @unique
+  idempotencyKey String    @unique
+  trigger        String
+  mode           String    @default("dry_run")
+  status         String    @default("running")
+  dryRun         Boolean   @default(true)
+  policyVersion  String
+  policyHash     String
+  summaryPayload String    @default("{}")
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  items  GuidePipelineItem[]
+  events GuidePipelineEvent[]
+
+  @@index([status, startedAt])
+  @@index([createdAt])
+}
+
+model GuidePipelineItem {
+  id                 String    @id @default(cuid())
+  runId              String
+  run                GuidePipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  activeRunId        String    @default("")
+  lastRunId          String    @default("")
+  videoId            String
+  video              GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  characterId        String    @default("")
+  discoveryKey       String    @unique
+  analysisIdempotencyKey String? @unique
+  publicationKey     String?   @unique
+  transcriptId       String?
+  transcript         GuideTranscript? @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
+  status             String    @default("DISCOVERED")
+  resumeStatus       String    @default("")
+  stateVersion       Int       @default(0)
+  leaseOwner         String    @default("")
+  leaseVersion       Int       @default(0)
+  attempts           Int       @default(0)
+  maxAttempts        Int       @default(3)
+  nextRetryAt        DateTime?
+  metadataHash       String    @default("")
+  transcriptHash     String    @default("")
+  analyzerVersion    String    @default("")
+  promptVersion      String    @default("")
+  schemaVersion      String    @default("")
+  blockCode          String    @default("")
+  safeErrorCode      String    @default("")
+  qualityPayload     String    @default("{}")
+  canonicalAnalysisPayload String @default("{}")
+  validationHash     String    @default("")
+  snapshotPayload    String    @default("{}")
+  policyHash         String    @default("")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  events GuidePipelineEvent[]
+
+  @@unique([runId, videoId])
+  @@index([status, nextRetryAt])
+  @@index([videoId, status])
+  @@index([characterId, status])
+  @@index([activeRunId, status])
+  @@index([transcriptId])
+}
+
+model GuidePipelineEvent {
+  id            String    @id @default(cuid())
+  actionKey     String    @unique
+  runId         String
+  run           GuidePipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  itemId        String?
+  item          GuidePipelineItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  actor         String    @default("system:youtube-automation")
+  fromStatus    String    @default("")
+  toStatus      String
+  safeCode      String    @default("")
+  detailPayload String    @default("{}")
+  createdAt     DateTime  @default(now())
+
+  @@index([runId, createdAt])
+  @@index([itemId, createdAt])
+}
+
+model GuideTranscript {
+  id                 String    @id @default(cuid())
+  videoId            String
+  video              GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  identityKey        String    @unique
+  transcriptHash     String    @unique
+  providerId         String
+  language           String
+  trackKind          String
+  sourceTrackId      String    @default("")
+  segmentCount       Int
+  fetchedAt          DateTime
+  retentionExpiresAt DateTime?
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  segments        GuideTranscriptSegment[]
+  analysisResults GuideVisualAnalysisResult[]
+  pipelineItems   GuidePipelineItem[]
+
+  @@unique([videoId, language, transcriptHash])
+  @@index([videoId, fetchedAt])
+  @@index([retentionExpiresAt])
+}
+
+model GuideTranscriptSegment {
+  id              String   @id @default(cuid())
+  transcriptId    String
+  transcript      GuideTranscript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  segmentIndex    Int
+  segmentKey      String   @unique
+  startSeconds    Float
+  durationSeconds Float
+  text            String
+  textHash        String
+  createdAt       DateTime @default(now())
+
+  @@unique([transcriptId, segmentIndex])
+  @@index([transcriptId, startSeconds])
+}
+
+model GuidePipelineLease {
+  lockKey         String   @id
+  leaseOwner      String
+  leaseAcquiredAt DateTime
+  leaseExpiresAt  DateTime
+  leaseVersion    Int      @default(1)
+  updatedAt       DateTime @updatedAt
+
+  @@index([leaseExpiresAt])
+}
+
+model GuideProviderCircuit {
+  providerId      String    @id
+  state           String    @default("closed")
+  failureCount    Int       @default(0)
+  lastErrorCode   String    @default("")
+  openedAt        DateTime?
+  openUntil       DateTime?
+  probeOwner      String    @default("")
+  probeToken      Int       @default(0)
+  probeAcquiredAt DateTime?
+  probeExpiresAt  DateTime?
+  stateVersion    Int       @default(0)
+  updatedAt       DateTime  @updatedAt
+
+  @@index([state, openUntil])
+  @@index([state, probeExpiresAt])
+}
+
+model GuideAutomationControl {
+  id               String   @id
+  emergencyStopped Boolean  @default(false)
+  reason           String   @default("")
+  version          Int      @default(0)
+  updatedAt        DateTime @updatedAt
 }

@@ -442,5 +442,64 @@ void main() {
       expect(find.text('再試行'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('unavailable source disables its evidence timestamp link', (
+      tester,
+    ) async {
+      const recommendation = CharacterBuildRecommendation(
+        characterId: '10000046',
+        label: '動画内推奨目安',
+        origin: BuildRecommendationOrigin.singleVideo,
+        overallConfidence: 0.95,
+        targets: [],
+        substatPriority: [],
+        caveats: [],
+        sources: [
+          BuildRecommendationSource(
+            videoId: 'unavailableVideo',
+            title: '利用不能な動画',
+            channelTitle: 'channel',
+            sourceUrl: 'https://www.youtube.com/watch?v=unavailableVideo',
+            availability: BuildRecommendationSourceAvailability.unavailable,
+          ),
+        ],
+        evidence: [
+          BuildRecommendationEvidence(
+            fieldPath: 'transcript',
+            exactVisibleText: '',
+            videoId: 'unavailableVideo',
+            startSeconds: 20,
+            endSeconds: 25,
+          ),
+        ],
+      );
+      await _pump(
+        tester,
+        overrides: [
+          buildRecommendationProvider(
+            _character.id,
+          ).overrideWith((ref) async => recommendation),
+        ],
+        child: RecommendedStatsCard(
+          characterId: _character.id,
+          currentStats: const {},
+        ),
+      );
+
+      final timestamp = find.text('00:20 根拠タイムスタンプ');
+      expect(timestamp, findsOneWidget);
+      final inkWell = tester.widget<InkWell>(
+        find.ancestor(of: timestamp, matching: find.byType(InkWell)),
+      );
+      expect(inkWell.onTap, isNull);
+      final unavailableSemantics = find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics && widget.properties.label == '根拠動画は現在利用できません',
+      );
+      expect(unavailableSemantics, findsOneWidget);
+      final semantics = tester.widget<Semantics>(unavailableSemantics);
+      expect(semantics.properties.label, '根拠動画は現在利用できません');
+      expect(semantics.properties.enabled, isFalse);
+    });
   });
 }

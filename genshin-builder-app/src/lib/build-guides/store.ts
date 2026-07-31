@@ -35,6 +35,7 @@ import {
   isGenshinTitledVideo,
 } from "./genshin-video-title";
 import { GUIDE_GAME_DATA_VERSION } from "./versions";
+import { getYoutubeAutomationAdminOverview } from "./automation/admin-overview";
 
 async function audit(action: string, status: string, detail: unknown): Promise<void> {
   await prisma.guideAdminAuditLog.create({
@@ -63,7 +64,7 @@ function parseExpectedUpdatedAt(raw: string): Date {
 }
 
 export async function getGuideAdminOverview() {
-  const [channels, videos, jobs, evidences, recommendations, audits] =
+  const [channels, videos, jobs, evidences, recommendations, audits, automation] =
     await Promise.all([
       prisma.guideChannel.findMany({ orderBy: { updatedAt: "desc" }, take: 100 }),
       prisma.guideVideo.findMany({
@@ -92,6 +93,7 @@ export async function getGuideAdminOverview() {
         },
       }),
       prisma.guideAdminAuditLog.findMany({ orderBy: { createdAt: "desc" }, take: 40 }),
+      getYoutubeAutomationAdminOverview(),
     ]);
 
   const evidenceMentions = evidences.map((row) => {
@@ -170,6 +172,7 @@ export async function getGuideAdminOverview() {
       };
     }),
     audits,
+    automation,
     geminiCost: geminiVideoCostHints(),
   };
 }

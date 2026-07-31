@@ -26,7 +26,7 @@ class BackendBuildRecommendationApi {
   Future<CharacterBuildRecommendation?> fetchPublished(
     String characterId,
   ) async {
-    final uri = _uri(characterId);
+    var uri = _uri(characterId, apiVersion: 2);
     http.Response response;
     try {
       response = await _client
@@ -52,6 +52,35 @@ class BackendBuildRecommendationApi {
       );
     }
 
+    // v2 is preferred. A server that predates v2 returns 404, so retry the
+    // unchanged v1 endpoint before treating the recommendation as absent.
+    if (response.statusCode == 404) {
+      uri = _uri(characterId, apiVersion: 1);
+      try {
+        response = await _client
+            .get(
+              uri,
+              headers: const {
+                'Accept': 'application/json',
+                'User-Agent': _userAgent,
+              },
+            )
+            .timeout(timeout);
+      } on TimeoutException {
+        throw const BuildRecommendationException(
+          BuildRecommendationFailure.timeout,
+        );
+      } on http.ClientException {
+        throw const BuildRecommendationException(
+          BuildRecommendationFailure.networkError,
+        );
+      } catch (_) {
+        throw const BuildRecommendationException(
+          BuildRecommendationFailure.networkError,
+        );
+      }
+    }
+
     if (response.bodyBytes.length > _maxResponseBytes) {
       throw const BuildRecommendationException(
         BuildRecommendationFailure.invalidResponse,
@@ -70,7 +99,7 @@ class BackendBuildRecommendationApi {
     return parseBuildRecommendation(_object(decoded['data']));
   }
 
-  Uri _uri(String characterId) {
+  Uri _uri(String characterId, {required int apiVersion}) {
     final trimmed = baseUrl.trim();
     if (trimmed.isEmpty) {
       throw const BuildRecommendationException(
@@ -94,7 +123,8 @@ class BackendBuildRecommendationApi {
       );
     }
     final encoded = Uri.encodeComponent(characterId);
-    return base.resolve('/api/build-recommendations/$encoded');
+    final prefix = apiVersion == 2 ? '/api/v2' : '/api';
+    return base.resolve('$prefix/build-recommendations/$encoded');
   }
 
   void dispose() {
@@ -110,6 +140,12 @@ bool _isLocalDevelopmentHttp(Uri uri) {
 CharacterBuildRecommendation parseBuildRecommendation(
   Map<String, Object?> json,
 ) {
+  final schemaVersion = _optionalInt(json['schemaVersion']) ?? 1;
+  if (schemaVersion != 1 && schemaVersion != 2) {
+    throw const BuildRecommendationException(
+      BuildRecommendationFailure.invalidResponse,
+    );
+  }
   final context = _object(json['context']);
   final targets = <BuildStatTarget>[];
   for (final item in _list(json['targets'], maxLength: 20)) {
@@ -175,6 +211,8 @@ CharacterBuildRecommendation parseBuildRecommendation(
             map['gameVersion'] is String
                 ? (map['gameVersion'] as String).trim()
                 : null,
+        availability: _parseSourceAvailability(map['availability']),
+        unavailableSince: _optionalDate(map['unavailableSince']),
       ),
     );
   }
@@ -196,10 +234,10 @@ CharacterBuildRecommendation parseBuildRecommendation(
         exactVisibleText: _string(map['exactVisibleText'] ?? map['snippet']),
         videoId: _string(map['videoId']),
         startSeconds:
-            _optionalDouble(map['startSeconds']) ??
+            _optionalDouble(map['timestampStart'] ?? map['startSeconds']) ??
             ((_optionalInt(map['startMs']) ?? 0) / 1000),
         endSeconds:
-            _optionalDouble(map['endSeconds']) ??
+            _optionalDouble(map['timestampEnd'] ?? map['endSeconds']) ??
             ((_optionalInt(map['endMs']) ?? 0) / 1000),
       ),
     );
@@ -340,9 +378,11 @@ CharacterBuildRecommendation parseBuildRecommendation(
               : null);
 
   return CharacterBuildRecommendation(
+    schemaVersion: schemaVersion,
     characterId: _string(json['characterId']),
     label: _string(json['label'], fallback: '動画内推奨目安'),
     origin: origin,
+    verificationMode: _parseVerificationMode(json['verificationMode']),
     overallConfidence: _optionalDouble(json['overallConfidence']) ?? 0,
     targets: targets,
     substatPriority: priority,
@@ -372,6 +412,28 @@ CharacterBuildRecommendation parseBuildRecommendation(
                 ? json['gameVersion'] as String
                 : null),
   );
+}
+
+BuildRecommendationVerificationMode _parseVerificationMode(Object? value) {
+  switch (value) {
+    case 'automatic_strict':
+      return BuildRecommendationVerificationMode.automaticStrict;
+    case 'manual_review':
+      return BuildRecommendationVerificationMode.manualReview;
+    default:
+      return BuildRecommendationVerificationMode.unknown;
+  }
+}
+
+BuildRecommendationSourceAvailability _parseSourceAvailability(Object? value) {
+  switch (value) {
+    case 'available':
+      return BuildRecommendationSourceAvailability.available;
+    case 'unavailable':
+      return BuildRecommendationSourceAvailability.unavailable;
+    default:
+      return BuildRecommendationSourceAvailability.unknown;
+  }
 }
 
 GuideArtifactSlot? _parseArtifactSlot(String raw) {

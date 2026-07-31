@@ -13,7 +13,8 @@ type ModuleId =
   | "evidence"
   | "recommendations"
   | "structured"
-  | "merge";
+  | "merge"
+  | "automation";
 
 interface Overview {
   channels: Array<{
@@ -102,6 +103,60 @@ interface Overview {
     adminNotes: string;
   }>;
   audits: Array<{ id: number; action: string; status: string; detail: string }>;
+  automation?: {
+    flags: {
+      enabled: boolean;
+      guideEnabled: boolean;
+      discoveryEnabled: boolean;
+      transcriptEnabled: boolean;
+      analysisEnabled: boolean;
+      geminiAnalysisEnabled: boolean;
+      deepseekAnalysisEnabled: boolean;
+      autoPublishEnabled: boolean;
+      maintenanceEnabled: boolean;
+    };
+    control: {
+      emergencyStopped: boolean;
+      reason: string;
+      version: number;
+      updatedAt: string | null;
+    };
+    runs: Array<{
+      id: string;
+      pipelineRunId: string;
+      trigger: string;
+      mode: string;
+      status: string;
+      dryRun: boolean;
+      policyVersion: string;
+      startedAt: string;
+      completedAt: string | null;
+    }>;
+    items: Array<{
+      id: string;
+      videoId: string;
+      status: string;
+      attempts: number;
+      maxAttempts: number;
+      nextRetryAt: string | null;
+      blockCode: string;
+      safeErrorCode: string;
+      updatedAt: string;
+    }>;
+    circuits: Array<{
+      providerId: string;
+      state: string;
+      failureCount: number;
+      lastErrorCode: string;
+      openUntil: string | null;
+    }>;
+    leases: Array<{
+      lockKey: string;
+      leaseOwner: string;
+      leaseExpiresAt: string;
+      leaseVersion: number;
+    }>;
+  };
   geminiCost?: {
     primaryModel: string;
     discoveryFps: number;
@@ -119,6 +174,7 @@ const MODULES: Array<{ id: ModuleId; label: string }> = [
   { id: "recommendations", label: "推奨詳細" },
   { id: "structured", label: "構造化編集" },
   { id: "merge", label: "統合・矛盾" },
+  { id: "automation", label: "自動化監視" },
 ];
 
 function formatAdminError(error: string | undefined, status?: number): string {
@@ -861,6 +917,94 @@ export default function GuideAdminWorkbench() {
           >
             統合候補を作成
           </button>
+        </section>
+      ) : null}
+
+      {module === "automation" ? (
+        <section className="space-y-4 rounded-xl border border-white/10 bg-[#1e2a3a] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-bold">YouTube 自動化パイプライン</h2>
+              <p className="text-sm text-gray-400">
+                字幕本文・AI prompt・provider response はこの画面へ返しません。
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={!secret || busy}
+                className="rounded border border-red-400/60 px-3 py-2 text-sm text-red-200 disabled:opacity-40"
+                onClick={() =>
+                  void postAction({
+                    action: "setYoutubeAutomationEmergencyStop",
+                    emergencyStopped: true,
+                    reason: "admin emergency stop",
+                  })
+                }
+              >
+                緊急停止
+              </button>
+              <button
+                type="button"
+                disabled={!secret || busy}
+                className="rounded border border-white/20 px-3 py-2 text-sm disabled:opacity-40"
+                onClick={() =>
+                  void postAction({
+                    action: "setYoutubeAutomationEmergencyStop",
+                    emergencyStopped: false,
+                    reason: "admin resumed",
+                  })
+                }
+              >
+                停止解除
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div className="rounded-lg bg-[#151d2a] p-3">
+              <div className="font-medium">安全スイッチ</div>
+              <div className="mt-1 text-gray-400">
+                緊急停止:{" "}
+                {overview?.automation?.control.emergencyStopped ? "ON" : "OFF"} ·
+                version {overview?.automation?.control.version ?? 0}
+              </div>
+              <pre className="mt-2 whitespace-pre-wrap text-xs text-gray-500">
+                {JSON.stringify(overview?.automation?.flags ?? {}, null, 2)}
+              </pre>
+            </div>
+            <div className="rounded-lg bg-[#151d2a] p-3">
+              <div className="font-medium">稼働状況</div>
+              <div className="mt-1 text-gray-400">
+                runs {overview?.automation?.runs.length ?? 0} · items{" "}
+                {overview?.automation?.items.length ?? 0} · active leases{" "}
+                {overview?.automation?.leases.length ?? 0}
+              </div>
+              <ul className="mt-2 space-y-1 text-xs text-gray-500">
+                {(overview?.automation?.circuits ?? []).map((circuit) => (
+                  <li key={circuit.providerId}>
+                    {circuit.providerId}: {circuit.state} · failures{" "}
+                    {circuit.failureCount}
+                    {circuit.lastErrorCode ? ` · ${circuit.lastErrorCode}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-bold">直近 item</h3>
+            <ul className="mt-2 max-h-72 space-y-1 overflow-auto text-xs text-gray-400">
+              {(overview?.automation?.items ?? []).map((item) => (
+                <li key={item.id} className="rounded bg-[#151d2a] px-3 py-2">
+                  {item.videoId} · {item.status} · attempts {item.attempts}/
+                  {item.maxAttempts}
+                  {item.blockCode ? ` · ${item.blockCode}` : ""}
+                  {item.safeErrorCode ? ` · ${item.safeErrorCode}` : ""}
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       ) : null}
 
