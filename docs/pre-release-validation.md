@@ -2,8 +2,8 @@
 
 Target branch: `feature/youtube-build-guide-recommendations`
 Related Draft PR to main: `#25` (remains Draft; not merged by this work)
-Last staging validation: `2026-07-29` (Vercel staging + Neon staging Postgres; **no production mutation**)
-Last local validation: `2026-07-28` (Windows host; **no local Docker/Postgres**; no production mutation)
+Last staging validation: `2026-07-29` (Vercel staging + Neon staging Postgres; **no production mutation**); re-checked `2026-08-01` (kill switches OFF; see notes)
+Last local validation: `2026-08-01` (Windows host; **no local Docker/Postgres**; no production mutation)
 
 Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, Bearer values, DB URLs, Neon project IDs, connection hosts, smoke character IDs, or device account credentials in this file.
 
@@ -108,8 +108,15 @@ Also verified on staging (included in smoke / deploy checks):
 | Production DB backup / rollback | **blocked** — not executed |
 | Production deploy | **blocked** — not executed |
 | Live YouTube / Gemini / DeepSeek | **OFF** (intentional; kill switches remained disabled) |
-| Feature ↔ main merge (abyss #35/#37) | **done locally** — hardened `abyss-aza-ingest-staging.yml` kept from main; push when ready |
+| Feature ↔ main merge (abyss #35/#37) | **done** — hardened `abyss-aza-ingest-staging.yml` from main; pushed on feature |
 | YouTube GHA `actions/checkout` | **fixed on feature** — required for job summary script |
+| Local Web typecheck/lint | **passed** (`2026-08-01`) |
+| Local Vitest | **374 passed / 46 skipped** (DB suites need disposable Postgres) |
+| Local Flutter analyze + guide tests | **passed** (34 focused tests) |
+| Staging `/api/v2/build-recommendations/*` | **404 HTML** — tip not redeployed with feature automation routes |
+| Staging `/api/build-recommendations/*` | **JSON notFound** — route present; no published guide for sample id |
+| Staging YouTube pipeline admin route | **404 HTML** — not on current staging deploy tip |
+| Staging automation migrate (`20260731120000`+) | **not applied** — owner approval required |
 
 ## Go / No-Go
 
