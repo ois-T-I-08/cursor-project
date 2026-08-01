@@ -32,6 +32,10 @@ jobs:
       REPOSITORY_DRY_RUN: ${{ vars.YOUTUBE_AUTOMATION_DRY_RUN }}
       DISPATCH_DRY_RUN: ${{ inputs.dry_run }}
     steps:
+      # Required for format-youtube-guide-job-summary.mjs (never log secrets).
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Validate staging-only configuration
         shell: bash
         run: |

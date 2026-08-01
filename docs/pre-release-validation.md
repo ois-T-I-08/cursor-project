@@ -108,6 +108,8 @@ Also verified on staging (included in smoke / deploy checks):
 | Production DB backup / rollback | **blocked** — not executed |
 | Production deploy | **blocked** — not executed |
 | Live YouTube / Gemini / DeepSeek | **OFF** (intentional; kill switches remained disabled) |
+| Feature ↔ main merge (abyss #35/#37) | **done locally** — hardened `abyss-aza-ingest-staging.yml` kept from main; push when ready |
+| YouTube GHA `actions/checkout` | **fixed on feature** — required for job summary script |
 
 ## Go / No-Go
 
@@ -120,8 +122,8 @@ Also verified on staging (included in smoke / deploy checks):
 
 ## Owner next actions (max 5)
 
-1. Capture / verify staging DB backup or snapshot evidence.
-2. Decide whether to run admin-secret-unset 503 on a disposable staging env (do not strip shared staging secret casually).
-3. Install Docker Desktop or local Postgres 16 for local migrate/smoke.
+1. Capture / verify staging DB backup or snapshot evidence; then apply automation migrations on Neon staging (`20260731120000`+).
+2. Add staging-only YouTube/Gemini/OAuth secrets and stage kill switches per `docs/YOUTUBE_GUIDE_AUTOMATION.md` (start all `false`).
+3. After #25 merges to main, set GitHub staging env vars/secrets and enable GHA gradually (dry-run first).
 4. Provide release keystore only if signed AAB is required next; run device install / migration / theme / notification checks.
 5. Keep PR #25 Draft until production backup/rollback plan and remaining gates are ready.

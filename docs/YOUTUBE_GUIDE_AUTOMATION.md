@@ -177,6 +177,16 @@ job summary は件数と `pipelineRunId` だけで、字幕や provider response
 default branch へ入る前は workflow_dispatch、cron、実 staging provider、
 auto publish を実行済みとは扱いません。
 
+### merge-ready 後の staging 段階導入チェックリスト
+
+コードが default branch に入ったあとも、フラグはすべて `false` のまま開始する。
+
+1. Neon staging に automation migrations（`20260731120000` 以降）を `migrate deploy`
+2. GitHub `environment: staging` に `STAGING_API_BASE_URL` / `STAGING_BUILD_GUIDE_ADMIN_SECRET`、repo var `YOUTUBE_AUTOMATION_ENABLED`（job 解錠用）を用意。schedule はまだ実質 OFF（アプリ flags false）
+3. Vercel staging に staging 専用 provider secrets を登録（チャット・git に書かない）
+4. dry-run → discovery → transcript/analysis → 単一 source auto-publish → maintenance → schedule の順で一段ずつ有効化
+5. 各段で `/admin/guides` の自動化監視と公開 API を確認。問題時は緊急停止 + 全 flags `false`
+
 ## 障害時の手順
 
 1. 管理画面で緊急停止を ON にする。

@@ -4,13 +4,20 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-08-01 — YouTube feature を main 取り込み・merge-ready へ
+
+- **目的:** PR #25（Draft）を main と整合させ、GHA checkout 欠落を直し、ローカル検証まで完走する。本番/フラグ ON はしない。
+- **決定事項:** `origin/main`（abyss ingest #35/#37）を feature へ merge。`abyss-aza-ingest-staging.yml` は main の hardened 版を採用。`youtube-guide-automation.yml` に `actions/checkout@v4` を追加（job summary 用スクリプト必須）。
+- **PR 状態:** #34 は feature へ **MERGED 済み**。#25 は **OPEN/Draft のまま**（Ready/merge しない）。
+- **未完了 / 次回（オーナー）:** staging Neon へ automation migrate（`20260731120000` 以降）適用承認、provider secrets、kill switch 段階 ON、GHA vars、#25 Ready。
+
 ## 2026-07-31 — YouTube自動化PR #34 最終安全監査修正
 
 - **目的:** 最終監査で残ったHIGH 1件（half-open probe固着）とsafety-related MEDIUM 2件（公開済み字幕差分、要約保持期限E2E）をfail-closedで解消。
 - **決定事項:** provider circuit probeをowner/token/acquired/expires/stateVersion付きの期限付きpermitへ変更し、取得・期限切れ再取得・結果反映をCASでフェンスする。`PUBLISHED` / `REVIEW_REQUIRED`も現在字幕を必ず再取得し、metadata/transcript/analyzer/prompt/schema/policyの完全キー一致時だけAIを省略する。run/API/Job Summaryはstrict allowlistのみ。
 - **Migration:** `20260731180000_fence_provider_circuit_probe`をforward-onlyで追加。旧half-open行は即時再取得可能なopenへ戻す。旧`20260731120000_add_youtube_automation_pipeline`は変更せずSHA-256 `7928117E523BD141317073E1C31B34785AB7873988A079DC5FA2BFDEAA8E47AD`を維持。
 - **検証:** Prisma generate/validate、typecheck、lint、Vitest 374成功・DB専用46 skip、Next production build、production dependency audit 0、Flutter analyze 0件・764テスト成功。CI disposable PostgreSQLでmigration upgrade/中断rollback/clean retry、migrate deploy/status、DB全テスト、build、auditがpush/PRとも成功。MobileとWeb/Mobile Golden parityもpush/PRで成功。修正後再監査はBLOCKER 0 / HIGH 0 / safety-related MEDIUM 0、review thread 0件。Flutter契約変更なし。
-- **未完了 / 次回:** PR #34はOPEN/Draft/未マージのまま。staging/production migration、実provider、cron/dispatch、flag有効化は未実施。PR #25は変更しない。
+- **未完了 / 次回（更新）:** PR #34 は feature へ MERGED 済み。staging/production migration、実provider、cron/dispatch、flag有効化は未実施。PR #25 は Draft 維持。
 
 ## 2026-07-30 — gcsim 完全廃止（おすすめ編成は維持）
 
