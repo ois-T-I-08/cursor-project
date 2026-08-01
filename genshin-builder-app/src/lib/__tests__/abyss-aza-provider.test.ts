@@ -37,7 +37,7 @@ describe("AzaAbyssStatisticsProvider", () => {
     });
     expect(options.headers).toMatchObject({
       Accept: "application/json",
-      "User-Agent": expect.stringContaining("GenshinBuilder-Web"),
+      "User-Agent": expect.stringContaining("GenshinBuilder/"),
     });
     expect(options.headers).not.toHaveProperty("Authorization");
   });
@@ -113,7 +113,8 @@ describe("AzaAbyssStatisticsProvider", () => {
   it.each([
     [new UpstreamFetchError("timeout"), "timeout"],
     [new UpstreamFetchError("httpStatus", 429), "rateLimited"],
-    [new UpstreamFetchError("httpStatus", 500), "networkError"],
+    // Non-429 HTTP statuses map to invalidResponse so staging logs can keep http_NNN.
+    [new UpstreamFetchError("httpStatus", 500), "invalidResponse"],
     [new UpstreamFetchError("invalidJson"), "invalidResponse"],
     [new UpstreamFetchError("invalidData"), "invalidResponse"],
   ])("maps upstream failure to %s", async (failure, expectedCode) => {
