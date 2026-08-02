@@ -10,6 +10,7 @@ import '../data/artifact_score/remote_artifact_score_weight_source.dart';
 import '../data/daily_materials/composite_daily_material_schedule_source.dart';
 import '../data/daily_materials/daily_material_schedule_repository.dart';
 import '../data/daily_materials/remote_daily_material_schedule_source.dart';
+import '../data/config/resin_farm_cost_repository.dart';
 import '../data/db/app_database.dart';
 import '../data/sync/master_content_probe.dart';
 import '../data/models/master_models.dart';
@@ -81,6 +82,12 @@ final dailyMaterialScheduleRepositoryProvider =
         ),
       );
     });
+
+final resinFarmCostRepositoryProvider = Provider<ResinFarmCostRepository>((
+  ref,
+) {
+  return ResinFarmCostRepository(LocalJsonResinFarmCostSource());
+});
 
 final masterContentProbeProvider = FutureProvider<MasterContentProbe>((
   ref,

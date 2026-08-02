@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../application/account/build_account_snapshot_use_case.dart';
 import '../application/account/generate_health_report_use_case.dart';
 import '../application/planning/apply_daily_plan_enrichment.dart';
+import '../application/planning/build_deterministic_daily_plan_proposal.dart';
+import '../application/planning/daily_plan_fingerprint.dart';
 import '../application/planning/generate_daily_plan_use_case.dart';
 import '../application/planning/diagnose_investment_use_case.dart';
 import '../application/planning/generate_upgrade_options_use_case.dart';
@@ -11,17 +13,22 @@ import '../application/planning/estimate_upgrade_impact_use_case.dart';
 import '../application/planning/optimize_growth_route_use_case.dart';
 import '../application/planning/generate_team_growth_priority_use_case.dart';
 import '../data/daily_plan/backend_daily_plan_enrich_api.dart';
+import '../data/daily_plan/daily_plan_proposal_store.dart';
 import '../domain/account/account_snapshot.dart';
 import '../domain/account/account_health_report.dart';
 import '../domain/account/snapshot_supplement.dart';
 import '../domain/daily_materials/daily_material_models.dart';
 import '../domain/history/growth_event.dart';
 import '../domain/planning/daily_plan.dart';
+import '../domain/planning/daily_plan_item_key.dart';
+import '../domain/planning/daily_plan_proposal.dart';
 import '../domain/planning/investment_diagnosis.dart';
 import '../domain/planning/upgrade_option.dart';
 import '../domain/planning/growth_route.dart';
 import '../domain/planning/growth_route_request.dart';
 import '../domain/planning/team_growth_priority.dart';
+import '../domain/planning/resin_farm_estimate.dart';
+import '../domain/planning/resin_farm_cost_table.dart';
 import '../domain/team/team_models.dart';
 import '../data/repositories/drift_growth_goal_repository.dart';
 import '../data/repositories/drift_material_inventory_repository.dart';
@@ -32,6 +39,7 @@ import 'app_providers.dart';
 import 'daily_materials_providers.dart';
 import 'hoyolab_providers.dart' show featureFlagsProvider;
 import 'hoyolab_snapshot_providers.dart' show buildSnapshotSupplement;
+import '../application/daily_plan_notifications/daily_plan_user_scope.dart';
 
 final growthGoalRepoProvider = FutureProvider((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);
@@ -94,6 +102,13 @@ final dailyPlanEnrichApiProvider = Provider<BackendDailyPlanEnrichApi>((ref) {
   return api;
 });
 
+final dailyPlanProposalStoreProvider = FutureProvider<DailyPlanProposalStore>((
+  ref,
+) async {
+  final db = await ref.watch(appDatabaseProvider.future);
+  return DailyPlanProposalStore(db);
+});
+
 final dailyPlanProvider = FutureProvider<DailyPlan>((ref) async {
   final flags = await ref.watch(featureFlagsProvider.future);
   if (!flags.enableDailyPlan) {
@@ -101,7 +116,8 @@ final dailyPlanProvider = FutureProvider<DailyPlan>((ref) async {
   }
   final snapshot = await ref.watch(accountSnapshotProvider.future);
   final now = DateTime.now();
-  final weekday = genshinIsoWeekday(now);
+  final gameDate = genshinGameDate(now);
+  final weekday = gameDate.weekday;
 
   DailyMaterialsPlan? materialsPlan;
   try {
@@ -110,26 +126,122 @@ final dailyPlanProvider = FutureProvider<DailyPlan>((ref) async {
     materialsPlan = null;
   }
 
-  final plan = const GenerateDailyPlanUseCase()(
+  final options = <UpgradeOption>[];
+  final goals = [...snapshot.activeGoals]
+    ..sort((a, b) => b.priority.compareTo(a.priority));
+  for (final goal in goals.take(8)) {
+    try {
+      options.addAll(await ref.watch(upgradeOptionsProvider(goal.id).future));
+    } catch (_) {
+      // The existing goal fallback remains available when master data is absent.
+    }
+  }
+
+  var estimatedOptions = options;
+  var weekdayLimitedMaterialIds = <String>{};
+  var availableMaterialIdsToday = <String>{};
+  int? weekdayRunResinCost;
+  int? weeklyBossRunResinCost;
+  try {
+    final schedule =
+        await ref.watch(dailyMaterialScheduleRepositoryProvider).getSchedule();
+    final table = await ref.watch(resinFarmCostRepositoryProvider).getTable();
+    final materials = await ref.watch(materialsMapProvider.future);
+    final materialIndex = schedule.buildMaterialIndex();
+    final categories = {
+      for (final entry in materials.entries) entry.key: entry.value.category,
+    };
+    estimatedOptions = [
+      for (final option in options)
+        option.copyWith(
+          estimatedResinCost: estimateResinCostForUpgradeOption(
+            option: option,
+            table: table,
+            materialIndex: materialIndex,
+            materialCategories: categories,
+          ),
+        ),
+    ];
+    weekdayLimitedMaterialIds = {
+      for (final series in schedule.allSeries)
+        for (final materialId in series.materialIds) materialId,
+    };
+    availableMaterialIdsToday = {
+      for (final series in schedule.seriesForDay(weekday))
+        for (final materialId in series.materialIds) materialId,
+    };
+    weekdayRunResinCost =
+        table.costFor(ResinFarmKind.talentDomain)?.resinPerRun;
+    weeklyBossRunResinCost =
+        table.costFor(ResinFarmKind.weeklyBoss)?.resinPerRun;
+  } catch (_) {
+    // Missing optional estimate data must not hide the deterministic plan.
+  }
+
+  var bookmarkedCharacterIds = <String>{};
+  try {
+    final bookmarks = await ref.watch(bookmarkRepositoryProvider.future);
+    bookmarkedCharacterIds =
+        (await bookmarks.getAll())
+            .map((bookmark) => bookmark.characterId)
+            .whereType<String>()
+            .where((id) => id.isNotEmpty)
+            .toSet();
+  } catch (_) {
+    // Bookmark facts are optional.
+  }
+
+  return const GenerateDailyPlanUseCase()(
     userId: snapshot.userId,
     snapshot: snapshot,
-    date: now,
+    date: gameDate,
     weekday: weekday,
     materialsPlan: materialsPlan,
+    upgradeOptions: estimatedOptions,
+    weekdayLimitedMaterialIds: weekdayLimitedMaterialIds,
+    availableMaterialIdsToday: availableMaterialIdsToday,
+    bookmarkedCharacterIds: bookmarkedCharacterIds,
+    weekdayRunResinCost: weekdayRunResinCost,
+    weeklyBossRunResinCost: weeklyBossRunResinCost,
     generatedAt: now,
   );
+});
 
+final dailyPlanProposalProvider = FutureProvider.family<DailyPlanProposal, int>(
+  (ref, generation) async {
+    final plan = await ref.watch(dailyPlanProvider.future);
+    if (plan.items.isEmpty) {
+      return buildDeterministicDailyPlanProposal(plan);
+    }
+
+    try {
+      final proposal = await ref
+          .watch(dailyPlanEnrichApiProvider)
+          .suggest(
+            plan: plan,
+            weekday: plan.date.weekday,
+            clientScope: dailyPlanSafeUserScope(plan.userId),
+            force: generation > 0,
+          );
+      return proposal ?? buildDeterministicDailyPlanProposal(plan);
+    } catch (_) {
+      return buildDeterministicDailyPlanProposal(plan);
+    }
+  },
+);
+
+/// Base plan plus a user-adopted, still-current validated proposal.
+final adoptedDailyPlanProvider = FutureProvider<DailyPlan>((ref) async {
+  final plan = await ref.watch(dailyPlanProvider.future);
   if (plan.items.isEmpty) return plan;
-
-  try {
-    final enrichment = await ref
-        .watch(dailyPlanEnrichApiProvider)
-        .enrich(plan: plan, weekday: weekday);
-    if (enrichment == null) return plan;
-    return applyDailyPlanEnrichment(plan, enrichment);
-  } catch (_) {
-    return plan;
-  }
+  final store = await ref.watch(dailyPlanProposalStoreProvider.future);
+  final proposal = await store.read(
+    userScope: dailyPlanSafeUserScope(plan.userId),
+    localDate: formatLocalDate(plan.date),
+    planFingerprint: dailyPlanFingerprint(plan),
+    plan: plan,
+  );
+  return proposal == null ? plan : applyDailyPlanProposal(plan, proposal);
 });
 
 // ── Diagnosis (family) ────────────────────────────────────────────

@@ -266,12 +266,32 @@ Flutter → GET /api/abyss/statistics
 | `GET /api/abyss/statistics` | Flutter 向け深境螺旋統計 DTO | DB 6h TTL + stale fallback |
 | `POST /api/team-recommendations` | 正規化済み戦闘DTOから推薦Jobを作成 | 同一request hashを再利用 |
 | `GET /api/team-recommendations/jobs/{jobId}` | Job状態・推薦結果 | `no-store` |
+| `POST /api/daily-plan/enrich` | Flutter の構造化済み候補を今日の優先タスクへ絞り込む | process-local 15分 + `no-store` |
 
 ### 6. 編成推薦（AZA / ルール）
 
 FlutterはHoYoLAB情報を端末内で`SimulationBuildSnapshot`へ縮約し、Cookie、UID、アカウント情報、未加工レスポンスを送信しない。Next.jsは`TeamCandidateGenerator`でAZA.GG実績、共起、元素・役割ルールを統合し、最大20候補だけを評価する。
 
 **gcsim は廃止済み**である。Config生成・固定バイナリ・シミュレーションcache・DPS推定は存在しない。クライアントConfig、command、pathはAPI検証で拒否する。詳細は`docs/TEAM_RECOMMENDATION.md`を参照。
+
+### 7. 今日やること AI 提案
+
+Flutter は既存の `GenerateDailyPlanUseCase` で、曜日素材・週ボス・育成目標・突破・天賦・武器候補を通常コードだけで最大20件へ絞る。送信するのは候補ID、種別、関連ID、数値進捗、樹脂・時間見積、当日入手可否、ブックマーク有無、短い構造化理由だけである。HoYoLAB Cookie、UID、未加工レスポンス、自由入力原文は送らない。
+
+```
+Flutter Today screen
+  → deterministic candidates（目安10〜20件、上限20件）
+  → POST /api/daily-plan/enrich
+      → strict Zod validation + rate limit
+      → DeepSeekJsonClient（共通timeout/retry/model allowlist）
+      → strict JSON validation
+      → deterministic allowlist/dedupe/availability/resin/time validation
+      → validated proposal or deterministic fallback
+  → 画面内で出典・根拠を表示
+  → ユーザーが「この提案を採用」で明示確定
+```
+
+DeepSeek は `DEEPSEEK_ENABLED=true` かつ `DEEPSEEK_DAILY_PLAN_ENABLED=true` のときだけ呼ぶ。キー・モデル・timeout・再試行は共通の `DEEPSEEK_API_KEY`、`DEEPSEEK_MODEL`、`DEEPSEEK_TIMEOUT_MS`、`DEEPSEEK_MAX_ATTEMPTS` を再利用する。入力キャッシュキーは匿名化済み端末スコープ、日付、候補・進捗・樹脂状態、prompt/rules/model版を含む。AI原文は保存せず、キャッシュ対象は最終検証済み提案と安全なメタデータだけとする。DBモデルとマイグレーションは追加しない。
 
 ---
 
@@ -296,6 +316,7 @@ Server Component (page)
 |----|------|
 | `lib/api/*` | try/catch → `null` or 空配列。console.error |
 | `lib/api/abyss/*` | typed error code。本文・秘密・内部例外をログやレスポンスへ出さない |
+| `lib/daily-plan/*` | AI失敗・無効化時は決定論的提案へ戻す。AI原文・秘密・内部例外を返却・保存しない |
 | `repository/*` | try/catch → 空/ダミー。画面を落とさない |
 | `sync*` | `Promise.allSettled` + errors 配列。部分成功を許容 |
 | `actions/*` | `{ ok: boolean }` を返す |
@@ -309,11 +330,11 @@ Server Component (page)
 |------|------|
 | 樹脂タイマー | 未実装 |
 | 素材自動計算 | 部分実装（詳細画面の必要素材表示） |
-| 曜日別素材表示 | 未実装 |
+| 曜日別素材表示 | Flutterで実装済み。今日の提案候補にも再利用 |
 | 聖遺物管理強化 | 基本入力のみ |
 | チーム編成 | 未実装 |
 | ガチャ履歴 | 未実装 |
-| デイリー・週ボス管理 | 未実装 |
+| デイリー・週ボス管理 | Flutterの「今日やること」で提案・完了管理を実装済み |
 | Enka.Network 連携 | 未実装 |
 | PWA / 通知 | 未実装 |
 | Google ログイン | `user.ts` / settings に言及 |

@@ -8,6 +8,7 @@ class DailyPlan {
     this.items = const [],
     this.currentResin,
     this.maxResin,
+    this.availableMinutes,
     this.confidence = RecommendationConfidence.unknown,
     this.completeness = DataCompleteness.unavailable,
     this.missingData = const [],
@@ -20,6 +21,7 @@ class DailyPlan {
   final List<DailyPlanItem> items;
   final int? currentResin;
   final int? maxResin;
+  final int? availableMinutes;
   final RecommendationConfidence confidence;
   final DataCompleteness completeness;
   final List<MissingData> missingData;
@@ -28,11 +30,31 @@ class DailyPlan {
 
   bool get isEmpty => items.isEmpty;
   List<DailyPlanItem> get topItems => items.take(3).toList();
+
+  DailyPlan copyWith({List<DailyPlanItem>? items, String? ruleVersion}) {
+    return DailyPlan(
+      userId: userId,
+      date: date,
+      items: items ?? this.items,
+      currentResin: currentResin,
+      maxResin: maxResin,
+      availableMinutes: availableMinutes,
+      confidence: confidence,
+      completeness: completeness,
+      missingData: missingData,
+      generatedAt: generatedAt,
+      ruleVersion: ruleVersion ?? this.ruleVersion,
+    );
+  }
 }
 
 enum DailyPlanItemType {
   weekdayMaterial,
   weeklyBoss,
+  characterLevel,
+  characterAscension,
+  talent,
+  weapon,
   growthGoal,
   generalMaterial,
 }
@@ -48,6 +70,12 @@ class DailyPlanItem {
     this.characterIds = const [],
     this.materialIds = const [],
     this.estimatedResinCost,
+    this.estimatedMinutes,
+    this.currentLevel,
+    this.targetLevel,
+    this.availableToday = true,
+    this.requiresResin = false,
+    this.bookmarked = false,
     this.reasons = const [],
     this.confidence = RecommendationConfidence.medium,
     this.missingData = const [],
@@ -62,7 +90,36 @@ class DailyPlanItem {
   final List<String> characterIds;
   final List<String> materialIds;
   final int? estimatedResinCost;
+  final int? estimatedMinutes;
+  final int? currentLevel;
+  final int? targetLevel;
+  final bool availableToday;
+  final bool requiresResin;
+  final bool bookmarked;
   final List<String> reasons;
   final RecommendationConfidence confidence;
   final List<MissingData> missingData;
+
+  DailyPlanItem copyWith({int? priority, List<String>? reasons}) {
+    return DailyPlanItem(
+      id: id,
+      type: type,
+      title: title,
+      description: description,
+      priority: priority ?? this.priority,
+      relatedGoalId: relatedGoalId,
+      characterIds: characterIds,
+      materialIds: materialIds,
+      estimatedResinCost: estimatedResinCost,
+      estimatedMinutes: estimatedMinutes,
+      currentLevel: currentLevel,
+      targetLevel: targetLevel,
+      availableToday: availableToday,
+      requiresResin: requiresResin,
+      bookmarked: bookmarked,
+      reasons: reasons ?? this.reasons,
+      confidence: confidence,
+      missingData: missingData,
+    );
+  }
 }

@@ -1,72 +1,40 @@
 import '../../domain/planning/daily_plan.dart';
+import '../../domain/planning/daily_plan_proposal.dart';
 
-/// Server-side enrichment result (reorder + Japanese reasons only).
-class DailyPlanEnrichment {
-  const DailyPlanEnrichment({
-    required this.orderedItemIds,
-    this.reasonsByItemId = const {},
-    this.enriched = false,
-    this.model,
-  });
-
-  final List<String> orderedItemIds;
-  final Map<String, List<String>> reasonsByItemId;
-  final bool enriched;
-  final String? model;
-}
-
-/// Applies allowlisted reorder + reason overrides. Unknown IDs are ignored;
-/// any local items missing from the server order are appended unchanged.
-DailyPlan applyDailyPlanEnrichment(
-  DailyPlan plan,
-  DailyPlanEnrichment enrichment,
-) {
-  if (!enrichment.enriched || enrichment.orderedItemIds.isEmpty) {
-    return plan;
-  }
+/// Applies a validated proposal to the existing local plan.
+///
+/// Item IDs and semantic completion keys stay unchanged. Unknown or duplicate
+/// IDs are ignored, and generation alone never mutates progress or goals.
+DailyPlan applyDailyPlanProposal(DailyPlan plan, DailyPlanProposal proposal) {
+  if (proposal.recommendations.isEmpty) return plan;
 
   final byId = {for (final item in plan.items) item.id: item};
   final seen = <String>{};
   final ordered = <DailyPlanItem>[];
 
-  for (final id in enrichment.orderedItemIds) {
-    final item = byId[id];
-    if (item == null || !seen.add(id)) continue;
-    final reasons = enrichment.reasonsByItemId[id];
-    ordered.add(
-      reasons == null || reasons.isEmpty
-          ? item
-          : DailyPlanItem(
-            id: item.id,
-            type: item.type,
-            title: item.title,
-            description: item.description,
-            priority: item.priority,
-            relatedGoalId: item.relatedGoalId,
-            characterIds: item.characterIds,
-            materialIds: item.materialIds,
-            estimatedResinCost: item.estimatedResinCost,
-            reasons: reasons.take(4).toList(),
-            confidence: item.confidence,
-            missingData: item.missingData,
-          ),
-    );
+  for (final recommendation in proposal.recommendations) {
+    final item = byId[recommendation.taskId];
+    if (item == null || !seen.add(item.id) || !item.availableToday) continue;
+    ordered.add(item.copyWith(reasons: [recommendation.reason]));
   }
 
+  final deferred = proposal.deferredTaskIds.toSet();
   for (final item in plan.items) {
-    if (seen.add(item.id)) ordered.add(item);
+    if (!deferred.contains(item.id) && seen.add(item.id)) ordered.add(item);
+  }
+  for (final item in plan.items) {
+    if (deferred.contains(item.id) && seen.add(item.id)) ordered.add(item);
   }
 
-  return DailyPlan(
-    userId: plan.userId,
-    date: plan.date,
+  return plan.copyWith(
     items: ordered,
-    currentResin: plan.currentResin,
-    maxResin: plan.maxResin,
-    confidence: plan.confidence,
-    completeness: plan.completeness,
-    missingData: plan.missingData,
-    generatedAt: plan.generatedAt,
-    ruleVersion: '${plan.ruleVersion}+ds',
+    ruleVersion:
+        '${plan.ruleVersion}+${proposal.isAiGenerated ? 'ai' : 'rules'}',
   );
 }
+
+@Deprecated('Use applyDailyPlanProposal')
+DailyPlan applyDailyPlanEnrichment(
+  DailyPlan plan,
+  DailyPlanProposal proposal,
+) => applyDailyPlanProposal(plan, proposal);

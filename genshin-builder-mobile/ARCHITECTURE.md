@@ -349,3 +349,13 @@ pigeon                   # dev — ネイティブ Cookie 取得
 `application/team_recommendations/normalize_simulation_builds.dart`がHoYoLAB detailを端末内で戦闘DTOへ縮約する。Cookie、UID、アカウント情報、未加工レスポンスは型に存在せず、`BackendTeamRecommendationApi`へ渡らない。聖遺物の安定したsetIdをGame Recordから取得できない場合はセット名から推測せず、空のsetsと`partial` / `artifactSets`を送る。
 
 `TeamRecommendationController`はPOSTでJobを作成し、GETを2秒間隔・最大6分の有限回pollingする。画面破棄後または新しい計算開始後は古いresponseをstateへ反映せず、次のpollingを行わない。queued/running中は計算ボタンを無効化する。UIはqueued/running/completed/failed/expired、再試行、所持キャラ、上半/下半、単体/複数、評価方針、入力品質、ローテーション信頼度、AZA.GGクレジットを表示する。おすすめ編成はAZA/ルール候補のみ（gcsim廃止）。既存の編成保存や深境螺旋画面とは独立する。
+
+---
+
+## 13. 今日やること AI 提案
+
+`GenerateDailyPlanUseCase` は既存の曜日素材、週ボス、育成目標、`UpgradeOption`、樹脂見積、ブックマークを統合し、通常コードだけで最大20件の安定ID付き候補を作る。`BackendDailyPlanEnrichApi` は匿名化済みスコープと必要最小限の構造化フィールドだけを同一バックエンドの `POST /api/daily-plan/enrich` へ送り、Cookie、UID、未加工HoYoLABレスポンスを送らない。
+
+サーバー応答は未知フィールド、未知・重複ID、当日実行不可、樹脂・時間超過、Markdown/HTML/URLを拒否する。通信失敗、AI無効、検証失敗時は `buildDeterministicDailyPlanProposal` が同じ候補から通常ルールで提案する。
+
+提案は既存の `DailyPlanScreen` 内で出典、上位1〜5件、短い根拠、再生成、閉じる、採用を表示する。生成だけでは進捗・目標・完了状態を変更しない。明示採用後だけ、検証済み提案を既存 `app_settings` へ日付・匿名スコープ・plan fingerprint付きで保存し、既存の `DailyPlanItem` IDと完了キーを維持したまま並びと理由へ反映する。候補、進捗、樹脂、日付、rules版が変われば採用済み提案は自動的に無効になる。DBマイグレーションは不要。

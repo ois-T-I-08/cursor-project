@@ -2,6 +2,13 @@
 
 セッションごとの設計判断ログ。重要な決定のみ追記する。
 
+## 2026-08-02 — 「今日やること」AI優先タスク提案
+
+- 既存`DailyPlanScreen`、`DailyPlan`、`DailyPlanItem`、`UpgradeOption`、曜日素材、樹脂見積、ブックマーク、安定した完了キーを再利用し、通常コードで安定ID付き候補を上限20件へ絞る。
+- 同一Next.jsバックエンドへ匿名化スコープと必要最小限の構造化DTOだけを送る。Cookie、UID、未加工HoYoLABレスポンスは送らず、HTTPS必須（localhost/loopback/emulatorのみHTTP許可）。応答は未知フィールド、未知/重複ID、当日不可、樹脂/時間超過、危険な表示文字列を拒否する。
+- AI無効・通信・検証失敗時はローカル通常ルールへ戻す。画面に出典、上位1〜5件、短い根拠、警告、再生成、採用、閉じるを追加。採用前は既存状態を変更せず、採用後だけ検証済み提案を既存`app_settings`へ日付・匿名スコープ・plan fingerprint付きで保存する。DB migrationなし。
+- 検証: Flutter analyze 0件、全776テスト成功。セキュリティ自己監査はBLOCKER/HIGH/MEDIUMなし。実バックエンド疎通と実機UI確認はデプロイ時に実施。
+
 ## 2026-07-30 — gcsim 完全廃止（おすすめ編成は維持）
 
 - gcsim クレジット・DPS・`result.gcsim` パースを削除。AZA/ルール推薦 UI と Job polling は維持。

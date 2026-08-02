@@ -15,6 +15,7 @@ import 'package:genshin_builder_mobile/application/account/generate_health_repor
 import 'package:genshin_builder_mobile/domain/daily_materials/daily_material_models.dart';
 import 'package:genshin_builder_mobile/domain/models/master_models.dart';
 import 'package:genshin_builder_mobile/domain/planning/daily_plan.dart';
+import 'package:genshin_builder_mobile/domain/planning/daily_plan_proposal.dart';
 
 // Test helper: build a minimal AccountSnapshot
 AccountSnapshot _testSnapshot({
@@ -168,11 +169,11 @@ void main() {
     });
 
     test('weekday materials become high-priority items', () {
-      final materialsPlan = DailyMaterialsPlan(
+      const materialsPlan = DailyMaterialsPlan(
         weekday: 2,
         talentCards: [
           DailyMaterialSeriesCardData(
-            series: const DailyMaterialSeries(
+            series: DailyMaterialSeries(
               id: 'freedom',
               name: '「自由」',
               region: 'Mondstadt',
@@ -180,7 +181,7 @@ void main() {
               days: [2, 5],
               materialIds: ['m1'],
             ),
-            materials: const [
+            materials: [
               MasterMaterial(
                 id: 'm1',
                 name: '「自由」の導き',
@@ -193,7 +194,7 @@ void main() {
                 key: 'chars',
                 label: 'キャラ',
                 consumers: [
-                  const DailyMaterialConsumer(
+                  DailyMaterialConsumer(
                     id: '10000002',
                     name: 'Ayaka',
                     remainingStatus: DailyRemainingStatus.needed,
@@ -203,11 +204,11 @@ void main() {
                 ],
               ),
             ],
-            remainingByMaterialId: const {'m1': 12},
-            nextStageByMaterialId: const {'m1': 3},
+            remainingByMaterialId: {'m1': 12},
+            nextStageByMaterialId: {'m1': 3},
           ),
         ],
-        weaponCards: const [],
+        weaponCards: [],
       );
       final plan = const GenerateDailyPlanUseCase()(
         userId: 'test',
@@ -219,11 +220,11 @@ void main() {
       expect(plan.items, isNotEmpty);
       expect(plan.items.first.type, DailyPlanItemType.weekdayMaterial);
       expect(plan.items.first.characterIds, contains('10000002'));
-      expect(plan.ruleVersion, '2');
+      expect(plan.ruleVersion, '3');
     });
   });
 
-  group('applyDailyPlanEnrichment', () {
+  group('applyDailyPlanProposal', () {
     test('reorders and overrides reasons for allowlisted ids', () {
       final plan = DailyPlan(
         userId: 'test',
@@ -246,20 +247,36 @@ void main() {
           ),
         ],
       );
-      final next = applyDailyPlanEnrichment(
+      final next = applyDailyPlanProposal(
         plan,
-        const DailyPlanEnrichment(
-          orderedItemIds: ['b', 'invented', 'a'],
-          reasonsByItemId: {
-            'b': ['樹脂に余裕があるので週ボス'],
-          },
-          enriched: true,
-          model: 'deepseek-v4-flash',
+        DailyPlanProposal(
+          summary: '週ボスを優先',
+          recommendations: const [
+            DailyPlanRecommendation(
+              taskId: 'b',
+              priority: 1,
+              reason: '樹脂に余裕があるので週ボス',
+              suggestedMinutes: 30,
+            ),
+            DailyPlanRecommendation(
+              taskId: 'invented',
+              priority: 2,
+              reason: '無視される候補',
+              suggestedMinutes: 20,
+            ),
+          ],
+          deferredTaskIds: const [],
+          warnings: const [],
+          source: DailyPlanRecommendationSource.deepseek,
+          generatedAt: DateTime(2026, 7, 14),
+          inputHash:
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          modelIdentifier: 'deepseek-v4-flash',
         ),
       );
       expect(next.items.map((e) => e.id).toList(), ['b', 'a']);
       expect(next.items.first.reasons.first, contains('週ボス'));
-      expect(next.ruleVersion, '2+ds');
+      expect(next.ruleVersion, '2+ai');
     });
 
     test('ignores enrichment when not enriched', () {
@@ -274,11 +291,23 @@ void main() {
           ),
         ],
       );
-      final next = applyDailyPlanEnrichment(
+      final next = applyDailyPlanProposal(
         plan,
-        const DailyPlanEnrichment(orderedItemIds: ['a'], enriched: false),
+        DailyPlanProposal(
+          summary: '候補なし',
+          recommendations: const [],
+          deferredTaskIds: const ['a'],
+          warnings: const [],
+          source: DailyPlanRecommendationSource.deterministicFallback,
+          generatedAt: DateTime(2026, 7, 14),
+          inputHash:
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        ),
       );
-      expect(identical(next, plan) || next.ruleVersion == plan.ruleVersion, isTrue);
+      expect(
+        identical(next, plan) || next.ruleVersion == plan.ruleVersion,
+        isTrue,
+      );
       expect(next.items.single.id, 'a');
     });
   });

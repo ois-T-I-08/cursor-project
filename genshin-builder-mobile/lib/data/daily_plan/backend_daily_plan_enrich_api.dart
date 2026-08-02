@@ -3,11 +3,13 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../../application/planning/apply_daily_plan_enrichment.dart';
 import '../../domain/planning/daily_plan.dart';
+import '../../domain/planning/daily_plan_proposal.dart';
+import '../../domain/planning/daily_plan_item_key.dart';
+import 'daily_plan_proposal_codec.dart';
 
-/// Optional DeepSeek reorder/reason enrich for a local rule-based [DailyPlan].
-/// Fail-closed: callers should keep the local plan on any error.
+/// Fetches an optional server-side DeepSeek proposal for local candidates.
+/// Fail-closed: callers retain their deterministic local plan on every error.
 class BackendDailyPlanEnrichApi {
   BackendDailyPlanEnrichApi({
     required this.baseUrl,
@@ -22,36 +24,47 @@ class BackendDailyPlanEnrichApi {
   final bool _ownsClient;
 
   static const _maxResponseBytes = 128 * 1024;
-  static const _userAgent = 'genshin-builder-mobile/0.1 (daily-plan-enrich)';
+  static const _userAgent = 'genshin-builder-mobile/0.1 (daily-plan)';
 
   void dispose() {
     if (_ownsClient) _client.close();
   }
 
-  Future<DailyPlanEnrichment?> enrich({
+  Future<DailyPlanProposal?> suggest({
     required DailyPlan plan,
     required int weekday,
+    required String clientScope,
+    bool force = false,
   }) async {
-    final trimmed = baseUrl.trim();
-    if (trimmed.isEmpty || plan.items.isEmpty) return null;
-
-    final uri = Uri.parse('$trimmed/api/daily-plan/enrich');
+    if (plan.items.isEmpty) return null;
+    final uri = _endpoint();
+    if (uri == null) return null;
     final body = jsonEncode({
+      'clientScope': clientScope,
+      'date': formatLocalDate(plan.date),
+      'timezone': _timezoneLabel(DateTime.now().timeZoneOffset),
       'weekday': weekday,
       'currentResin': plan.currentResin,
       'maxResin': plan.maxResin,
-      'items': [
-        for (final item in plan.items.take(12))
+      'availableMinutes': plan.availableMinutes,
+      'force': force,
+      'candidates': [
+        for (final item in plan.items.take(20))
           {
-            'id': item.id,
+            'taskId': item.id,
             'type': item.type.name,
             'title': item.title,
-            'priority': item.priority,
-            'reasons': item.reasons,
-            'characterIds': item.characterIds,
-            'materialIds': item.materialIds,
-            if (item.estimatedResinCost != null)
-              'estimatedResinCost': item.estimatedResinCost,
+            'characterIds': item.characterIds.take(8).toList(),
+            'materialIds': item.materialIds.take(16).toList(),
+            'currentLevel': item.currentLevel,
+            'targetLevel': item.targetLevel,
+            'estimatedResinCost': item.estimatedResinCost,
+            'estimatedMinutes': item.estimatedMinutes,
+            'availableToday': item.availableToday,
+            'requiresResin': item.requiresResin,
+            'bookmarked': item.bookmarked,
+            'existingPriority': item.priority,
+            'reasonFacts': item.reasons.take(8).toList(),
           },
       ],
     });
@@ -77,41 +90,47 @@ class BackendDailyPlanEnrichApi {
       return null;
     }
 
-    if (response.statusCode != 200) return null;
-    if (response.bodyBytes.length > _maxResponseBytes) return null;
+    if (response.statusCode != 200 ||
+        response.bodyBytes.length > _maxResponseBytes) {
+      return null;
+    }
 
     try {
       final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-      if (decoded is! Map<String, dynamic>) return null;
-      if (decoded['ok'] != true) return null;
-      final data = decoded['data'];
-      if (data is! Map<String, dynamic>) return null;
-
-      final orderedRaw = data['orderedItemIds'];
-      if (orderedRaw is! List) return null;
-      final orderedItemIds =
-          orderedRaw.map((e) => '$e').where((e) => e.isNotEmpty).toList();
-
-      final reasonsRaw = data['reasonsByItemId'];
-      final reasonsByItemId = <String, List<String>>{};
-      if (reasonsRaw is Map) {
-        for (final entry in reasonsRaw.entries) {
-          final key = '${entry.key}';
-          final value = entry.value;
-          if (value is! List) continue;
-          reasonsByItemId[key] =
-              value.map((e) => '$e'.trim()).where((e) => e.isNotEmpty).take(4).toList();
-        }
+      if (decoded is! Map) return null;
+      final envelope = Map<String, dynamic>.from(decoded);
+      if (envelope.length != 2 ||
+          !envelope.keys.every(const {'ok', 'data'}.contains) ||
+          envelope['ok'] != true ||
+          envelope['data'] == null) {
+        return null;
       }
-
-      return DailyPlanEnrichment(
-        orderedItemIds: orderedItemIds,
-        reasonsByItemId: reasonsByItemId,
-        enriched: data['enriched'] == true,
-        model: data['model'] is String ? data['model'] as String : null,
-      );
+      return parseDailyPlanProposal(envelope['data'], plan: plan);
     } catch (_) {
       return null;
     }
   }
+
+  String _timezoneLabel(Duration offset) {
+    final sign = offset.isNegative ? '-' : '+';
+    final absolute = offset.abs();
+    final hours = absolute.inHours.toString().padLeft(2, '0');
+    final minutes = (absolute.inMinutes % 60).toString().padLeft(2, '0');
+    return 'UTC$sign$hours:$minutes';
+  }
+
+  Uri? _endpoint() {
+    final base = Uri.tryParse(baseUrl.trim());
+    if (base == null ||
+        !base.hasAuthority ||
+        base.userInfo.isNotEmpty ||
+        (base.scheme != 'https' && !_isLocalDevelopmentHttp(base))) {
+      return null;
+    }
+    return base.resolve('/api/daily-plan/enrich');
+  }
 }
+
+bool _isLocalDevelopmentHttp(Uri uri) =>
+    uri.scheme == 'http' &&
+    const {'localhost', '127.0.0.1', '::1', '10.0.2.2'}.contains(uri.host);
