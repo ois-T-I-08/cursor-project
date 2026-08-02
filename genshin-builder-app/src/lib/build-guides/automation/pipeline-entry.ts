@@ -49,6 +49,17 @@ export async function runDefaultYoutubeGuidePipeline(input: {
         ...STAT_KEYS,
       ]);
     },
+    loadKnownEntities: async () => {
+      const [weapons, artifactSets] = await Promise.all([
+        prisma.weapon.findMany({ select: { id: true, name: true } }),
+        fetchArtifactSets(),
+      ]);
+      return [
+        ...weapons.map(({ id, name }) => ({ id, name })),
+        ...artifactSets.map(({ id, name }) => ({ id, name })),
+        ...STAT_KEYS.map((id) => ({ id, name: id })),
+      ];
+    },
   });
   if (!flags.enabled || !flags.maintenanceEnabled || input.dryRun) {
     return summary;

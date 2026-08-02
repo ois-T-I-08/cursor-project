@@ -1,3 +1,4 @@
+import { numberInNormalizedVisibleText } from "./ocr-text-normalize";
 import { PUBLISHABLE_PURPOSES, type VideoVisualAnalysisResult } from "./visual-schemas";
 
 export class VisualValidationError extends Error {
@@ -101,7 +102,7 @@ export function validateVisualAnalysisResult(input: {
       if (stat.purpose === "unknown") continue;
       if (stat.confidence < MIN_CONFIDENCE) continue;
       if (
-        !numberInVisibleText(stat.exactVisibleText, [
+        !numberInNormalizedVisibleText(stat.exactVisibleText, [
           stat.minimum,
           stat.recommended,
           stat.maximum,
@@ -138,18 +139,37 @@ export function validateVisualAnalysisResult(input: {
       publishableStatValues.push(stat);
     }
 
+    const gearMentions =
+      evidence.weaponMentions.length + evidence.artifactSetMentions.length;
+    const mentionOnlyOk =
+      publishableStatValues.length === 0 &&
+      gearMentions > 0 &&
+      evidence.confidence >= MIN_CONFIDENCE &&
+      (evidence.evidenceType === "weapon_screen" ||
+        evidence.evidenceType === "artifact_screen" ||
+        evidence.evidenceType === "comparison_table" ||
+        evidence.evidenceType === "build_summary_slide" ||
+        evidence.evidenceType === "recommendation_table");
+    const validated =
+      publishableStatValues.length > 0 || mentionOnlyOk;
+
     out.push({
       startSeconds: evidence.startSeconds,
       endSeconds: evidence.endSeconds,
       evidenceType: evidence.evidenceType,
       exactVisibleText: evidence.visibleTexts[0]?.text?.slice(0, 200) ??
         evidence.statValues[0]?.exactVisibleText?.slice(0, 200) ??
+        evidence.weaponMentions[0]?.exactVisibleText?.slice(0, 200) ??
+        evidence.artifactSetMentions[0]?.exactVisibleText?.slice(0, 200) ??
         evidence.visualSummary.slice(0, 200),
       confidence: evidence.confidence,
       purposeSummary: [...new Set(evidence.statValues.map((s) => s.purpose))].join(","),
-      validationStatus: publishableStatValues.length > 0 ? "validated" : "rejected",
-      exclusionCode:
-        publishableStatValues.length > 0 ? "" : "noPublishableStats",
+      validationStatus: validated ? "validated" : "rejected",
+      exclusionCode: validated
+        ? ""
+        : gearMentions > 0
+          ? "mentionOnlyNotAccepted"
+          : "noPublishableStats",
       normalizedPayload: {
         recommendedMainStats: evidence.recommendedMainStats,
         statPriority: evidence.statPriority,
@@ -162,6 +182,7 @@ export function validateVisualAnalysisResult(input: {
           normalizedArtifactSetId: a.normalizedArtifactSetId,
         })),
         warnings: evidence.warnings,
+        mentionOnly: mentionOnlyOk,
       },
       publishableStatValues,
       visibleTexts: evidence.visibleTexts,
@@ -191,15 +212,3 @@ function reject(
   };
 }
 
-function numberInVisibleText(
-  text: string,
-  values: Array<number | null>,
-): boolean {
-  const normalized = text.replace(/,/g, "");
-  return values.some((value) => {
-    if (value == null) return false;
-    const asInt = String(Math.round(value));
-    const asOne = value.toFixed(1).replace(/\.0$/, "");
-    return normalized.includes(asInt) || normalized.includes(asOne);
-  });
-}

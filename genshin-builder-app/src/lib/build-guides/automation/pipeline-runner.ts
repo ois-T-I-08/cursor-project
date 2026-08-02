@@ -3,8 +3,10 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import {
   TRANSCRIPT_ANALYSIS_SCHEMA_VERSION,
+  type TranscriptAnalysis,
   validateTranscriptAnalysis,
 } from "./analysis-schema";
+import { softResolveTranscriptAnalysis } from "./transcript-entity-resolve";
 import { readYoutubeAutomationControl } from "./automation-control";
 import { publishAutomaticRecommendation } from "./auto-publish-store";
 import { buildAutomaticRecommendationSnapshot } from "./automatic-snapshot";
@@ -99,6 +101,10 @@ export async function runYoutubeGuidePipeline(input: {
   transcriptProvider: TranscriptProvider;
   analysisProvider: TranscriptAnalysisProvider;
   loadKnownEntityIds: () => Promise<ReadonlySet<string>>;
+  /** Optional name allowlist for soft entity resolve (DeepSeek / exact name). */
+  loadKnownEntities?: () => Promise<
+    ReadonlyArray<{ id: string; name: string }>
+  >;
   now?: Date;
   workerId?: string;
   testStageHook?: (stage: PipelineTestStage) => Promise<void>;
@@ -219,6 +225,7 @@ export async function runYoutubeGuidePipeline(input: {
       transcriptProvider: input.transcriptProvider,
       analysisProvider: input.analysisProvider,
       knownEntityIds,
+      loadKnownEntities: input.loadKnownEntities,
       now: input.now,
       testStageHook: input.testStageHook,
     });
@@ -358,6 +365,9 @@ async function processCandidatePassOne(input: {
   transcriptProvider: TranscriptProvider;
   analysisProvider: TranscriptAnalysisProvider;
   knownEntityIds: ReadonlySet<string>;
+  loadKnownEntities?: () => Promise<
+    ReadonlyArray<{ id: string; name: string }>
+  >;
   now?: Date;
   testStageHook?: (stage: PipelineTestStage) => Promise<void>;
 }): Promise<void> {
@@ -662,7 +672,19 @@ async function processCandidatePassOne(input: {
     });
     await input.testStageHook?.("before_validation_ready");
     await checkpoint(claim, input.now);
-    const validation = validateTranscriptAnalysis(completion.value, {
+    let analysisValue = completion.value as TranscriptAnalysis;
+    if (input.loadKnownEntities) {
+      try {
+        const entities = await input.loadKnownEntities();
+        analysisValue = await softResolveTranscriptAnalysis({
+          analysis: analysisValue,
+          entities,
+        });
+      } catch {
+        // Soft-resolve is best-effort; fall through to strict validation.
+      }
+    }
+    const validation = validateTranscriptAnalysis(analysisValue, {
       expectedCharacterId: candidate.characterId,
       knownEntityIds: input.knownEntityIds,
       transcript,
