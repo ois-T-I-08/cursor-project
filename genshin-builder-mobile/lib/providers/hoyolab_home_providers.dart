@@ -12,14 +12,16 @@ import 'hoyolab_game_providers.dart';
 import 'hoyolab_providers.dart';
 import 'hoyolab_reminder_providers.dart';
 
-final hoyolabHomeDiskCacheProvider =
-    FutureProvider<HoyolabHomeDiskCache>((ref) async {
+final hoyolabHomeDiskCacheProvider = FutureProvider<HoyolabHomeDiskCache>((
+  ref,
+) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return HoyolabHomeDiskCache(AppDatabaseSettingsStore(db));
 });
 
-final dailyNoteProvider =
-    AsyncNotifierProvider<DailyNoteNotifier, DailyNote?>(DailyNoteNotifier.new);
+final dailyNoteProvider = AsyncNotifierProvider<DailyNoteNotifier, DailyNote?>(
+  DailyNoteNotifier.new,
+);
 
 class DailyNoteNotifier extends AsyncNotifier<DailyNote?> {
   @override
@@ -68,8 +70,9 @@ class DailyNoteNotifier extends AsyncNotifier<DailyNote?> {
     final diskCache = await ref.read(hoyolabHomeDiskCacheProvider.future);
     await diskCache.saveDailyNote(uid, note, fetchedAt: fetchedAt);
     try {
-      final coordinator =
-          await ref.read(notificationScheduleCoordinatorProvider.future);
+      final coordinator = await ref.read(
+        notificationScheduleCoordinatorProvider.future,
+      );
       coordinator.reconcileUnawaited(
         ReminderReconcileSnapshot(note: note, fetchedAt: fetchedAt),
       );
@@ -80,8 +83,10 @@ class DailyNoteNotifier extends AsyncNotifier<DailyNote?> {
   }
 }
 
-final hoyolabAdventureStatusProvider = AsyncNotifierProvider<
-    AdventureStatusNotifier, AdventureStatus?>(AdventureStatusNotifier.new);
+final hoyolabAdventureStatusProvider =
+    AsyncNotifierProvider<AdventureStatusNotifier, AdventureStatus?>(
+      AdventureStatusNotifier.new,
+    );
 
 class AdventureStatusNotifier extends AsyncNotifier<AdventureStatus?> {
   @override
@@ -122,10 +127,7 @@ class AdventureStatusNotifier extends AsyncNotifier<AdventureStatus?> {
     return _fetchAndSave(uid);
   }
 
-  Future<void> _refreshInBackground(
-    String uid, {
-    bool delayed = false,
-  }) async {
+  Future<void> _refreshInBackground(String uid, {bool delayed = false}) async {
     if (delayed) {
       await Future<void>.delayed(HoyolabConstants.adventureStatusRefreshDelay);
     }

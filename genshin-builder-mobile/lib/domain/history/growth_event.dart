@@ -20,10 +20,7 @@ enum GrowthEventType {
 
 /// Cursor for paginating growth events.
 class GrowthEventCursor {
-  const GrowthEventCursor({
-    required this.observedAt,
-    required this.eventId,
-  });
+  const GrowthEventCursor({required this.observedAt, required this.eventId});
 
   final DateTime observedAt;
   final String eventId;

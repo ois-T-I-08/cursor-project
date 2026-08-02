@@ -7,91 +7,121 @@ import 'package:genshin_builder_mobile/data/db/drift/daos/growth_dao.dart';
 
 void main() {
   group('DB migration v6 ↁEv7', () {
-    testWidgets('v7 database creates growth tables on fresh install',
-        (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
+    testWidgets('v7 database creates growth tables on fresh install', (
+      tester,
+    ) async {
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
       addTearDown(() async {
-        try { await db.close(); } catch (_) {}
+        try {
+          await db.close();
+        } catch (_) {}
       });
 
       // Verify new v7 tables exist
-      final goalsTable = await db.customSelect(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='growth_goals'",
-      ).get();
+      final goalsTable =
+          await db
+              .customSelect(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='growth_goals'",
+              )
+              .get();
       expect(goalsTable, isNotEmpty);
 
-      final invTable = await db.customSelect(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='user_material_inventory'",
-      ).get();
+      final invTable =
+          await db
+              .customSelect(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='user_material_inventory'",
+              )
+              .get();
       expect(invTable, isNotEmpty);
 
-      final teamsTable = await db.customSelect(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='saved_teams'",
-      ).get();
+      final teamsTable =
+          await db
+              .customSelect(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='saved_teams'",
+              )
+              .get();
       expect(teamsTable, isNotEmpty);
 
-      final eventsTable = await db.customSelect(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='growth_events'",
-      ).get();
+      final eventsTable =
+          await db
+              .customSelect(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='growth_events'",
+              )
+              .get();
       expect(eventsTable, isNotEmpty);
 
       await db.close();
     });
 
-    testWidgets('existing v6 tables still exist alongside v7 tables',
-        (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
+    testWidgets('existing v6 tables still exist alongside v7 tables', (
+      tester,
+    ) async {
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
       addTearDown(() async {
-        try { await db.close(); } catch (_) {}
+        try {
+          await db.close();
+        } catch (_) {}
       });
 
-      final chars = await db.customSelect(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='characters'",
-      ).get();
+      final chars =
+          await db
+              .customSelect(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='characters'",
+              )
+              .get();
       expect(chars, isNotEmpty);
 
-      final progress = await db.customSelect(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='user_progress'",
-      ).get();
+      final progress =
+          await db
+              .customSelect(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='user_progress'",
+              )
+              .get();
       expect(progress, isNotEmpty);
 
       await db.close();
     });
 
     testWidgets('growth goal CRUD works', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
       addTearDown(() async {
-        try { await db.close(); } catch (_) {}
+        try {
+          await db.close();
+        } catch (_) {}
       });
 
       final now = DateTime.now().millisecondsSinceEpoch;
-      await db.growthDao.goalUpsert(GrowthGoalsCompanion(
-        id: const Value('g1'),
-        userId: const Value('local'),
-        characterId: const Value('10000002'),
-        targetLevel: const Value(90),
-        status: const Value('active'),
-        createdAt: Value(now),
-      ));
+      await db.growthDao.goalUpsert(
+        GrowthGoalsCompanion(
+          id: const Value('g1'),
+          userId: const Value('local'),
+          characterId: const Value('10000002'),
+          targetLevel: const Value(90),
+          status: const Value('active'),
+          createdAt: Value(now),
+        ),
+      );
 
       final goals = await db.growthDao.goalsGetAll('local');
       expect(goals.length, 1);
       expect(goals.first.id, 'g1');
 
       // Update
-      await db.growthDao.goalUpsert(const GrowthGoalsCompanion(
-        id: Value('g1'),
-        userId: Value('local'),
-        characterId: Value('10000002'),
-        targetLevel: Value(80),
-        status: Value('active'),
-      ));
+      await db.growthDao.goalUpsert(
+        const GrowthGoalsCompanion(
+          id: Value('g1'),
+          userId: Value('local'),
+          characterId: Value('10000002'),
+          targetLevel: Value(80),
+          status: Value('active'),
+        ),
+      );
       final updated = await db.growthDao.goalGetById('g1');
       expect(updated!.targetLevel, 80);
 
@@ -104,11 +134,13 @@ void main() {
     });
 
     testWidgets('material inventory CRUD works', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
       addTearDown(() async {
-        try { await db.close(); } catch (_) {}
+        try {
+          await db.close();
+        } catch (_) {}
       });
 
       await db.growthDao.inventorySetQuantity('local', 'mat_a', 10);
@@ -129,11 +161,13 @@ void main() {
     });
 
     testWidgets('growth event dedup works via unique index', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
       addTearDown(() async {
-        try { await db.close(); } catch (_) {}
+        try {
+          await db.close();
+        } catch (_) {}
       });
 
       final dt = DateTime.now().millisecondsSinceEpoch;
@@ -167,11 +201,13 @@ void main() {
     });
 
     testWidgets('saved team CRUD works', (tester) async {
-      final db = DriftAppDatabase(DatabaseConnection(
-        DatabaseConnection(NativeDatabase.memory()),
-      ));
+      final db = DriftAppDatabase(
+        DatabaseConnection(DatabaseConnection(NativeDatabase.memory())),
+      );
       addTearDown(() async {
-        try { await db.close(); } catch (_) {}
+        try {
+          await db.close();
+        } catch (_) {}
       });
 
       await db.growthDao.teamSave(

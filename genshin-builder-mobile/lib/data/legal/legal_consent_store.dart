@@ -9,8 +9,9 @@ class LegalConsentStore {
   Future<LegalConsentSnapshot> read() async {
     final privacy = await _db.getSetting(LegalConsentVersions.privacyPolicyKey);
     final terms = await _db.getSetting(LegalConsentVersions.termsKey);
-    final hoyolab =
-        await _db.getSetting(LegalConsentVersions.hoyolabDisclosureKey);
+    final hoyolab = await _db.getSetting(
+      LegalConsentVersions.hoyolabDisclosureKey,
+    );
     final atRaw = await _db.getSetting(LegalConsentVersions.acceptedAtKey);
     DateTime? at;
     if (atRaw != null && atRaw.isNotEmpty) {

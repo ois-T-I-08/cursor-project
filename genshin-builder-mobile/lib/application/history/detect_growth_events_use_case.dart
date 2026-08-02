@@ -33,58 +33,103 @@ class DetectGrowthEventsUseCase {
       if (curr == null) continue;
 
       _addIfChanged(
-        events, userId, prev.characterId,
+        events,
+        userId,
+        prev.characterId,
         GrowthEventType.characterLevelChanged,
-        '${prev.level}', '${curr.level}',
-        prev.level != curr.level, source, now,
+        '${prev.level}',
+        '${curr.level}',
+        prev.level != curr.level,
+        source,
+        now,
       );
       _addIfChanged(
-        events, userId, prev.characterId,
+        events,
+        userId,
+        prev.characterId,
         GrowthEventType.ascensionChanged,
-        '${prev.ascension}', '${curr.ascension}',
-        prev.ascension != curr.ascension, source, now,
+        '${prev.ascension}',
+        '${curr.ascension}',
+        prev.ascension != curr.ascension,
+        source,
+        now,
       );
       _addIfChanged(
-        events, userId, prev.characterId,
+        events,
+        userId,
+        prev.characterId,
         GrowthEventType.talentNormalChanged,
-        '${prev.talentNormal}', '${curr.talentNormal}',
-        prev.talentNormal != curr.talentNormal, source, now,
+        '${prev.talentNormal}',
+        '${curr.talentNormal}',
+        prev.talentNormal != curr.talentNormal,
+        source,
+        now,
       );
       _addIfChanged(
-        events, userId, prev.characterId,
+        events,
+        userId,
+        prev.characterId,
         GrowthEventType.talentSkillChanged,
-        '${prev.talentSkill}', '${curr.talentSkill}',
-        prev.talentSkill != curr.talentSkill, source, now,
+        '${prev.talentSkill}',
+        '${curr.talentSkill}',
+        prev.talentSkill != curr.talentSkill,
+        source,
+        now,
       );
       _addIfChanged(
-        events, userId, prev.characterId,
+        events,
+        userId,
+        prev.characterId,
         GrowthEventType.talentBurstChanged,
-        '${prev.talentBurst}', '${curr.talentBurst}',
-        prev.talentBurst != curr.talentBurst, source, now,
+        '${prev.talentBurst}',
+        '${curr.talentBurst}',
+        prev.talentBurst != curr.talentBurst,
+        source,
+        now,
       );
       _addIfChanged(
-        events, userId, prev.characterId,
+        events,
+        userId,
+        prev.characterId,
         GrowthEventType.weaponChanged,
-        prev.equippedWeaponId ?? '', curr.equippedWeaponId ?? '',
-        prev.equippedWeaponId != curr.equippedWeaponId, source, now,
+        prev.equippedWeaponId ?? '',
+        curr.equippedWeaponId ?? '',
+        prev.equippedWeaponId != curr.equippedWeaponId,
+        source,
+        now,
       );
       _addIfChanged(
-        events, userId, prev.characterId,
+        events,
+        userId,
+        prev.characterId,
         GrowthEventType.weaponLevelChanged,
-        '${prev.weaponLevel}', '${curr.weaponLevel}',
-        prev.weaponLevel != curr.weaponLevel, source, now,
+        '${prev.weaponLevel}',
+        '${curr.weaponLevel}',
+        prev.weaponLevel != curr.weaponLevel,
+        source,
+        now,
       );
       _addIfChanged(
-        events, userId, prev.characterId,
+        events,
+        userId,
+        prev.characterId,
         GrowthEventType.weaponRefinementChanged,
-        '${prev.weaponRefinement}', '${curr.weaponRefinement}',
-        prev.weaponRefinement != curr.weaponRefinement, source, now,
+        '${prev.weaponRefinement}',
+        '${curr.weaponRefinement}',
+        prev.weaponRefinement != curr.weaponRefinement,
+        source,
+        now,
       );
       _addIfChanged(
-        events, userId, prev.characterId,
+        events,
+        userId,
+        prev.characterId,
         GrowthEventType.artifactCompletionChanged,
-        prev.artifactCompletion.toStringAsFixed(1), curr.artifactCompletion.toStringAsFixed(1),
-        prev.artifactCompletion != curr.artifactCompletion, source, now,
+        prev.artifactCompletion.toStringAsFixed(1),
+        curr.artifactCompletion.toStringAsFixed(1),
+        prev.artifactCompletion != curr.artifactCompletion,
+        source,
+        now,
       );
     }
 
@@ -103,22 +148,24 @@ class DetectGrowthEventsUseCase {
     DateTime observedAt,
   ) {
     if (!changed) return;
-    events.add(GrowthEvent(
-      eventId: _uuid.v4(),
-      userId: userId,
-      characterId: characterId,
-      eventType: type,
-      beforeValue: before,
-      afterValue: after,
-      source: source,
-      observedAt: observedAt,
-      dedupKey: GrowthEvent.makeValueDedupKey(
+    events.add(
+      GrowthEvent(
+        eventId: _uuid.v4(),
         userId: userId,
         characterId: characterId,
         eventType: type,
-        before: before,
-        after: after,
+        beforeValue: before,
+        afterValue: after,
+        source: source,
+        observedAt: observedAt,
+        dedupKey: GrowthEvent.makeValueDedupKey(
+          userId: userId,
+          characterId: characterId,
+          eventType: type,
+          before: before,
+          after: after,
+        ),
       ),
-    ));
+    );
   }
 }

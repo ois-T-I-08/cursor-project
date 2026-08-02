@@ -9,8 +9,9 @@ import '../domain/gacha/gacha_banner.dart';
 import '../domain/models/master_models.dart';
 import 'app_providers.dart';
 
-final gachaBannerHistorySourceProvider =
-    Provider<GachaBannerHistorySource>((ref) {
+final gachaBannerHistorySourceProvider = Provider<GachaBannerHistorySource>((
+  ref,
+) {
   const remoteUrl = String.fromEnvironment(
     'GACHA_BANNER_HISTORY_URL',
     defaultValue: '',
@@ -36,15 +37,15 @@ final gachaBannerRepositoryProvider = Provider<GachaBannerRepository>((ref) {
   );
 });
 
-final gachaBannersProvider =
-    FutureProvider<GachaBannerLoadResult>((ref) async {
+final gachaBannersProvider = FutureProvider<GachaBannerLoadResult>((ref) async {
   final repo = ref.watch(gachaBannerRepositoryProvider);
   return repo.loadBanners();
 });
 
 /// ホーム用: 開催中＋予告イベント（期間不明は除外）
-final homeCalendarEventsProvider =
-    FutureProvider<List<CalendarEvent>>((ref) async {
+final homeCalendarEventsProvider = FutureProvider<List<CalendarEvent>>((
+  ref,
+) async {
   final api = ref.watch(gachaCalendarApiProvider);
   final events = await api.fetchCurrentEvents();
   return sortCalendarEventsForHome(events);

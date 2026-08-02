@@ -1,14 +1,15 @@
-// Prisma スキーマ
-// 開発初期は SQLite を使用。本番では provider を "postgresql" に変更するだけで移行できるよう、
-// SQLite 固有の機能は使わない方針。
+// Prisma schema (PostgreSQL)
+// Dev/CI/staging use PostgreSQL. SQLite history is in prisma/migrations-sqlite-archive.
+// For Neon pooled connections, set DATABASE_URL (pooler) and DIRECT_URL (direct).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================================
@@ -153,7 +154,7 @@ model ExternalApiCache {
   updatedAt  DateTime @updatedAt
 }
 
-/// gcsimを含むおすすめ編成生成Job。HoYoLABのUID/Cookie/未加工レスポンスは保存しない。
+/// おすすめ編成生成Job。HoYoLABのUID/Cookie/未加工レスポンスは保存しない。
 model TeamSimulationJob {
   id           String   @id
   requestHash  String
@@ -166,20 +167,6 @@ model TeamSimulationJob {
   expiresAt    DateTime
 
   @@index([requestHash, status])
-  @@index([expiresAt])
-}
-
-/// 同一の正規化済み戦闘入力に対する最終正常結果。
-model TeamSimulationCache {
-  cacheKey      String   @id
-  gcsimVersion  String
-  attackerId    String
-  payload       String
-  createdAt     DateTime @default(now())
-  expiresAt     DateTime
-  updatedAt     DateTime @updatedAt
-
-  @@index([attackerId])
   @@index([expiresAt])
 }
 
@@ -350,4 +337,497 @@ model TeamImportLog {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// ============================================================
+// Build Guide recommendations (YouTube metadata + Gemini visual OCR)
+// JSON fields use String columns (SQLite-compatible).
+// Video files / frames / audio are NEVER persisted.
+// ============================================================
+
+model GuideChannel {
+  id                   String    @id @default(cuid())
+  channelId            String    @unique
+  title                String
+  description          String    @default("")
+  customUrl            String    @default("")
+  thumbnailUrl         String    @default("")
+  enabled              Boolean   @default(true)
+  permissionStatus     String    @default("unknown")
+  attributionRequired  Boolean   @default(true)
+  notes                String    @default("")
+  dailyAnalysisLimit   Int       @default(20)
+  lastFetchedAt        DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  videos GuideVideo[]
+
+  @@index([enabled, permissionStatus])
+}
+
+model GuideVideo {
+  id               String    @id @default(cuid())
+  videoId          String    @unique
+  channelId        String
+  channel          GuideChannel @relation(fields: [channelId], references: [channelId], onDelete: Cascade)
+  title            String
+  description      String    @default("")
+  publishedAt      DateTime?
+  thumbnailUrl     String    @default("")
+  durationSeconds  Int?
+  privacyStatus    String    @default("unknown")
+  metadataHash     String    @default("")
+  sourceUrl        String
+  language         String    @default("")
+  discoveredAt     DateTime  @default(now())
+  discoveryReason  String    @default("")
+  availabilityStatus String  @default("available")
+  unavailableSince DateTime?
+  analysisStatus   String    @default("pending")
+  lastAnalyzedAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  jobs            GuideVisualAnalysisJob[]
+  results         GuideVisualAnalysisResult[]
+  evidences       GuideVisualEvidence[]
+  claims          GuideVisualExtractedClaim[]
+  sourceLinks     GuideAnalysisSourceVideo[]
+  contributions   RecommendationVisualContribution[]
+  transcripts     GuideTranscript[]
+  pipelineItems   GuidePipelineItem[]
+
+  @@index([channelId, publishedAt])
+  @@index([analysisStatus])
+  @@index([privacyStatus])
+}
+
+model GuideVisualAnalysisJob {
+  id              String    @id @default(cuid())
+  videoId         String
+  video           GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  requestHash     String
+  status          String
+  providerId      String    @default("")
+  modelIdentifier String    @default("")
+  promptVersion   String    @default("")
+  schemaVersion   String    @default("")
+  gameDataVersion String    @default("")
+  attempts        Int       @default(0)
+  tokenUsage      String    @default("")
+  errorCode       String    @default("")
+  rangesPayload   String    @default("")
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([videoId, status])
+  @@index([requestHash])
+  @@index([createdAt])
+}
+
+model GuideVisualAnalysisResult {
+  id               String   @id @default(cuid())
+  cacheKey         String   @unique
+  videoId          String
+  video            GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  requestHash      String
+  providerId       String
+  modelIdentifier  String
+  promptVersion    String
+  schemaVersion    String
+  gameDataVersion  String
+  inputKind        String   @default("visual")
+  transcriptId     String?
+  transcript       GuideTranscript? @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
+  analysisIdempotencyKey String? @unique
+  status           String
+  rawAiOutput      String   @default("")
+  validatedPayload String   @default("")
+  errorCode        String   @default("")
+  generatedAt      DateTime
+  updatedAt        DateTime @updatedAt
+
+  evidences GuideVisualEvidence[]
+
+  @@index([videoId, status])
+  @@index([status])
+  @@index([transcriptId])
+}
+
+model GuideVisualEvidence {
+  id                 String   @id @default(cuid())
+  analysisResultId   String
+  analysisResult     GuideVisualAnalysisResult @relation(fields: [analysisResultId], references: [id], onDelete: Cascade)
+  videoId            String
+  video              GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  startSeconds       Float
+  endSeconds         Float
+  evidenceType       String
+  normalizedPayload  String   @default("{}")
+  exactVisibleText   String   @default("")
+  confidence         Float    @default(0)
+  validationStatus   String   @default("pending")
+  approvalStatus     String   @default("pending_review")
+  exclusionCode      String   @default("")
+  purposeSummary     String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  visibleTexts  GuideVisualVisibleText[]
+  claims        GuideVisualExtractedClaim[]
+  contributions RecommendationVisualContribution[]
+
+  @@index([videoId, startSeconds])
+  @@index([analysisResultId])
+  @@index([approvalStatus, validationStatus])
+}
+
+model GuideVisualVisibleText {
+  id         String @id @default(cuid())
+  evidenceId String
+  evidence   GuideVisualEvidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  text       String
+  category   String @default("other")
+  confidence Float  @default(0)
+
+  @@index([evidenceId])
+}
+
+model GuideVisualExtractedClaim {
+  id             String   @id @default(cuid())
+  evidenceId     String
+  evidence       GuideVisualEvidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  videoId        String
+  video          GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  characterId    String
+  claimKey       String
+  claimPayload   String
+  purpose        String   @default("unknown")
+  confidence     Float    @default(0)
+  status         String   @default("extracted")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([videoId, characterId])
+  @@index([evidenceId])
+  @@index([characterId, claimKey])
+}
+
+model GuideAnalysisSourceManifest {
+  id               String   @id @default(cuid())
+  characterId      String
+  videoIdsPayload  String
+  manifestHash     String   @unique
+  status           String   @default("draft")
+  mergePayload     String   @default("")
+  conflictPayload  String   @default("")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  videos GuideAnalysisSourceVideo[]
+  recommendations CharacterBuildRecommendation[]
+
+  @@index([characterId, status])
+}
+
+model GuideAnalysisSourceVideo {
+  id         String @id @default(cuid())
+  manifestId String
+  manifest   GuideAnalysisSourceManifest @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+  videoId    String
+  video      GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  sortOrder  Int      @default(0)
+
+  @@unique([manifestId, videoId])
+  @@index([videoId])
+}
+
+model CharacterBuildRecommendation {
+  id                 String    @id @default(cuid())
+  characterId        String
+  status             String    @default("pending_review")
+  origin             String    @default("single_video")
+  manifestId         String?
+  manifest           GuideAnalysisSourceManifest? @relation(fields: [manifestId], references: [id], onDelete: SetNull)
+  contextPayload     String    @default("{}")
+  mainStatsPayload   String    @default("[]")
+  priorityPayload    String    @default("[]")
+  targetsPayload     String    @default("[]")
+  /// weapons / artifactRecommendations / investmentPriority / gameVersion
+  structuredPayload  String    @default("{}")
+  overallConfidence  Float     @default(0)
+  notes              String    @default("")
+  adminNotes         String    @default("")
+  automationKey      String?   @unique
+  publicationKey     String?   @unique
+  verificationMode  String    @default("manual")
+  qualityScore       Float     @default(0)
+  validationPayload  String    @default("{}")
+  publishedAt        DateTime?
+  lastVerifiedAt     DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  contributions RecommendationVisualContribution[]
+  revisions     GuideRecommendationRevision[]
+
+  @@index([characterId, status])
+  @@index([status, publishedAt])
+}
+
+model RecommendationVisualContribution {
+  id                    String @id @default(cuid())
+  recommendationId      String
+  recommendation        CharacterBuildRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  evidenceId            String
+  evidence              GuideVisualEvidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  videoId               String
+  video                 GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  startSeconds          Float
+  endSeconds            Float
+  exactVisibleText      String
+  contributionRole      String @default("supporting")
+  decision              String @default("adopted")
+  decisionSummary       String @default("")
+  usedInPublishedResult Boolean @default(false)
+
+  @@index([recommendationId, usedInPublishedResult])
+  @@index([evidenceId])
+  @@index([videoId])
+}
+
+model GuideRecommendationRevision {
+  id               String   @id @default(cuid())
+  recommendationId String
+  recommendation   CharacterBuildRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  action           String
+  actionKey        String?  @unique
+  actor            String   @default("admin")
+  pipelineRunId    String?
+  publicationKey   String?
+  snapshotHash     String   @default("")
+  etag             String   @default("")
+  validationPayload String  @default("{}")
+  beforePayload    String   @default("")
+  afterPayload     String   @default("")
+  createdAt        DateTime @default(now())
+
+  @@index([recommendationId, createdAt])
+  @@index([pipelineRunId])
+  @@index([publicationKey])
+}
+
+model GuideAdminAuditLog {
+  id        Int      @id @default(autoincrement())
+  actionKey String?  @unique
+  pipelineRunId String?
+  actor     String   @default("admin")
+  action    String
+  status    String
+  detail    String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([pipelineRunId])
+}
+
+model GuideImportLog {
+  id        Int      @id @default(autoincrement())
+  source    String
+  action    String
+  status    String
+  detail    String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model GuideVisualUsageLog {
+  id              Int      @id @default(autoincrement())
+  channelId       String   @default("")
+  videoId         String   @default("")
+  providerId      String
+  modelIdentifier String
+  success         Boolean
+  tokenUsage      String   @default("")
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([channelId, createdAt])
+  @@index([videoId, createdAt])
+}
+
+// ============================================================
+// Durable YouTube guide automation pipeline.
+// Transcript text is internal-only and must never be returned by public DTOs.
+// ============================================================
+
+model GuidePipelineRun {
+  id             String    @id @default(cuid())
+  pipelineRunId  String    @unique
+  idempotencyKey String    @unique
+  trigger        String
+  mode           String    @default("dry_run")
+  status         String    @default("running")
+  dryRun         Boolean   @default(true)
+  policyVersion  String
+  policyHash     String
+  summaryPayload String    @default("{}")
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  items  GuidePipelineItem[]
+  events GuidePipelineEvent[]
+
+  @@index([status, startedAt])
+  @@index([createdAt])
+}
+
+model GuidePipelineItem {
+  id                 String    @id @default(cuid())
+  runId              String
+  run                GuidePipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  activeRunId        String    @default("")
+  lastRunId          String    @default("")
+  videoId            String
+  video              GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  characterId        String    @default("")
+  discoveryKey       String    @unique
+  analysisIdempotencyKey String? @unique
+  publicationKey     String?   @unique
+  transcriptId       String?
+  transcript         GuideTranscript? @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
+  status             String    @default("DISCOVERED")
+  resumeStatus       String    @default("")
+  stateVersion       Int       @default(0)
+  leaseOwner         String    @default("")
+  leaseVersion       Int       @default(0)
+  attempts           Int       @default(0)
+  maxAttempts        Int       @default(3)
+  nextRetryAt        DateTime?
+  metadataHash       String    @default("")
+  transcriptHash     String    @default("")
+  analyzerVersion    String    @default("")
+  promptVersion      String    @default("")
+  schemaVersion      String    @default("")
+  blockCode          String    @default("")
+  safeErrorCode      String    @default("")
+  qualityPayload     String    @default("{}")
+  canonicalAnalysisPayload String @default("{}")
+  validationHash     String    @default("")
+  snapshotPayload    String    @default("{}")
+  policyHash         String    @default("")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  events GuidePipelineEvent[]
+
+  @@unique([runId, videoId])
+  @@index([status, nextRetryAt])
+  @@index([videoId, status])
+  @@index([characterId, status])
+  @@index([activeRunId, status])
+  @@index([transcriptId])
+}
+
+model GuidePipelineEvent {
+  id            String    @id @default(cuid())
+  actionKey     String    @unique
+  runId         String
+  run           GuidePipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  itemId        String?
+  item          GuidePipelineItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  actor         String    @default("system:youtube-automation")
+  fromStatus    String    @default("")
+  toStatus      String
+  safeCode      String    @default("")
+  detailPayload String    @default("{}")
+  createdAt     DateTime  @default(now())
+
+  @@index([runId, createdAt])
+  @@index([itemId, createdAt])
+}
+
+model GuideTranscript {
+  id                 String    @id @default(cuid())
+  videoId            String
+  video              GuideVideo @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  identityKey        String    @unique
+  transcriptHash     String    @unique
+  providerId         String
+  language           String
+  trackKind          String
+  sourceTrackId      String    @default("")
+  segmentCount       Int
+  fetchedAt          DateTime
+  retentionExpiresAt DateTime?
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  segments        GuideTranscriptSegment[]
+  analysisResults GuideVisualAnalysisResult[]
+  pipelineItems   GuidePipelineItem[]
+
+  @@unique([videoId, language, transcriptHash])
+  @@index([videoId, fetchedAt])
+  @@index([retentionExpiresAt])
+}
+
+model GuideTranscriptSegment {
+  id              String   @id @default(cuid())
+  transcriptId    String
+  transcript      GuideTranscript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  segmentIndex    Int
+  segmentKey      String   @unique
+  startSeconds    Float
+  durationSeconds Float
+  text            String
+  textHash        String
+  createdAt       DateTime @default(now())
+
+  @@unique([transcriptId, segmentIndex])
+  @@index([transcriptId, startSeconds])
+}
+
+model GuidePipelineLease {
+  lockKey         String   @id
+  leaseOwner      String
+  leaseAcquiredAt DateTime
+  leaseExpiresAt  DateTime
+  leaseVersion    Int      @default(1)
+  updatedAt       DateTime @updatedAt
+
+  @@index([leaseExpiresAt])
+}
+
+model GuideProviderCircuit {
+  providerId      String    @id
+  state           String    @default("closed")
+  failureCount    Int       @default(0)
+  lastErrorCode   String    @default("")
+  openedAt        DateTime?
+  openUntil       DateTime?
+  probeOwner      String    @default("")
+  probeToken      Int       @default(0)
+  probeAcquiredAt DateTime?
+  probeExpiresAt  DateTime?
+  stateVersion    Int       @default(0)
+  updatedAt       DateTime  @updatedAt
+
+  @@index([state, openUntil])
+  @@index([state, probeExpiresAt])
+}
+
+model GuideAutomationControl {
+  id               String   @id
+  emergencyStopped Boolean  @default(false)
+  reason           String   @default("")
+  version          Int      @default(0)
+  updatedAt        DateTime @updatedAt
 }

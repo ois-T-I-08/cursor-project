@@ -19,10 +19,7 @@ class _HoyolabLoginScreenState extends ConsumerState<HoyolabLoginScreen> {
   var _completing = false;
   String? _error;
 
-  static const _hoyolabHosts = {
-    'm.hoyolab.com',
-    'www.hoyolab.com',
-  };
+  static const _hoyolabHosts = {'m.hoyolab.com', 'www.hoyolab.com'};
 
   @override
   void initState() {
@@ -132,8 +129,9 @@ if (location.href.startsWith("https://m.hoyolab.com/") || location.href.startsWi
     });
 
     try {
-      final useCase =
-          await ref.read(completeHoyolabWebLoginUseCaseProvider.future);
+      final useCase = await ref.read(
+        completeHoyolabWebLoginUseCaseProvider.future,
+      );
       final result = await useCase();
       if (!mounted) return;
       if (result.success) {
@@ -142,8 +140,7 @@ if (location.href.startsWith("https://m.hoyolab.com/") || location.href.startsWi
       }
       setState(() {
         _completing = false;
-        _error = result.userMessage ??
-            '連携に失敗しました。ログイン状態を確認して再試行してください。';
+        _error = result.userMessage ?? '連携に失敗しました。ログイン状態を確認して再試行してください。';
       });
     } catch (_) {
       if (!mounted) return;
@@ -159,9 +156,7 @@ if (location.href.startsWith("https://m.hoyolab.com/") || location.href.startsWi
     final controller = _controller;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('HoYoLAB ログイン'),
-      ),
+      appBar: AppBar(title: const Text('HoYoLAB ログイン')),
       body: Column(
         children: [
           const Padding(
@@ -169,15 +164,16 @@ if (location.href.startsWith("https://m.hoyolab.com/") || location.href.startsWi
             child: HoyolabDisclaimerBanner(compact: true),
           ),
           Expanded(
-            child: controller == null
-                ? const Center(child: CircularProgressIndicator())
-                : Stack(
-                    children: [
-                      WebViewWidget(controller: controller),
-                      if (_loading)
-                        const Center(child: CircularProgressIndicator()),
-                    ],
-                  ),
+            child:
+                controller == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : Stack(
+                      children: [
+                        WebViewWidget(controller: controller),
+                        if (_loading)
+                          const Center(child: CircularProgressIndicator()),
+                      ],
+                    ),
           ),
           SafeArea(
             child: Padding(
@@ -203,13 +199,14 @@ if (location.href.startsWith("https://m.hoyolab.com/") || location.href.startsWi
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: _completing ? null : _completeLogin,
-                    icon: _completing
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.check),
+                    icon:
+                        _completing
+                            ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.check),
                     label: const Text('連携を完了'),
                   ),
                 ],

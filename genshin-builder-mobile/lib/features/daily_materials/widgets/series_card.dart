@@ -94,18 +94,20 @@ class DailyMaterialSeriesCard extends StatelessWidget {
             for (final consumer in group.consumers)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: showGroupLabels
-                    ? WeaponConsumerTile(
-                        consumer: consumer,
-                        materials: card.materials,
-                      )
-                    : CharacterConsumerTile(
-                        consumer: consumer,
-                        materials: card.materials,
-                        onTap: onConsumerTap == null
-                            ? null
-                            : () => onConsumerTap!(consumer.id),
-                      ),
+                child:
+                    showGroupLabels
+                        ? WeaponConsumerTile(
+                          consumer: consumer,
+                          materials: card.materials,
+                        )
+                        : CharacterConsumerTile(
+                          consumer: consumer,
+                          materials: card.materials,
+                          onTap:
+                              onConsumerTap == null
+                                  ? null
+                                  : () => onConsumerTap!(consumer.id),
+                        ),
               ),
           ],
       ],
@@ -115,10 +117,7 @@ class DailyMaterialSeriesCard extends StatelessWidget {
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: body,
-      ),
+      child: Padding(padding: const EdgeInsets.all(12), child: body),
     );
   }
 }

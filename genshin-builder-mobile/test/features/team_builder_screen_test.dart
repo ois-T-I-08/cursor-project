@@ -31,26 +31,38 @@ void main() {
     });
 
     test('with character is not empty', () {
-      const slot = TeamBuilderSlot(characterId: '10000002', role: TeamRole.support);
+      const slot = TeamBuilderSlot(
+        characterId: '10000002',
+        role: TeamRole.support,
+      );
       expect(slot.isEmpty, isFalse);
     });
 
     test('copyWith preserves fields', () {
-      const slot = TeamBuilderSlot(characterId: '10000002', role: TeamRole.healer);
+      const slot = TeamBuilderSlot(
+        characterId: '10000002',
+        role: TeamRole.healer,
+      );
       final copy = slot.copyWith();
       expect(copy.characterId, '10000002');
       expect(copy.role, TeamRole.healer);
     });
 
     test('copyWith updates characterId', () {
-      const slot = TeamBuilderSlot(characterId: '10000002', role: TeamRole.flex);
+      const slot = TeamBuilderSlot(
+        characterId: '10000002',
+        role: TeamRole.flex,
+      );
       final copy = slot.copyWith(characterId: '10000096');
       expect(copy.characterId, '10000096');
       expect(copy.role, TeamRole.flex);
     });
 
     test('copyWith updates role', () {
-      const slot = TeamBuilderSlot(characterId: '10000002', role: TeamRole.flex);
+      const slot = TeamBuilderSlot(
+        characterId: '10000002',
+        role: TeamRole.flex,
+      );
       final copy = slot.copyWith(role: TeamRole.shielder);
       expect(copy.characterId, '10000002');
       expect(copy.role, TeamRole.shielder);
@@ -101,10 +113,13 @@ void main() {
       );
       await tester.pump();
       expect(
-          find.text(
-              '\u30e1\u30a4\u30f3\u30a2\u30bf\u30c3\u30ab\u30fc'),
-          findsOneWidget);
-      expect(find.text('\u30b5\u30d6\u30a2\u30bf\u30c3\u30ab\u30fc'), findsOneWidget);
+        find.text('\u30e1\u30a4\u30f3\u30a2\u30bf\u30c3\u30ab\u30fc'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('\u30b5\u30d6\u30a2\u30bf\u30c3\u30ab\u30fc'),
+        findsOneWidget,
+      );
       expect(find.text('\u30b5\u30dd\u30fc\u30c8'), findsOneWidget);
       expect(find.text('\u30d2\u30fc\u30e9\u30fc'), findsOneWidget);
     });

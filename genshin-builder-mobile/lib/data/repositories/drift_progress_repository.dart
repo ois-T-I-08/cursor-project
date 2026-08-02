@@ -12,8 +12,7 @@ class DriftProgressRepository implements ProgressRepository {
     required String userId,
     required String characterId,
     required String progressId,
-  }) =>
-      _db.getOrCreateProgress(userId, characterId, progressId);
+  }) => _db.getOrCreateProgress(userId, characterId, progressId);
 
   @override
   Future<List<UserProgress>> getAll(String userId) =>

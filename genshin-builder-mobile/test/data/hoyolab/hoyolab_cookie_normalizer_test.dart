@@ -31,17 +31,12 @@ void main() {
     });
 
     test('keeps equals signs inside values', () {
-      final map = HoyolabCookieNormalizer.parseToMap(
-        'ltoken_v2=a=b=c; foo=1',
-      )!;
+      final map = HoyolabCookieNormalizer.parseToMap('ltoken_v2=a=b=c; foo=1')!;
       expect(map['ltoken_v2'], 'a=b=c');
     });
 
     test('rejects empty token value', () {
-      expect(
-        HoyolabCookieNormalizer.normalize('ltoken_v2=; foo=1'),
-        isNull,
-      );
+      expect(HoyolabCookieNormalizer.normalize('ltoken_v2=; foo=1'), isNull);
     });
 
     test('rejects missing required token key', () {
@@ -60,10 +55,7 @@ void main() {
 
     test('mergePreferBase keeps base on conflict and fills missing', () {
       final merged = HoyolabCookieNormalizer.mergePreferBase(
-        base: {
-          'ltoken_v2': 'from_webview',
-          'shared': 'webview_wins',
-        },
+        base: {'ltoken_v2': 'from_webview', 'shared': 'webview_wins'},
         fill: {
           'ltoken_v2': 'from_native_ignored',
           'shared': 'native_ignored',

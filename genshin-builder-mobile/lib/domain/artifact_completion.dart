@@ -37,14 +37,17 @@ double calcArtifactPieceCompletionPercent(
 
   final levelPart = 25.0 * (piece.level.clamp(0, 20) / 20.0);
   final mainPart = piece.mainStat.trim().isEmpty ? 0.0 : 15.0;
-  final filledSubs =
-      piece.substats.where((s) => s.stat.trim().isNotEmpty).length.clamp(0, 4);
+  final filledSubs = piece.substats
+      .where((s) => s.stat.trim().isNotEmpty)
+      .length
+      .clamp(0, 4);
   final subPart = 25.0 * (filledSubs / 4.0);
-  final score = weights == null
-      ? calcArtifactPieceScore(piece, scoreType)
-      : calcArtifactPieceScoreWithWeights(piece, weights);
-  final scorePart = 15.0 *
-      (score / kArtifactCompletionReferenceScore).clamp(0.0, 1.0);
+  final score =
+      weights == null
+          ? calcArtifactPieceScore(piece, scoreType)
+          : calcArtifactPieceScoreWithWeights(piece, weights);
+  final scorePart =
+      15.0 * (score / kArtifactCompletionReferenceScore).clamp(0.0, 1.0);
 
   return (20.0 + levelPart + mainPart + subPart + scorePart).clamp(0.0, 100.0);
 }

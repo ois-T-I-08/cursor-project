@@ -47,8 +47,12 @@ class DailyPlanScheduleCalculator {
     }
 
     final tomorrow = today.add(const Duration(days: 1));
-    final tomorrow2300 =
-        DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 23);
+    final tomorrow2300 = DateTime(
+      tomorrow.year,
+      tomorrow.month,
+      tomorrow.day,
+      23,
+    );
     return DailyPlanScheduleDecision(
       targetLocalDate: formatLocalDate(tomorrow),
       scheduledLocalDateTime: tomorrow2300,
@@ -68,8 +72,12 @@ class DailyPlanScheduleCalculator {
 
     if (evaluatedLocalDate == todayKey || !nowLocal.isBefore(today2300)) {
       final tomorrow = today.add(const Duration(days: 1));
-      final tomorrow2300 =
-          DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 23);
+      final tomorrow2300 = DateTime(
+        tomorrow.year,
+        tomorrow.month,
+        tomorrow.day,
+        23,
+      );
       return DailyPlanScheduleDecision(
         targetLocalDate: formatLocalDate(tomorrow),
         scheduledLocalDateTime: tomorrow2300,

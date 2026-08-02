@@ -38,9 +38,8 @@
 - [ ] stagingで初回取得、fresh cache、stale fallback、kill switchの4経路が成功していることを確認する
 - [ ] Flutter画面にAZA.GGクレジット、更新日時、サンプル数、stale状態が表示されることを確認する
 - [ ] AZA.GG利用条件と商用・広告利用可否の確認記録を保管する
-- [ ] `20260720120000_add_team_simulation_jobs` migrationをstagingへ適用し、Job作成・再利用・期限切れ削除を確認する
-- [ ] gcsim v2.43.4バイナリを信頼済み配置へ置き、SHA-256一致を確認する（Secretsへバイナリパスを登録しない）
-- [ ] `GCSIM_ENABLED=false`のままAZA/ルール推薦が表示され、true時はtimeout・同時実行上限・stale fallbackが機能することをstagingで確認する
+- [ ] `20260720120000_add_team_simulation_jobs` / PostgreSQL baseline と `20260730120000_drop_team_simulation_cache` が staging へ適用済みであることを確認する
+- [ ] AZA/ルール推薦が表示されること（gcsim は廃止済み）を staging で確認する
 - [ ] HoYoLAB Cookie/UIDが推薦API request、DB、サーバーログへ存在しないことを確認する
 - [ ] workflow生成AABの署名、applicationId、versionName／versionCodeを確認する
 - [ ] 署名AABを実機へinstallし、起動、backend接続、主要画面を確認する

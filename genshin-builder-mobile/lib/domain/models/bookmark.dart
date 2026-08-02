@@ -3,11 +3,7 @@ library;
 
 const moraMaterialId = '__mora__';
 
-enum CultivationKind {
-  characterLevel,
-  weaponLevel,
-  talent,
-}
+enum CultivationKind { characterLevel, weaponLevel, talent }
 
 class BookmarkCharacterSource {
   const BookmarkCharacterSource({

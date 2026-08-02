@@ -19,9 +19,7 @@ void main() {
   unawaited(NotificationBootstrap.ensureInitialized());
   // P1-8C: WorkManager callback registration (no permission prompt).
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-    unawaited(
-      Workmanager().initialize(dailyPlanIncompleteCallbackDispatcher),
-    );
+    unawaited(Workmanager().initialize(dailyPlanIncompleteCallbackDispatcher));
   }
   NotificationTapRouter.attachRouter(appRouter);
   runApp(const ProviderScope(child: GenshinBuilderApp()));

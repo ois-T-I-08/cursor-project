@@ -43,10 +43,7 @@ class ArtifactScoreResolver {
     if (profile != null) {
       final inferredType =
           inferArtifactScoreTypeFromWeights(profile.weights) ??
-              resolveArtifactScoreType(
-                character,
-                nameOverrides: nameOverrides,
-              );
+          resolveArtifactScoreType(character, nameOverrides: nameOverrides);
       return ArtifactScoreSettings(
         scoreType: inferredType,
         weights: profile.weights,

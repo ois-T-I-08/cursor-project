@@ -37,36 +37,28 @@ void main() {
         },
       });
 
-      final relic = GameRecordRelic.fromJson(
-        {
-          'id': 1,
-          'name': '冠',
-          'pos_name': '理之冠',
-          'level': 20,
-          'set': {'name': '深林の記憶'},
-          'main_property': {
-            'property_type': 22,
-            'value': '31.2%',
-          },
-        },
-        propertyMap: propertyMap,
-      );
+      final relic = GameRecordRelic.fromJson({
+        'id': 1,
+        'name': '冠',
+        'pos_name': '理之冠',
+        'level': 20,
+        'set': {'name': '深林の記憶'},
+        'main_property': {'property_type': 22, 'value': '31.2%'},
+      }, propertyMap: propertyMap);
 
       expect(relic.mainStat?.label, '暴击率');
       expect(relic.mainStat?.value, '31.2%');
     });
 
     test('parses icon from API', () {
-      final relic = GameRecordRelic.fromJson(
-        {
-          'id': 1,
-          'name': '冠',
-          'pos_name': '理之冠',
-          'level': 20,
-          'icon': 'https://example.com/relic.png',
-          'set': {'name': '深林の記憶'},
-        },
-      );
+      final relic = GameRecordRelic.fromJson({
+        'id': 1,
+        'name': '冠',
+        'pos_name': '理之冠',
+        'level': 20,
+        'icon': 'https://example.com/relic.png',
+        'set': {'name': '深林の記憶'},
+      });
 
       expect(relic.iconUrl, 'https://example.com/relic.png');
     });
@@ -89,8 +81,10 @@ void main() {
         ],
       );
 
-      expect(merged[ArtifactSlotKey.flower]!.iconUrl,
-          'https://example.com/flower.png');
+      expect(
+        merged[ArtifactSlotKey.flower]!.iconUrl,
+        'https://example.com/flower.png',
+      );
       expect(merged[ArtifactSlotKey.flower]!.name, '花');
     });
 
@@ -149,9 +143,7 @@ void main() {
             posName: '死の羽',
             level: 20,
             setName: '深林の記憶',
-            subStats: [
-              GameRecordProp(label: '攻撃力%', value: '5.8'),
-            ],
+            subStats: [GameRecordProp(label: '攻撃力%', value: '5.8')],
           ),
         ],
       );
@@ -165,10 +157,7 @@ void main() {
 
   group('normalizeMainStatForSlot', () {
     test('maps Chinese crit rate label to app label', () {
-      expect(
-        normalizeMainStatForSlot('暴击率', ArtifactSlotKey.circlet),
-        '会心率',
-      );
+      expect(normalizeMainStatForSlot('暴击率', ArtifactSlotKey.circlet), '会心率');
     });
   });
 

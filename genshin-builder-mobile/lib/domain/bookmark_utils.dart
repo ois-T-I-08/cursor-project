@@ -3,16 +3,12 @@ import 'models/bookmark.dart';
 /// Web `bookmark-utils.ts` 相当 — sourceKey / エントリ生成
 
 String cultivationKindKey(CultivationKind kind) => switch (kind) {
-      CultivationKind.characterLevel => 'character-level',
-      CultivationKind.weaponLevel => 'weapon-level',
-      CultivationKind.talent => 'talent',
-    };
+  CultivationKind.characterLevel => 'character-level',
+  CultivationKind.weaponLevel => 'weapon-level',
+  CultivationKind.talent => 'talent',
+};
 
-String makeRangeSourceKey(
-  CultivationBookmarkContext ctx,
-  int from,
-  int to,
-) {
+String makeRangeSourceKey(CultivationBookmarkContext ctx, int from, int to) {
   final sub = ctx.subLabel != null ? ':${ctx.subLabel}' : '';
   return 'range:${cultivationKindKey(ctx.kind)}:${ctx.targetId}$sub:$from-$to';
 }
@@ -26,11 +22,7 @@ String makeItemSourceKey(
   return 'item:${cultivationKindKey(ctx.kind)}:${ctx.targetId}$sub:$scope:$materialId';
 }
 
-String makeRangeSourceLabel(
-  CultivationBookmarkContext ctx,
-  int from,
-  int to,
-) {
+String makeRangeSourceLabel(CultivationBookmarkContext ctx, int from, int to) {
   final prefix = switch (ctx.kind) {
     CultivationKind.characterLevel => 'キャラLv',
     CultivationKind.weaponLevel => '武器Lv',
@@ -60,10 +52,7 @@ bool isMaterialBookmarked(
   List<MaterialBookmarkEntry> entries,
   String sourceKey,
   String materialId,
-) =>
-    entries.any(
-      (e) => e.sourceKey == sourceKey && e.materialId == materialId,
-    );
+) => entries.any((e) => e.sourceKey == sourceKey && e.materialId == materialId);
 
 List<MaterialBookmarkEntry> buildBookmarkEntries({
   required List<RequirementLine> lines,
@@ -82,10 +71,9 @@ List<MaterialBookmarkEntry> buildBookmarkEntries({
           materialId: line.materialId,
           name: line.name,
           count: line.count,
-          iconUrl: line.iconUrl ??
-              (line.isMora
-                  ? null
-                  : iconUrlByMaterialId?[line.materialId]),
+          iconUrl:
+              line.iconUrl ??
+              (line.isMora ? null : iconUrlByMaterialId?[line.materialId]),
           characterId: character.characterId,
           characterName: character.characterName,
           characterIconUrl: character.characterIconUrl,
@@ -96,8 +84,7 @@ List<MaterialBookmarkEntry> buildBookmarkEntries({
       .toList();
 }
 
-String formatMora(int value) =>
-    value.toString().replaceAllMapped(
-          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]},',
-        );
+String formatMora(int value) => value.toString().replaceAllMapped(
+  RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+  (m) => '${m[1]},',
+);

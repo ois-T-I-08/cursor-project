@@ -12,15 +12,14 @@ class ArtifactSubstat {
 
   Map<String, dynamic> toJson() => {'stat': stat, 'value': value};
 
-  factory ArtifactSubstat.fromJson(Map<String, dynamic> json) => ArtifactSubstat(
+  factory ArtifactSubstat.fromJson(Map<String, dynamic> json) =>
+      ArtifactSubstat(
         stat: json['stat'] as String? ?? '',
         value: (json['value'] as num?)?.toDouble() ?? 0,
       );
 
-  ArtifactSubstat copyWith({String? stat, double? value}) => ArtifactSubstat(
-        stat: stat ?? this.stat,
-        value: value ?? this.value,
-      );
+  ArtifactSubstat copyWith({String? stat, double? value}) =>
+      ArtifactSubstat(stat: stat ?? this.stat, value: value ?? this.value);
 }
 
 /// 聖遺物1部位
@@ -42,24 +41,25 @@ class ArtifactPiece {
   final String? name;
 
   Map<String, dynamic> toJson() => {
-        'setName': setName,
-        'mainStat': mainStat,
-        'level': level,
-        'substats': substats.map((s) => s.toJson()).toList(),
-        if (iconUrl != null) 'iconUrl': iconUrl,
-        if (name != null) 'name': name,
-      };
+    'setName': setName,
+    'mainStat': mainStat,
+    'level': level,
+    'substats': substats.map((s) => s.toJson()).toList(),
+    if (iconUrl != null) 'iconUrl': iconUrl,
+    if (name != null) 'name': name,
+  };
 
   factory ArtifactPiece.fromJson(Map<String, dynamic> json) => ArtifactPiece(
-        setName: json['setName'] as String? ?? json['setId'] as String? ?? '',
-        mainStat: json['mainStat'] as String? ?? '',
-        level: json['level'] as int? ?? 0,
-        substats: (json['substats'] as List<dynamic>? ?? [])
+    setName: json['setName'] as String? ?? json['setId'] as String? ?? '',
+    mainStat: json['mainStat'] as String? ?? '',
+    level: json['level'] as int? ?? 0,
+    substats:
+        (json['substats'] as List<dynamic>? ?? [])
             .map((e) => ArtifactSubstat.fromJson(e as Map<String, dynamic>))
             .toList(),
-        iconUrl: json['iconUrl'] as String?,
-        name: json['name'] as String?,
-      );
+    iconUrl: json['iconUrl'] as String?,
+    name: json['name'] as String?,
+  );
 
   ArtifactPiece copyWith({
     String? setName,
@@ -68,15 +68,14 @@ class ArtifactPiece {
     List<ArtifactSubstat>? substats,
     String? iconUrl,
     String? name,
-  }) =>
-      ArtifactPiece(
-        setName: setName ?? this.setName,
-        mainStat: mainStat ?? this.mainStat,
-        level: level ?? this.level,
-        substats: substats ?? this.substats,
-        iconUrl: iconUrl ?? this.iconUrl,
-        name: name ?? this.name,
-      );
+  }) => ArtifactPiece(
+    setName: setName ?? this.setName,
+    mainStat: mainStat ?? this.mainStat,
+    level: level ?? this.level,
+    substats: substats ?? this.substats,
+    iconUrl: iconUrl ?? this.iconUrl,
+    name: name ?? this.name,
+  );
 }
 
 typedef ArtifactState = Map<ArtifactSlotKey, ArtifactPiece>;
@@ -85,12 +84,12 @@ ArtifactPiece createEmptyArtifactPiece({String mainStat = ''}) =>
     ArtifactPiece(mainStat: mainStat);
 
 ArtifactState createEmptyArtifactState() => {
-      ArtifactSlotKey.flower: createEmptyArtifactPiece(mainStat: 'HP'),
-      ArtifactSlotKey.plume: createEmptyArtifactPiece(mainStat: '攻撃力'),
-      ArtifactSlotKey.sands: createEmptyArtifactPiece(),
-      ArtifactSlotKey.goblet: createEmptyArtifactPiece(),
-      ArtifactSlotKey.circlet: createEmptyArtifactPiece(),
-    };
+  ArtifactSlotKey.flower: createEmptyArtifactPiece(mainStat: 'HP'),
+  ArtifactSlotKey.plume: createEmptyArtifactPiece(mainStat: '攻撃力'),
+  ArtifactSlotKey.sands: createEmptyArtifactPiece(),
+  ArtifactSlotKey.goblet: createEmptyArtifactPiece(),
+  ArtifactSlotKey.circlet: createEmptyArtifactPiece(),
+};
 
 ArtifactState parseArtifactState(String? json) {
   if (json == null || json.trim().isEmpty) {
@@ -117,8 +116,8 @@ String encodeArtifactState(ArtifactState state) {
 }
 
 ArtifactState copyArtifactState(ArtifactState state) => {
-      for (final e in state.entries) e.key: e.value,
-    };
+  for (final e in state.entries) e.key: e.value,
+};
 
 ArtifactState updateArtifactPiece(
   ArtifactState state,

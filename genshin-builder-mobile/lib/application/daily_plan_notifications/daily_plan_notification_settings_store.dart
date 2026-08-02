@@ -12,8 +12,9 @@ class DailyPlanNotificationSettingsStore {
   final HoyolabSettingsStore _store;
 
   Future<bool> isIncompleteEnabled() async {
-    final raw =
-        await _store.getSetting(DailyPlanNotificationSettingsKeys.incompleteEnabled);
+    final raw = await _store.getSetting(
+      DailyPlanNotificationSettingsKeys.incompleteEnabled,
+    );
     return raw == 'true';
   }
 
@@ -28,12 +29,12 @@ class DailyPlanNotificationSettingsStore {
       _store.getSetting(DailyPlanNotificationSettingsKeys.lastUniqueWorkName);
 
   Future<void> writeLastUniqueWorkName(String name) => _store.setSetting(
-        DailyPlanNotificationSettingsKeys.lastUniqueWorkName,
-        name,
-      );
+    DailyPlanNotificationSettingsKeys.lastUniqueWorkName,
+    name,
+  );
 
   Future<void> clearLastUniqueWorkName() => _store.setSetting(
-        DailyPlanNotificationSettingsKeys.lastUniqueWorkName,
-        '',
-      );
+    DailyPlanNotificationSettingsKeys.lastUniqueWorkName,
+    '',
+  );
 }

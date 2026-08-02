@@ -12,6 +12,8 @@ export class UpstreamFetchError extends Error {
     readonly code: UpstreamFailureCode,
     readonly status?: number,
     readonly retryAfterMs?: number,
+    /** Safe diagnostic token only (error name/code). Never URLs or secrets. */
+    readonly causeKind?: string,
   ) {
     super(`upstream_${code}`);
     this.name = "UpstreamFetchError";
@@ -23,8 +25,29 @@ export interface SafeJsonFetchOptions {
   maxBytes: number;
   retries?: number;
   revalidateSeconds?: number;
+  cache?: RequestCache;
   headers?: HeadersInit;
   fetchImpl?: typeof fetch;
+}
+
+/** Extract errno/name chain for logs. Never includes messages/URLs/secrets. */
+export function sanitizeNetworkCause(error: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current; depth += 1) {
+    if (!(current instanceof Error)) break;
+    parts.push(current.name || "Error");
+    const err = current as NodeJS.ErrnoException & { cause?: unknown };
+    if (typeof err.code === "string" && /^[A-Za-z0-9_.-]{1,40}$/.test(err.code)) {
+      parts.push(err.code);
+    }
+    if (typeof err.syscall === "string" && /^[A-Za-z0-9_.-]{1,40}$/.test(err.syscall)) {
+      parts.push(err.syscall);
+    }
+    current = err.cause;
+  }
+  const out = parts.join("/");
+  return out.slice(0, 120) || "unknown";
 }
 
 export async function fetchJsonObject(
@@ -54,6 +77,7 @@ async function fetchJsonObjectOnce(
     response = await withDeadline(
       fetchImpl(url, {
         headers: options.headers,
+        cache: options.cache,
         next:
           options.revalidateSeconds === undefined
             ? undefined
@@ -66,9 +90,9 @@ async function fetchJsonObjectOnce(
   } catch (error) {
     if (error instanceof UpstreamFetchError) throw error;
     if (isAbortError(error)) {
-      throw new UpstreamFetchError("timeout");
+      throw new UpstreamFetchError("timeout", undefined, undefined, sanitizeNetworkCause(error));
     }
-    throw new UpstreamFetchError("network");
+    throw new UpstreamFetchError("network", undefined, undefined, sanitizeNetworkCause(error));
   }
 
   if (!response.ok) {

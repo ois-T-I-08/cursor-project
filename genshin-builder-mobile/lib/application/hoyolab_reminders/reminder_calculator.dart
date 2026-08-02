@@ -86,7 +86,8 @@ class HoyolabReminderCalculator {
     }
 
     final notifyAt = fetchedAt.add(Duration(seconds: secondsTo190));
-    if (notifyAt.difference(fetchedAt) > ReminderNotificationIds.maxScheduleHorizon) {
+    if (notifyAt.difference(fetchedAt) >
+        ReminderNotificationIds.maxScheduleHorizon) {
       return ReminderDecision.cancel(
         ReminderKind.resin,
         reasonCode: 'horizon_exceeded',
@@ -193,7 +194,8 @@ class HoyolabReminderCalculator {
     }
 
     final notifyAt = fetchedAt.add(Duration(seconds: maxRemaining));
-    if (notifyAt.difference(fetchedAt) > ReminderNotificationIds.maxScheduleHorizon) {
+    if (notifyAt.difference(fetchedAt) >
+        ReminderNotificationIds.maxScheduleHorizon) {
       return ReminderDecision.cancel(
         ReminderKind.expedition,
         reasonCode: 'horizon_exceeded',
@@ -228,7 +230,8 @@ class HoyolabReminderCalculator {
 
   static String _immediateResinFp(String gen) => '$gen|resin_ge_190';
 
-  static String _immediateExpeditionFp(String gen) => '$gen|expedition_all_done';
+  static String _immediateExpeditionFp(String gen) =>
+      '$gen|expedition_all_done';
 
   static String _scheduleResinFp({
     required String accountGeneration,
@@ -243,8 +246,7 @@ class HoyolabReminderCalculator {
     required String accountGeneration,
     required List<int> seconds,
     required DateTime notifyAt,
-  }) =>
-      '$accountGeneration|e|${seconds.join(',')}|${_epochMinute(notifyAt)}';
+  }) => '$accountGeneration|e|${seconds.join(',')}|${_epochMinute(notifyAt)}';
 
   static int _epochMinute(DateTime dt) =>
       dt.toUtc().millisecondsSinceEpoch ~/ 60000;

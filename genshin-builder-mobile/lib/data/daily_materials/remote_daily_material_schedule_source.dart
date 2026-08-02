@@ -9,8 +9,7 @@ import 'daily_material_schedule_repository.dart';
 const _configKind = 'daily_material_schedule';
 
 /// リモート JSON から曜日スケジュールを取得（`--dart-define=DAILY_MATERIAL_SCHEDULE_URL=`）
-class RemoteDailyMaterialScheduleSource
-    implements DailyMaterialScheduleSource {
+class RemoteDailyMaterialScheduleSource implements DailyMaterialScheduleSource {
   RemoteDailyMaterialScheduleSource({
     required this.url,
     http.Client? client,

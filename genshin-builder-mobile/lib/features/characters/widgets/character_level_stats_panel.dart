@@ -43,16 +43,18 @@ class CharacterLevelStatsPanel extends ConsumerWidget {
     final nextAscension = _nextAscensionStage(promotes, ascension);
 
     return detailAsync.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: LinearProgressIndicator(),
-      ),
-      error: (_, __) => Text(
-        '基礎ステータスを取得できませんでした',
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.error,
-        ),
-      ),
+      loading:
+          () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: LinearProgressIndicator(),
+          ),
+      error:
+          (_, __) => Text(
+            '基礎ステータスを取得できませんでした',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
       data: (detail) {
         final avatarStats = detail?.stats;
         if (avatarStats == null) {
@@ -69,16 +71,21 @@ class CharacterLevelStatsPanel extends ConsumerWidget {
           level: level,
           ascension: ascension,
         );
-        final currentPromote =
-            findPromoteByLevel(avatarStats.promotes, ascension);
-        final prevPromote =
-            findPromoteByLevel(avatarStats.promotes, ascension - 1);
-        final nextPromote = nextAscension == null
-            ? null
-            : findPromoteByLevel(
-                avatarStats.promotes,
-                nextAscension.promoteLevel,
-              );
+        final currentPromote = findPromoteByLevel(
+          avatarStats.promotes,
+          ascension,
+        );
+        final prevPromote = findPromoteByLevel(
+          avatarStats.promotes,
+          ascension - 1,
+        );
+        final nextPromote =
+            nextAscension == null
+                ? null
+                : findPromoteByLevel(
+                  avatarStats.promotes,
+                  nextAscension.promoteLevel,
+                );
 
         final beforeBonuses = ascensionBonusProps(prevPromote);
         final afterBonuses = ascensionBonusProps(currentPromote);
@@ -87,15 +94,16 @@ class CharacterLevelStatsPanel extends ConsumerWidget {
           promotes: avatarStats.promotes,
         );
 
-        final nextLines = nextStage == null
-            ? const <RequirementLine>[]
-            : nextStageToRequirementLines(
-                nextStage!.materials,
-                nextStage!.levelUpMaterials,
-                nextStage!.mora,
-                resolveName,
-                resolveIcon: resolveIcon,
-              );
+        final nextLines =
+            nextStage == null
+                ? const <RequirementLine>[]
+                : nextStageToRequirementLines(
+                  nextStage!.materials,
+                  nextStage!.levelUpMaterials,
+                  nextStage!.mora,
+                  resolveName,
+                  resolveIcon: resolveIcon,
+                );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,44 +202,45 @@ class CharacterLevelStatsPanel extends ConsumerWidget {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: items
-          .map(
-            (item) => SizedBox(
-              width: 110,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 10,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.$1,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+      children:
+          items
+              .map(
+                (item) => SizedBox(
+                  width: 110,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.$2,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.$1,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.$2,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          )
-          .toList(),
+              )
+              .toList(),
     );
   }
 
@@ -249,28 +258,29 @@ class CharacterLevelStatsPanel extends ConsumerWidget {
       );
     }
     return Column(
-      children: bonuses.entries.map((e) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  fightPropLabel(e.key),
-                  style: theme.textTheme.bodyMedium,
-                ),
+      children:
+          bonuses.entries.map((e) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      fightPropLabel(e.key),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                  Text(
+                    '+${formatFightPropValue(e.key, e.value)}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '+${formatFightPropValue(e.key, e.value)}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+            );
+          }).toList(),
     );
   }
 

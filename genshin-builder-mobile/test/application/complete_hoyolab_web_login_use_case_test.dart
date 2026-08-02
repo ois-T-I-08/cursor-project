@@ -37,7 +37,10 @@ class _ScriptedClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    final body = _i < _bodies.length ? _bodies[_i++] : '{"retcode":-1,"message":"done","data":null}';
+    final body =
+        _i < _bodies.length
+            ? _bodies[_i++]
+            : '{"retcode":-1,"message":"done","data":null}';
     return http.StreamedResponse(
       Stream.value(utf8.encode(body)),
       200,
@@ -54,25 +57,28 @@ void main() {
       expect(result.userMessage, isNull);
     });
 
-    test('failure when cookie missing has no token material in message', () async {
-      final useCase = CompleteHoyolabWebLoginUseCase(
-        cookieService: HoyolabCookieService(
-          webViewCookieReader: () async => {},
-          nativeCookieFetcher: () async =>
-              const NativeCookieFetchResult.absent(),
-        ),
-        repository: HoyolabRepository(
-          secureStorage: _MemSecureStorage(),
-          featureFlags: FeatureFlags(hoyolabLinkEnabled: true),
-        ),
-      );
-      final result = await useCase();
-      expect(result.success, isFalse);
-      final msg = result.userMessage!.toLowerCase();
-      expect(msg, isNot(contains('ltoken')));
-      expect(msg, isNot(contains('dummy_')));
-      expect(result.userMessage, isNot(contains('=')));
-    });
+    test(
+      'failure when cookie missing has no token material in message',
+      () async {
+        final useCase = CompleteHoyolabWebLoginUseCase(
+          cookieService: HoyolabCookieService(
+            webViewCookieReader: () async => {},
+            nativeCookieFetcher:
+                () async => const NativeCookieFetchResult.absent(),
+          ),
+          repository: HoyolabRepository(
+            secureStorage: _MemSecureStorage(),
+            featureFlags: FeatureFlags(hoyolabLinkEnabled: true),
+          ),
+        );
+        final result = await useCase();
+        expect(result.success, isFalse);
+        final msg = result.userMessage!.toLowerCase();
+        expect(msg, isNot(contains('ltoken')));
+        expect(msg, isNot(contains('dummy_')));
+        expect(result.userMessage, isNot(contains('=')));
+      },
+    );
 
     test('does not save cookie when verifyLToken fails', () async {
       final storage = _MemSecureStorage();
@@ -81,21 +87,15 @@ void main() {
       ]);
       final useCase = CompleteHoyolabWebLoginUseCase(
         cookieService: HoyolabCookieService(
-          webViewCookieReader: () async => {
-            'ltoken_v2': 'dummy_token_should_not_persist',
-          },
-          nativeCookieFetcher: () async =>
-              const NativeCookieFetchResult.absent(),
+          webViewCookieReader:
+              () async => {'ltoken_v2': 'dummy_token_should_not_persist'},
+          nativeCookieFetcher:
+              () async => const NativeCookieFetchResult.absent(),
         ),
         repository: HoyolabRepository(
           secureStorage: storage,
           featureFlags: FeatureFlags(hoyolabLinkEnabled: true),
-          apiFactory: ({
-            required cookie,
-            region,
-            uid,
-            appVersion = '4.13.0',
-          }) {
+          apiFactory: ({required cookie, region, uid, appVersion = '4.13.0'}) {
             return HoyolabApi(
               cookie: cookie,
               appVersion: appVersion,

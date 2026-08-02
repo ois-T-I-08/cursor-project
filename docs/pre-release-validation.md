@@ -1,132 +1,141 @@
 # Pre-release validation checklist
 
-Target branch: `main` (via `salvage/daily-plan-completion-notifications`)
-Base: `main`
+Target branch: `feature/youtube-build-guide-recommendations`
+Related Draft PR to main: `#25` (remains Draft; not merged by this work)
+Last staging validation: `2026-08-02` (Vercel staging Tier B flags ON for dry-run; auto-publish/maintenance OFF; Tier B smoke **PASS**; **no production mutation**)
+Last local validation: `2026-08-01` (Windows host; **no local Docker/Postgres**; no production mutation)
 
-Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, or device account credentials in this file.
+Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, Bearer values, DB URLs, Neon project IDs, connection hosts, smoke character IDs, or device account credentials in this file.
 
 ## Build identity (fill when signing is available)
 
 | Field | Value |
 |-------|--------|
-| Target commit | |
+| Target commit | (see branch tip after Tier B docs commit) |
 | applicationId | `io.github.oisti08.genshinbuilder` |
-| versionCode / versionName | from `pubspec.yaml` / Flutter |
+| versionCode / versionName | from `pubspec.yaml` / Flutter (unchanged by this branch) |
 | Build datetime | |
 | APK size / SHA-256 | *blocked until local release signing exists* |
 | AAB size / SHA-256 | *blocked until local release signing exists* |
 | APK signature verify | *not run* |
-| Device / Android version | |
+| Device / Android version | *not run (no device session in this integration)* |
 | Reviewer / date | |
 
 ## Automated gates
 
 | Gate | Status | Notes |
 |------|--------|--------|
-| Mobile tests | 571 passed (local) | |
-| Domain parity (3) | passed | |
-| `flutter analyze` | 0 errors / 0 warnings | info only |
-| Web tests | 111 passed (local) | includes cooperative abort |
-| Web lint | passed | |
-| Web production build | passed | |
-| Secret Guard | passed (local) | |
-| Genshin Mobile CI | | fill after push |
-| Genshin Web CI | | fill after push |
+| Mobile format | passed | 436 files, 0 changed |
+| Mobile codegen | passed | build_runner |
+| Mobile tests | 756 passed | 0 failed |
+| Domain parity (3) | passed | included in full suite; GitHub Domain Golden Parity CI also SUCCESS |
+| `flutter analyze` | passed | 0 issues |
+| Android debug APK | passed | `build/app/outputs/flutter-apk/app-debug.apk` (gitignored; not signed) |
+| Web tests | 334 passed / 2 skipped | skips are env-gated DB suites without local Postgres |
+| Web typecheck / lint | passed | 0 errors / 0 warnings |
+| Web production build | passed | Next.js 16.2.12 / Turbopack |
+| Prisma generate / validate | passed | Prisma 6.19.3 / provider postgresql |
+| Prisma migration status / deploy | **blocked locally** (no Docker/Postgres); **CI passed** on `postgres:16` (`migrate deploy` + DB integration); **staging Neon baseline applied** `2026-07-29` | baseline `20260728220000_postgresql_baseline` |
+| Production dependency audit | passed | `npm audit --omit=dev`: 0 vulnerabilities |
+| Secret logging guards | code + CI secret guard | |
+| Genshin Mobile CI | passed | PR #27 GitHub Actions SUCCESS |
+| Genshin Web CI | passed | `postgres:16` service; `migrate deploy` success; DB integration (`RUN_*_DB_TEST`) success |
+| Node.js runtime | passed | engines / deploy runtime **24.x**; Node 20 deprecation warning resolved |
 
-## Feature gates
+## PostgreSQL cutover
 
-### P1-8C — 23:00 incomplete Daily Plan notification
+| Item | Value |
+|------|--------|
+| Provider | postgresql |
+| Active migrations | 1 baseline (full schema incl. build guides) |
+| SQLite archive | `prisma/migrations-sqlite-archive` |
+| Ops doc | `docs/POSTGRES_MIGRATION.md` |
+| Staging doc | `docs/STAGING_SETUP.md` |
 
-| Check | Pass? | Notes |
-|-------|-------|--------|
-| Completion persistence (per user / localDate / itemKey) | code | device E2E pending |
-| Checkbox UI complete / incomplete | code | device E2E pending |
-| WorkManager unique one-off to next local 23:00 | code | device E2E pending |
-| Catch-up after 23:00 when unevaluated | code | device E2E pending |
-| `targetLocalDate` preserved on delayed run | unit | device E2E pending |
-| Settings toggle independent of P1-8B | code | |
-| Permission request only from settings | code | |
-| Logout / OFF cancels P1-8C work only | code | device E2E pending |
-| Notification tap → Daily Plan | code | device E2E pending |
-| No secrets in notification body/payload/logs | unit | |
+## Staging validation (`2026-07-29`)
 
-### Distributed sync lease + cooperative abort
+- Deployed commit: `778fc74b1798013414b26ff27f38df70e63952d0`
+- Vercel Project: `ois/staging`
+- Staging URL: https://staging-sable.vercel.app
+- Deployment: READY (Node.js 24.x)
+- PostgreSQL: Neon staging baseline applied
+- Smoke summary: **22 passed / 0 failed**
+- Kill switches: remained disabled during smoke
+- Production impact: none
+- PR #25: remains OPEN / Draft
 
-| Check | Pass? | Notes |
-|-------|-------|--------|
-| `renewSyncLease` owner+unexpired | unit | |
-| Heartbeat ≈ TTL/3 (120s default) | unit | |
-| Ownership loss aborts shared signal | unit | |
-| Default runner checks signal before later phases / writes | unit | |
-| `fullUpgrade` does not open replacement TX after ownership loss | code | |
-| Release only matching owner token | unit | |
-| Timer cleared in `finally` | unit | |
-| API/Action map ownership loss to safe 409 | unit | |
+| Gate | Status | Notes |
+|------|--------|-------|
+| Staging deployment | passed | ois/staging, Node 24, READY |
+| PostgreSQL baseline | passed | Neon staging |
+| Public unpublished API | passed | 404 |
+| Admin auth | passed | 401 / 403 / authenticated 200 |
+| Publish flow | passed | approve → publish → public 200 |
+| ETag / 304 | passed | |
+| Optimistic lock | passed | stale update 409 |
+| Published snapshot retention | passed | draft edit did not change ETag |
+| Revision restore | passed | |
+| Unpublish | passed | public API returned 404 |
+| Public data leakage | passed | admin-only fields absent |
+| YouTube URL validation | passed | invalid host rejected, youtu.be accepted |
+| Smoke total | passed | 22 passed / 0 failed |
+| Staging DB backup | not verified | keep incomplete |
+| Admin secret unset 503 | not run | shared staging secret was not removed |
 
-### Release signing & install (human)
+Also verified on staging (included in smoke / deploy checks):
 
-| Check | Pass? | Notes |
-|-------|-------|--------|
-| `android/key.properties` present locally (not committed) | | Required for APK/AAB |
-| keystore ignored by git | yes | |
-| Signed release APK | | |
-| Signed release AAB | | |
-| Fresh install → schema v9 | | Device required |
-| Upgrade install schema v8 → v9 | | Device required |
-| Upgrade install schema v7 → v9 | | Device required |
+| Check | Status | Notes |
+|-------|--------|-------|
+| GET `/` | passed | 200 |
+| GET `/admin/guides` | passed | 200 |
 
-## Device migration paths (do not mark pass without running)
+## Staging / Android / device
 
-### A. Fresh install → schema v9
+| Check | Status |
+|-------|--------|
+| Staging deploy | **passed** — `ois/staging` READY @ `778fc74` (`2026-07-29`) |
+| Staging Postgres baseline | **passed** — Neon staging (`2026-07-29`) |
+| Staging smoke (build-guide admin/public) | **passed** — 22 / 0 (`2026-07-29`) |
+| Staging DB backup / snapshot | **not verified** — no clear evidence of backup/snapshot |
+| Admin secret unset → 503 | **not run** — shared staging secret was not removed |
+| Local Docker / PostgreSQL smoke | **blocked** — not executed |
+| Signed AAB | **blocked** — no local `android/key.properties` / keystore |
+| Device fresh install | **blocked** — not executed |
+| Device schema v7 / v8 → current migration | **blocked** — not executed |
+| Notification device check | **blocked** — not executed |
+| Light / dark theme | **blocked** — not executed |
+| Larger text / a11y | **blocked** — not executed |
+| Production DB backup / rollback | **blocked** — not executed |
+| Production deploy | **blocked** — not executed |
+| Live YouTube / Gemini / DeepSeek | **OFF** (intentional; kill switches remained disabled) |
+| Feature ↔ main merge (abyss #35/#37) | **done** — hardened `abyss-aza-ingest-staging.yml` from main; pushed on feature |
+| YouTube GHA `actions/checkout` | **fixed on feature** — required for job summary script |
+| Local Web typecheck/lint | **passed** (`2026-08-01`) |
+| Local Vitest | **374 passed / 46 skipped** (DB suites need disposable Postgres) |
+| Local Flutter analyze + guide tests | **passed** (34 focused tests) |
+| Staging `/api/v2/build-recommendations/*` | **JSON notFound** — route on tip `fc7b762`; no published guide |
+| Staging `/api/build-recommendations/*` | **JSON notFound** — route present; no published guide for sample id |
+| Staging YouTube pipeline admin route | **real Next API** — tip redeployed; Bearer admin works |
+| Staging automation migrate (`20260731120000`+) | **applied** on Neon staging |
+| Staging Tier A gate-only dry-run | **PASS** (historical; staging flags now Tier B) — `scripts/gate-only-smoke.mjs` |
+| Staging Tier B provider dry-run | **PASS** — `scripts/provider-dry-run-smoke.mjs`; `skipped=false`; `published=0`; run created; no publish |
+| Staging approved channels | **0** — register `approved_for_processing` channel to get `discovered>0` |
+| Staging `YOUTUBE_OAUTH_ACCESS_TOKEN` | **unset** — captions may BLOCK until set |
+| Staging admin secret | **rotated** `2026-08-02` — pull from Vercel; do not use old clipboard value |
 
-1. Uninstall any previous build.
-2. Install signed release APK.
-3. Confirm first launch, DB create, home / characters / daily plan / teams.
-4. Record Pass/Fail: ____
+## Go / No-Go
 
-### B. schema v8 → v9
+| Question | Answer |
+|----------|--------|
+| Merge PR #25 into main? | **No** — keep Draft |
+| Production migrate/deploy? | **No** |
+| Enable auto-publish on staging? | **No** until channel + OAuth + quality review |
+| Production impact from staging smoke? | **None** |
 
-1. Prepare a v8 data set (progress, goals, teams, events, inventory, bookmarks, upgrades).
-2. Install release APK over it.
-3. Confirm: no DB wipe; tables `daily_plan_completions` / `daily_plan_eval_history` exist; user data retained; no duplicate rows; relaunch stable.
-4. Record Pass/Fail: ____
+## Owner next actions (max 5)
 
-### C. schema v7 → v9
-
-1. Prepare v7 DB including legacy `local` user id rows where applicable.
-2. Install release APK over it.
-3. Confirm: legacy user id → UUID; growth/progress/team/inventory/events retained; new daily-plan tables created; no DB delete on failure paths; downgrade still rejected without wiping.
-4. Record Pass/Fail: ____
-
-## 23:00 notification E2E (do not mark pass without running)
-
-| Scenario | Pass? | Observed delay | Notes |
-|----------|-------|----------------|-------|
-| Permission allowed | | | |
-| Permission denied (no dialog from worker) | | | |
-| Incomplete items → notify | | | |
-| All complete → no notify | | | |
-| Empty plan → no notify | | | |
-| Foreground | | | |
-| Background | | | |
-| Process killed | | | |
-| Device reboot | | | |
-| Doze / battery optimization | | | |
-| Logout → no further notify | | | |
-| Settings OFF → cancel | | | |
-| User switch | | | |
-| Delayed run same night (e.g. 23:30) uses target date | | | |
-| Delayed run next day 00:01 uses previous target date | | | |
-| No same-day double notify | | | |
-| Tap opens Daily Plan | | | |
-
-## Known limitations
-
-- WorkManager does not guarantee exact 23:00; delayed runs use `targetLocalDate` from registration.
-- In-flight Prisma queries cannot be forcibly cancelled; after ownership loss is observed, no new phase or replacement transaction is started. An in-flight transaction rolls back if the abort check throws inside it.
-- Completion / eval history can grow over time; optional prune (>90 days) is not mandatory in v1.
-- Release APK/AAB verification remains incomplete until upload signing files exist locally.
-
-## Go / no-go
-
-Public release is **not** approved until signed APK/AAB, device install, migration paths A–C, and 23:00 notification checks above are completed and recorded.
+1. Pull rotated `BUILD_GUIDE_ADMIN_SECRET` from Vercel `ois/staging` (old value is invalid).
+2. Register at least one `approved_for_processing` channel in `/admin/guides`, then re-run Tier B smoke (expect `discovered>0`).
+3. Add staging-only `YOUTUBE_OAUTH_ACCESS_TOKEN` when ready for captions; keep auto-publish/maintenance `false`.
+4. After #25 merges to main, set GitHub `environment: staging` vars/secrets and enable GHA gradually.
+5. On any doubt: emergency stop ON + all YouTube/Gemini flags `false` (see `docs/YOUTUBE_GUIDE_AUTOMATION.md`).

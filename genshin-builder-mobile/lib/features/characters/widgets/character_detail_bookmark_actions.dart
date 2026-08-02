@@ -36,13 +36,11 @@ class CharacterDetailBookmarkActions {
       isMaterialBookmarked(getBookmarks(), sourceKey, materialId);
 
   Map<String, String?> _iconMap() => {
-        for (final m in getMaterials().values) m.id: m.iconUrl,
-      };
+    for (final m in getMaterials().values) m.id: m.iconUrl,
+  };
 
   int _rangeFrom(CultivationBookmarkContext ctx) =>
-      ctx.kind == CultivationKind.weaponLevel
-          ? getWeaponLevel()
-          : getLevel();
+      ctx.kind == CultivationKind.weaponLevel ? getWeaponLevel() : getLevel();
 
   int _rangeTo(CultivationBookmarkContext ctx) =>
       ctx.kind == CultivationKind.weaponLevel
@@ -55,8 +53,11 @@ class CharacterDetailBookmarkActions {
     String sourceKey,
   ) async {
     final repo = await ref.read(bookmarkRepositoryProvider.future);
-    final sourceLabel =
-        makeRangeSourceLabel(ctx, _rangeFrom(ctx), _rangeTo(ctx));
+    final sourceLabel = makeRangeSourceLabel(
+      ctx,
+      _rangeFrom(ctx),
+      _rangeTo(ctx),
+    );
     final entries = buildBookmarkEntries(
       lines: lines,
       sourceKey: sourceKey,
@@ -64,17 +65,14 @@ class CharacterDetailBookmarkActions {
       character: ctx.character,
       iconUrlByMaterialId: _iconMap(),
     );
-    await repo.replaceSourceBookmarks(
-      sourceKey: sourceKey,
-      entries: entries,
-    );
+    await repo.replaceSourceBookmarks(sourceKey: sourceKey, entries: entries);
     setBookmarks(await repo.getAll());
     ref.invalidate(aggregatedBookmarksProvider);
     final context = getContext();
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ブックマークに追加しました')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ブックマークに追加しました')));
     }
     onStateChanged();
   }
@@ -92,17 +90,18 @@ class CharacterDetailBookmarkActions {
       bookmarks.removeWhere((b) => b.id == id);
       setBookmarks(bookmarks);
     } else {
-      final entry = buildBookmarkEntries(
-        lines: [line],
-        sourceKey: rangeSourceKey,
-        sourceLabel: makeRangeSourceLabel(
-          ctx,
-          _rangeFrom(ctx),
-          _rangeTo(ctx),
-        ),
-        character: ctx.character,
-        iconUrlByMaterialId: _iconMap(),
-      ).first;
+      final entry =
+          buildBookmarkEntries(
+            lines: [line],
+            sourceKey: rangeSourceKey,
+            sourceLabel: makeRangeSourceLabel(
+              ctx,
+              _rangeFrom(ctx),
+              _rangeTo(ctx),
+            ),
+            character: ctx.character,
+            iconUrlByMaterialId: _iconMap(),
+          ).first;
       await repo.addOrUpdate(entry);
       setBookmarks([...bookmarks, entry]);
     }
@@ -124,13 +123,14 @@ class CharacterDetailBookmarkActions {
       bookmarks.removeWhere((b) => b.id == id);
       setBookmarks(bookmarks);
     } else {
-      final entry = buildBookmarkEntries(
-        lines: [line],
-        sourceKey: sourceKey,
-        sourceLabel: makeItemSourceLabel(ctx, line.name),
-        character: ctx.character,
-        iconUrlByMaterialId: _iconMap(),
-      ).first;
+      final entry =
+          buildBookmarkEntries(
+            lines: [line],
+            sourceKey: sourceKey,
+            sourceLabel: makeItemSourceLabel(ctx, line.name),
+            character: ctx.character,
+            iconUrlByMaterialId: _iconMap(),
+          ).first;
       await repo.addOrUpdate(entry);
       setBookmarks([...bookmarks, entry]);
     }

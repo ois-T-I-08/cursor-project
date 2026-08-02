@@ -33,14 +33,8 @@ void main() {
 
     final router = GoRouter(
       routes: [
-        GoRoute(
-          path: '/',
-          builder: (_, __) => const SizedBox(),
-        ),
-        GoRoute(
-          path: '/settings',
-          builder: (_, __) => const SizedBox(),
-        ),
+        GoRoute(path: '/', builder: (_, __) => const SizedBox()),
+        GoRoute(path: '/settings', builder: (_, __) => const SizedBox()),
       ],
       initialLocation: '/settings',
     );

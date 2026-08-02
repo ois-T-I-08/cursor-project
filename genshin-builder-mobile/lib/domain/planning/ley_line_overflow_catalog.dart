@@ -105,7 +105,8 @@ class LeyLineOverflowEventFromJson {
     if (end.isBefore(start)) return null;
 
     final rawName = '${json['displayName'] ?? defaults.displayName}'.trim();
-    final multiplier = (json['rewardMultiplier'] as num?)?.toInt() ??
+    final multiplier =
+        (json['rewardMultiplier'] as num?)?.toInt() ??
         defaults.rewardMultiplier;
     if (multiplier < 2) return null;
     final limit =
@@ -121,9 +122,10 @@ class LeyLineOverflowEventFromJson {
       dailyBonusLimit: limit,
       rewardMultiplier: multiplier,
       condensedResinEligible: false,
-      eligibleLeyLineTypes: json.containsKey('eligibleLeyLineTypes')
-          ? parseEligibleLeyLineTypes(json['eligibleLeyLineTypes'])
-          : defaults.eligibleLeyLineTypes,
+      eligibleLeyLineTypes:
+          json.containsKey('eligibleLeyLineTypes')
+              ? parseEligibleLeyLineTypes(json['eligibleLeyLineTypes'])
+              : defaults.eligibleLeyLineTypes,
       enabled: json['enabled'] as bool? ?? true,
       source: '${json['source'] ?? sourceFallback}'.trim(),
       updatedAt: _parseDate(json['updatedAt']),

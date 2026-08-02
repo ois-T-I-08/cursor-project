@@ -6,34 +6,37 @@ import 'package:genshin_builder_mobile/domain/planning/upgrade_option.dart';
 import 'package:genshin_builder_mobile/data/config/config_validators.dart';
 
 ResinFarmCostTable _table() => ResinFarmCostTable.fromJson({
-      'version': 1,
-      'kinds': {
-        'talentDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2},
-        'weaponDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2},
-        'artifactDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 1},
-        'weeklyBoss': {'resinPerRun': 30, 'assumedDropsPerRun': 1},
-        'worldBoss': {'resinPerRun': 40, 'assumedDropsPerRun': 2},
-        'leyLineExp': {'resinPerRun': 20, 'assumedDropsPerRun': 1},
-        'leyLineMora': {'resinPerRun': 20, 'assumedMoraPerRun': 60000},
-      },
-      'zeroResinCategories': ['localSpecialtyMondstadt'],
-    });
+  'version': 1,
+  'kinds': {
+    'talentDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2},
+    'weaponDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2},
+    'artifactDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 1},
+    'weeklyBoss': {'resinPerRun': 30, 'assumedDropsPerRun': 1},
+    'worldBoss': {'resinPerRun': 40, 'assumedDropsPerRun': 2},
+    'leyLineExp': {'resinPerRun': 20, 'assumedDropsPerRun': 1},
+    'leyLineMora': {'resinPerRun': 20, 'assumedMoraPerRun': 60000},
+  },
+  'zeroResinCategories': ['localSpecialtyMondstadt'],
+});
 
 void main() {
   group('validateResinFarmCostsJson', () {
     test('accepts valid table', () {
-      expect(() => validateResinFarmCostsJson({
-            'version': 1,
-            'kinds': {
-              'talentDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2.2},
-              'weaponDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2.2},
-              'artifactDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 1},
-              'weeklyBoss': {'resinPerRun': 30, 'assumedDropsPerRun': 1},
-              'worldBoss': {'resinPerRun': 40, 'assumedDropsPerRun': 2},
-              'leyLineExp': {'resinPerRun': 20, 'assumedDropsPerRun': 1},
-              'leyLineMora': {'resinPerRun': 20, 'assumedMoraPerRun': 60000},
-            },
-          }), returnsNormally);
+      expect(
+        () => validateResinFarmCostsJson({
+          'version': 1,
+          'kinds': {
+            'talentDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2.2},
+            'weaponDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 2.2},
+            'artifactDomain': {'resinPerRun': 20, 'assumedDropsPerRun': 1},
+            'weeklyBoss': {'resinPerRun': 30, 'assumedDropsPerRun': 1},
+            'worldBoss': {'resinPerRun': 40, 'assumedDropsPerRun': 2},
+            'leyLineExp': {'resinPerRun': 20, 'assumedDropsPerRun': 1},
+            'leyLineMora': {'resinPerRun': 20, 'assumedMoraPerRun': 60000},
+          },
+        }),
+        returnsNormally,
+      );
     });
 
     test('rejects missing kind', () {
@@ -194,10 +197,7 @@ void main() {
         expItemCost: {'104003': 5},
       );
       // ceil(5/2.5)=2 * 20 = 40
-      expect(
-        estimateResinCostForUpgradeOption(option: option, table: v2),
-        40,
-      );
+      expect(estimateResinCostForUpgradeOption(option: option, table: v2), 40);
     });
 
     test('accepts leyLineExp with hero-wit only', () {

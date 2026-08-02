@@ -113,10 +113,7 @@ String configFailureReason(Object error) {
   return 'unexpected';
 }
 
-void logRemoteFallback({
-  required String kind,
-  required Object error,
-}) {
+void logRemoteFallback({required String kind, required Object error}) {
   logConfigLoad(
     kind: kind,
     source: 'remote',
@@ -130,10 +127,7 @@ void logRemoteFallback({
   );
 }
 
-void logLocalConfigFailed({
-  required String kind,
-  required Object error,
-}) {
+void logLocalConfigFailed({required String kind, required Object error}) {
   logConfigLoad(
     kind: kind,
     source: 'local',

@@ -56,7 +56,8 @@ class HoyolabCharacterBuild {
     }
 
     final talents = <GameRecordTalent>[];
-    final skills = json['skills'] as List<dynamic>? ??
+    final skills =
+        json['skills'] as List<dynamic>? ??
         json['skill_list'] as List<dynamic>? ??
         [];
     for (final raw in skills) {
@@ -65,7 +66,9 @@ class HoyolabCharacterBuild {
 
     final relics = <GameRecordRelic>[];
     final relicList =
-        json['relics'] as List<dynamic>? ?? json['reliquary_list'] as List<dynamic>? ?? [];
+        json['relics'] as List<dynamic>? ??
+        json['reliquary_list'] as List<dynamic>? ??
+        [];
     for (final raw in relicList) {
       relics.add(
         GameRecordRelic.fromJson(
@@ -108,8 +111,7 @@ class HoyolabCharacterBuild {
       level: level > 1 ? level : summary.level,
       promoteLevel: promoteLevel > 0 ? promoteLevel : summary.promoteLevel,
       friendship: friendship > 0 ? friendship : summary.friendship,
-      constellation:
-          constellation > 0 ? constellation : summary.constellation,
+      constellation: constellation > 0 ? constellation : summary.constellation,
       stats: stats,
       talents: talents,
       weapon: weapon ?? summary.weapon,

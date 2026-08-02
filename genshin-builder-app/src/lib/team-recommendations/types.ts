@@ -2,7 +2,7 @@ import type { AbyssTeamStatistic } from "@/lib/abyss/types";
 
 export type InputQuality = "exact" | "partial" | "defaulted" | "unsupported";
 export type Element = "anemo" | "cryo" | "dendro" | "electro" | "geo" | "hydro" | "pyro";
-export type SimulationStatus = "simulated" | "observed" | "ruleBased" | "manual";
+export type SimulationStatus = "observed" | "ruleBased" | "manual";
 export type JobStatus = "queued" | "running" | "completed" | "failed" | "expired";
 
 export interface NormalizedTalents {
@@ -72,7 +72,7 @@ export interface TeamRecommendationRequest {
   characters: SimulationBuildSnapshot[];
 }
 
-export type CandidateSource = "aza" | "coOccurrence" | "ruleBased" | "gcsim";
+export type CandidateSource = "aza" | "coOccurrence" | "ruleBased";
 
 export interface TeamCandidate {
   attackerId: string;
@@ -86,17 +86,9 @@ export interface TeamCandidate {
   rotationConfidence: "high" | "medium" | "low";
 }
 
-export interface GcsimRunResult {
-  estimatedDps: number;
-  iterations: number;
-  reactions: Record<string, number>;
-  endingEnergy: number[];
-}
-
 export interface TeamRecommendation {
   members: string[];
   score: number;
-  estimatedDps?: number;
   simulationStatus: SimulationStatus;
   sourceTypes: CandidateSource[];
   rotationConfidence: "high" | "medium" | "low";
@@ -111,16 +103,14 @@ export interface TeamRecommendation {
 export interface TeamRecommendationResult {
   attackerId: string;
   generatedAt: string;
-  gcsim: { version: string; iterations: number; enabled: boolean };
   recommendations: TeamRecommendation[];
-  warning?: "staleSimulation" | "gcsimUnavailable";
 }
 
 export interface TeamRecommendationJob {
   jobId: string;
   status: JobStatus;
   result?: TeamRecommendationResult;
-  errorCode?: "invalidRequest" | "noCandidates" | "simulationFailed" | "internalError";
+  errorCode?: "invalidRequest" | "noCandidates" | "internalError";
 }
 
 export interface CandidateGenerationContext {

@@ -39,7 +39,9 @@ class TalentDetailData {
   final Map<int, List<TalentStatRow>> levelStats;
 
   int get maxStatLevel =>
-      levelStats.keys.isEmpty ? 0 : levelStats.keys.reduce((a, b) => a > b ? a : b);
+      levelStats.keys.isEmpty
+          ? 0
+          : levelStats.keys.reduce((a, b) => a > b ? a : b);
 }
 
 class AvatarDetailData {

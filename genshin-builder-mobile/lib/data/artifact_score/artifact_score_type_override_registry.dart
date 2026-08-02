@@ -6,7 +6,7 @@ typedef ArtifactScoreTypeOverrideLoader =
 /// JSON 上書き定義の読み込みと参照。
 class ArtifactScoreTypeOverrideRegistry {
   ArtifactScoreTypeOverrideRegistry({ArtifactScoreTypeOverrideLoader? loader})
-      : _loader = loader;
+    : _loader = loader;
 
   static final ArtifactScoreTypeOverrideRegistry instance =
       ArtifactScoreTypeOverrideRegistry();

@@ -24,6 +24,7 @@ class HoyolabConstants {
   static const characterListPath = '/character/list';
   static const characterLegacyPath = '/character';
   static const characterDetailPath = '/character/detail';
+
   /// `/character/detail` の1リクエストあたりの最大キャラ数
   static const characterDetailBatchSize = 40;
   static const spiralAbyssPath = '/spiralAbyss';

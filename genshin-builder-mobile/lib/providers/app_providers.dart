@@ -39,16 +39,18 @@ final amberApiProvider = Provider<AmberApi>((ref) {
   return api;
 });
 
-final artifactScoreWeightSourceProvider =
-    Provider<ArtifactScoreWeightSource>((ref) {
+final artifactScoreWeightSourceProvider = Provider<ArtifactScoreWeightSource>((
+  ref,
+) {
   const remoteUrl = String.fromEnvironment(
     'ARTIFACT_SCORE_WEIGHTS_URL',
     defaultValue: '',
   );
   final local = LocalJsonArtifactScoreWeightSource();
-  final remote = remoteUrl.isEmpty
-      ? null
-      : RemoteArtifactScoreWeightSource(url: remoteUrl);
+  final remote =
+      remoteUrl.isEmpty
+          ? null
+          : RemoteArtifactScoreWeightSource(url: remoteUrl);
   return CompositeArtifactScoreWeightSource(
     localSource: local,
     remoteSource: remote,
@@ -57,59 +59,69 @@ final artifactScoreWeightSourceProvider =
 
 final artifactScoreWeightRepositoryProvider =
     Provider<ArtifactScoreWeightRepository>((ref) {
-  return ArtifactScoreWeightRepository(ref.watch(artifactScoreWeightSourceProvider));
-});
+      return ArtifactScoreWeightRepository(
+        ref.watch(artifactScoreWeightSourceProvider),
+      );
+    });
 
 final dailyMaterialScheduleRepositoryProvider =
     Provider<DailyMaterialScheduleRepository>((ref) {
-  const remoteUrl = String.fromEnvironment(
-    'DAILY_MATERIAL_SCHEDULE_URL',
-    defaultValue: '',
-  );
-  final remote = remoteUrl.isEmpty
-      ? null
-      : RemoteDailyMaterialScheduleSource(url: remoteUrl);
-  return DailyMaterialScheduleRepository(
-    CompositeDailyMaterialScheduleSource(
-      localSource: LocalJsonDailyMaterialScheduleSource(),
-      remoteSource: remote,
-    ),
-  );
-});
+      const remoteUrl = String.fromEnvironment(
+        'DAILY_MATERIAL_SCHEDULE_URL',
+        defaultValue: '',
+      );
+      final remote =
+          remoteUrl.isEmpty
+              ? null
+              : RemoteDailyMaterialScheduleSource(url: remoteUrl);
+      return DailyMaterialScheduleRepository(
+        CompositeDailyMaterialScheduleSource(
+          localSource: LocalJsonDailyMaterialScheduleSource(),
+          remoteSource: remote,
+        ),
+      );
+    });
 
-final masterContentProbeProvider =
-    FutureProvider<MasterContentProbe>((ref) async {
+final masterContentProbeProvider = FutureProvider<MasterContentProbe>((
+  ref,
+) async {
   final db = await ref.watch(appDatabaseProvider.future);
   final amber = ref.watch(amberApiProvider);
   return MasterContentProbe(amberApi: amber, db: db);
 });
 
-final characterRepositoryProvider =
-    FutureProvider<CharacterRepository>((ref) async {
+final characterRepositoryProvider = FutureProvider<CharacterRepository>((
+  ref,
+) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return DriftCharacterRepository(db);
 });
 
-final progressRepositoryProvider =
-    FutureProvider<ProgressRepository>((ref) async {
+final progressRepositoryProvider = FutureProvider<ProgressRepository>((
+  ref,
+) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return DriftProgressRepository(db);
 });
 
-final bookmarkRepositoryProvider =
-    FutureProvider<BookmarkRepository>((ref) async {
+final bookmarkRepositoryProvider = FutureProvider<BookmarkRepository>((
+  ref,
+) async {
   final db = await ref.watch(appDatabaseProvider.future);
   return BookmarkRepository(db);
 });
 
-final masterSyncServiceProvider =
-    FutureProvider<MasterSyncService>((ref) async {
+final masterSyncServiceProvider = FutureProvider<MasterSyncService>((
+  ref,
+) async {
   final db = await ref.watch(appDatabaseProvider.future);
   final amber = ref.watch(amberApiProvider);
   return MasterSyncService(amberApi: amber, db: db);
 });
 
-final versioningServiceProvider = FutureProvider<VersioningService>((ref) async {
+final versioningServiceProvider = FutureProvider<VersioningService>((
+  ref,
+) async {
   final db = await ref.watch(appDatabaseProvider.future);
   final weights = ref.watch(artifactScoreWeightRepositoryProvider);
   return VersioningService(db: db, weightRepository: weights);
@@ -121,7 +133,9 @@ final charactersProvider = FutureProvider((ref) async {
 });
 
 /// 素材マスタのキャッシュ（詳細画面の名前解決用）
-final materialsMapProvider = FutureProvider<Map<String, MasterMaterial>>((ref) async {
+final materialsMapProvider = FutureProvider<Map<String, MasterMaterial>>((
+  ref,
+) async {
   final repo = await ref.watch(characterRepositoryProvider.future);
   return repo.getMaterialsMap();
 });
@@ -164,8 +178,9 @@ final cloudSyncPortProvider = FutureProvider<CloudSyncPort>((ref) async {
   return LocalOnlyCloudSync(localUserId: userId, progress: progress);
 });
 
-final syncStateProvider =
-    StateProvider<AsyncValue<SyncResult?>>((ref) => const AsyncValue.data(null));
+final syncStateProvider = StateProvider<AsyncValue<SyncResult?>>(
+  (ref) => const AsyncValue.data(null),
+);
 
 /// マスタ同期後に UI が参照する Provider を再読み込み
 void invalidateMasterDataProviders(WidgetRef ref) {

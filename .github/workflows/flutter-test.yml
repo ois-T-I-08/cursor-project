@@ -24,9 +24,16 @@ jobs:
 
       - run: flutter pub get
 
-      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: dart run build_runner build
+
+      - name: Format check
+        run: dart format --output=none --set-exit-if-changed .
 
       - run: flutter analyze
+
+      - name: Guard against unexpected generated diffs
+        working-directory: .
+        run: git diff --exit-code -- genshin-builder-mobile
 
       - run: flutter test test/domain/phase3_upgrade_test.dart --reporter expanded
 

@@ -419,10 +419,7 @@ Future<void> _verifyMigratedData(DriftAppDatabase db) async {
   expect(events.single.characterId, '10000002');
   expect(events.single.eventId, 'event-legacy');
 
-  for (final table in [
-    'daily_plan_completions',
-    'daily_plan_eval_history',
-  ]) {
+  for (final table in ['daily_plan_completions', 'daily_plan_eval_history']) {
     expect(
       await db
           .customSelect(

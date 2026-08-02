@@ -23,13 +23,15 @@ class ArtifactScoreSummaryCard extends StatelessWidget {
   /// 表示用のスコア基準ラベル（例: "攻撃"）
   final String? scoreTypeLabel;
 
-  double _pieceScore(ArtifactPiece piece) => weights == null
-      ? calcArtifactPieceScore(piece, scoreType)
-      : calcArtifactPieceScoreWithWeights(piece, weights!);
+  double _pieceScore(ArtifactPiece piece) =>
+      weights == null
+          ? calcArtifactPieceScore(piece, scoreType)
+          : calcArtifactPieceScoreWithWeights(piece, weights!);
 
-  double _totalScore() => weights == null
-      ? calcArtifactTotalScore(artifacts, scoreType)
-      : calcArtifactTotalScoreWithWeights(artifacts, weights!);
+  double _totalScore() =>
+      weights == null
+          ? calcArtifactTotalScore(artifacts, scoreType)
+          : calcArtifactTotalScoreWithWeights(artifacts, weights!);
 
   @override
   Widget build(BuildContext context) {
@@ -72,10 +74,7 @@ class ArtifactScoreSummaryCard extends StatelessWidget {
                     GameIconImage(
                       iconUrl: piece.iconUrl,
                       size: 28,
-                      fallback: Text(
-                        label,
-                        style: theme.textTheme.labelSmall,
-                      ),
+                      fallback: Text(label, style: theme.textTheme.labelSmall),
                     ),
                     const SizedBox(width: 8),
                     SizedBox(

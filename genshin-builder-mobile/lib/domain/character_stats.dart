@@ -146,10 +146,10 @@ class WeaponStatsData {
     double? subValue;
 
     for (final prop in props) {
-      final curve =
-          prop.curveValues.isEmpty ? 1.0 : prop.curveValues[lv - 1];
+      final curve = prop.curveValues.isEmpty ? 1.0 : prop.curveValues[lv - 1];
       if (prop.propType == 'FIGHT_PROP_BASE_ATTACK') {
-        baseAttack = prop.initValue * curve +
+        baseAttack =
+            prop.initValue * curve +
             (promote?.addProps['FIGHT_PROP_BASE_ATTACK'] ?? 0);
       } else {
         subProp = prop.propType;
@@ -332,9 +332,7 @@ void _applySetEffectText(String text, _StatBucket bucket) {
 
     if (statName == 'シールド強化') {
       bucket.shield += value;
-    } else if (statName == 'HP' ||
-        statName == '攻撃力' ||
-        statName == '防御力') {
+    } else if (statName == 'HP' || statName == '攻撃力' || statName == '防御力') {
       if (percent == '%') {
         _applyNamedStat('$statName%', value, bucket);
       }
@@ -455,9 +453,9 @@ StatValues computeCharacterStats({
   return {
     StatKey.hp:
         (baseHp * (1 + bucket.hpPct / 100) + bucket.hpFlat).roundToDouble(),
-    StatKey.atk: ((baseAtk + weaponBaseAtk) * (1 + bucket.atkPct / 100) +
-            bucket.atkFlat)
-        .roundToDouble(),
+    StatKey.atk:
+        ((baseAtk + weaponBaseAtk) * (1 + bucket.atkPct / 100) + bucket.atkFlat)
+            .roundToDouble(),
     StatKey.def:
         (baseDef * (1 + bucket.defPct / 100) + bucket.defFlat).roundToDouble(),
     StatKey.em: bucket.em.roundToDouble(),
@@ -517,8 +515,7 @@ String formatFightPropValue(String propType, double value) {
   return value.round().toString();
 }
 
-String fightPropLabel(String propType) =>
-    fightPropLabels[propType] ?? propType;
+String fightPropLabel(String propType) => fightPropLabels[propType] ?? propType;
 
 /// キャラクターの基礎 HP / 攻撃 / 防御（レベル × 曲線 + 突破加算）
 class CharacterBaseStats {
@@ -545,7 +542,10 @@ CharacterBaseStats computeCharacterBaseStats({
   required int level,
   required int ascension,
 }) {
-  final promote = findPromoteByLevel(avatarStats.promotes, ascension.clamp(0, 6));
+  final promote = findPromoteByLevel(
+    avatarStats.promotes,
+    ascension.clamp(0, 6),
+  );
   final lv = level.clamp(1, 90);
   var baseHp = 0.0;
   var baseAtk = 0.0;

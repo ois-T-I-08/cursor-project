@@ -59,9 +59,11 @@ class LocalJsonArtifactScoreWeightSource implements ArtifactScoreWeightSource {
     try {
       final items = (map['profiles'] as List<dynamic>? ?? [])
           .whereType<Map>()
-          .map((e) => ArtifactScoreWeightProfile.fromJson(
-                Map<String, dynamic>.from(e),
-              ))
+          .map(
+            (e) => ArtifactScoreWeightProfile.fromJson(
+              Map<String, dynamic>.from(e),
+            ),
+          )
           .toList(growable: false);
       _cache = items;
       return items;

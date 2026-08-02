@@ -37,9 +37,11 @@ List<CharacterResinBreakdown> buildCharacterResinBreakdowns(GrowthRoute route) {
 
   for (final day in route.days) {
     for (final action in day.actions) {
-      final type = action.reasons.isNotEmpty
-          ? action.reasons.first
-          : growthOptionTypeFromOptionId(action.optionId) ?? action.optionId;
+      final type =
+          action.reasons.isNotEmpty
+              ? action.reasons.first
+              : growthOptionTypeFromOptionId(action.optionId) ??
+                  action.optionId;
       final resin = action.estimatedResinCost ?? 0;
       final charMap = byChar.putIfAbsent(action.characterId, () => {});
       final prev = charMap[type];
@@ -53,20 +55,21 @@ List<CharacterResinBreakdown> buildCharacterResinBreakdowns(GrowthRoute route) {
 
   final result = <CharacterResinBreakdown>[];
   for (final entry in byChar.entries) {
-    final lines = entry.value.entries
-        .map(
-          (e) => CharacterResinLine(
-            optionType: e.key,
-            resin: e.value.resin,
-            actionCount: e.value.count,
-          ),
-        )
-        .toList()
-      ..sort((a, b) {
-        final byResin = b.resin.compareTo(a.resin);
-        if (byResin != 0) return byResin;
-        return a.optionType.compareTo(b.optionType);
-      });
+    final lines =
+        entry.value.entries
+            .map(
+              (e) => CharacterResinLine(
+                optionType: e.key,
+                resin: e.value.resin,
+                actionCount: e.value.count,
+              ),
+            )
+            .toList()
+          ..sort((a, b) {
+            final byResin = b.resin.compareTo(a.resin);
+            if (byResin != 0) return byResin;
+            return a.optionType.compareTo(b.optionType);
+          });
     final total = lines.fold<int>(0, (s, l) => s + l.resin);
     result.add(
       CharacterResinBreakdown(

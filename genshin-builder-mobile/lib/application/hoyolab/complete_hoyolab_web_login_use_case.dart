@@ -5,15 +5,12 @@ import '../../data/repositories/hoyolab_repository.dart';
 
 /// UI-safe result of completing HoYoLAB WebView login (no cookie bodies).
 class HoyolabWebLoginResult {
-  const HoyolabWebLoginResult._({
-    required this.success,
-    this.userMessage,
-  });
+  const HoyolabWebLoginResult._({required this.success, this.userMessage});
 
   const HoyolabWebLoginResult.success() : this._(success: true);
 
   const HoyolabWebLoginResult.failure(String userMessage)
-      : this._(success: false, userMessage: userMessage);
+    : this._(success: false, userMessage: userMessage);
 
   final bool success;
   final String? userMessage;
@@ -24,8 +21,8 @@ class CompleteHoyolabWebLoginUseCase {
   const CompleteHoyolabWebLoginUseCase({
     required HoyolabCookieService cookieService,
     required HoyolabRepository repository,
-  })  : _cookies = cookieService,
-        _repository = repository;
+  }) : _cookies = cookieService,
+       _repository = repository;
 
   final HoyolabCookieService _cookies;
   final HoyolabRepository _repository;
@@ -46,10 +43,7 @@ class CompleteHoyolabWebLoginUseCase {
     } catch (e, st) {
       logAppError(e, st, 'hoyolab.webLogin');
       return HoyolabWebLoginResult.failure(
-        userFacingError(
-          e,
-          fallback: '連携に失敗しました。ログイン状態を確認して再試行してください。',
-        ),
+        userFacingError(e, fallback: '連携に失敗しました。ログイン状態を確認して再試行してください。'),
       );
     }
   }

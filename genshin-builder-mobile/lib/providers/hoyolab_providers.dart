@@ -19,44 +19,58 @@ final hoyolabCookieServiceProvider = Provider<HoyolabCookieService>((ref) {
 final featureFlagsProvider = FutureProvider<FeatureFlags>((ref) async {
   final db = await ref.watch(appDatabaseProvider.future);
   final rawHoyolab = await db.getSetting(FeatureFlags.hoyolabLinkEnabledKey);
-  final hoyolab = rawHoyolab == null
-      ? FeatureFlags.defaultHoyolabLinkEnabled
-      : rawHoyolab == 'true';
+  final hoyolab =
+      rawHoyolab == null
+          ? FeatureFlags.defaultHoyolabLinkEnabled
+          : rawHoyolab == 'true';
 
   final rawGoals = await db.getSetting(FeatureFlags.growthGoalsEnabledKey);
-  final goals = rawGoals == null
-      ? FeatureFlags.defaultGrowthGoalsEnabled
-      : rawGoals == 'true';
+  final goals =
+      rawGoals == null
+          ? FeatureFlags.defaultGrowthGoalsEnabled
+          : rawGoals == 'true';
 
-  final rawInventory = await db.getSetting(FeatureFlags.materialInventoryEnabledKey);
-  final inventory = rawInventory == null
-      ? FeatureFlags.defaultMaterialInventoryEnabled
-      : rawInventory == 'true';
+  final rawInventory = await db.getSetting(
+    FeatureFlags.materialInventoryEnabledKey,
+  );
+  final inventory =
+      rawInventory == null
+          ? FeatureFlags.defaultMaterialInventoryEnabled
+          : rawInventory == 'true';
 
   final rawTeams = await db.getSetting(FeatureFlags.savedTeamsEnabledKey);
-  final teams = rawTeams == null
-      ? FeatureFlags.defaultSavedTeamsEnabled
-      : rawTeams == 'true';
+  final teams =
+      rawTeams == null
+          ? FeatureFlags.defaultSavedTeamsEnabled
+          : rawTeams == 'true';
 
   final rawDailyPlan = await db.getSetting(FeatureFlags.dailyPlanEnabledKey);
-  final dailyPlan = rawDailyPlan == null
-      ? FeatureFlags.defaultDailyPlanEnabled
-      : rawDailyPlan == 'true';
+  final dailyPlan =
+      rawDailyPlan == null
+          ? FeatureFlags.defaultDailyPlanEnabled
+          : rawDailyPlan == 'true';
 
-  final rawDiag = await db.getSetting(FeatureFlags.investmentDiagnosisEnabledKey);
-  final diag = rawDiag == null
-      ? FeatureFlags.defaultInvestmentDiagnosisEnabled
-      : rawDiag == 'true';
+  final rawDiag = await db.getSetting(
+    FeatureFlags.investmentDiagnosisEnabledKey,
+  );
+  final diag =
+      rawDiag == null
+          ? FeatureFlags.defaultInvestmentDiagnosisEnabled
+          : rawDiag == 'true';
 
-  final rawTimeline = await db.getSetting(FeatureFlags.growthTimelineEnabledKey);
-  final timeline = rawTimeline == null
-      ? FeatureFlags.defaultGrowthTimelineEnabled
-      : rawTimeline == 'true';
+  final rawTimeline = await db.getSetting(
+    FeatureFlags.growthTimelineEnabledKey,
+  );
+  final timeline =
+      rawTimeline == null
+          ? FeatureFlags.defaultGrowthTimelineEnabled
+          : rawTimeline == 'true';
 
   final rawHealth = await db.getSetting(FeatureFlags.accountHealthEnabledKey);
-  final health = rawHealth == null
-      ? FeatureFlags.defaultAccountHealthEnabled
-      : rawHealth == 'true';
+  final health =
+      rawHealth == null
+          ? FeatureFlags.defaultAccountHealthEnabled
+          : rawHealth == 'true';
 
   return FeatureFlags(
     hoyolabLinkEnabled: hoyolab,
@@ -70,7 +84,9 @@ final featureFlagsProvider = FutureProvider<FeatureFlags>((ref) async {
   );
 });
 
-final hoyolabRepositoryProvider = FutureProvider<HoyolabRepository>((ref) async {
+final hoyolabRepositoryProvider = FutureProvider<HoyolabRepository>((
+  ref,
+) async {
   final secure = ref.watch(secureStorageProvider);
   final flags = await ref.watch(featureFlagsProvider.future);
   return HoyolabRepository(
@@ -82,12 +98,12 @@ final hoyolabRepositoryProvider = FutureProvider<HoyolabRepository>((ref) async 
 
 final completeHoyolabWebLoginUseCaseProvider =
     FutureProvider<CompleteHoyolabWebLoginUseCase>((ref) async {
-  final repo = await ref.watch(hoyolabRepositoryProvider.future);
-  return CompleteHoyolabWebLoginUseCase(
-    cookieService: ref.watch(hoyolabCookieServiceProvider),
-    repository: repo,
-  );
-});
+      final repo = await ref.watch(hoyolabRepositoryProvider.future);
+      return CompleteHoyolabWebLoginUseCase(
+        cookieService: ref.watch(hoyolabCookieServiceProvider),
+        repository: repo,
+      );
+    });
 
 final hoyolabSessionProvider = FutureProvider<HoyolabSession>((ref) async {
   final flags = await ref.watch(featureFlagsProvider.future);

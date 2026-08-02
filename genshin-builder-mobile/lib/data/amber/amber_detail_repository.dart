@@ -238,18 +238,18 @@ class AmberDetailRepository {
         }
 
         final affixMap = json['affix'] as Map<String, dynamic>?;
-        final affix = affixMap == null || affixMap.isEmpty
-            ? null
-            : affixMap.values.first as Map<String, dynamic>;
+        final affix =
+            affixMap == null || affixMap.isEmpty
+                ? null
+                : affixMap.values.first as Map<String, dynamic>;
         final upgrade = affix?['upgrade'] as Map<String, dynamic>? ?? {};
-        final effectDescriptions = upgrade.keys
-            .map((k) => int.tryParse(k) ?? 0)
-            .toList()
-          ..sort();
-        final descriptions = effectDescriptions
-            .map((k) => stripAmberMarkup('${upgrade['$k'] ?? ''}'))
-            .where((s) => s.isNotEmpty)
-            .toList();
+        final effectDescriptions =
+            upgrade.keys.map((k) => int.tryParse(k) ?? 0).toList()..sort();
+        final descriptions =
+            effectDescriptions
+                .map((k) => stripAmberMarkup('${upgrade['$k'] ?? ''}'))
+                .where((s) => s.isNotEmpty)
+                .toList();
 
         final typeKey = json['type'] as String? ?? '';
         final weaponType = weaponTypeMap[typeKey] ?? typeKey;
@@ -290,12 +290,13 @@ class AmberDetailRepository {
         final name = set['name'] as String?;
         if (name == null || name.isEmpty) continue;
         final affixList = set['affixList'] as Map<String, dynamic>?;
-        final effects = affixList == null
-            ? const <String>[]
-            : affixList.values
-                .map((e) => stripAmberMarkup('$e'))
-                .where((s) => s.isNotEmpty)
-                .toList();
+        final effects =
+            affixList == null
+                ? const <String>[]
+                : affixList.values
+                    .map((e) => stripAmberMarkup('$e'))
+                    .where((s) => s.isNotEmpty)
+                    .toList();
         final icon = set['icon'] as String?;
         final sortOrder = (set['sortOrder'] as num?)?.toInt() ?? 0;
         final id = '${set['id']}';
@@ -314,8 +315,8 @@ class AmberDetailRepository {
       }
       sets.sort((a, b) {
         final regionCmp = artifactSetRegionOrder
-                .indexOf(a.region)
-                .compareTo(artifactSetRegionOrder.indexOf(b.region));
+            .indexOf(a.region)
+            .compareTo(artifactSetRegionOrder.indexOf(b.region));
         if (regionCmp != 0) return regionCmp;
         return a.sortOrder.compareTo(b.sortOrder);
       });
@@ -341,8 +342,10 @@ class AmberDetailRepository {
     Map<String, dynamic>? curveData,
   ) {
     final talentMap = json['talent'] as Map<String, dynamic>? ?? {};
-    final keys = talentMap.keys.toList()
-      ..sort((a, b) => (int.tryParse(a) ?? 0).compareTo(int.tryParse(b) ?? 0));
+    final keys =
+        talentMap.keys.toList()..sort(
+          (a, b) => (int.tryParse(a) ?? 0).compareTo(int.tryParse(b) ?? 0),
+        );
 
     final actives = <Map<String, dynamic>>[];
     final passives = <Map<String, dynamic>>[];
@@ -403,11 +406,14 @@ class AmberDetailRepository {
 
     final constellationMap =
         json['constellation'] as Map<String, dynamic>? ?? {};
-    final constellationKeys = constellationMap.keys.toList()
-      ..sort((a, b) => (int.tryParse(a) ?? 0).compareTo(int.tryParse(b) ?? 0));
+    final constellationKeys =
+        constellationMap.keys.toList()..sort(
+          (a, b) => (int.tryParse(a) ?? 0).compareTo(int.tryParse(b) ?? 0),
+        );
     final constellations = <ConstellationDetailData>[];
     for (var i = 0; i < constellationKeys.length && i < 6; i++) {
-      final raw = constellationMap[constellationKeys[i]] as Map<String, dynamic>;
+      final raw =
+          constellationMap[constellationKeys[i]] as Map<String, dynamic>;
       final icon = raw['icon'] as String?;
       constellations.add(
         ConstellationDetailData(

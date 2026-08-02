@@ -10,35 +10,39 @@ import 'daily_plan_completion_providers.dart';
 
 final dailyPlanNotificationSettingsStoreProvider =
     FutureProvider<DailyPlanNotificationSettingsStore>((ref) async {
-  final db = await ref.watch(appDatabaseProvider.future);
-  return DailyPlanNotificationSettingsStore(AppDatabaseSettingsStore(db));
-});
+      final db = await ref.watch(appDatabaseProvider.future);
+      return DailyPlanNotificationSettingsStore(AppDatabaseSettingsStore(db));
+    });
 
 final dailyPlanIncompleteSchedulerProvider =
     Provider<DailyPlanIncompleteScheduler>((ref) {
-  return DailyPlanIncompleteScheduler();
-});
+      return DailyPlanIncompleteScheduler();
+    });
 
 final dailyPlanIncompleteNotifierProvider =
     Provider<DailyPlanIncompleteNotifier>((ref) {
-  return const DailyPlanIncompleteNotifier();
-});
+      return const DailyPlanIncompleteNotifier();
+    });
 
 final dailyPlanNotificationCoordinatorProvider =
     FutureProvider<DailyPlanNotificationCoordinator>((ref) async {
-  final settings =
-      await ref.watch(dailyPlanNotificationSettingsStoreProvider.future);
-  final evalHistory = await ref.watch(dailyPlanEvalHistoryRepoProvider.future);
-  final scheduler = ref.watch(dailyPlanIncompleteSchedulerProvider);
-  return DailyPlanNotificationCoordinator(
-    settings: settings,
-    evalHistory: evalHistory,
-    scheduler: scheduler,
-  );
-});
+      final settings = await ref.watch(
+        dailyPlanNotificationSettingsStoreProvider.future,
+      );
+      final evalHistory = await ref.watch(
+        dailyPlanEvalHistoryRepoProvider.future,
+      );
+      final scheduler = ref.watch(dailyPlanIncompleteSchedulerProvider);
+      return DailyPlanNotificationCoordinator(
+        settings: settings,
+        evalHistory: evalHistory,
+        scheduler: scheduler,
+      );
+    });
 
 final dailyPlanIncompleteEnabledProvider = FutureProvider<bool>((ref) async {
-  final store =
-      await ref.watch(dailyPlanNotificationSettingsStoreProvider.future);
+  final store = await ref.watch(
+    dailyPlanNotificationSettingsStoreProvider.future,
+  );
   return store.isIncompleteEnabled();
 });

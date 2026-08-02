@@ -68,9 +68,9 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     } catch (_) {
       if (mounted) {
         setState(() => _optimisticCompleted = previous);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('完了状態の保存に失敗しました')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('完了状態の保存に失敗しました')));
       }
     } finally {
       if (mounted) {
@@ -98,7 +98,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  '育成目標を設定すると、今日おすすめの育成項目が表示されます。',
+                  '育成目標の設定、または今日開放の曜日素材の不足があると、おすすめが表示されます。',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge,
                 ),
@@ -124,8 +124,11 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                           vertical: 8,
                         ),
                         child: OutlinedButton.icon(
-                          onPressed: () =>
-                              context.push('/growth-route', extra: routeReq),
+                          onPressed:
+                              () => context.push(
+                                '/growth-route',
+                                extra: routeReq,
+                              ),
                           icon: const Icon(Icons.route),
                           label: const Text('育成ルートを作成'),
                         ),
@@ -137,29 +140,31 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                     return Card(
                       child: CheckboxListTile(
                         value: isDone,
-                        onChanged: _busyKeys.contains(key)
-                            ? null
-                            : (v) => _toggleItem(
+                        onChanged:
+                            _busyKeys.contains(key)
+                                ? null
+                                : (v) => _toggleItem(
                                   item: item,
                                   complete: v ?? false,
                                   baseline: baseline,
                                 ),
                         title: Text(
                           item.title,
-                          style: isDone
-                              ? TextStyle(
-                                  decoration: TextDecoration.lineThrough,
-                                  color: theme.disabledColor,
-                                )
-                              : null,
+                          style:
+                              isDone
+                                  ? TextStyle(
+                                    decoration: TextDecoration.lineThrough,
+                                    color: theme.disabledColor,
+                                  )
+                                  : null,
                         ),
                         subtitle: Text('優先度: ${item.priority}'),
                         secondary:
                             item.confidence == RecommendationConfidence.high
                                 ? const Icon(
-                                    Icons.check_circle,
-                                    color: Colors.green,
-                                  )
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                )
                                 : const Icon(Icons.info_outline),
                       ),
                     );

@@ -9,19 +9,21 @@ import 'daily_plan_user_scope.dart';
 /// Registers / cancels P1-8C unique one-off WorkManager tasks.
 class DailyPlanIncompleteScheduler {
   DailyPlanIncompleteScheduler({
-    DailyPlanScheduleCalculator calculator = const DailyPlanScheduleCalculator(),
+    DailyPlanScheduleCalculator calculator =
+        const DailyPlanScheduleCalculator(),
     DateTime Function()? now,
     Future<void> Function({
       required String uniqueName,
       required String taskName,
       required Map<String, dynamic> inputData,
       required Duration initialDelay,
-    })? registerOneOff,
+    })?
+    registerOneOff,
     Future<void> Function(String uniqueName)? cancelByUniqueName,
-  })  : _calculator = calculator,
-        _now = now ?? DateTime.now,
-        _registerOneOff = registerOneOff ?? _defaultRegister,
-        _cancelByUniqueName = cancelByUniqueName ?? _defaultCancel;
+  }) : _calculator = calculator,
+       _now = now ?? DateTime.now,
+       _registerOneOff = registerOneOff ?? _defaultRegister,
+       _cancelByUniqueName = cancelByUniqueName ?? _defaultCancel;
 
   final DailyPlanScheduleCalculator _calculator;
   final DateTime Function() _now;
@@ -30,7 +32,8 @@ class DailyPlanIncompleteScheduler {
     required String taskName,
     required Map<String, dynamic> inputData,
     required Duration initialDelay,
-  }) _registerOneOff;
+  })
+  _registerOneOff;
   final Future<void> Function(String uniqueName) _cancelByUniqueName;
 
   static String uniqueNameFor(String userId) =>
@@ -119,9 +122,10 @@ class DailyPlanIncompleteScheduler {
       }
     }
 
-    final delay = decision.initialDelay.isNegative
-        ? Duration.zero
-        : decision.initialDelay;
+    final delay =
+        decision.initialDelay.isNegative
+            ? Duration.zero
+            : decision.initialDelay;
 
     // ExistingWorkPolicy.replace: TZ / settings changes must recalculate delay
     // instead of keeping a stale pending one-off for the old wall-clock target.

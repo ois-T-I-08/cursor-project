@@ -8,14 +8,13 @@ MasterWeapon _w({
   required String name,
   required int rarity,
   String type = 'sword',
-}) =>
-    MasterWeapon(
-      id: id,
-      name: name,
-      weaponType: type,
-      rarity: rarity,
-      iconUrl: '',
-    );
+}) => MasterWeapon(
+  id: id,
+  name: name,
+  weaponType: type,
+  rarity: rarity,
+  iconUrl: '',
+);
 
 void main() {
   const character = MasterCharacter(
@@ -51,8 +50,7 @@ void main() {
           baseAttack: 600,
         ),
       ];
-      final sorted =
-          sortWeaponList(entries, WeaponListSortMode.baseAttackDesc);
+      final sorted = sortWeaponList(entries, WeaponListSortMode.baseAttackDesc);
       expect(sorted.first.id, 'b');
     });
 
@@ -60,10 +58,7 @@ void main() {
       final low = WeaponListEntry(
         weapon: _w(id: 'low', name: 'Low', rarity: 5),
         usageRate: 0.1,
-        recommendScore: computeWeaponPopularityScore(
-          usageRate: 0.1,
-          rarity: 5,
-        ),
+        recommendScore: computeWeaponPopularityScore(usageRate: 0.1, rarity: 5),
       );
       final high = WeaponListEntry(
         weapon: _w(id: 'high', name: 'High', rarity: 4),
@@ -73,10 +68,7 @@ void main() {
           rarity: 4,
         ),
       );
-      final sorted = sortWeaponList(
-        [low, high],
-        WeaponListSortMode.popularity,
-      );
+      final sorted = sortWeaponList([low, high], WeaponListSortMode.popularity);
       expect(sorted.first.id, 'high');
     });
 
@@ -100,10 +92,7 @@ void main() {
         ),
       );
       expect(high.recommendScore, greaterThan(low.recommendScore));
-      final sorted = sortWeaponList(
-        [low, high],
-        WeaponListSortMode.popularity,
-      );
+      final sorted = sortWeaponList([low, high], WeaponListSortMode.popularity);
       expect(sorted.first.id, 'high');
     });
 

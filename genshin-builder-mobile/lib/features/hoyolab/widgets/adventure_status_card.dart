@@ -24,9 +24,8 @@ class AdventureStatusCard extends ConsumerWidget {
         }
 
         final updated = status.latestUpdate;
-        final updatedLabel = updated == null
-            ? null
-            : formatRelativeUpdateTime(updated);
+        final updatedLabel =
+            updated == null ? null : formatRelativeUpdateTime(updated);
 
         return Card(
           elevation: 0,
@@ -51,8 +50,8 @@ class AdventureStatusCard extends ConsumerWidget {
                     Text(
                       '冒険状況',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const Spacer(),
                     IconButton(
@@ -67,9 +66,10 @@ class AdventureStatusCard extends ConsumerWidget {
                   _StatusTile(
                     icon: Icons.whatshot_outlined,
                     title: '深境螺旋',
-                    value: spiral.isUnlocked
-                        ? '${spiral.maxFloor} · ☆${spiral.totalStars}'
-                        : '未解放',
+                    value:
+                        spiral.isUnlocked
+                            ? '${spiral.maxFloor} · ☆${spiral.totalStars}'
+                            : '未解放',
                     subtitle: spiral.isUnlocked ? '当期' : null,
                   ),
                 if (theater != null) ...[
@@ -77,29 +77,32 @@ class AdventureStatusCard extends ConsumerWidget {
                   _StatusTile(
                     icon: Icons.theater_comedy_outlined,
                     title: '幻想シアター',
-                    value: theater.hasData
-                        ? '${theater.difficultyLabel} · 第${theater.maxRoundId}幕'
-                        : theater.isUnlocked
+                    value:
+                        theater.hasData
+                            ? '${theater.difficultyLabel} · 第${theater.maxRoundId}幕'
+                            : theater.isUnlocked
                             ? 'データなし'
                             : '未解放',
-                    subtitle: theater.medalNum > 0
-                        ? 'メダル ${theater.medalNum}'
-                        : null,
+                    subtitle:
+                        theater.medalNum > 0 ? 'メダル ${theater.medalNum}' : null,
                   ),
                 ],
                 if (stygian != null) ...[
-                  if (spiral != null || theater != null) const SizedBox(height: 8),
+                  if (spiral != null || theater != null)
+                    const SizedBox(height: 8),
                   _StatusTile(
                     icon: Icons.shield_moon_outlined,
                     title: '幽境の激戦',
-                    value: stygian.hasData && stygian.bestDifficultyId > 0
-                        ? '${stygian.difficultyLabel} · ${_formatClearTime(stygian.bestTimeSeconds)}'
-                        : stygian.isUnlocked
+                    value:
+                        stygian.hasData && stygian.bestDifficultyId > 0
+                            ? '${stygian.difficultyLabel} · ${_formatClearTime(stygian.bestTimeSeconds)}'
+                            : stygian.isUnlocked
                             ? 'データなし'
                             : '未解放',
-                    subtitle: stygian.seasonName.isNotEmpty
-                        ? stygian.seasonName
-                        : null,
+                    subtitle:
+                        stygian.seasonName.isNotEmpty
+                            ? stygian.seasonName
+                            : null,
                   ),
                 ],
                 if (updatedLabel != null) ...[
@@ -107,8 +110,8 @@ class AdventureStatusCard extends ConsumerWidget {
                   Text(
                     '最終更新 $updatedLabel',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
@@ -116,12 +119,13 @@ class AdventureStatusCard extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Card(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      ),
+      loading:
+          () => const Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
       error: (e, _) {
         if (e is HoyolabApiException) {
           return Card(
@@ -174,15 +178,12 @@ class _StatusTile extends StatelessWidget {
               Text(title, style: Theme.of(context).textTheme.bodyMedium),
               Text(
                 value,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
               if (subtitle != null)
-                Text(
-                  subtitle!,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ),

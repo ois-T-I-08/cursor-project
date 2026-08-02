@@ -24,8 +24,7 @@ List<MasterCharacter> parseCharactersFromAmberItems(
     if (elementKey != null && elementKey is! String) {
       throw const FormatException('Invalid character record');
     }
-    final element =
-        elementKey is String ? elementMap[elementKey] : null;
+    final element = elementKey is String ? elementMap[elementKey] : null;
     final name = avatar['name'] as String?;
     final rank = (avatar['rank'] as num?)?.toInt();
     if (name == null || name.isEmpty || (rank != 4 && rank != 5)) {
@@ -84,8 +83,7 @@ int countSyncableCharactersFromAmberItems(Map<String, dynamic> items) {
     if (elementKey != null && elementKey is! String) {
       throw const FormatException('Invalid character record');
     }
-    final element =
-        elementKey is String ? elementMap[elementKey] : null;
+    final element = elementKey is String ? elementMap[elementKey] : null;
     final name = avatar['name'] as String?;
     final rank = (avatar['rank'] as num?)?.toInt();
     if (name == null || name.isEmpty || (rank != 4 && rank != 5)) {

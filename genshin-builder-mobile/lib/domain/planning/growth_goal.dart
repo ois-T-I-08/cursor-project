@@ -1,11 +1,7 @@
 /// User-defined growth goal for a character.
 library;
 
-enum GrowthGoalStatus {
-  active,
-  paused,
-  completed,
-}
+enum GrowthGoalStatus { active, paused, completed }
 
 class GrowthGoal {
   const GrowthGoal({
@@ -66,7 +62,11 @@ class GrowthGoal {
       final a = goal.targetAscension!;
       if (a < 0 || a > 6) return 'Target ascension must be 0-6';
     }
-    for (final t in [goal.targetTalentNormal, goal.targetTalentSkill, goal.targetTalentBurst]) {
+    for (final t in [
+      goal.targetTalentNormal,
+      goal.targetTalentSkill,
+      goal.targetTalentBurst,
+    ]) {
       if (t != null && (t < 1 || t > 10)) return 'Talent target must be 1-10';
     }
     if (goal.targetWeaponLevel != null) {

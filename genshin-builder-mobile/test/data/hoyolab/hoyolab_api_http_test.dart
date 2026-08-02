@@ -32,9 +32,7 @@ void main() {
               'retcode': 0,
               'message': 'OK',
               'data': {
-                'user_info': {
-                  'account_name': 'traveler',
-                },
+                'user_info': {'account_name': 'traveler'},
               },
             }),
             200,

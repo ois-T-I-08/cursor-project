@@ -33,8 +33,9 @@ class DailyPlanIncompleteNotifier {
   Future<void> cancel() async {
     try {
       await NotificationBootstrap.ensureInitializedOrThrow();
-      await NotificationBootstrap.plugin
-          .cancel(DailyPlanNotificationIds.incomplete);
+      await NotificationBootstrap.plugin.cancel(
+        DailyPlanNotificationIds.incomplete,
+      );
     } catch (_) {
       debugPrint('daily_plan_incomplete: cancel notification failed');
     }
@@ -45,9 +46,11 @@ class DailyPlanIncompleteNotifier {
       await NotificationBootstrap.ensureInitializedOrThrow();
       if (kIsWeb) return false;
       if (defaultTargetPlatform != TargetPlatform.android) return false;
-      final android = NotificationBootstrap.plugin
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final android =
+          NotificationBootstrap.plugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
       return await android?.areNotificationsEnabled() ?? false;
     } catch (_) {
       return false;

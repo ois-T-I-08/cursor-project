@@ -4,6 +4,39 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-08-01 — YouTube feature を main 取り込み・merge-ready へ
+
+- **目的:** PR #25（Draft）を main と整合させ、GHA checkout 欠落を直し、ローカル検証まで完走する。本番/フラグ ON はしない。
+- **決定事項:** `origin/main`（abyss ingest #35/#37）を feature へ merge。`abyss-aza-ingest-staging.yml` は main の hardened 版を採用。`youtube-guide-automation.yml` に `actions/checkout@v4` を追加（job summary 用スクリプト必須）。
+- **PR 状態:** #34 は feature へ **MERGED 済み**。#25 は **OPEN/Draft のまま**（Ready/merge しない）。
+- **未完了 / 次回（オーナー）:** staging Neon へ automation migrate（`20260731120000` 以降）適用承認、provider secrets、kill switch 段階 ON、GHA vars、#25 Ready。
+
+## 2026-07-31 — YouTube自動化PR #34 最終安全監査修正
+
+- **目的:** 最終監査で残ったHIGH 1件（half-open probe固着）とsafety-related MEDIUM 2件（公開済み字幕差分、要約保持期限E2E）をfail-closedで解消。
+- **決定事項:** provider circuit probeをowner/token/acquired/expires/stateVersion付きの期限付きpermitへ変更し、取得・期限切れ再取得・結果反映をCASでフェンスする。`PUBLISHED` / `REVIEW_REQUIRED`も現在字幕を必ず再取得し、metadata/transcript/analyzer/prompt/schema/policyの完全キー一致時だけAIを省略する。run/API/Job Summaryはstrict allowlistのみ。
+- **Migration:** `20260731180000_fence_provider_circuit_probe`をforward-onlyで追加。旧half-open行は即時再取得可能なopenへ戻す。旧`20260731120000_add_youtube_automation_pipeline`は変更せずSHA-256 `7928117E523BD141317073E1C31B34785AB7873988A079DC5FA2BFDEAA8E47AD`を維持。
+- **検証:** Prisma generate/validate、typecheck、lint、Vitest 374成功・DB専用46 skip、Next production build、production dependency audit 0、Flutter analyze 0件・764テスト成功。CI disposable PostgreSQLでmigration upgrade/中断rollback/clean retry、migrate deploy/status、DB全テスト、build、auditがpush/PRとも成功。MobileとWeb/Mobile Golden parityもpush/PRで成功。修正後再監査はBLOCKER 0 / HIGH 0 / safety-related MEDIUM 0、review thread 0件。Flutter契約変更なし。
+- **未完了 / 次回（更新）:** PR #34 は feature へ MERGED 済み。staging/production migration、実provider、cron/dispatch、flag有効化は未実施。PR #25 は Draft 維持。
+
+## 2026-07-30 — gcsim 完全廃止（おすすめ編成は維持）
+
+- **決定:** gcsim シミュレーション層を削除。AZA.GG / 共起 / ルールベースのおすすめ編成と Job API は維持。
+- **削除:** runner / Config 生成 / IDマップ / rotation / `GCSIM_*` / `TeamSimulationCache` / `docs/GCSIM_INTEGRATION.md` / vendor 想定パス。
+- **環境変数:** `TEAM_RECOMMENDATION_MAX_*` / `TEAM_RECOMMENDATION_JOB_TTL_SECONDS` / `TEAM_RECOMMENDATION_SCORE_*`（旧 `GCSIM_*` は互換読取しない）。
+- **Migration:** `20260730120000_drop_team_simulation_cache`（staging/production への apply は別 ops）。
+- **未完了:** staging での migrate deploy、Vercel 環境からの旧 `GCSIM_*` 削除確認。
+
+## 2026-07-28 — 全体品質仕上げとBuild Guide公開安全性
+
+- **目的:** 既存機能・ドメイン計算を維持し、公開中の編集、楽観ロック、公開前検証、管理UI、外部URL、開発手順をリリース前品質へ揃える。
+- **決定事項:** 公開中の保存・承認・revision復元は旧公開スナップショットを直接上書きせず`adminWorkingDraft`を使う。公開・公開取り消し・overrideは`id + updatedAt`完全一致の条件付き更新とrevision/auditを同一transactionで行う。公開時は採用/部分採用した根拠だけを使い、チャンネル許可、public動画、evidence=`approved`、管理レビュー、Amberマスター、pieces、citationをサーバーで再検証する。
+- **安全性/UI:** 公開出典URLをHTTPS YouTube/youtu.beへ限定。管理画面は未保存の選択移動を確認し、409後も入力を保持、未保存・未承認時のdisabled理由を表示。マスター一覧の取得はレコード選択時の1回と明示再試行に限定。
+- **最終レビュー:** 管理変異の`expectedUpdatedAt`を必須化し、全更新を`id + updatedAt`条件へ統一。作業下書き承認で公開`lastVerifiedAt`を動かさず、`adminConfirmed: true`と`structuredReviewStatus: admin_confirmed`を公開必須にした。ETagは公開DTO全体を指紋化し、weak/list形式の`If-None-Match`にも対応。Web/FlutterのYouTube URLは`youtube.com`、`www.youtube.com`、`m.youtube.com`、`youtu.be`だけを許可する。
+- **変更ファイル（主要）:** `src/lib/build-guides/{store,structured-admin,public-recommendation-normalize}.ts`、管理route/editor、回帰テスト、README/開発資料/Build Guide運用資料。
+- **検証:** Prisma 6.19.3 generate/validate成功、local SQLite 11 migrationsでstatus/deployともpendingなし、typecheck/lint成功、Vitest 334成功・環境依存DB integration 1 skip、Flutter analyze 0件・756テスト成功・debug APK成功、Next.js 16.2.12 production build成功、production dependency audit 0。
+- **未完了 / 次回:** 本番migration・デプロイは未実施。signed release、staging疎通、実機migration/UI確認、CIは運用者ゲート。dev-only ESLint依存にhigh advisory 9件が残るため、互換修正版待ち（`audit fix --force`禁止）。
+
 ## 2026-07-26 — 承認済み編成テンプレートと事前生成入れ替え候補
 
 - `team-recommendations/replacements/`へTeamSource、ローカルJSON、正規化、Prisma永続化、10〜20件の一次絞り込み、DeepSeek JSON評価、Zod＋決定論的最終検証、版付きキャッシュを追加。GenshinBuilds接続は公開API許可待ちで意図的に未実装。
@@ -44,10 +77,10 @@
 
 - **目的:** Flutter に AZA.GG の深境螺旋キャラクター／編成統計を安全に提供する
 - **決定事項:** Flutter は AZA を直接呼ばず `GET /api/abyss/statistics` のみ利用。`AbyssStatisticsProvider` を交換境界とし、AZA 公開 KV API を実レスポンスの確認済みフィールドだけで正規化。API キーは現在不要のため未確認ヘッダーを送らない
-- **可用性:** Prisma `ExternalApiCache` に最終成功値を保存。6時間 TTL、同一 Node.js プロセス内だけの single-flight、最大1回再試行、期限切れ時の stale fallback、`AZA_ABYSS_ENABLED` kill switch。現時点では AZA 経路に分散ロックを追加しない
+- **可用性:** Prisma `ExternalApiCache` に最終成功値を保存。6時間 TTL、同一 Node.js プロセス内だけの single-flight、最大1回再試行、期限切れ時の stale fallback、`AZA_ABYSS_ENABLED` kill switch。staging は Vercel→AZA が 403 のため `AZA_LIVE_FETCH_ENABLED=false` とし、GHA が `POST /api/abyss/statistics/ingest` でキャッシュ更新。現時点では AZA 経路に分散ロックを追加しない
 - **契約監視:** 既知 `meta.api_ver` は `5.6`。未知版は現行スキーマ適合なら warning で継続、不適合なら `invalidResponse`。2026-07-19 の120キャラは全件 `phase` キーが `"1"` のみで、明示的な `"2"` がない場合だけ補数を使用
 - **安全性:** HTTPS upstream、10秒 timeout、2MiB、配列／ID／比率／日時検証、安全なエラー code と許可フィールド限定ログ。ゲームバージョンと編成使用回数は upstream にないため生成しない
-- **変更ファイル（主要）:** `src/lib/api/abyss/*`, `src/lib/abyss/*`, `src/app/api/abyss/statistics/route.ts`, Prisma schema/migration, `.env.example`, 関連テスト・資料
+- **変更ファイル（主要）:** `src/lib/api/abyss/*`, `src/lib/abyss/*`, `src/app/api/abyss/statistics/route.ts`, `src/app/api/abyss/statistics/ingest/route.ts`, Prisma schema/migration, `.env.example`, `.github/workflows/abyss-aza-ingest-staging.yml`, 関連テスト・資料
 - **検証:** Vitest 全155成功、lint 0、`npm run typecheck` 成功、Prisma validate/generate 成功、Next production build 成功
 - **未完了 / 次回:** 本番 DB の未適用 migration 2件（`add_sync_lease`、`add_external_api_cache`）、AZA 利用規約／クレジット文言／商用・広告利用の運用確認、公開 API 変更監視
 

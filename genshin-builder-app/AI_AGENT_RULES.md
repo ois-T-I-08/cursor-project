@@ -92,6 +92,7 @@
 変更完了前に確認すること。
 
 - [ ] `npm run build` が通る
+- [ ] `npm run typecheck` / `npm run lint` / `npm test` が通る
 - [ ] Prisma 変更時は `npx prisma migrate dev` + `npx prisma generate`（dev サーバー停止）
 - [ ] Server/Client の境界が崩れていない（`"use client"` の範囲は最小）
 - [ ] 新規 props は Server → Client でシリアライズ可能
@@ -104,23 +105,25 @@
 
 ## 6. テスト方針（現状）
 
-- **自動テスト:** 未整備（Jest/Vitest/Playwright なし）
-- **必須の手動確認:**
-  - `npm run build`
+- **自動テスト:** Vitest。正規化、同期、公開 API、認証、Build Guide、編成推薦、ドメイン計算を対象とする
+- **必須ゲート:** `npm run typecheck`、`npm run lint`、`npm test`、`npm run build`
+- **手動確認:**
   - 設定 → 通常同期
   - キャラ詳細 → レベル/武器/天賦スライダー → 素材表示
   - 武器切り替え → `/api/weapons/[id]` 経由で性能表示
-- **テスト追加時:** ビジネスロジック（`level-progression.ts`, `artifact-score.ts`, `sync-utils.ts`）を優先
+- **DB integration:** 明示的なテスト用 DB 設定がある場合だけ実行し、本番 DB を使わない
+- **変更時:** 再現ケースを先に追加し、既存のドメインゴールデンや公開情報漏えいテストを弱めない
 
 ---
 
 ## 7. セキュリティ注意（エージェント向け）
 
-- `POST /api/sync` は現状**未認証**。本番では Cron + シークレット or 管理者のみに制限予定。
+- `POST /api/sync` は `SYNC_API_SECRET` の Bearer 認証を使い、未設定の本番環境では fail-closed。secret をクライアント、URL、ログへ出さない。
+- Build Guide / 編成テンプレートの管理 API は用途別 secret を使い、未設定時 503、Bearer 不足 401、不一致 403。
 - ユーザー識別は `gb_user_id` cookie（httpOnly）。他ユーザーデータへのアクセス経路を作らない。
 - `saveProgress` の入力は clamp / 長さ制限済み。新フィールド追加時も同様に sanitize する。
 - API 説明文は `stripMarkup()` 済み。HTML 生挿入しない。
-- 本番デプロイ時: cookie `secure: true`、sync エンドポイント保護を検討。
+- 公開 API へ working draft、管理者メモ、revision、内部レビュー状態を含めない。
 
 ---
 

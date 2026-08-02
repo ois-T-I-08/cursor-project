@@ -40,17 +40,12 @@ class AkashaWeaponUsageApi {
     final response = await _client
         .get(
           uri,
-          headers: {
-            'User-Agent': _userAgent,
-            'Accept': 'application/json',
-          },
+          headers: {'User-Agent': _userAgent, 'Accept': 'application/json'},
         )
         .timeout(timeout);
 
     if (response.statusCode != 200) {
-      throw Exception(
-        'akasha builds error: ${response.statusCode}',
-      );
+      throw Exception('akasha builds error: ${response.statusCode}');
     }
 
     final decoded = jsonDecode(response.body);

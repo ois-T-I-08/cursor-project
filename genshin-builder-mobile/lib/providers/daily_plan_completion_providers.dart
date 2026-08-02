@@ -9,19 +9,20 @@ import 'app_providers.dart';
 
 final dailyPlanCompletionRepoProvider =
     FutureProvider<DailyPlanCompletionRepository>((ref) async {
-  final db = await ref.watch(appDatabaseProvider.future);
-  return DriftDailyPlanCompletionRepository(db);
-});
+      final db = await ref.watch(appDatabaseProvider.future);
+      return DriftDailyPlanCompletionRepository(db);
+    });
 
 final dailyPlanEvalHistoryRepoProvider =
     FutureProvider<DailyPlanEvalHistoryRepository>((ref) async {
-  final db = await ref.watch(appDatabaseProvider.future);
-  return DriftDailyPlanEvalHistoryRepository(db);
-});
+      final db = await ref.watch(appDatabaseProvider.future);
+      return DriftDailyPlanEvalHistoryRepository(db);
+    });
 
 /// Completed itemKeys for today's local calendar date (current user).
-final dailyPlanTodayCompletionsProvider =
-    FutureProvider<Set<String>>((ref) async {
+final dailyPlanTodayCompletionsProvider = FutureProvider<Set<String>>((
+  ref,
+) async {
   final repo = await ref.watch(dailyPlanCompletionRepoProvider.future);
   final userId = await ref.watch(localUserIdProvider.future);
   final localDate = formatLocalDate(DateTime.now());

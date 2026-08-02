@@ -33,12 +33,13 @@ class GachaScreen extends ConsumerWidget {
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(userFacingError(e)),
-          ),
-        ),
+        error:
+            (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(userFacingError(e)),
+              ),
+            ),
         data: (result) {
           final characters = charactersAsync.valueOrNull ?? const [];
           final weapons = weaponsAsync.valueOrNull ?? const [];
@@ -70,11 +71,14 @@ class GachaScreen extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             '開催中バナーの取得に失敗したため、履歴のみ表示しています',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onErrorContainer,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onErrorContainer,
+                            ),
                           ),
                         ),
                       ],
@@ -108,10 +112,7 @@ class GachaScreen extends ConsumerWidget {
 }
 
 class _BannerCard extends StatelessWidget {
-  const _BannerCard({
-    required this.banner,
-    required this.featured,
-  });
+  const _BannerCard({required this.banner, required this.featured});
 
   final GachaBanner banner;
   final List<GachaFeaturedIcon> featured;
@@ -195,10 +196,7 @@ class _BannerCard extends StatelessWidget {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: [
-                  for (final f in featured)
-                    _FeaturedIcon(item: f),
-                ],
+                children: [for (final f in featured) _FeaturedIcon(item: f)],
               ),
             ],
           ],

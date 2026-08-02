@@ -25,37 +25,35 @@ class HomeEventsCard extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    '開催中のイベント',
-                    style: theme.textTheme.titleMedium,
-                  ),
+                  child: Text('開催中のイベント', style: theme.textTheme.titleMedium),
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh),
                   tooltip: '更新',
-                  onPressed: () =>
-                      ref.invalidate(homeCalendarEventsProvider),
+                  onPressed: () => ref.invalidate(homeCalendarEventsProvider),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             async.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+              loading:
+                  () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              error: (e, _) => Text(
-                userFacingError(e),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-              ),
+              error:
+                  (e, _) => Text(
+                    userFacingError(e),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
               data: (events) {
                 if (events.isEmpty) {
                   return Text(

@@ -148,7 +148,9 @@ class _DailyMaterialsScreenState extends ConsumerState<DailyMaterialsScreen>
                   weekdayLabelsJa[day] ?? '$day',
                   style: TextStyle(
                     fontWeight:
-                        day == _todayWeekday ? FontWeight.bold : FontWeight.w500,
+                        day == _todayWeekday
+                            ? FontWeight.bold
+                            : FontWeight.w500,
                   ),
                 ),
               ),
@@ -159,8 +161,7 @@ class _DailyMaterialsScreenState extends ConsumerState<DailyMaterialsScreen>
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(userFacingError(e))),
         data: (plan) {
-          final cards =
-              isWeapon ? plan.weaponCards : plan.talentCards;
+          final cards = isWeapon ? plan.weaponCards : plan.talentCards;
 
           return RefreshIndicator(
             onRefresh: _refresh,
@@ -200,9 +201,7 @@ class _DailyMaterialsScreenState extends ConsumerState<DailyMaterialsScreen>
                 const SizedBox(height: 12),
                 if (cards.isEmpty)
                   Text(
-                    isWeapon
-                        ? 'この曜日の武器突破素材はありません'
-                        : 'この曜日の天賦素材はありません',
+                    isWeapon ? 'この曜日の武器突破素材はありません' : 'この曜日の天賦素材はありません',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -221,12 +220,12 @@ class _DailyMaterialsScreenState extends ConsumerState<DailyMaterialsScreen>
                       child: DailyMaterialSeriesCard(
                         card: card,
                         embedded: true,
-                        emptyConsumersLabel:
-                            isWeapon ? '使用武器なし' : '使用キャラクターなし',
+                        emptyConsumersLabel: isWeapon ? '使用武器なし' : '使用キャラクターなし',
                         showGroupLabels: isWeapon,
-                        onConsumerTap: isWeapon
-                            ? null
-                            : (id) => context.push('/characters/$id'),
+                        onConsumerTap:
+                            isWeapon
+                                ? null
+                                : (id) => context.push('/characters/$id'),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -241,11 +240,7 @@ class _DailyMaterialsScreenState extends ConsumerState<DailyMaterialsScreen>
 }
 
 class _NeedIcon {
-  const _NeedIcon({
-    required this.id,
-    required this.name,
-    this.iconUrl,
-  });
+  const _NeedIcon({required this.id, required this.name, this.iconUrl});
 
   final String id;
   final String name;

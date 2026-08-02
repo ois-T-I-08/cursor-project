@@ -19,7 +19,9 @@ class _GenshinBuilderAppState extends ConsumerState<GenshinBuilderApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureDailyPlanSchedule());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _ensureDailyPlanSchedule(),
+    );
   }
 
   @override
@@ -40,8 +42,9 @@ class _GenshinBuilderAppState extends ConsumerState<GenshinBuilderApp>
     () async {
       try {
         final userId = await ref.read(localUserIdProvider.future);
-        final coordinator =
-            await ref.read(dailyPlanNotificationCoordinatorProvider.future);
+        final coordinator = await ref.read(
+          dailyPlanNotificationCoordinatorProvider.future,
+        );
         ensureDailyPlanIncompleteScheduledUnawaited(coordinator, userId);
       } catch (_) {
         // Non-fatal: schedule is best-effort on start/resume.

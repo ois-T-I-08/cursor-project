@@ -7,10 +7,7 @@ import 'gacha_calendar_api.dart';
 const _configKind = 'gacha_banner_history';
 
 class GachaBannerLoadResult {
-  const GachaBannerLoadResult({
-    required this.banners,
-    this.liveError,
-  });
+  const GachaBannerLoadResult({required this.banners, this.liveError});
 
   final List<GachaBanner> banners;
   final Object? liveError;
@@ -23,8 +20,8 @@ class GachaBannerRepository {
   GachaBannerRepository({
     required GachaBannerHistorySource historySource,
     GachaCalendarApi? calendarApi,
-  })  : _historySource = historySource,
-        _calendarApi = calendarApi ?? GachaCalendarApi();
+  }) : _historySource = historySource,
+       _calendarApi = calendarApi ?? GachaCalendarApi();
 
   final GachaBannerHistorySource _historySource;
   final GachaCalendarApi _calendarApi;
@@ -39,10 +36,7 @@ class GachaBannerRepository {
       liveError = e;
     }
 
-    final merged = mergeGachaBanners(
-      history: schedule.banners,
-      live: live,
-    );
+    final merged = mergeGachaBanners(history: schedule.banners, live: live);
     return GachaBannerLoadResult(
       banners: sortGachaBanners(merged, now: now),
       liveError: liveError,

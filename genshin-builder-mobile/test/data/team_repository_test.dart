@@ -18,9 +18,7 @@ void main() {
     const team = Team(
       id: 'team-1',
       name: 'Team',
-      members: [
-        TeamMemberSlot(characterId: '10000002', position: 0),
-      ],
+      members: [TeamMemberSlot(characterId: '10000002', position: 0)],
     );
 
     await repository.save('uuid-user', team);

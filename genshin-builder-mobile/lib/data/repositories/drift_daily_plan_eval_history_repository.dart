@@ -23,9 +23,10 @@ class DriftDailyPlanEvalHistoryRepository
         userId: row.userId,
         localDate: row.localDate,
         evaluatedAt: DateTime.fromMillisecondsSinceEpoch(row.evaluatedAt),
-        notifiedAt: row.notifiedAt == null
-            ? null
-            : DateTime.fromMillisecondsSinceEpoch(row.notifiedAt!),
+        notifiedAt:
+            row.notifiedAt == null
+                ? null
+                : DateTime.fromMillisecondsSinceEpoch(row.notifiedAt!),
         incompleteCount: row.incompleteCount,
       );
     } catch (_) {

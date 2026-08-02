@@ -35,10 +35,10 @@ class DailyProgressPrefetchService {
     required ProgressRepository progressRepository,
     required HoyolabGameDataRepository hoyolabRepository,
     this.concurrency = 3,
-  })  : _scheduleRepository = scheduleRepository,
-        _characterRepository = characterRepository,
-        _progressRepository = progressRepository,
-        _hoyolabRepository = hoyolabRepository;
+  }) : _scheduleRepository = scheduleRepository,
+       _characterRepository = characterRepository,
+       _progressRepository = progressRepository,
+       _hoyolabRepository = hoyolabRepository;
 
   final DailyMaterialScheduleRepository _scheduleRepository;
   final CharacterRepository _characterRepository;
@@ -66,9 +66,10 @@ class DailyProgressPrefetchService {
     );
 
     // HoYoLAB 連携時は所持キャラに限定（未所持に初期 Progress を作らない）
-    final targets = ownedCharacterIds.isEmpty
-        ? <String>{}
-        : needing.intersection(ownedCharacterIds);
+    final targets =
+        ownedCharacterIds.isEmpty
+            ? <String>{}
+            : needing.intersection(ownedCharacterIds);
 
     if (targets.isEmpty) {
       return DailyProgressPrefetchResult(
@@ -104,10 +105,7 @@ class DailyProgressPrefetchService {
     final errors = <String>[];
     final list = targets.toList()..sort();
     for (var i = 0; i < list.length; i += concurrency) {
-      final chunk = list.sublist(
-        i,
-        (i + concurrency).clamp(0, list.length),
-      );
+      final chunk = list.sublist(i, (i + concurrency).clamp(0, list.length));
       await Future.wait(
         chunk.map((id) async {
           try {
@@ -146,9 +144,10 @@ class DailyProgressPrefetchService {
       level: build.level,
       promoteLevel: build.promoteLevel,
       constellation: build.constellation,
-      talents: build.talents
-          .map((t) => HoyolabTalentInput(name: t.name, level: t.level))
-          .toList(),
+      talents:
+          build.talents
+              .map((t) => HoyolabTalentInput(name: t.name, level: t.level))
+              .toList(),
       weaponId: build.weapon?.id,
       weaponName: build.weapon?.name,
       weaponLevel: build.weapon?.level,
@@ -159,15 +158,13 @@ class DailyProgressPrefetchService {
       level: snapshot.level,
       ascension: snapshot.promoteLevel,
       constellation: snapshot.constellation,
-      talentNormal:
-          build.talents.isNotEmpty ? snapshot.talentNormal : null,
+      talentNormal: build.talents.isNotEmpty ? snapshot.talentNormal : null,
       talentSkill: build.talents.isNotEmpty ? snapshot.talentSkill : null,
       talentBurst: build.talents.isNotEmpty ? snapshot.talentBurst : null,
       weaponId: snapshot.weaponId ?? existing.weaponId,
       weaponName: snapshot.weaponName ?? existing.weaponName,
       weaponLevel: snapshot.weaponLevel ?? existing.weaponLevel,
-      weaponRefinement:
-          snapshot.weaponRefinement ?? existing.weaponRefinement,
+      weaponRefinement: snapshot.weaponRefinement ?? existing.weaponRefinement,
     );
     await _progressRepository.save(updated);
     return build.talents.isNotEmpty || snapshot.weaponId != null;

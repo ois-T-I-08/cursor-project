@@ -172,29 +172,31 @@ void main() {
 
   group('daily composite', () {
     test('remote failure falls back to local', () async {
-      final local = _FakeSchedule(() async => const DailyMaterialSchedule(
-            version: 1,
-            talentSeries: [
-              DailyMaterialSeries(
-                id: 't',
-                name: 't',
-                region: 'r',
-                kind: DailyMaterialKind.talentBook,
-                days: [1],
-                materialIds: ['1'],
-              ),
-            ],
-            weaponSeries: [
-              DailyMaterialSeries(
-                id: 'w',
-                name: 'w',
-                region: 'r',
-                kind: DailyMaterialKind.weaponAscension,
-                days: [1],
-                materialIds: ['2'],
-              ),
-            ],
-          ));
+      final local = _FakeSchedule(
+        () async => const DailyMaterialSchedule(
+          version: 1,
+          talentSeries: [
+            DailyMaterialSeries(
+              id: 't',
+              name: 't',
+              region: 'r',
+              kind: DailyMaterialKind.talentBook,
+              days: [1],
+              materialIds: ['1'],
+            ),
+          ],
+          weaponSeries: [
+            DailyMaterialSeries(
+              id: 'w',
+              name: 'w',
+              region: 'r',
+              kind: DailyMaterialKind.weaponAscension,
+              days: [1],
+              materialIds: ['2'],
+            ),
+          ],
+        ),
+      );
       final remote = _FakeSchedule(() async {
         throw const RemoteJsonFetchException(
           kind: 'daily_material_schedule',
@@ -222,10 +224,7 @@ void main() {
         );
       });
       final local = _FakeHistory(() async {
-        return const GachaBannerSchedule(
-          version: 1,
-          banners: [],
-        );
+        return const GachaBannerSchedule(version: 1, banners: []);
       });
       final source = PreferRemoteGachaBannerHistorySource(
         remote: remote,

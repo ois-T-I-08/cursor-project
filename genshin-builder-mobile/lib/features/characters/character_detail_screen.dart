@@ -59,17 +59,21 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
       onStateChanged: () {
         if (mounted) setState(() {});
       },
-      getMaterials: () =>
-          ref.read(characterDetailProvider(widget.characterId)).materials,
-      getLevel: () =>
-          ref.read(characterDetailProvider(widget.characterId)).level,
-      getTargetLevel: () =>
-          ref.read(characterDetailProvider(widget.characterId)).targetLevel,
-      getWeaponLevel: () =>
-          ref.read(characterDetailProvider(widget.characterId)).weaponLevel,
-      getTargetWeaponLevel: () => ref
-          .read(characterDetailProvider(widget.characterId))
-          .targetWeaponLevel,
+      getMaterials:
+          () => ref.read(characterDetailProvider(widget.characterId)).materials,
+      getLevel:
+          () => ref.read(characterDetailProvider(widget.characterId)).level,
+      getTargetLevel:
+          () =>
+              ref.read(characterDetailProvider(widget.characterId)).targetLevel,
+      getWeaponLevel:
+          () =>
+              ref.read(characterDetailProvider(widget.characterId)).weaponLevel,
+      getTargetWeaponLevel:
+          () =>
+              ref
+                  .read(characterDetailProvider(widget.characterId))
+                  .targetWeaponLevel,
     );
     unawaited(_loadBookmarks());
   }
@@ -100,31 +104,32 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('取得情報に戻す'),
-        content: const Text(
-          'レベル・天賦・武器・聖遺物の手動変更をすべて破棄し、'
-          '取得時の状態に戻します。よろしいですか？',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('キャンセル'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('取得情報に戻す'),
+            content: const Text(
+              'レベル・天賦・武器・聖遺物の手動変更をすべて破棄し、'
+              '取得時の状態に戻します。よろしいですか？',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('戻す'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('戻す'),
-          ),
-        ],
-      ),
     );
     if (confirmed != true || !mounted) return;
 
     await _notifier.resetToFetched();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('取得情報に戻しました')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('取得情報に戻しました')));
   }
 
   Future<void> _onWeaponSelected(
@@ -172,33 +177,30 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
 
   CultivationBookmarkContext _characterBookmarkContext(
     MasterCharacter character,
-  ) =>
-      CultivationBookmarkContext(
-        kind: CultivationKind.characterLevel,
-        targetId: character.id,
-        targetName: character.name,
-        character: BookmarkCharacterSource(
-          characterId: character.id,
-          characterName: character.name,
-          characterIconUrl: character.iconUrl,
-        ),
-      );
+  ) => CultivationBookmarkContext(
+    kind: CultivationKind.characterLevel,
+    targetId: character.id,
+    targetName: character.name,
+    character: BookmarkCharacterSource(
+      characterId: character.id,
+      characterName: character.name,
+      characterIconUrl: character.iconUrl,
+    ),
+  );
 
   CultivationBookmarkContext _weaponBookmarkContext(
     MasterCharacter character,
     CharacterDetailState detail,
-  ) =>
-      CultivationBookmarkContext(
-        kind: CultivationKind.weaponLevel,
-        targetId: detail.weaponId.isEmpty ? character.id : detail.weaponId,
-        targetName:
-            detail.weaponName.isEmpty ? character.name : detail.weaponName,
-        character: BookmarkCharacterSource(
-          characterId: character.id,
-          characterName: character.name,
-          characterIconUrl: character.iconUrl,
-        ),
-      );
+  ) => CultivationBookmarkContext(
+    kind: CultivationKind.weaponLevel,
+    targetId: detail.weaponId.isEmpty ? character.id : detail.weaponId,
+    targetName: detail.weaponName.isEmpty ? character.name : detail.weaponName,
+    character: BookmarkCharacterSource(
+      characterId: character.id,
+      characterName: character.name,
+      characterIconUrl: character.iconUrl,
+    ),
+  );
 
   bool _isBookmarked(String sourceKey, String materialId) =>
       _bookmarkActions.isBookmarked(sourceKey, materialId);
@@ -210,8 +212,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
 
     ref.listen(hoyolabCharacterBuildProvider(widget.characterId), (prev, next) {
       next.whenData((build) {
-        final current =
-            ref.read(characterDetailProvider(widget.characterId));
+        final current = ref.read(characterDetailProvider(widget.characterId));
         if (build != null && build.isOwned && !current.loading) {
           unawaited(notifier.applyHoyolabBuildSafe(build));
         }
@@ -222,9 +223,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (detail.error != null) {
-      return Scaffold(
-        body: Center(child: Text(userFacingError(detail.error))),
-      );    }
+      return Scaffold(body: Center(child: Text(userFacingError(detail.error))));
+    }
 
     final character = detail.character;
     if (character == null) {
@@ -248,8 +248,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
     );
     final bookmarkCtx = _characterBookmarkContext(character);
     final weaponBookmarkCtx = _weaponBookmarkContext(character, detail);
-    final rangeSourceKey =
-        makeRangeSourceKey(bookmarkCtx, detail.level, detail.targetLevel);
+    final rangeSourceKey = makeRangeSourceKey(
+      bookmarkCtx,
+      detail.level,
+      detail.targetLevel,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -258,9 +261,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
           IconButton(
             icon: const Icon(Icons.settings_backup_restore),
             tooltip: '取得情報に戻す',
-            onPressed: detail.fetchedSnapshot == null
-                ? null
-                : () => unawaited(_confirmResetToFetched(detail)),
+            onPressed:
+                detail.fetchedSnapshot == null
+                    ? null
+                    : () => unawaited(_confirmResetToFetched(detail)),
           ),
           const ShellMenuButton(),
         ],
@@ -275,10 +279,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
             onConstellationChanged: notifier.updateConstellation,
           ),
           _DiagnosisCard(characterId: widget.characterId),
-          _GrowthGoalButton(
-            characterId: widget.characterId,
-            detail: detail,
-          ),
+          _GrowthGoalButton(characterId: widget.characterId, detail: detail),
           Material(
             color: Theme.of(context).colorScheme.surface,
             child: TabBar(
@@ -290,7 +291,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
                 Tab(text: '武器'),
                 Tab(text: '聖遺物'),
                 Tab(text: '天賦'),
-                Tab(text: '想定'),
+                Tab(text: 'ステータス'),
                 Tab(text: 'HoYoLAB'),
               ],
             ),
@@ -345,8 +346,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
                 onArtifactsChanged: notifier.updateArtifacts,
                 onArtifactScoreTypeChanged: notifier.updateArtifactScoreType,
                 onArtifactCompletedChanged: notifier.updateArtifactCompleted,
-                onResetToFetched: () =>
-                    unawaited(_confirmResetToFetched(detail)),
+                onResetToFetched:
+                    () => unawaited(_confirmResetToFetched(detail)),
                 snapshotFromCurrent: detail.snapshotFromCurrent,
               ).buildTabs(context),
             ),
@@ -358,10 +359,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
 }
 
 class _GrowthGoalButton extends ConsumerStatefulWidget {
-  const _GrowthGoalButton({
-    required this.characterId,
-    required this.detail,
-  });
+  const _GrowthGoalButton({required this.characterId, required this.detail});
 
   final String characterId;
   final CharacterDetailState detail;
@@ -378,7 +376,8 @@ class _GrowthGoalButtonState extends ConsumerState<_GrowthGoalButton> {
     final detail = widget.detail;
     final targetLevel =
         detail.targetLevel > detail.level ? detail.targetLevel : null;
-    final hasWeaponTarget = detail.weaponId.isNotEmpty &&
+    final hasWeaponTarget =
+        detail.weaponId.isNotEmpty &&
         detail.targetWeaponLevel > detail.weaponLevel;
     if (targetLevel == null && !hasWeaponTarget) return;
 
@@ -386,9 +385,10 @@ class _GrowthGoalButtonState extends ConsumerState<_GrowthGoalButton> {
     try {
       final userId = await ref.read(localUserIdProvider.future);
       final snapshot = await ref.read(accountSnapshotProvider.future);
-      final existing = snapshot.activeGoals
-          .where((goal) => goal.characterId == widget.characterId)
-          .firstOrNull;
+      final existing =
+          snapshot.activeGoals
+              .where((goal) => goal.characterId == widget.characterId)
+              .firstOrNull;
       final now = DateTime.now();
       final goal = GrowthGoal(
         id: existing?.id ?? const Uuid().v4(),
@@ -396,8 +396,7 @@ class _GrowthGoalButtonState extends ConsumerState<_GrowthGoalButton> {
         characterId: widget.characterId,
         targetLevel: targetLevel,
         targetWeaponId: hasWeaponTarget ? detail.weaponId : null,
-        targetWeaponLevel:
-            hasWeaponTarget ? detail.targetWeaponLevel : null,
+        targetWeaponLevel: hasWeaponTarget ? detail.targetWeaponLevel : null,
         priority: existing?.priority ?? 0,
         status: GrowthGoalStatus.active,
         memo: existing?.memo,
@@ -411,14 +410,14 @@ class _GrowthGoalButtonState extends ConsumerState<_GrowthGoalButton> {
       ref.invalidate(characterDiagnosisProvider(widget.characterId));
       ref.invalidate(accountHealthReportProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('育成目標を保存しました')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('育成目標を保存しました')));
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('育成目標を保存できませんでした')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('育成目標を保存できませんでした')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -431,7 +430,8 @@ class _GrowthGoalButtonState extends ConsumerState<_GrowthGoalButton> {
     if (!enabledByFlag) return const SizedBox.shrink();
 
     final detail = widget.detail;
-    final enabled = detail.targetLevel > detail.level ||
+    final enabled =
+        detail.targetLevel > detail.level ||
         (detail.weaponId.isNotEmpty &&
             detail.targetWeaponLevel > detail.weaponLevel);
     return Padding(
@@ -453,9 +453,11 @@ class _DiagnosisCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final flagsAsync = ref.watch(featureFlagsProvider);
     return flagsAsync.maybeWhen(
-      data: (flags) => flags.enableInvestmentDiagnosis
-          ? _DiagnosisContent(characterId: characterId)
-          : const SizedBox.shrink(),
+      data:
+          (flags) =>
+              flags.enableInvestmentDiagnosis
+                  ? _DiagnosisContent(characterId: characterId)
+                  : const SizedBox.shrink(),
       orElse: () => const SizedBox.shrink(),
     );
   }
@@ -483,43 +485,58 @@ class _DiagnosisContent extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('\u80b2\u6210\u8a3a\u65ad', style: theme.textTheme.titleSmall),
+                  Text(
+                    '\u80b2\u6210\u8a3a\u65ad',
+                    style: theme.textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 6),
-                  ...diag.topFindings.map((f) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              f.severity == DiagnosisSeverity.warning
-                                  ? Icons.warning_amber
-                                  : Icons.info_outline,
-                              size: 18,
-                              color: f.severity == DiagnosisSeverity.warning
-                                  ? Colors.orange
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(f.title, style: theme.textTheme.bodyMedium),
-                                  if (f.explanation.isNotEmpty)
-                                    Text(f.explanation, style: theme.textTheme.bodySmall?.copyWith(
+                  ...diag.topFindings.map(
+                    (f) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            f.severity == DiagnosisSeverity.warning
+                                ? Icons.warning_amber
+                                : Icons.info_outline,
+                            size: 18,
+                            color:
+                                f.severity == DiagnosisSeverity.warning
+                                    ? Colors.orange
+                                    : theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  f.title,
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                                if (f.explanation.isNotEmpty)
+                                  Text(
+                                    f.explanation,
+                                    style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.onSurfaceVariant,
-                                    )),
-                                  if (f.recommendation != null && f.recommendation!.isNotEmpty)
-                                    Text(f.recommendation!,
-                                        style: theme.textTheme.labelSmall?.copyWith(
-                                          color: theme.colorScheme.primary,
-                                        )),
-                                ],
-                              ),
+                                    ),
+                                  ),
+                                if (f.recommendation != null &&
+                                    f.recommendation!.isNotEmpty)
+                                  Text(
+                                    f.recommendation!,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
+                              ],
                             ),
-                          ],
-                        ),
-                      )),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   Text(
                     '\u4fe1\u983c\u5ea6: ${_confidenceLabel(diag.topFindings.firstOrNull?.confidence ?? RecommendationConfidence.unknown)}',
                     style: theme.textTheme.labelSmall,
@@ -535,10 +552,14 @@ class _DiagnosisContent extends ConsumerWidget {
 
   String _confidenceLabel(RecommendationConfidence c) {
     switch (c) {
-      case RecommendationConfidence.high: return '\u9ad8';
-      case RecommendationConfidence.medium: return '\u4e2d';
-      case RecommendationConfidence.low: return '\u4f4e';
-      case RecommendationConfidence.unknown: return '\u4e0d\u660e';
+      case RecommendationConfidence.high:
+        return '\u9ad8';
+      case RecommendationConfidence.medium:
+        return '\u4e2d';
+      case RecommendationConfidence.low:
+        return '\u4f4e';
+      case RecommendationConfidence.unknown:
+        return '\u4e0d\u660e';
     }
   }
 }

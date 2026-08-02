@@ -104,11 +104,12 @@ CalendarEvent parseCalendarEvent(Map<String, dynamic> json) {
       for (final r in json['rewards'] as List<dynamic>? ?? const [])
         if (r is Map<String, dynamic>) parseCalendarEventReward(r),
     ],
-    specialReward: json['special_reward'] is Map<String, dynamic>
-        ? parseCalendarEventReward(
-            json['special_reward'] as Map<String, dynamic>,
-          )
-        : null,
+    specialReward:
+        json['special_reward'] is Map<String, dynamic>
+            ? parseCalendarEventReward(
+              json['special_reward'] as Map<String, dynamic>,
+            )
+            : null,
   );
 }
 
@@ -179,9 +180,7 @@ GachaBanner parseCalendarBanner(Map<String, dynamic> json) {
 
 GachaBannerType inferBannerTypeFromName(String name) {
   final n = name.toLowerCase();
-  if (n.contains('集録') ||
-      n.contains('追憶') ||
-      n.contains('chronicled')) {
+  if (n.contains('集録') || n.contains('追憶') || n.contains('chronicled')) {
     return GachaBannerType.chronicled;
   }
   if (n.contains('武器') || n.contains('weapon') || n.contains('神鋳')) {

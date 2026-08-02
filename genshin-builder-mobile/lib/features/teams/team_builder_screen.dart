@@ -18,14 +18,7 @@ import 'team_recommendation_panel.dart';
 // Team role
 // ---------------------------------------------------------------------------
 
-enum TeamRole {
-  mainDps,
-  subDps,
-  support,
-  healer,
-  shielder,
-  flex,
-}
+enum TeamRole { mainDps, subDps, support, healer, shielder, flex }
 
 extension TeamRoleLabel on TeamRole {
   String get label {
@@ -47,7 +40,12 @@ extension TeamRoleLabel on TeamRole {
 }
 
 /// Default roles for slots 0-3.
-const _defaultRoles = [TeamRole.mainDps, TeamRole.subDps, TeamRole.support, TeamRole.healer];
+const _defaultRoles = [
+  TeamRole.mainDps,
+  TeamRole.subDps,
+  TeamRole.support,
+  TeamRole.healer,
+];
 
 TeamRole _roleFromTemplate(String role) => switch (role) {
   'main_dps' => TeamRole.mainDps,
@@ -71,7 +69,10 @@ class TeamBuilderSlot {
   bool get isEmpty => characterId == null;
 
   TeamBuilderSlot copyWith({String? characterId, TeamRole? role}) =>
-      TeamBuilderSlot(characterId: characterId ?? this.characterId, role: role ?? this.role);
+      TeamBuilderSlot(
+        characterId: characterId ?? this.characterId,
+        role: role ?? this.role,
+      );
 }
 
 // ---------------------------------------------------------------------------
@@ -94,7 +95,8 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
     const TeamBuilderSlot(),
   ];
 
-  late final TextEditingController _teamNameController = TextEditingController();
+  late final TextEditingController _teamNameController =
+      TextEditingController();
   bool _isPickerOpen = false;
   bool _isRolePickerOpen = false;
 
@@ -125,10 +127,11 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
     final selectedId = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _TeamCharacterPicker(
-        selectedIds: _selectedIds,
-        onSelected: (id) => Navigator.of(context).pop(id),
-      ),
+      builder:
+          (_) => _TeamCharacterPicker(
+            selectedIds: _selectedIds,
+            onSelected: (id) => Navigator.of(context).pop(id),
+          ),
     );
 
     if (!mounted) return;
@@ -181,9 +184,9 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
   // ── Mutations ─────────────────────────────────────────────────────
 
   void _removeCharacter(int slotIndex) {
-    setState(() => _slots[slotIndex] = TeamBuilderSlot(
-          role: _defaultRoles[slotIndex],
-        ));
+    setState(
+      () => _slots[slotIndex] = TeamBuilderSlot(role: _defaultRoles[slotIndex]),
+    );
   }
 
   void _clearAll() {
@@ -203,9 +206,10 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
     if (_selectedCount == 0) return;
     final team = Team(
       id: _teamId,
-      name: _teamNameController.text.trim().isEmpty
-          ? '\u7121\u984c\u306e\u7de8\u6210'
-          : _teamNameController.text.trim(),
+      name:
+          _teamNameController.text.trim().isEmpty
+              ? '\u7121\u984c\u306e\u7de8\u6210'
+              : _teamNameController.text.trim(),
       members: [
         for (var i = 0; i < _slots.length; i++)
           if (!_slots[i].isEmpty)
@@ -223,11 +227,11 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
 
   Widget _buildTeamPriorityButton(BuildContext context) {
     return OutlinedButton.icon(
-      onPressed: _selectedCount == 0
-          ? null
-          : () => _openTeamPriority(context),
+      onPressed: _selectedCount == 0 ? null : () => _openTeamPriority(context),
       icon: const Icon(Icons.sort),
-      label: const Text('\u3053\u306e\u7de8\u6210\u306e\u80b2\u6210\u512a\u5148\u5ea6\u3092\u898b\u308b'),
+      label: const Text(
+        '\u3053\u306e\u7de8\u6210\u306e\u80b2\u6210\u512a\u5148\u5ea6\u3092\u898b\u308b',
+      ),
     );
   }
 
@@ -245,7 +249,10 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('\u304a\u3059\u3059\u3081\u7de8\u6210', style: theme.textTheme.titleSmall),
+            Text(
+              '\u304a\u3059\u3059\u3081\u7de8\u6210',
+              style: theme.textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
             Text(
               '1人目にアタッカーを選ぶと、育成状況に合わせたおすすめ編成を確認できます',
@@ -318,8 +325,7 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
                 const SizedBox(height: 12),
                 _buildSlots(),
                 const SizedBox(height: 16),
-                if (_selectedCount > 0)
-                  _buildTeamPriorityButton(context),
+                if (_selectedCount > 0) _buildTeamPriorityButton(context),
                 const SizedBox(height: 24),
                 _buildFutureHint(theme),
               ],
@@ -349,17 +355,16 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
 
   Widget _buildCompletionStatus(ThemeData theme) {
     final style = theme.textTheme.bodyMedium?.copyWith(
-      color: _isComplete
-          ? theme.colorScheme.primary
-          : theme.colorScheme.onSurfaceVariant,
+      color:
+          _isComplete
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant,
     );
-    final text = _isComplete
-        ? '$_selectedCount / 4 \u3000\u7de8\u6210\u304c\u5b8c\u6210\u3057\u307e\u3057\u305f'
-        : '$_selectedCount / 4 \u3000\u3042\u3068${4 - _selectedCount}\u4eba\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044';
-    return Semantics(
-      label: text,
-      child: Text(text, style: style),
-    );
+    final text =
+        _isComplete
+            ? '$_selectedCount / 4 \u3000\u7de8\u6210\u304c\u5b8c\u6210\u3057\u307e\u3057\u305f'
+            : '$_selectedCount / 4 \u3000\u3042\u3068${4 - _selectedCount}\u4eba\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044';
+    return Semantics(label: text, child: Text(text, style: style));
   }
 
   Widget _buildHintText(ThemeData theme) {
@@ -395,9 +400,8 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
                   slotHeight: slotHeight,
                   onTap: () => _openCharacterPicker(i),
                   onRoleTap: () => _openRolePicker(i),
-                  onRemove: !_slots[i].isEmpty
-                      ? () => _removeCharacter(i)
-                      : null,
+                  onRemove:
+                      !_slots[i].isEmpty ? () => _removeCharacter(i) : null,
                   onMove: _moveSlot,
                 ),
               ),
@@ -410,25 +414,26 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
   void _confirmClear(BuildContext context) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('\u7de8\u6210\u3092\u30af\u30ea\u30a2'),
-        content: const Text(
-          '\u9078\u629e\u3057\u305f\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u3001\u5f79\u5272\u3001\u7de8\u6210\u540d\u304c\u3059\u3079\u3066\u521d\u671f\u72b6\u614b\u306b\u623b\u308a\u307e\u3059\u3002',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('\u30ad\u30e3\u30f3\u30bb\u30eb'),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('\u7de8\u6210\u3092\u30af\u30ea\u30a2'),
+            content: const Text(
+              '\u9078\u629e\u3057\u305f\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u3001\u5f79\u5272\u3001\u7de8\u6210\u540d\u304c\u3059\u3079\u3066\u521d\u671f\u72b6\u614b\u306b\u623b\u308a\u307e\u3059\u3002',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('\u30ad\u30e3\u30f3\u30bb\u30eb'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _clearAll();
+                },
+                child: const Text('\u30af\u30ea\u30a2'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              _clearAll();
-            },
-            child: const Text('\u30af\u30ea\u30a2'),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -499,21 +504,19 @@ class _DraggableSlot extends StatelessWidget {
               isDragOver: false,
             ),
           ),
-          childWhenDragging: Opacity(
-            opacity: 0.3,
-            child: child,
-          ),
-          child: isDragOver
-              ? _TeamSlot(
-                  slotIndex: slotIndex,
-                  slot: slot,
-                  onTap: onTap,
-                  onRoleTap: onRoleTap,
-                  onRemove: onRemove,
-                  showDragHandle: true,
-                  isDragOver: true,
-                )
-              : child,
+          childWhenDragging: Opacity(opacity: 0.3, child: child),
+          child:
+              isDragOver
+                  ? _TeamSlot(
+                    slotIndex: slotIndex,
+                    slot: slot,
+                    onTap: onTap,
+                    onRoleTap: onRoleTap,
+                    onRemove: onRemove,
+                    showDragHandle: true,
+                    isDragOver: true,
+                  )
+                  : child,
         );
       },
     );
@@ -557,9 +560,9 @@ class _TeamSlot extends ConsumerWidget {
     return charsAsync.when(
       data: (characters) {
         final character = characters.cast<MasterCharacter?>().firstWhere(
-              (c) => c?.id == slot.characterId,
-              orElse: () => null,
-            );
+          (c) => c?.id == slot.characterId,
+          orElse: () => null,
+        );
         if (character == null) {
           return _EmptySlot(
             slotNumber: slotIndex + 1,
@@ -578,16 +581,18 @@ class _TeamSlot extends ConsumerWidget {
           isDragOver: isDragOver,
         );
       },
-      loading: () => _EmptySlot(
-        slotNumber: slotIndex + 1,
-        defaultRole: slot.role,
-        onTap: onTap,
-      ),
-      error: (_, __) => _EmptySlot(
-        slotNumber: slotIndex + 1,
-        defaultRole: slot.role,
-        onTap: onTap,
-      ),
+      loading:
+          () => _EmptySlot(
+            slotNumber: slotIndex + 1,
+            defaultRole: slot.role,
+            onTap: onTap,
+          ),
+      error:
+          (_, __) => _EmptySlot(
+            slotNumber: slotIndex + 1,
+            defaultRole: slot.role,
+            onTap: onTap,
+          ),
     );
   }
 }
@@ -611,7 +616,8 @@ class _EmptySlot extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Semantics(
-      label: '$slotNumber\u4eba\u76ee\u306e\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u3092\u9078\u629e',
+      label:
+          '$slotNumber\u4eba\u76ee\u306e\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u3092\u9078\u629e',
       child: Material(
         color: theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
@@ -645,7 +651,9 @@ class _EmptySlot extends StatelessWidget {
                 Text(
                   defaultRole.label,
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.5,
+                    ),
                     fontSize: 10,
                   ),
                 ),
@@ -686,9 +694,8 @@ class _FilledSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final borderColor = isDragOver
-        ? theme.colorScheme.primary
-        : character.element.elementColor;
+    final borderColor =
+        isDragOver ? theme.colorScheme.primary : character.element.elementColor;
     final borderWidth = isDragOver ? 3.0 : 2.0;
     final label =
         '$slotNumber\u4eba\u76ee ${character.name}\u3000${role.label}\u3000\u4e26\u3073\u66ff\u3048\u53ef\u80fd';
@@ -696,9 +703,10 @@ class _FilledSlot extends StatelessWidget {
     return Semantics(
       label: label,
       child: Material(
-        color: isDragOver
-            ? theme.colorScheme.primaryContainer
-            : theme.colorScheme.surfaceContainerLow,
+        color:
+            isDragOver
+                ? theme.colorScheme.primaryContainer
+                : theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
         child: Container(
           decoration: BoxDecoration(
@@ -720,15 +728,17 @@ class _FilledSlot extends StatelessWidget {
                           padding: const EdgeInsets.all(4),
                           child: LayoutBuilder(
                             builder: (context, constraints) {
-                              final size =
-                                  constraints.biggest.shortestSide.clamp(36.0, 64.0);
+                              final size = constraints.biggest.shortestSide
+                                  .clamp(36.0, 64.0);
                               return GameIconImage(
                                 iconUrl: character.iconUrl,
                                 size: size,
                                 borderRadius: 8,
                                 borderColor: character.element.elementColor,
                                 fallback: Text(
-                                  character.name.isNotEmpty ? character.name[0] : '?',
+                                  character.name.isNotEmpty
+                                      ? character.name[0]
+                                      : '?',
                                   style: theme.textTheme.titleMedium,
                                 ),
                               );
@@ -765,7 +775,11 @@ class _FilledSlot extends StatelessWidget {
                     child: InkResponse(
                       radius: 15,
                       onTap: onRemove,
-                      child: Icon(Icons.cancel, size: 20, color: theme.colorScheme.error),
+                      child: Icon(
+                        Icons.cancel,
+                        size: 20,
+                        color: theme.colorScheme.error,
+                      ),
                     ),
                   ),
                 ),
@@ -776,9 +790,13 @@ class _FilledSlot extends StatelessWidget {
                   bottom: 0,
                   child: Semantics(
                     label: '\u4e26\u3073\u66ff\u3048',
-                    child: Icon(Icons.drag_indicator,
-                        size: 18,
-                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                    child: Icon(
+                      Icons.drag_indicator,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.4,
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -803,7 +821,8 @@ class _RoleChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Semantics(
-      label: '\u5f79\u5272: ${role.label}\u3000\u30bf\u30c3\u30d7\u3067\u5909\u66f4',
+      label:
+          '\u5f79\u5272: ${role.label}\u3000\u30bf\u30c3\u30d7\u3067\u5909\u66f4',
       child: ActionChip(
         label: Text(role.label, style: theme.textTheme.labelSmall),
         onPressed: onTap,
@@ -836,7 +855,10 @@ class _RolePickerSheet extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
-              child: Text('\u5f79\u5272\u3092\u9078\u629e', style: theme.textTheme.titleSmall),
+              child: Text(
+                '\u5f79\u5272\u3092\u9078\u629e',
+                style: theme.textTheme.titleSmall,
+              ),
             ),
             RadioGroup<TeamRole>(
               groupValue: currentRole,
@@ -894,16 +916,18 @@ class _TeamCharacterPicker extends ConsumerWidget {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       expand: false,
-      builder: (context, scrollController) => charsAsync.when(
-        data: (characters) => _CharacterPickerContent(
-          characters: characters,
-          isExcluded: _isExcluded,
-          onSelected: onSelected,
-          scrollController: scrollController,
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(userFacingError(e))),
-      ),
+      builder:
+          (context, scrollController) => charsAsync.when(
+            data:
+                (characters) => _CharacterPickerContent(
+                  characters: characters,
+                  isExcluded: _isExcluded,
+                  onSelected: onSelected,
+                  scrollController: scrollController,
+                ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text(userFacingError(e))),
+          ),
     );
   }
 }
@@ -922,7 +946,8 @@ class _CharacterPickerContent extends StatefulWidget {
   final ScrollController scrollController;
 
   @override
-  State<_CharacterPickerContent> createState() => _CharacterPickerContentState();
+  State<_CharacterPickerContent> createState() =>
+      _CharacterPickerContentState();
 }
 
 class _CharacterPickerContentState extends State<_CharacterPickerContent> {
@@ -931,17 +956,19 @@ class _CharacterPickerContentState extends State<_CharacterPickerContent> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final available = widget.characters
-        .where((c) => !widget.isExcluded(c.id))
-        .toList();
+    final available =
+        widget.characters.where((c) => !widget.isExcluded(c.id)).toList();
 
-    final filtered = _query.isEmpty
-        ? available
-        : available
-            .where((c) =>
-                c.name.contains(_query) ||
-                c.element.contains(_query.toLowerCase()))
-            .toList();
+    final filtered =
+        _query.isEmpty
+            ? available
+            : available
+                .where(
+                  (c) =>
+                      c.name.contains(_query) ||
+                      c.element.contains(_query.toLowerCase()),
+                )
+                .toList();
 
     return Column(
       children: [
@@ -963,82 +990,87 @@ class _CharacterPickerContentState extends State<_CharacterPickerContent> {
           ),
         ),
         Expanded(
-          child: filtered.isEmpty
-              ? Center(
-                  child: Text(
-                    '\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                )
-              : GridView.builder(
-                  controller: widget.scrollController,
-                  padding: const EdgeInsets.all(8),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    childAspectRatio: 0.75,
-                  ),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final c = filtered[index];
-                    final elementLabel = elementLabelMap[c.element] ?? c.element;
-                    return Material(
-                      color: theme.colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(10),
-                      child: InkWell(
+          child:
+              filtered.isEmpty
+                  ? Center(
+                    child: Text(
+                      '\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  )
+                  : GridView.builder(
+                    controller: widget.scrollController,
+                    padding: const EdgeInsets.all(8),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 4,
+                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 8,
+                          childAspectRatio: 0.75,
+                        ),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final c = filtered[index];
+                      final elementLabel =
+                          elementLabelMap[c.element] ?? c.element;
+                      return Material(
+                        color: theme.colorScheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(10),
-                        onTap: () => widget.onSelected(c.id),
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Center(
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      final size = constraints.biggest.shortestSide
-                                          .clamp(32.0, 56.0);
-                                      return GameIconImage(
-                                        iconUrl: c.iconUrl,
-                                        size: size,
-                                        borderRadius: 8,
-                                        borderColor: c.element.elementColor,
-                                        fallback: Text(
-                                          c.name.isNotEmpty ? c.name[0] : '?',
-                                          style: theme.textTheme.titleMedium,
-                                        ),
-                                      );
-                                    },
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () => widget.onSelected(c.id),
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Center(
+                                    child: LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        final size = constraints
+                                            .biggest
+                                            .shortestSide
+                                            .clamp(32.0, 56.0);
+                                        return GameIconImage(
+                                          iconUrl: c.iconUrl,
+                                          size: size,
+                                          borderRadius: 8,
+                                          borderColor: c.element.elementColor,
+                                          fallback: Text(
+                                            c.name.isNotEmpty ? c.name[0] : '?',
+                                            style: theme.textTheme.titleMedium,
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                c.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.labelSmall,
-                              ),
-                              Text(
-                                '$elementLabel \u00b7 ${c.rarity}\u2605',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                  fontSize: 10,
+                                const SizedBox(height: 4),
+                                Text(
+                                  c.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.labelSmall,
                                 ),
-                              ),
-                            ],
+                                Text(
+                                  '$elementLabel \u00b7 ${c.rarity}\u2605',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
         ),
       ],
     );

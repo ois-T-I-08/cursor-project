@@ -35,13 +35,23 @@ class Team {
 
   /// Validates team constraints. Returns null if valid, or an error message.
   static String? validate(Team team) {
-    if (team.id.isEmpty) return 'Team id must not be empty';
-    if (team.name.isEmpty) return 'Team name must not be empty';
-    if (team.members.length > maxSize) return 'Team cannot have more than $maxSize members';
+    if (team.id.isEmpty) {
+      return 'Team id must not be empty';
+    }
+    if (team.name.isEmpty) {
+      return 'Team name must not be empty';
+    }
+    if (team.members.length > maxSize) {
+      return 'Team cannot have more than $maxSize members';
+    }
     final ids = <String>{};
     for (final m in team.members) {
-      if (m.characterId.isEmpty) return 'Member characterId must not be empty';
-      if (!ids.add(m.characterId)) return 'Duplicate character ${m.characterId} in team';
+      if (m.characterId.isEmpty) {
+        return 'Member characterId must not be empty';
+      }
+      if (!ids.add(m.characterId)) {
+        return 'Duplicate character ${m.characterId} in team';
+      }
     }
     return null;
   }
@@ -51,11 +61,10 @@ class Team {
     String? name,
     List<TeamMemberSlot>? members,
     String? notes,
-  }) =>
-      Team(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        members: members ?? this.members,
-        notes: notes ?? this.notes,
-      );
+  }) => Team(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    members: members ?? this.members,
+    notes: notes ?? this.notes,
+  );
 }

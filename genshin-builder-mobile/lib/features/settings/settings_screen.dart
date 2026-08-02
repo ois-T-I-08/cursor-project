@@ -56,8 +56,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       final store = await ref.read(reminderSettingsStoreProvider.future);
       final scheduler = ref.read(notificationSchedulerProvider);
-      final coordinator =
-          await ref.read(notificationScheduleCoordinatorProvider.future);
+      final coordinator = await ref.read(
+        notificationScheduleCoordinatorProvider.future,
+      );
 
       if (enabled) {
         final granted = await scheduler.requestPermission();
@@ -65,10 +66,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         await store.setResinEnabled(true);
         if (!granted) {
           if (mounted) {
-            setState(
-              () => _lastMessage =
-                  '樹脂通知をONにしましたが、端末側で通知が許可されていません。',
-            );
+            setState(() => _lastMessage = '樹脂通知をONにしましたが、端末側で通知が許可されていません。');
           }
           return;
         }
@@ -77,10 +75,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           await ref.read(dailyNoteProvider.notifier).refresh();
         } catch (_) {
           if (mounted) {
-            setState(
-              () => _lastMessage =
-                  '樹脂通知をONにしました。次回のリアルタイムメモ取得後に予約します。',
-            );
+            setState(() => _lastMessage = '樹脂通知をONにしました。次回のリアルタイムメモ取得後に予約します。');
           }
         }
       } else {
@@ -104,8 +99,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       final store = await ref.read(reminderSettingsStoreProvider.future);
       final scheduler = ref.read(notificationSchedulerProvider);
-      final coordinator =
-          await ref.read(notificationScheduleCoordinatorProvider.future);
+      final coordinator = await ref.read(
+        notificationScheduleCoordinatorProvider.future,
+      );
 
       if (enabled) {
         final granted = await scheduler.requestPermission();
@@ -113,10 +109,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         await store.setExpeditionEnabled(true);
         if (!granted) {
           if (mounted) {
-            setState(
-              () => _lastMessage =
-                  '探索派遣通知をONにしましたが、端末側で通知が許可されていません。',
-            );
+            setState(() => _lastMessage = '探索派遣通知をONにしましたが、端末側で通知が許可されていません。');
           }
           return;
         }
@@ -125,8 +118,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         } catch (_) {
           if (mounted) {
             setState(
-              () => _lastMessage =
-                  '探索派遣通知をONにしました。次回のリアルタイムメモ取得後に予約します。',
+              () => _lastMessage = '探索派遣通知をONにしました。次回のリアルタイムメモ取得後に予約します。',
             );
           }
         }
@@ -150,8 +142,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() => _reminderBusy = true);
     try {
       final scheduler = ref.read(notificationSchedulerProvider);
-      final coordinator =
-          await ref.read(dailyPlanNotificationCoordinatorProvider.future);
+      final coordinator = await ref.read(
+        dailyPlanNotificationCoordinatorProvider.future,
+      );
       final userId = await ref.read(localUserIdProvider.future);
 
       if (enabled) {
@@ -162,8 +155,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         if (!granted) {
           if (mounted) {
             setState(
-              () => _lastMessage =
-                  '23時の未完了通知をONにしましたが、端末側で通知が許可されていません。',
+              () => _lastMessage = '23時の未完了通知をONにしましたが、端末側で通知が許可されていません。',
             );
           }
         }
@@ -207,17 +199,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           },
         );
         final result = outcome.result;
-        final iconMessage = outcome.iconsLoaded > 0
-            ? ' · 新規アイコン ${outcome.iconsLoaded} 件'
-            : ' · アイコンは取得済み';
+        final iconMessage =
+            outcome.iconsLoaded > 0
+                ? ' · 新規アイコン ${outcome.iconsLoaded} 件'
+                : ' · アイコンは取得済み';
         final modeLabel = fullUpgrade ? '完全再同期完了' : '同期完了';
         if (!mounted) return;
         setState(() {
-          _lastMessage = result.hasErrors
-              ? userFacingSyncErrors(result.errors)
-              : '$modeLabel — キャラ ${result.characters} / 武器 ${result.weapons} / '
-                  '素材 ${result.materials} · 突破 キャラ ${result.characterUpgrades} / '
-                  '武器 ${result.weaponUpgrades}$iconMessage';
+          _lastMessage =
+              result.hasErrors
+                  ? userFacingSyncErrors(result.errors)
+                  : '$modeLabel — キャラ ${result.characters} / 武器 ${result.weapons} / '
+                      '素材 ${result.materials} · 突破 キャラ ${result.characterUpgrades} / '
+                      '武器 ${result.weaponUpgrades}$iconMessage';
         });
         if (result.hasErrors) {
           logAppError(result.errors.join('; '), null, 'settings.sync');
@@ -333,8 +327,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (session.uid != null && session.uid!.isNotEmpty) {
       final diskCache = await ref.read(hoyolabHomeDiskCacheProvider.future);
       await diskCache.clearForUid(session.uid!);
-      final discoveryStore =
-          await ref.read(hoyolabCharacterDiscoveryStoreProvider.future);
+      final discoveryStore = await ref.read(
+        hoyolabCharacterDiscoveryStoreProvider.future,
+      );
       await discoveryStore.clearForUid(session.uid!);
     }
     final repo = await ref.read(hoyolabRepositoryProvider.future);
@@ -345,8 +340,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // Secure Storage 側は削除済み。WebView Cookie 失敗は無視。
     }
     try {
-      final coordinator =
-          await ref.read(notificationScheduleCoordinatorProvider.future);
+      final coordinator = await ref.read(
+        notificationScheduleCoordinatorProvider.future,
+      );
       await coordinator.cancelAllAndResetAccount();
     } catch (_) {}
     ref.invalidate(hoyolabSessionProvider);
@@ -359,23 +355,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _confirmFullUpgrade() async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('完全再同期'),
-        content: const Text(
-          '突破データをすべて再取得します。ゲーム側で素材要件が変わった場合に使います。'
-          '通常の同期より時間がかかります（数分）。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('キャンセル'),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('完全再同期'),
+            content: const Text(
+              '突破データをすべて再取得します。ゲーム側で素材要件が変わった場合に使います。'
+              '通常の同期より時間がかかります（数分）。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('実行'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('実行'),
-          ),
-        ],
-      ),
     );
     if (ok == true) await _sync(fullUpgrade: true);
   }
@@ -418,13 +415,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const SizedBox(height: 8),
                   syncStatusAsync.when(
-                    data: (s) => Text(
-                      s.lastSyncedAt == null
-                          ? '未同期'
-                          : '最終同期: ${s.lastSyncedAt!.toLocal()}\n'
-                              '突破データ: キャラ ${s.characterUpgrades}/${s.characters} · '
-                              '武器 ${s.weaponUpgrades}/${s.weapons}',
-                    ),
+                    data:
+                        (s) => Text(
+                          s.lastSyncedAt == null
+                              ? '未同期'
+                              : '最終同期: ${s.lastSyncedAt!.toLocal()}\n'
+                                  '突破データ: キャラ ${s.characterUpgrades}/${s.characters} · '
+                                  '武器 ${s.weaponUpgrades}/${s.weapons}',
+                        ),
                     loading: () => const Text('…'),
                     error: (e, _) => Text(userFacingError(e)),
                   ),
@@ -440,9 +438,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       if (v.updatedAt != null) {
                         lines.add('更新: ${v.updatedAt!.toLocal()}');
                       }
-                      return Text(
-                        lines.join('\n'),
-                      );
+                      return Text(lines.join('\n'));
                     },
                     loading: () => const SizedBox.shrink(),
                     error: (_, __) => const SizedBox.shrink(),
@@ -458,13 +454,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     onPressed: _syncing ? null : () => _sync(),
-                    icon: _syncing
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.cloud_download),
+                    icon:
+                        _syncing
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.cloud_download),
                     label: Text(_syncing ? '同期中…' : '今すぐ同期'),
                   ),
                   const SizedBox(height: 8),
@@ -497,8 +494,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               padding: const EdgeInsets.all(8),
               child: reminderStoreAsync.when(
                 data: (store) {
-                  final dailyIncompleteAsync =
-                      ref.watch(dailyPlanIncompleteEnabledProvider);
+                  final dailyIncompleteAsync = ref.watch(
+                    dailyPlanIncompleteEnabledProvider,
+                  );
                   return FutureBuilder(
                     future: store.readPreferences(),
                     builder: (context, snap) {
@@ -516,33 +514,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               'ローカル通知',
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
-                            subtitle: const Text(
-                              '端末内の予約通知です。既定はOFFです。',
-                            ),
+                            subtitle: const Text('端末内の予約通知です。既定はOFFです。'),
                           ),
                           SwitchListTile(
                             title: const Text('樹脂190到達'),
                             subtitle: const Text('天然樹脂が190以上になったとき'),
                             value: resinOn,
-                            onChanged: _reminderBusy
-                                ? null
-                                : (v) => _setResinReminder(v),
+                            onChanged:
+                                _reminderBusy
+                                    ? null
+                                    : (v) => _setResinReminder(v),
                           ),
                           SwitchListTile(
                             title: const Text('探索派遣すべて完了'),
                             subtitle: const Text('派遣が5件とも完了したとき'),
                             value: expeditionOn,
-                            onChanged: _reminderBusy
-                                ? null
-                                : (v) => _setExpeditionReminder(v),
+                            onChanged:
+                                _reminderBusy
+                                    ? null
+                                    : (v) => _setExpeditionReminder(v),
                           ),
                           SwitchListTile(
                             title: const Text('23時に未完了の育成タスクを通知'),
                             subtitle: const Text('その日のデイリー育成タスクが残っているとき'),
                             value: dailyIncompleteOn,
-                            onChanged: _reminderBusy
-                                ? null
-                                : (v) => _setDailyPlanIncompleteReminder(v),
+                            onChanged:
+                                _reminderBusy
+                                    ? null
+                                    : (v) => _setDailyPlanIncompleteReminder(v),
                           ),
                           if (osDenied &&
                               (resinOn ||
@@ -569,13 +568,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     },
                   );
                 },
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: LinearProgressIndicator(),
-                ),
-                error: (_, __) => const ListTile(
-                  title: Text('通知設定を読み込めませんでした'),
-                ),
+                loading:
+                    () => const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: LinearProgressIndicator(),
+                    ),
+                error:
+                    (_, __) => const ListTile(title: Text('通知設定を読み込めませんでした')),
               ),
             ),
           ),
@@ -615,9 +614,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const ListTile(
             leading: Icon(Icons.warning_amber),
             title: Text('免責事項'),
-            subtitle: Text(
-              '本アプリは非公式ツールです。ゲームデータの正確性は保証されません。',
-            ),
+            subtitle: Text('本アプリは非公式ツールです。ゲームデータの正確性は保証されません。'),
           ),
         ],
       ),
@@ -650,8 +647,7 @@ class _SyncStatusBanner extends StatelessWidget {
     } else if (status.needsInitialUpgradeSync) {
       bg = colorScheme.tertiaryContainer;
       fg = colorScheme.onTertiaryContainer;
-      message =
-          '一覧は同期済みですが突破データが未登録です。同期で必要素材を取得します（初回は数分かかることがあります）。';
+      message = '一覧は同期済みですが突破データが未登録です。同期で必要素材を取得します（初回は数分かかることがあります）。';
     } else if (status.missingCharacterUpgrades > 0 ||
         status.missingWeaponUpgrades > 0) {
       bg = colorScheme.tertiaryContainer;

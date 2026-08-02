@@ -40,10 +40,7 @@ class ArtifactSetDetailDialog extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      set.name,
-                      style: theme.textTheme.titleLarge,
-                    ),
+                    child: Text(set.name, style: theme.textTheme.titleLarge),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -129,9 +126,10 @@ class ArtifactSetDetailDialog extends StatelessWidget {
                             CharacterIconWithBadge(
                               characterId: r.character.id,
                               iconUrl: r.character.iconUrl,
-                              name: r.usageRate == null
-                                  ? r.character.name
-                                  : '${r.character.name}（${(r.usageRate! * 100).round()}%）',
+                              name:
+                                  r.usageRate == null
+                                      ? r.character.name
+                                      : '${r.character.name}（${(r.usageRate! * 100).round()}%）',
                             ),
                         ],
                       ),

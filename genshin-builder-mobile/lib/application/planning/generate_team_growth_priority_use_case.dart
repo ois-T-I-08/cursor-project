@@ -24,17 +24,20 @@ class GenerateTeamGrowthPriorityUseCase {
     final priorities = <TeamMemberGrowthPriority>[];
 
     for (final member in team.members) {
-      final char = snapshot.characters
-          .where((c) => c.characterId == member.characterId)
-          .firstOrNull;
+      final char =
+          snapshot.characters
+              .where((c) => c.characterId == member.characterId)
+              .firstOrNull;
 
       if (char == null || !char.isOwned) {
-        priorities.add(TeamMemberGrowthPriority(
-          characterId: member.characterId,
-          priority: -1,
-          reasons: ['未所持、またはキャラが見つかりません'],
-          confidence: RecommendationConfidence.unknown,
-        ));
+        priorities.add(
+          TeamMemberGrowthPriority(
+            characterId: member.characterId,
+            priority: -1,
+            reasons: ['未所持、またはキャラが見つかりません'],
+            confidence: RecommendationConfidence.unknown,
+          ),
+        );
         continue;
       }
 
@@ -59,28 +62,38 @@ class GenerateTeamGrowthPriorityUseCase {
         reasons.add('武器レベル（${char.weaponLevel}）が 80 未満です');
         totalScore += 0.08;
       }
-      final maxTalent = [char.talentNormal, char.talentSkill, char.talentBurst]
-          .reduce((a, b) => a > b ? a : b);
+      final maxTalent = [
+        char.talentNormal,
+        char.talentSkill,
+        char.talentBurst,
+      ].reduce((a, b) => a > b ? a : b);
       if (maxTalent < 6) {
         reasons.add('最高天賦（Lv.$maxTalent）が 6 未満です');
         totalScore += 0.05;
       }
 
-      final priority = totalScore > 0.3 ? 3
-          : totalScore > 0.15 ? 2
-          : totalScore > 0 ? 1
-          : 0;
+      final priority =
+          totalScore > 0.3
+              ? 3
+              : totalScore > 0.15
+              ? 2
+              : totalScore > 0
+              ? 1
+              : 0;
 
-      priorities.add(TeamMemberGrowthPriority(
-        characterId: member.characterId,
-        priority: priority,
-        score: totalScore,
-        upgradeOptions: options.take(3).toList(),
-        reasons: reasons,
-        confidence: options.isNotEmpty
-            ? RecommendationConfidence.medium
-            : RecommendationConfidence.low,
-      ));
+      priorities.add(
+        TeamMemberGrowthPriority(
+          characterId: member.characterId,
+          priority: priority,
+          score: totalScore,
+          upgradeOptions: options.take(3).toList(),
+          reasons: reasons,
+          confidence:
+              options.isNotEmpty
+                  ? RecommendationConfidence.medium
+                  : RecommendationConfidence.low,
+        ),
+      );
     }
 
     // Sort by priority desc, then score desc
@@ -100,19 +113,21 @@ class GenerateTeamGrowthPriorityUseCase {
         }
       }
     }
-    final shared = allMaterials.entries
-        .where((e) => e.value.length > 1)
-        .map((e) => 'Material ${e.key} shared by ${e.value.join(", ")}')
-        .toList();
+    final shared =
+        allMaterials.entries
+            .where((e) => e.value.length > 1)
+            .map((e) => 'Material ${e.key} shared by ${e.value.join(", ")}')
+            .toList();
 
     return TeamGrowthPriorityReport(
       teamId: team.id,
       teamName: team.name,
       memberPriorities: priorities,
       sharedMaterialOpportunities: shared,
-      confidence: priorities.any((p) => p.score > 0)
-          ? RecommendationConfidence.medium
-          : RecommendationConfidence.low,
+      confidence:
+          priorities.any((p) => p.score > 0)
+              ? RecommendationConfidence.medium
+              : RecommendationConfidence.low,
       completeness: DataCompleteness.partial,
       missingData: snapshot.missingData,
       generatedAt: generatedAt ?? DateTime.now(),

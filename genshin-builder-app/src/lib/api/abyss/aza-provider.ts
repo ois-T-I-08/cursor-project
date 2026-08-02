@@ -52,10 +52,12 @@ export class AzaAbyssStatisticsProvider
         timeoutMs: readTimeout(this.environment.AZA_REQUEST_TIMEOUT_MS),
         maxBytes: MAX_RESPONSE_BYTES,
         retries: 1,
+        cache: "no-store",
         headers: {
           Accept: "application/json",
+          // AZA returns 403 to some datacenter clients with a custom UA; use a plain browser-like UA.
           "User-Agent":
-            "GenshinBuilder-Web/0.1 (AZA.GG statistics proxy)",
+            "Mozilla/5.0 (compatible; GenshinBuilder/0.1; +https://github.com/ois-T-I-08/cursor-project)",
         },
       });
       const identity = readAzaResponseIdentity(input);
@@ -90,21 +92,30 @@ export class AzaAbyssStatisticsProvider
     } catch (error) {
       if (error instanceof AbyssStatisticsError) throw error;
       if (error instanceof UpstreamFetchError) {
+        const diagnostic = [
+          error.code,
+          error.status !== undefined ? `http_${error.status}` : undefined,
+          error.causeKind,
+        ]
+          .filter((part): part is string => typeof part === "string" && part.length > 0)
+          .join("/")
+          .slice(0, 120);
         if (error.code === "timeout") {
-          throw new AbyssStatisticsError("timeout");
+          throw new AbyssStatisticsError("timeout", undefined, diagnostic);
         }
         if (error.code === "httpStatus" && error.status === 429) {
-          throw new AbyssStatisticsError("rateLimited", 429);
+          throw new AbyssStatisticsError("rateLimited", 429, diagnostic);
         }
         if (
           error.code === "invalidJson" ||
           error.code === "invalidData" ||
           error.code === "invalidEncoding" ||
-          error.code === "bodyTooLarge"
+          error.code === "bodyTooLarge" ||
+          error.code === "httpStatus"
         ) {
-          throw new AbyssStatisticsError("invalidResponse");
+          throw new AbyssStatisticsError("invalidResponse", error.status, diagnostic);
         }
-        throw new AbyssStatisticsError("networkError", error.status);
+        throw new AbyssStatisticsError("networkError", error.status, diagnostic || "network");
       }
       throw new AbyssStatisticsError("unknownError");
     }

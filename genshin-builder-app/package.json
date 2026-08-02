@@ -2,6 +2,9 @@
   "name": "genshin-builder-app",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:migration:youtube-hardening": "node scripts/test-youtube-hardening-migration.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

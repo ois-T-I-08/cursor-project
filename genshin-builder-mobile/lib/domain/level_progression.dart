@@ -116,11 +116,12 @@ List<({String materialId, String name, int exp})> _getLevelUpItems(
   String kind, [
   UpgradeDataCache? cache,
 ]) {
-  final fromCache = (cache?.levelUpMaterials ?? [])
-      .where((m) => m.targetType == kind)
-      .map((m) => (materialId: m.materialId, name: m.name, exp: m.exp))
-      .toList()
-    ..sort((a, b) => b.exp.compareTo(a.exp));
+  final fromCache =
+      (cache?.levelUpMaterials ?? [])
+          .where((m) => m.targetType == kind)
+          .map((m) => (materialId: m.materialId, name: m.name, exp: m.exp))
+          .toList()
+        ..sort((a, b) => b.exp.compareTo(a.exp));
 
   if (fromCache.isNotEmpty) return fromCache;
 
@@ -149,11 +150,13 @@ List<LevelUpMaterialSuggestion> suggestLevelUpMaterials(
   for (final item in items) {
     final count = remaining ~/ item.exp;
     if (count > 0) {
-      result.add(LevelUpMaterialSuggestion(
-        materialId: item.materialId,
-        name: item.name,
-        count: count,
-      ));
+      result.add(
+        LevelUpMaterialSuggestion(
+          materialId: item.materialId,
+          name: item.name,
+          count: count,
+        ),
+      );
       remaining -= count * item.exp;
     }
   }
@@ -171,11 +174,13 @@ List<LevelUpMaterialSuggestion> suggestLevelUpMaterials(
         count: existing.count + extra,
       );
     } else {
-      result.add(LevelUpMaterialSuggestion(
-        materialId: smallest.materialId,
-        name: smallest.name,
-        count: extra,
-      ));
+      result.add(
+        LevelUpMaterialSuggestion(
+          materialId: smallest.materialId,
+          name: smallest.name,
+          count: extra,
+        ),
+      );
     }
   }
 
@@ -215,8 +220,13 @@ NextStageRequirements? getNextStageRequirements(
     }
   }
 
-  final expTotal =
-      getExpBetweenMarks(fromLevel, toLevel, kind, weaponRarity, cache);
+  final expTotal = getExpBetweenMarks(
+    fromLevel,
+    toLevel,
+    kind,
+    weaponRarity,
+    cache,
+  );
   final levelUpMora = (expTotal / 10).round();
   final levelUpMaterials = suggestLevelUpMaterials(expTotal, kind, cache);
 
@@ -224,9 +234,10 @@ NextStageRequirements? getNextStageRequirements(
     fromLevel: fromLevel,
     toLevel: toLevel,
     needsAscension: needsAscension,
-    materials: materialMap.entries
-        .map((e) => MaterialCost(materialId: e.key, count: e.value))
-        .toList(),
+    materials:
+        materialMap.entries
+            .map((e) => MaterialCost(materialId: e.key, count: e.value))
+            .toList(),
     mora: mora + levelUpMora,
     expTotal: expTotal,
     levelUpMaterials: levelUpMaterials,
@@ -234,17 +245,19 @@ NextStageRequirements? getNextStageRequirements(
 }
 
 List<AscensionStageInfo> getAscensionStageInfos(List<PromoteStage> promotes) {
-  final filtered = promotes.where((p) => p.promoteLevel > 0).toList()
-    ..sort((a, b) => a.unlockMaxLevel.compareTo(b.unlockMaxLevel));
+  final filtered =
+      promotes.where((p) => p.promoteLevel > 0).toList()
+        ..sort((a, b) => a.unlockMaxLevel.compareTo(b.unlockMaxLevel));
   return filtered
       .map(
         (p) => AscensionStageInfo(
           level: p.unlockMaxLevel,
           promoteLevel: p.promoteLevel,
           requiresAscension: true,
-          materials: p.costItems.entries
-              .map((e) => MaterialCost(materialId: e.key, count: e.value))
-              .toList(),
+          materials:
+              p.costItems.entries
+                  .map((e) => MaterialCost(materialId: e.key, count: e.value))
+                  .toList(),
           mora: p.coinCost,
           requiredPlayerLevel: p.requiredPlayerLevel,
         ),

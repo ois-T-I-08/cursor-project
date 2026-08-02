@@ -53,7 +53,9 @@ void main() {
       expect(keqing.element, 'electro');
       expect(keqing.scoreType, 'atk');
 
-      final traveler = characters.firstWhere((c) => c.id.startsWith('10000005-'));
+      final traveler = characters.firstWhere(
+        (c) => c.id.startsWith('10000005-'),
+      );
       expect(traveler.name, contains('旅人'));
       expect(traveler.element, 'anemo');
 

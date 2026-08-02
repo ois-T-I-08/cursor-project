@@ -35,8 +35,9 @@ class ReminderSettingsStore {
   Future<ReminderUserPreferences> readPreferences() async {
     return ReminderUserPreferences(
       resinEnabled: await _readBool(ReminderSettingsKeys.resinEnabled),
-      expeditionEnabled:
-          await _readBool(ReminderSettingsKeys.expeditionEnabled),
+      expeditionEnabled: await _readBool(
+        ReminderSettingsKeys.expeditionEnabled,
+      ),
     );
   }
 
@@ -58,17 +59,22 @@ class ReminderSettingsStore {
 
   Future<ReminderPriorState> readPriorState() async {
     return ReminderPriorState(
-      resinWasAtOrAbove190:
-          await _readBool(ReminderSettingsKeys.resinWasAtOrAbove190),
-      expeditionAllComplete:
-          await _readBool(ReminderSettingsKeys.expeditionAllComplete),
+      resinWasAtOrAbove190: await _readBool(
+        ReminderSettingsKeys.resinWasAtOrAbove190,
+      ),
+      expeditionAllComplete: await _readBool(
+        ReminderSettingsKeys.expeditionAllComplete,
+      ),
       resinScheduledAt: await _readDate(ReminderSettingsKeys.resinScheduledAt),
-      resinScheduleFingerprint:
-          await _store.getSetting(ReminderSettingsKeys.resinScheduleFingerprint),
-      expeditionScheduledAt:
-          await _readDate(ReminderSettingsKeys.expeditionScheduledAt),
-      expeditionScheduleFingerprint: await _store
-          .getSetting(ReminderSettingsKeys.expeditionScheduleFingerprint),
+      resinScheduleFingerprint: await _store.getSetting(
+        ReminderSettingsKeys.resinScheduleFingerprint,
+      ),
+      expeditionScheduledAt: await _readDate(
+        ReminderSettingsKeys.expeditionScheduledAt,
+      ),
+      expeditionScheduleFingerprint: await _store.getSetting(
+        ReminderSettingsKeys.expeditionScheduleFingerprint,
+      ),
     );
   }
 
@@ -79,7 +85,9 @@ class ReminderSettingsStore {
   }
 
   Future<String> readSettingsGeneration() async {
-    final raw = await _store.getSetting(ReminderSettingsKeys.settingsGeneration);
+    final raw = await _store.getSetting(
+      ReminderSettingsKeys.settingsGeneration,
+    );
     if (raw == null || raw.isEmpty) return '0';
     return raw;
   }
@@ -110,17 +118,11 @@ class ReminderSettingsStore {
       ReminderSettingsKeys.resinScheduleFingerprint,
       fingerprint,
     );
-    await _store.setSetting(
-      ReminderSettingsKeys.resinWasAtOrAbove190,
-      'false',
-    );
+    await _store.setSetting(ReminderSettingsKeys.resinWasAtOrAbove190, 'false');
   }
 
   Future<void> markResinImmediateNotified({required String fingerprint}) async {
-    await _store.setSetting(
-      ReminderSettingsKeys.resinWasAtOrAbove190,
-      'true',
-    );
+    await _store.setSetting(ReminderSettingsKeys.resinWasAtOrAbove190, 'true');
     await _store.setSetting(ReminderSettingsKeys.resinScheduledAt, '');
     await _store.setSetting(
       ReminderSettingsKeys.resinScheduleFingerprint,
@@ -160,10 +162,7 @@ class ReminderSettingsStore {
   Future<void> markExpeditionImmediateNotified({
     required String fingerprint,
   }) async {
-    await _store.setSetting(
-      ReminderSettingsKeys.expeditionAllComplete,
-      'true',
-    );
+    await _store.setSetting(ReminderSettingsKeys.expeditionAllComplete, 'true');
     await _store.setSetting(ReminderSettingsKeys.expeditionScheduledAt, '');
     await _store.setSetting(
       ReminderSettingsKeys.expeditionScheduleFingerprint,

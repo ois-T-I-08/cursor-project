@@ -22,27 +22,27 @@ class MasterCharacter {
   final String scoreType;
 
   Map<String, Object?> toMap() => {
-        'id': id,
-        'name': name,
-        'element': element,
-        'weapon_type': weaponType,
-        'rarity': rarity,
-        'region': region,
-        'icon_url': iconUrl,
-        'score_type': scoreType,
-        'synced_at': DateTime.now().millisecondsSinceEpoch,
-      };
+    'id': id,
+    'name': name,
+    'element': element,
+    'weapon_type': weaponType,
+    'rarity': rarity,
+    'region': region,
+    'icon_url': iconUrl,
+    'score_type': scoreType,
+    'synced_at': DateTime.now().millisecondsSinceEpoch,
+  };
 
   factory MasterCharacter.fromMap(Map<String, Object?> map) => MasterCharacter(
-        id: map['id'] as String,
-        name: map['name'] as String,
-        element: map['element'] as String,
-        weaponType: map['weapon_type'] as String,
-        rarity: map['rarity'] as int,
-        region: map['region'] as String,
-        iconUrl: map['icon_url'] as String,
-        scoreType: map['score_type'] as String? ?? 'atk',
-      );
+    id: map['id'] as String,
+    name: map['name'] as String,
+    element: map['element'] as String,
+    weaponType: map['weapon_type'] as String,
+    rarity: map['rarity'] as int,
+    region: map['region'] as String,
+    iconUrl: map['icon_url'] as String,
+    scoreType: map['score_type'] as String? ?? 'atk',
+  );
 }
 
 class MasterWeapon {
@@ -61,21 +61,21 @@ class MasterWeapon {
   final String iconUrl;
 
   Map<String, Object?> toMap() => {
-        'id': id,
-        'name': name,
-        'weapon_type': weaponType,
-        'rarity': rarity,
-        'icon_url': iconUrl,
-        'synced_at': DateTime.now().millisecondsSinceEpoch,
-      };
+    'id': id,
+    'name': name,
+    'weapon_type': weaponType,
+    'rarity': rarity,
+    'icon_url': iconUrl,
+    'synced_at': DateTime.now().millisecondsSinceEpoch,
+  };
 
   factory MasterWeapon.fromMap(Map<String, Object?> map) => MasterWeapon(
-        id: map['id'] as String,
-        name: map['name'] as String,
-        weaponType: map['weapon_type'] as String,
-        rarity: map['rarity'] as int,
-        iconUrl: map['icon_url'] as String,
-      );
+    id: map['id'] as String,
+    name: map['name'] as String,
+    weaponType: map['weapon_type'] as String,
+    rarity: map['rarity'] as int,
+    iconUrl: map['icon_url'] as String,
+  );
 }
 
 class MasterMaterial {
@@ -98,25 +98,25 @@ class MasterMaterial {
   final String? expTarget;
 
   Map<String, Object?> toMap() => {
-        'id': id,
-        'name': name,
-        'category': category,
-        'rarity': rarity,
-        'icon_url': iconUrl,
-        'exp_value': expValue,
-        'exp_target': expTarget,
-        'synced_at': DateTime.now().millisecondsSinceEpoch,
-      };
+    'id': id,
+    'name': name,
+    'category': category,
+    'rarity': rarity,
+    'icon_url': iconUrl,
+    'exp_value': expValue,
+    'exp_target': expTarget,
+    'synced_at': DateTime.now().millisecondsSinceEpoch,
+  };
 
   factory MasterMaterial.fromMap(Map<String, Object?> map) => MasterMaterial(
-        id: map['id'] as String,
-        name: map['name'] as String,
-        category: map['category'] as String,
-        rarity: map['rarity'] as int?,
-        iconUrl: map['icon_url'] as String,
-        expValue: map['exp_value'] as int?,
-        expTarget: map['exp_target'] as String?,
-      );
+    id: map['id'] as String,
+    name: map['name'] as String,
+    category: map['category'] as String,
+    rarity: map['rarity'] as int?,
+    iconUrl: map['icon_url'] as String,
+    expValue: map['exp_value'] as int?,
+    expTarget: map['exp_target'] as String?,
+  );
 }
 
 class UserProgress {
@@ -166,45 +166,45 @@ class UserProgress {
   ArtifactState get artifacts => parseArtifactState(artifactsJson);
 
   Map<String, Object?> toMap() => {
-        'id': id,
-        'user_id': userId,
-        'character_id': characterId,
-        'level': level,
-        'ascension': ascension,
-        'constellation': constellation,
-        'talent_normal': talentNormal,
-        'talent_skill': talentSkill,
-        'talent_burst': talentBurst,
-        'weapon_id': weaponId,
-        'weapon_name': weaponName,
-        'weapon_level': weaponLevel,
-        'weapon_refinement': weaponRefinement,
-        'artifacts': artifactsJson,
-        'is_completed': artifactCompleted ? 1 : 0,
-        'memo': memo,
-        'artifact_score_type': artifactScoreType,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
-      };
+    'id': id,
+    'user_id': userId,
+    'character_id': characterId,
+    'level': level,
+    'ascension': ascension,
+    'constellation': constellation,
+    'talent_normal': talentNormal,
+    'talent_skill': talentSkill,
+    'talent_burst': talentBurst,
+    'weapon_id': weaponId,
+    'weapon_name': weaponName,
+    'weapon_level': weaponLevel,
+    'weapon_refinement': weaponRefinement,
+    'artifacts': artifactsJson,
+    'is_completed': artifactCompleted ? 1 : 0,
+    'memo': memo,
+    'artifact_score_type': artifactScoreType,
+    'updated_at': DateTime.now().millisecondsSinceEpoch,
+  };
 
   factory UserProgress.fromMap(Map<String, Object?> map) => UserProgress(
-        id: map['id'] as String,
-        userId: map['user_id'] as String,
-        characterId: map['character_id'] as String,
-        level: map['level'] as int? ?? 1,
-        ascension: map['ascension'] as int? ?? 0,
-        constellation: map['constellation'] as int? ?? 0,
-        talentNormal: map['talent_normal'] as int? ?? 1,
-        talentSkill: map['talent_skill'] as int? ?? 1,
-        talentBurst: map['talent_burst'] as int? ?? 1,
-        weaponId: map['weapon_id'] as String? ?? '',
-        weaponName: map['weapon_name'] as String? ?? '',
-        weaponLevel: map['weapon_level'] as int? ?? 1,
-        weaponRefinement: map['weapon_refinement'] as int? ?? 1,
-        artifactsJson: map['artifacts'] as String? ?? '{}',
-        artifactCompleted: (map['is_completed'] as int? ?? 0) == 1,
-        memo: map['memo'] as String? ?? '',
-        artifactScoreType: map['artifact_score_type'] as String? ?? '',
-      );
+    id: map['id'] as String,
+    userId: map['user_id'] as String,
+    characterId: map['character_id'] as String,
+    level: map['level'] as int? ?? 1,
+    ascension: map['ascension'] as int? ?? 0,
+    constellation: map['constellation'] as int? ?? 0,
+    talentNormal: map['talent_normal'] as int? ?? 1,
+    talentSkill: map['talent_skill'] as int? ?? 1,
+    talentBurst: map['talent_burst'] as int? ?? 1,
+    weaponId: map['weapon_id'] as String? ?? '',
+    weaponName: map['weapon_name'] as String? ?? '',
+    weaponLevel: map['weapon_level'] as int? ?? 1,
+    weaponRefinement: map['weapon_refinement'] as int? ?? 1,
+    artifactsJson: map['artifacts'] as String? ?? '{}',
+    artifactCompleted: (map['is_completed'] as int? ?? 0) == 1,
+    memo: map['memo'] as String? ?? '',
+    artifactScoreType: map['artifact_score_type'] as String? ?? '',
+  );
 
   UserProgress copyWith({
     int? level,
@@ -237,8 +237,11 @@ class UserProgress {
       weaponLevel: weaponLevel ?? this.weaponLevel,
       weaponRefinement: weaponRefinement ?? this.weaponRefinement,
       artifactScoreType: artifactScoreType ?? this.artifactScoreType,
-      artifactsJson: artifactsJson ??
-          (artifacts != null ? encodeArtifactState(artifacts) : this.artifactsJson),
+      artifactsJson:
+          artifactsJson ??
+          (artifacts != null
+              ? encodeArtifactState(artifacts)
+              : this.artifactsJson),
       artifactCompleted: artifactCompleted ?? this.artifactCompleted,
       memo: memo,
     );

@@ -56,9 +56,9 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
     }
     if (!mounted) return;
 
-    final ok = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const HoyolabLoginScreen()),
-    );
+    final ok = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => const HoyolabLoginScreen()));
     if (ok != true || !mounted) return;
 
     setState(() {
@@ -71,10 +71,11 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
     } catch (e, st) {
       logAppError(e, st, 'hoyolab.login.refresh');
       setState(
-        () => _message = userFacingError(
-          e,
-          fallback: '連携状態の更新に失敗しました。再試行してください。',
-        ),
+        () =>
+            _message = userFacingError(
+              e,
+              fallback: '連携状態の更新に失敗しました。再試行してください。',
+            ),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -84,20 +85,21 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
   Future<void> _disconnect() async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('連携を解除'),
-        content: const Text('保存された Cookie と UID 情報を削除します。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('キャンセル'),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('連携を解除'),
+            content: const Text('保存された Cookie と UID 情報を削除します。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('解除'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('解除'),
-          ),
-        ],
-      ),
     );
     if (ok != true) return;
 
@@ -107,8 +109,9 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
       if (session.uid != null && session.uid!.isNotEmpty) {
         final diskCache = await ref.read(hoyolabHomeDiskCacheProvider.future);
         await diskCache.clearForUid(session.uid!);
-        final discoveryStore =
-            await ref.read(hoyolabCharacterDiscoveryStoreProvider.future);
+        final discoveryStore = await ref.read(
+          hoyolabCharacterDiscoveryStoreProvider.future,
+        );
         await discoveryStore.clearForUid(session.uid!);
       }
       final repo = await ref.read(hoyolabRepositoryProvider.future);
@@ -119,16 +122,18 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
         // Secure Storage 側は削除済み。WebView Cookie 失敗はログのみ。
       }
       try {
-        final coordinator =
-            await ref.read(notificationScheduleCoordinatorProvider.future);
+        final coordinator = await ref.read(
+          notificationScheduleCoordinatorProvider.future,
+        );
         await coordinator.cancelAllAndResetAccount();
       } catch (_) {
         // Cookie 削除は成功済み。通知側失敗はログのみ。
       }
       try {
         final userId = await ref.read(localUserIdProvider.future);
-        final dailyCoordinator =
-            await ref.read(dailyPlanNotificationCoordinatorProvider.future);
+        final dailyCoordinator = await ref.read(
+          dailyPlanNotificationCoordinatorProvider.future,
+        );
         await dailyCoordinator.cancelForLogoutOrUserSwitch(userId);
       } catch (_) {
         // P1-8C cancel is best-effort; do not block disconnect.
@@ -140,30 +145,37 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
     }
   }
 
-  Future<void> _selectRole(List<HoyolabGameRole> roles, HoyolabGameRole? current) async {
+  Future<void> _selectRole(
+    List<HoyolabGameRole> roles,
+    HoyolabGameRole? current,
+  ) async {
     final selected = await showModalBottomSheet<HoyolabGameRole>(
       context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('ゲームアカウントを選択'),
+      builder:
+          (ctx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('ゲームアカウントを選択'),
+                ),
+                ...roles.map(
+                  (role) => ListTile(
+                    title: Text(role.nickname),
+                    subtitle: Text(
+                      'UID ${role.uid} · ${role.region} · Lv.${role.level}',
+                    ),
+                    trailing:
+                        current?.uid == role.uid
+                            ? const Icon(Icons.check)
+                            : null,
+                    onTap: () => Navigator.pop(ctx, role),
+                  ),
+                ),
+              ],
             ),
-            ...roles.map(
-              (role) => ListTile(
-                title: Text(role.nickname),
-                subtitle: Text('UID ${role.uid} · ${role.region} · Lv.${role.level}'),
-                trailing: current?.uid == role.uid
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () => Navigator.pop(ctx, role),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
     );
     if (selected == null) return;
 
@@ -172,16 +184,18 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
       final repo = await ref.read(hoyolabRepositoryProvider.future);
       await repo.selectRole(selected);
       try {
-        final coordinator =
-            await ref.read(notificationScheduleCoordinatorProvider.future);
+        final coordinator = await ref.read(
+          notificationScheduleCoordinatorProvider.future,
+        );
         await coordinator.cancelAllAndResetAccount();
       } catch (_) {
         // ロール切替は成功済み。通知側失敗はログのみ。
       }
       try {
         final userId = await ref.read(localUserIdProvider.future);
-        final dailyCoordinator =
-            await ref.read(dailyPlanNotificationCoordinatorProvider.future);
+        final dailyCoordinator = await ref.read(
+          dailyPlanNotificationCoordinatorProvider.future,
+        );
         await dailyCoordinator.cancelForLogoutOrUserSwitch(userId);
       } catch (_) {
         // P1-8C cancel is best-effort; do not block role switch.
@@ -195,10 +209,7 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
 
   Future<void> _toggleFeatureFlag(bool enabled) async {
     final db = await ref.read(appDatabaseProvider.future);
-    await db.setSetting(
-      FeatureFlags.hoyolabLinkEnabledKey,
-      enabled.toString(),
-    );
+    await db.setSetting(FeatureFlags.hoyolabLinkEnabledKey, enabled.toString());
     await _refreshProviders();
     setState(() => _message = enabled ? 'HoYoLAB 連携を有効化' : 'HoYoLAB 連携を無効化');
   }
@@ -217,12 +228,13 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
           const HoyolabDisclaimerBanner(),
           const SizedBox(height: 16),
           flagsAsync.when(
-            data: (flags) => SwitchListTile(
-              title: const Text('HoYoLAB 連携を有効化'),
-              subtitle: const Text('機能フラグ（Remote Config 相当）'),
-              value: flags.hoyolabLinkEnabled,
-              onChanged: _busy ? null : _toggleFeatureFlag,
-            ),
+            data:
+                (flags) => SwitchListTile(
+                  title: const Text('HoYoLAB 連携を有効化'),
+                  subtitle: const Text('機能フラグ（Remote Config 相当）'),
+                  value: flags.hoyolabLinkEnabled,
+                  onChanged: _busy ? null : _toggleFeatureFlag,
+                ),
             loading: () => const LinearProgressIndicator(),
             error: (e, _) => Text(userFacingError(e)),
           ),
@@ -275,9 +287,10 @@ class _HoyolabSettingsScreenState extends ConsumerState<HoyolabSettingsScreen> {
                             }
                           }
                           return OutlinedButton.icon(
-                            onPressed: _busy
-                                ? null
-                                : () => _selectRole(roles, current),
+                            onPressed:
+                                _busy
+                                    ? null
+                                    : () => _selectRole(roles, current),
                             icon: const Icon(Icons.swap_horiz),
                             label: const Text('アカウント切替'),
                           );

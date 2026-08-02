@@ -61,10 +61,7 @@ class ArtifactCompletionPanel extends StatelessWidget {
 }
 
 class _SlotCompletionBar extends StatelessWidget {
-  const _SlotCompletionBar({
-    required this.label,
-    required this.percent,
-  });
+  const _SlotCompletionBar({required this.label, required this.percent});
 
   final String label;
   final double percent;
@@ -77,10 +74,7 @@ class _SlotCompletionBar extends StatelessWidget {
       children: [
         SizedBox(
           width: 40,
-          child: Text(
-            label,
-            style: theme.textTheme.bodySmall,
-          ),
+          child: Text(label, style: theme.textTheme.bodySmall),
         ),
         Expanded(
           child: ClipRRect(

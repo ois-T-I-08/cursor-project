@@ -8,8 +8,9 @@ import '../../../domain/level_progression.dart';
 import '../../../domain/models/calculation_models.dart';
 import '../../../domain/models/character_build_snapshot.dart';
 import '../../../providers/character_detail_providers.dart';
+import 'recommended_stats_card.dart';
 
-/// 想定ステータス: 現在（取得情報基準）と変更後（編集状態）を比較表示する
+/// ステータスタブ: 現在（取得情報基準）と変更後（編集状態）を比較表示する
 class SimulatedStatsSection extends ConsumerWidget {
   const SimulatedStatsSection({
     super.key,
@@ -47,9 +48,7 @@ class SimulatedStatsSection extends ConsumerWidget {
     if (avatarStats == null) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
-        child: Text(
-          'ステータス計算用データを取得できませんでした。\nネットワーク接続を確認して画面を開き直してください。',
-        ),
+        child: Text('ステータス計算用データを取得できませんでした。\nネットワーク接続を確認して画面を開き直してください。'),
       );
     }
 
@@ -94,7 +93,7 @@ class SimulatedStatsSection extends ConsumerWidget {
       children: [
         _BuildSummaryRow(label: '現在（取得情報）', snapshot: baseline),
         const SizedBox(height: 4),
-        _BuildSummaryRow(label: '変更後（想定）', snapshot: simulated),
+        _BuildSummaryRow(label: '変更後（編集）', snapshot: simulated),
         const SizedBox(height: 12),
         Card(
           margin: EdgeInsets.zero,
@@ -118,7 +117,7 @@ class SimulatedStatsSection extends ConsumerWidget {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        '想定',
+                        '編集後',
                         textAlign: TextAlign.end,
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -157,6 +156,7 @@ class SimulatedStatsSection extends ConsumerWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
+        RecommendedStatsCard(characterId: character.id, currentStats: current),
       ],
     );
   }
@@ -171,9 +171,10 @@ class _BuildSummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final weapon = snapshot.weaponName.isEmpty
-        ? '武器なし'
-        : '${snapshot.weaponName} Lv.${snapshot.weaponLevel}';
+    final weapon =
+        snapshot.weaponName.isEmpty
+            ? '武器なし'
+            : '${snapshot.weaponName} Lv.${snapshot.weaponLevel}';
     return Text(
       '$label: Lv.${snapshot.level} · 凸${snapshot.constellation} · $weapon · '
       '天賦 ${snapshot.talentNormal}/${snapshot.talentSkill}/${snapshot.talentBurst}',
@@ -192,9 +193,10 @@ class _StatRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final deltaColor = !row.hasChange
-        ? theme.colorScheme.onSurfaceVariant
-        : row.delta > 0
+    final deltaColor =
+        !row.hasChange
+            ? theme.colorScheme.onSurfaceVariant
+            : row.delta > 0
             ? Colors.green.shade600
             : theme.colorScheme.error;
 

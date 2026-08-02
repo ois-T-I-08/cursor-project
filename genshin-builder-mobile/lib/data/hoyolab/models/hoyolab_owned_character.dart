@@ -38,23 +38,23 @@ class HoyolabOwnedCharacter {
     String? iconUrl,
     GameRecordWeapon? weapon,
     List<GameRecordRelic>? relics,
-  }) =>
-      HoyolabOwnedCharacter(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        level: level ?? this.level,
-        friendship: friendship ?? this.friendship,
-        constellation: constellation ?? this.constellation,
-        promoteLevel: promoteLevel ?? this.promoteLevel,
-        obtainedAt: obtainedAt ?? this.obtainedAt,
-        iconUrl: iconUrl ?? this.iconUrl,
-        weapon: weapon ?? this.weapon,
-        relics: relics ?? this.relics,
-      );
+  }) => HoyolabOwnedCharacter(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    level: level ?? this.level,
+    friendship: friendship ?? this.friendship,
+    constellation: constellation ?? this.constellation,
+    promoteLevel: promoteLevel ?? this.promoteLevel,
+    obtainedAt: obtainedAt ?? this.obtainedAt,
+    iconUrl: iconUrl ?? this.iconUrl,
+    weapon: weapon ?? this.weapon,
+    relics: relics ?? this.relics,
+  );
 
   factory HoyolabOwnedCharacter.fromSummaryJson(Map<String, dynamic> json) {
     final weaponRaw = json['weapon'] as Map<String, dynamic>?;
-    final relicsRaw = json['reliquaries'] as List<dynamic>? ??
+    final relicsRaw =
+        json['reliquaries'] as List<dynamic>? ??
         json['relics'] as List<dynamic>? ??
         json['reliquary_list'] as List<dynamic>? ??
         [];
@@ -67,12 +67,11 @@ class HoyolabOwnedCharacter {
       promoteLevel: _asInt(json['promote_level']),
       obtainedAt: parseObtainedAtFromCharacterJson(json),
       iconUrl: json['icon'] as String?,
-      weapon: weaponRaw == null
-          ? null
-          : GameRecordWeapon.fromJson(weaponRaw),
-      relics: relicsRaw
-          .map((e) => GameRecordRelic.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      weapon: weaponRaw == null ? null : GameRecordWeapon.fromJson(weaponRaw),
+      relics:
+          relicsRaw
+              .map((e) => GameRecordRelic.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
   }
 }
@@ -127,7 +126,8 @@ DateTime? parseFlexibleDateTime(dynamic raw) {
       final millis = unix > 9999999999 ? unix : unix * 1000;
       return DateTime.fromMillisecondsSinceEpoch(millis);
     }
-    final normalized = trimmed.contains('T') ? trimmed : trimmed.replaceFirst(' ', 'T');
+    final normalized =
+        trimmed.contains('T') ? trimmed : trimmed.replaceFirst(' ', 'T');
     return DateTime.tryParse(normalized);
   }
   return null;

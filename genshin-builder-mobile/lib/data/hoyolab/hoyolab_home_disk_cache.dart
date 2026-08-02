@@ -24,10 +24,7 @@ class AppDatabaseSettingsStore implements HoyolabSettingsStore {
 }
 
 class HoyolabCachedEntry<T> {
-  const HoyolabCachedEntry({
-    required this.data,
-    required this.fetchedAt,
-  });
+  const HoyolabCachedEntry({required this.data, required this.fetchedAt});
 
   final T data;
   final DateTime fetchedAt;
@@ -44,33 +41,26 @@ class HoyolabHomeDiskCache {
   static String dailyNoteKey(String uid) => 'hoyolab_cache_daily_note_$uid';
   static String adventureKey(String uid) => 'hoyolab_cache_adventure_$uid';
 
-  Future<HoyolabCachedEntry<DailyNote>?> readDailyNote(String uid) =>
-      _read(
-        key: dailyNoteKey(uid),
-        parse: (json) => DailyNote.fromJsonSource(json, fromApi: false),
-      );
+  Future<HoyolabCachedEntry<DailyNote>?> readDailyNote(String uid) => _read(
+    key: dailyNoteKey(uid),
+    parse: (json) => DailyNote.fromJsonSource(json, fromApi: false),
+  );
 
   Future<void> saveDailyNote(
     String uid,
     DailyNote note, {
     DateTime? fetchedAt,
-  }) =>
-      _write(
-        key: dailyNoteKey(uid),
-        payload: note.toJson(),
-        fetchedAt: fetchedAt,
-      );
+  }) => _write(
+    key: dailyNoteKey(uid),
+    payload: note.toJson(),
+    fetchedAt: fetchedAt,
+  );
 
   Future<HoyolabCachedEntry<AdventureStatus>?> readAdventure(String uid) =>
-      _read(
-        key: adventureKey(uid),
-        parse: AdventureStatus.fromCacheJson,
-      );
+      _read(key: adventureKey(uid), parse: AdventureStatus.fromCacheJson);
 
-  Future<void> saveAdventure(String uid, AdventureStatus status) => _write(
-        key: adventureKey(uid),
-        payload: status.toJson(),
-      );
+  Future<void> saveAdventure(String uid, AdventureStatus status) =>
+      _write(key: adventureKey(uid), payload: status.toJson());
 
   Future<void> clearForUid(String uid) async {
     await _store.setSetting(dailyNoteKey(uid), '');
@@ -93,10 +83,7 @@ class HoyolabHomeDiskCache {
       final fetchedAt = DateTime.tryParse(fetchedAtRaw);
       if (fetchedAt == null) return null;
 
-      return HoyolabCachedEntry(
-        data: parse(payload),
-        fetchedAt: fetchedAt,
-      );
+      return HoyolabCachedEntry(data: parse(payload), fetchedAt: fetchedAt);
     } catch (_) {
       return null;
     }

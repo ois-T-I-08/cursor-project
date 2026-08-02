@@ -157,7 +157,7 @@ genshin-builder-mobile/
 | `sync_logs` | 同期履歴 |
 | `app_settings` | 匿名 userId、最終同期時刻（Phase 2 で HoYoLAB 設定キー追加） |
 
-Codegen: `dart run build_runner build --delete-conflicting-outputs`
+Codegen: `dart run build_runner build`
 
 ### 4.2 Project Amber
 
@@ -348,4 +348,4 @@ pigeon                   # dev — ネイティブ Cookie 取得
 
 `application/team_recommendations/normalize_simulation_builds.dart`がHoYoLAB detailを端末内で戦闘DTOへ縮約する。Cookie、UID、アカウント情報、未加工レスポンスは型に存在せず、`BackendTeamRecommendationApi`へ渡らない。聖遺物の安定したsetIdをGame Recordから取得できない場合はセット名から推測せず、空のsetsと`partial` / `artifactSets`を送る。
 
-`TeamRecommendationController`はPOSTでJobを作成し、GETを2秒間隔・最大6分の有限回pollingする。画面破棄後または新しい計算開始後は古いresponseをstateへ反映せず、次のpollingを行わない。queued/running中は計算ボタンを無効化する。UIはqueued/running/completed/failed/expired、再試行、stale、所持キャラ、上半/下半、単体/複数、評価方針、入力品質、ローテーション信頼度、gcsim/AZA.GGクレジットを表示する。gcsimが無効・失敗でもAZA/ルール推薦を表示でき、既存の編成保存や深境螺旋画面とは独立する。
+`TeamRecommendationController`はPOSTでJobを作成し、GETを2秒間隔・最大6分の有限回pollingする。画面破棄後または新しい計算開始後は古いresponseをstateへ反映せず、次のpollingを行わない。queued/running中は計算ボタンを無効化する。UIはqueued/running/completed/failed/expired、再試行、所持キャラ、上半/下半、単体/複数、評価方針、入力品質、ローテーション信頼度、AZA.GGクレジットを表示する。おすすめ編成はAZA/ルール候補のみ（gcsim廃止）。既存の編成保存や深境螺旋画面とは独立する。
