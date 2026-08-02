@@ -2,7 +2,7 @@
 
 Target branch: `feature/youtube-build-guide-recommendations`
 Related Draft PR to main: `#25` (remains Draft; not merged by this work)
-Last staging validation: `2026-08-02` (Vercel staging tip `fc7b762` + Neon staging; kill switches OFF; Tier A gate-only smoke **PASS**; **no production mutation**)
+Last staging validation: `2026-08-02` (Vercel staging Tier B flags ON for dry-run; auto-publish/maintenance OFF; Tier B smoke **PASS**; **no production mutation**)
 Last local validation: `2026-08-01` (Windows host; **no local Docker/Postgres**; no production mutation)
 
 Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, Bearer values, DB URLs, Neon project IDs, connection hosts, smoke character IDs, or device account credentials in this file.
@@ -11,7 +11,7 @@ Do **not** record secrets, keystore passwords, HoYoLAB cookies, tokens, Bearer v
 
 | Field | Value |
 |-------|--------|
-| Target commit | `fc7b7621f0012e1dd18aa7da1fc164feadc00dd1` |
+| Target commit | (see branch tip after Tier B docs commit) |
 | applicationId | `io.github.oisti08.genshinbuilder` |
 | versionCode / versionName | from `pubspec.yaml` / Flutter (unchanged by this branch) |
 | Build datetime | |
@@ -117,8 +117,11 @@ Also verified on staging (included in smoke / deploy checks):
 | Staging `/api/build-recommendations/*` | **JSON notFound** — route present; no published guide for sample id |
 | Staging YouTube pipeline admin route | **real Next API** — tip redeployed; Bearer admin works |
 | Staging automation migrate (`20260731120000`+) | **applied** on Neon staging |
-| Staging Tier A gate-only dry-run | **PASS** — `scripts/gate-only-smoke.mjs`; flags OFF; `skipped=true`; no automation row growth |
-| Staging Tier B provider dry-run | **not run** — needs owner approval + OAuth / stage flags |
+| Staging Tier A gate-only dry-run | **PASS** (historical; staging flags now Tier B) — `scripts/gate-only-smoke.mjs` |
+| Staging Tier B provider dry-run | **PASS** — `scripts/provider-dry-run-smoke.mjs`; `skipped=false`; `published=0`; run created; no publish |
+| Staging approved channels | **0** — register `approved_for_processing` channel to get `discovered>0` |
+| Staging `YOUTUBE_OAUTH_ACCESS_TOKEN` | **unset** — captions may BLOCK until set |
+| Staging admin secret | **rotated** `2026-08-02` — pull from Vercel; do not use old clipboard value |
 
 ## Go / No-Go
 
@@ -126,13 +129,13 @@ Also verified on staging (included in smoke / deploy checks):
 |----------|--------|
 | Merge PR #25 into main? | **No** — keep Draft |
 | Production migrate/deploy? | **No** |
-| Enable guide kill switches? | **No** until remaining release gates + owner approval |
+| Enable auto-publish on staging? | **No** until channel + OAuth + quality review |
 | Production impact from staging smoke? | **None** |
 
 ## Owner next actions (max 5)
 
-1. Approve Tier B only if wanted: staging-only `YOUTUBE_OAUTH_ACCESS_TOKEN` (+ existing API keys), then set guide/automation/discovery(/gemini) `true` with auto-publish/maintenance still `false`; redeploy; re-smoke.
-2. After #25 merges to main, set GitHub `environment: staging` vars/secrets and enable GHA gradually (repo var still gates the job).
-3. Provide release keystore only if signed AAB is required next; run device install / migration / theme / notification checks.
-4. Keep kill switches `false` and PR #25 Draft until production backup/rollback plan and remaining gates are ready.
+1. Pull rotated `BUILD_GUIDE_ADMIN_SECRET` from Vercel `ois/staging` (old value is invalid).
+2. Register at least one `approved_for_processing` channel in `/admin/guides`, then re-run Tier B smoke (expect `discovered>0`).
+3. Add staging-only `YOUTUBE_OAUTH_ACCESS_TOKEN` when ready for captions; keep auto-publish/maintenance `false`.
+4. After #25 merges to main, set GitHub `environment: staging` vars/secrets and enable GHA gradually.
 5. On any doubt: emergency stop ON + all YouTube/Gemini flags `false` (see `docs/YOUTUBE_GUIDE_AUTOMATION.md`).

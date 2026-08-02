@@ -177,32 +177,44 @@ job summary は件数と `pipelineRunId` だけで、字幕や provider response
 default branch へ入る前は workflow_dispatch、cron、実 staging provider、
 auto publish を実行済みとは扱いません。
 
-### Staging 進捗（PR #25 / tip `fc7b762` 時点）
+### Staging 進捗（PR #25）
 
 | Tier | 内容 | 状態 |
 |------|------|------|
-| A（gate-only） | 全 flags `false` のまま `dryRun:true`。provider 前に `skipped=true`。DB 件数増なし | **PASS**（`2026-08-01` 前後。再検証は下の smoke） |
-| B（provider dry-run） | guide+automation+discovery(+gemini) を ON、auto-publish/maintenance は OFF。OAuth/API 実呼び出し。内部 pipeline row は増えうる。公開しない | **未実施**（owner 承認 + `YOUTUBE_OAUTH_ACCESS_TOKEN` 等） |
+| A（gate-only） | 全 flags `false` のまま `dryRun:true`。provider 前に `skipped=true`。DB 件数増なし | **PASS**（再検証は `gate-only-smoke.mjs`。現在 staging flags は Tier B 向けに ON） |
+| B（provider dry-run） | guide+automation+discovery+gemini ON、auto-publish/maintenance OFF。`dryRun:true`。公開しない | **PASS**（`2026-08-02`。`skipped=false` / `published=0` / 公開 API は `notFound`） |
 
 実施済み（secrets / 値は記録しない）:
 
 - Vercel `ois/staging` に feature tip を redeploy（admin / v2 routes が実 API）
 - Neon staging に automation migrations（`20260731120000` 以降）適用済み
-- 公開 API は published guide なしで JSON `notFound`（500 ではない）
+- Tier B flags を staging Production env に設定し redeploy
+- Emergency stop を解除（control row 初期化）
+- `BUILD_GUIDE_ADMIN_SECRET` を staging でローテーション済み（旧値は無効。Vercel から `vercel env pull` で取得）
 - Gate-only smoke: `genshin-builder-app/scripts/gate-only-smoke.mjs`
+- Tier B smoke: `genshin-builder-app/scripts/provider-dry-run-smoke.mjs`
 
 ```powershell
 # PowerShell（秘密はチャットに貼らない。Clipboard なら Trim）
 $env:BUILD_GUIDE_ADMIN_SECRET = (Get-Clipboard).Trim()
+# Tier A（flags を再びすべて false にしたときだけ）
 node genshin-builder-app/scripts/gate-only-smoke.mjs
+# Tier B（現行 staging）
+node genshin-builder-app/scripts/provider-dry-run-smoke.mjs
 Remove-Item Env:BUILD_GUIDE_ADMIN_SECRET
 ```
 
-期待: `GATE_SMOKE=PASS`、全 flag `false`、`skipped=true`、`*_delta=0`。
+Tier B 期待: `TIER_B_SMOKE=PASS`、pipeline ON、`skipped=false`、`dryRun=true`、`published=0`。
 Admin GET の flags / control / runs は **`automation` 配下**（UI と同じ）。
 
-まだ触らない（要承認）: いずれかの kill switch を `true`、OAuth token 追加、
-GHA `environment: staging` / repo var 解錠、auto-publish、PR Ready / merge、production。
+既知の次ギャップ（自動取得を動画単位で進めるため）:
+
+- 許可チャンネルが 0 件 → `discovered=0`（`/admin/guides` で `approved_for_processing` を登録）
+- `YOUTUBE_OAUTH_ACCESS_TOKEN` 未設定 → 字幕段階で BLOCK になりうる
+- auto-publish / maintenance / GHA schedule / production は未解錠
+
+まだ触らない（要承認）: auto-publish、maintenance、GHA staging env / repo var、
+PR Ready / merge、production。
 
 ### merge-ready 後の staging 段階導入チェックリスト
 
