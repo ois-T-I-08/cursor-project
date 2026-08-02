@@ -8,6 +8,7 @@ import {
   mergeVisualRecommendationsWithDeepSeek,
 } from "./deepseek-visual-merge";
 import { geminiVideoCostHints } from "./gemini-settings";
+import { isVisualAutoPublishEnabled } from "./visual-auto-publish-settings";
 import {
   buildStructuredPayloadFromEvidences,
   normalizePublicBuildRecommendation,
@@ -174,6 +175,7 @@ export async function getGuideAdminOverview() {
     audits,
     automation,
     geminiCost: geminiVideoCostHints(),
+    visualAutoPublishEnabled: isVisualAutoPublishEnabled(),
   };
 }
 

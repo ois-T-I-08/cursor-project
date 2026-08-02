@@ -30,6 +30,11 @@ import {
   VISUAL_SCHEMA_VERSION,
 } from "./versions";
 import { GENSIN_VIDEO_TITLE_MARKER } from "./genshin-video-title";
+import {
+  autoPublishVisualRecommendations,
+  isVisualAutoPublishEnabled,
+} from "./visual-auto-publish";
+import type { VisualAutoPublishResult } from "./visual-auto-publish";
 
 export class GuideVisualAnalysisError extends Error {
   constructor(public readonly code: string) {
@@ -58,6 +63,7 @@ export async function analyzeVideoVisuals(input: {
   recommendationIds: string[];
   analysisMode: "full_discovery" | "clipped_detail";
   fps: number;
+  autoPublish?: VisualAutoPublishResult | null;
 }> {
   const video = await prisma.guideVideo.findUnique({
     where: { videoId: input.videoId },
@@ -299,6 +305,14 @@ export async function analyzeVideoVisuals(input: {
       evidenceIds,
     });
 
+    let autoPublish: VisualAutoPublishResult | null = null;
+    if (isVisualAutoPublishEnabled() && recommendationIds.length > 0) {
+      autoPublish = await autoPublishVisualRecommendations({
+        evidenceIds,
+        recommendationIds,
+      });
+    }
+
     return {
       jobId: job.id,
       cacheKey: requestHash,
@@ -307,6 +321,7 @@ export async function analyzeVideoVisuals(input: {
       recommendationIds,
       analysisMode,
       fps,
+      autoPublish,
     };
   } catch (error) {
     const code = resolveAnalysisErrorCode(error);
