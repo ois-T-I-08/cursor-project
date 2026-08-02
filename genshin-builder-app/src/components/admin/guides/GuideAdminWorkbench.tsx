@@ -165,6 +165,7 @@ interface Overview {
     estimatedDetailCostMultiplier: number;
     note: string;
   };
+  visualAutoPublishEnabled?: boolean;
 }
 
 const MODULES: Array<{ id: ModuleId; label: string }> = [
@@ -649,9 +650,38 @@ export default function GuideAdminWorkbench() {
             >
               指定時間帯を詳細解析（高FPS・コスト増）
             </button>
+            <button
+              type="button"
+              disabled={!secret || busy}
+              className="rounded-lg border border-sky-400/40 px-3 py-2 text-sm disabled:opacity-40"
+              onClick={() =>
+                void postAction({
+                  action: "approvePendingVisualRecommendations",
+                  limit: 20,
+                })
+              }
+            >
+              未公開の映像推奨を一括採用
+            </button>
+            <button
+              type="button"
+              disabled={!secret || busy}
+              className="rounded-lg border border-emerald-400/40 px-3 py-2 text-sm disabled:opacity-40"
+              onClick={() =>
+                void postAction({
+                  action: "publishPendingVisualRecommendations",
+                  limit: 20,
+                })
+              }
+            >
+              未公開の映像推奨を一括公開
+            </button>
           </div>
           <p className="text-xs text-gray-500">
-            「全キャラ解析」は育成ガイド寄りの未解析動画から、まだ推奨のないキャラを1人1本ずつ解析します（目安50〜60本・数時間・Gemini費用あり）。日次上限は自動で300まで引き上げます。成功すると証拠と推奨ドラフトが作成され、公開には承認と構造化 publish が必要です。
+            「全キャラ解析」は育成ガイド寄りの未解析動画から、まだ推奨のないキャラを1人1本ずつ解析します（目安50〜60本・数時間・Gemini費用あり）。日次上限は自動で300まで引き上げます。
+            {overview?.visualAutoPublishEnabled
+              ? " BUILD_GUIDE_VISUAL_AUTO_PUBLISH が ON のため、解析成功後は証拠承認→推奨承認→公開まで自動実行します（構造化バリデーション失敗時は承認済みドラフトのまま公開だけスキップ）。"
+              : " 成功すると証拠と推奨ドラフトが作成されます。「一括採用」で証拠＋推奨を承認し、「一括公開」で publish まで進めます。"}
           </p>
           <ul className="max-h-[28rem] space-y-2 overflow-auto text-sm">
             {genshinVideos.map((video) => (
@@ -698,6 +728,19 @@ export default function GuideAdminWorkbench() {
           <p className="text-sm text-gray-400">
             選択 videoId: {selectedVideoId || "（全件）"}
           </p>
+          <button
+            type="button"
+            disabled={!secret || busy}
+            className="rounded-lg border border-sky-400/40 px-3 py-2 text-sm disabled:opacity-40"
+            onClick={() =>
+              void postAction({
+                action: "approvePendingVisualRecommendations",
+                limit: 20,
+              })
+            }
+          >
+            未公開の映像推奨を一括採用
+          </button>
           <ul className="space-y-2 text-sm">
             {evidencesForVideo.map((evidence) => (
               <li key={evidence.id} className="rounded-lg bg-[#151d2a] p-3">
@@ -803,6 +846,47 @@ export default function GuideAdminWorkbench() {
       {module === "recommendations" ? (
         <section className="space-y-3 rounded-xl border border-white/10 bg-[#1e2a3a] p-5">
           <h2 className="font-bold">推奨詳細 / 承認・公開</h2>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!secret || busy}
+              className="rounded-lg border border-sky-400/40 px-3 py-2 text-sm disabled:opacity-40"
+              onClick={() =>
+                void postAction({
+                  action: "approvePendingVisualRecommendations",
+                  limit: 20,
+                })
+              }
+            >
+              未公開の映像推奨を一括採用
+            </button>
+            <button
+              type="button"
+              disabled={!secret || busy}
+              className="rounded-lg border border-emerald-400/40 px-3 py-2 text-sm disabled:opacity-40"
+              onClick={() =>
+                void postAction({
+                  action: "publishPendingVisualRecommendations",
+                  limit: 20,
+                })
+              }
+            >
+              未公開の映像推奨を一括公開
+            </button>
+            <button
+              type="button"
+              disabled={!secret || busy}
+              className="rounded-lg border border-violet-400/40 px-3 py-2 text-sm disabled:opacity-40"
+              onClick={() =>
+                void postAction({
+                  action: "repromoteVisualGearMentions",
+                  limit: 20,
+                })
+              }
+            >
+              武器・聖遺物言及を再昇格
+            </button>
+          </div>
           <ul className="space-y-3 text-sm">
             {(overview?.recommendations ?? []).map((rec) => (
               <li key={rec.id} className="rounded-lg bg-[#151d2a] p-3">
@@ -859,6 +943,19 @@ export default function GuideAdminWorkbench() {
                     }
                   >
                     公開
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border border-sky-400/40 px-2 py-1 text-xs"
+                    disabled={busy}
+                    onClick={() =>
+                      void postAction({
+                        action: "suggestPendingGearResolutions",
+                        recommendationId: rec.id,
+                      })
+                    }
+                  >
+                    装備名の解決提案
                   </button>
                   <button
                     type="button"

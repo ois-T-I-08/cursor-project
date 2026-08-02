@@ -29,6 +29,12 @@ import {
   updateGuideChannel,
   validateStructuredRecommendationDto,
 } from "@/lib/build-guides/store";
+import {
+  approvePendingVisualRecommendations,
+  publishPendingVisualRecommendations,
+  repromoteVisualGearMentions,
+  suggestPendingGearResolutions,
+} from "@/lib/build-guides/visual-auto-publish";
 import { parseYoutubePlaylistId } from "@/lib/build-guides/youtube-client";
 import { setYoutubeAutomationEmergencyStop } from "@/lib/build-guides/automation/admin-overview";
 
@@ -183,6 +189,22 @@ const actionSchema = z.discriminatedUnion("action", [
     mainStatsPayload: z.unknown().optional(),
     structuredPayload: z.unknown().optional(),
   }),
+  z.strictObject({
+    action: z.literal("approvePendingVisualRecommendations"),
+    limit: z.number().int().min(1).max(50).default(20),
+  }),
+  z.strictObject({
+    action: z.literal("publishPendingVisualRecommendations"),
+    limit: z.number().int().min(1).max(50).default(20),
+  }),
+  z.strictObject({
+    action: z.literal("repromoteVisualGearMentions"),
+    limit: z.number().int().min(1).max(50).default(20),
+  }),
+  z.strictObject({
+    action: z.literal("suggestPendingGearResolutions"),
+    recommendationId: cuid,
+  }),
 ]);
 
 export async function GET(request: Request): Promise<Response> {
@@ -320,6 +342,24 @@ export async function POST(request: Request): Promise<Response> {
         return NextResponse.json(await restoreRecommendationRevision(input));
       case "validateStructuredRecommendation":
         return NextResponse.json(await validateStructuredRecommendationDto(input));
+      case "approvePendingVisualRecommendations":
+        return NextResponse.json(
+          await approvePendingVisualRecommendations({ limit: input.limit }),
+        );
+      case "publishPendingVisualRecommendations":
+        return NextResponse.json(
+          await publishPendingVisualRecommendations({ limit: input.limit }),
+        );
+      case "repromoteVisualGearMentions":
+        return NextResponse.json(
+          await repromoteVisualGearMentions({ limit: input.limit }),
+        );
+      case "suggestPendingGearResolutions":
+        return NextResponse.json(
+          await suggestPendingGearResolutions({
+            recommendationId: input.recommendationId,
+          }),
+        );
     }
   } catch (error) {
     if (error instanceof z.ZodError || error instanceof SyntaxError) {
