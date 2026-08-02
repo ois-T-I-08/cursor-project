@@ -211,9 +211,11 @@ Admin GET の flags / control / runs は **`automation` 配下**（UI と同じ�
 
 - 許可チャンネルが 0 件 → `discovered=0`（`/admin/guides` で `approved_for_processing` を登録）
 - `YOUTUBE_OAUTH_ACCESS_TOKEN` 未設定 → 字幕段階で BLOCK になりうる
-- auto-publish / maintenance / GHA schedule / production は未解錠
+- 字幕パイプラインの `YOUTUBE_AUTO_PUBLISH_ENABLED` / maintenance / GHA schedule / production は未解錠
+- 映像解析経路の自動採用・公開は別フラグ `BUILD_GUIDE_VISUAL_AUTO_PUBLISH`（`"true"` のみ有効）。ON 時は Gemini 解析成功後に証拠承認→推奨承認→公開まで自動実行し、構造化バリデーション失敗時は承認済みドラフトのまま公開だけスキップ。武器/聖遺物言及はマスタ ID または名前完全一致で解決できたものだけ自動昇格（単一聖遺物セットは 4pc）。未解決言及は pending を空にして公開ブロックを避ける。既存分は `repromoteVisualGearMentions`（武器・聖遺物言及を再昇格）。一括は `approvePendingVisualRecommendations` / `publishPendingVisualRecommendations`
+- DeepSeek（`DEEPSEEK_GUIDE_ANALYSIS_ENABLED`）追加用途: 証拠マージ強化（mainStats/priority/conflict）、allowlist 付き装備名解決、OCR 数字正規化、admin「装備名の解決提案」、字幕 claim の entity soft-resolve（fail-closed）
 
-まだ触らない（要承認）: auto-publish、maintenance、GHA staging env / repo var、
+まだ触らない（要承認）: 字幕 auto-publish、maintenance、GHA staging env / repo var、
 PR Ready / merge、production。
 
 ### merge-ready 後の staging 段階導入チェックリスト

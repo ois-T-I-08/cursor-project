@@ -23,6 +23,7 @@ DEEPSEEK_GUIDE_ANALYSIS_ENABLED=false
 | `DATABASE_URL` | Pooled Postgres URL for the app |
 | `DIRECT_URL` | Direct Postgres URL for Prisma Migrate |
 | `BUILD_GUIDE_ADMIN_SECRET` | Admin Bearer for `/api/admin/build-guides` |
+| `BUILD_GUIDE_VISUAL_AUTO_PUBLISH` | Visual-analysis auto approve/publish (`true` only; default off) |
 | `SYNC_API_SECRET` | Existing sync admin secret (separate value) |
 | `GENSHIN_BUILDER_API_BASE_URL` | HTTPS origin Flutter uses |
 
