@@ -98,7 +98,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  '育成目標を設定すると、今日おすすめの育成項目が表示されます。',
+                  '育成目標の設定、または今日開放の曜日素材の不足があると、おすすめが表示されます。',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge,
                 ),

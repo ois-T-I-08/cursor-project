@@ -3,15 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/account/build_account_snapshot_use_case.dart';
 import '../application/account/generate_health_report_use_case.dart';
+import '../application/planning/apply_daily_plan_enrichment.dart';
 import '../application/planning/generate_daily_plan_use_case.dart';
 import '../application/planning/diagnose_investment_use_case.dart';
 import '../application/planning/generate_upgrade_options_use_case.dart';
 import '../application/planning/estimate_upgrade_impact_use_case.dart';
 import '../application/planning/optimize_growth_route_use_case.dart';
 import '../application/planning/generate_team_growth_priority_use_case.dart';
+import '../data/daily_plan/backend_daily_plan_enrich_api.dart';
 import '../domain/account/account_snapshot.dart';
 import '../domain/account/account_health_report.dart';
 import '../domain/account/snapshot_supplement.dart';
+import '../domain/daily_materials/daily_material_models.dart';
 import '../domain/history/growth_event.dart';
 import '../domain/planning/daily_plan.dart';
 import '../domain/planning/investment_diagnosis.dart';
@@ -26,6 +29,7 @@ import '../data/repositories/drift_team_repository.dart';
 import '../data/repositories/drift_growth_event_repository.dart';
 import '../data/repositories/progress_mutation_repository.dart';
 import 'app_providers.dart';
+import 'daily_materials_providers.dart';
 import 'hoyolab_providers.dart' show featureFlagsProvider;
 import 'hoyolab_snapshot_providers.dart' show buildSnapshotSupplement;
 
@@ -80,6 +84,16 @@ final accountSnapshotProvider = FutureProvider<AccountSnapshot>((ref) async {
 
 // ── DailyPlan ─────────────────────────────────────────────────────
 
+final dailyPlanEnrichApiProvider = Provider<BackendDailyPlanEnrichApi>((ref) {
+  const baseUrl = String.fromEnvironment(
+    'GENSHIN_BUILDER_API_BASE_URL',
+    defaultValue: '',
+  );
+  final api = BackendDailyPlanEnrichApi(baseUrl: baseUrl);
+  ref.onDispose(api.dispose);
+  return api;
+});
+
 final dailyPlanProvider = FutureProvider<DailyPlan>((ref) async {
   final flags = await ref.watch(featureFlagsProvider.future);
   if (!flags.enableDailyPlan) {
@@ -87,13 +101,35 @@ final dailyPlanProvider = FutureProvider<DailyPlan>((ref) async {
   }
   final snapshot = await ref.watch(accountSnapshotProvider.future);
   final now = DateTime.now();
-  return const GenerateDailyPlanUseCase()(
+  final weekday = genshinIsoWeekday(now);
+
+  DailyMaterialsPlan? materialsPlan;
+  try {
+    materialsPlan = await ref.watch(dailyMaterialsPlanProvider(weekday).future);
+  } catch (_) {
+    materialsPlan = null;
+  }
+
+  final plan = const GenerateDailyPlanUseCase()(
     userId: snapshot.userId,
     snapshot: snapshot,
     date: now,
-    weekday: now.weekday,
+    weekday: weekday,
+    materialsPlan: materialsPlan,
     generatedAt: now,
   );
+
+  if (plan.items.isEmpty) return plan;
+
+  try {
+    final enrichment = await ref
+        .watch(dailyPlanEnrichApiProvider)
+        .enrich(plan: plan, weekday: weekday);
+    if (enrichment == null) return plan;
+    return applyDailyPlanEnrichment(plan, enrichment);
+  } catch (_) {
+    return plan;
+  }
 });
 
 // ── Diagnosis (family) ────────────────────────────────────────────

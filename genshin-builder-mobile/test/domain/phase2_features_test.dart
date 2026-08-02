@@ -7,10 +7,14 @@ import 'package:genshin_builder_mobile/domain/planning/growth_goal.dart';
 import 'package:genshin_builder_mobile/domain/planning/investment_diagnosis.dart';
 import 'package:genshin_builder_mobile/domain/planning/upgrade_option.dart';
 import 'package:genshin_builder_mobile/domain/team/team_models.dart';
+import 'package:genshin_builder_mobile/application/planning/apply_daily_plan_enrichment.dart';
 import 'package:genshin_builder_mobile/application/planning/generate_daily_plan_use_case.dart';
 import 'package:genshin_builder_mobile/application/planning/diagnose_investment_use_case.dart';
 import 'package:genshin_builder_mobile/application/history/detect_growth_events_use_case.dart';
 import 'package:genshin_builder_mobile/application/account/generate_health_report_use_case.dart';
+import 'package:genshin_builder_mobile/domain/daily_materials/daily_material_models.dart';
+import 'package:genshin_builder_mobile/domain/models/master_models.dart';
+import 'package:genshin_builder_mobile/domain/planning/daily_plan.dart';
 
 // Test helper: build a minimal AccountSnapshot
 AccountSnapshot _testSnapshot({
@@ -161,6 +165,121 @@ void main() {
         weekday: 2,
       );
       expect(plan.topItems.length, lessThanOrEqualTo(3));
+    });
+
+    test('weekday materials become high-priority items', () {
+      final materialsPlan = DailyMaterialsPlan(
+        weekday: 2,
+        talentCards: [
+          DailyMaterialSeriesCardData(
+            series: const DailyMaterialSeries(
+              id: 'freedom',
+              name: '「自由」',
+              region: 'Mondstadt',
+              kind: DailyMaterialKind.talentBook,
+              days: [2, 5],
+              materialIds: ['m1'],
+            ),
+            materials: const [
+              MasterMaterial(
+                id: 'm1',
+                name: '「自由」の導き',
+                category: 'talent',
+                iconUrl: '',
+              ),
+            ],
+            consumerGroups: [
+              DailyMaterialConsumerGroup(
+                key: 'chars',
+                label: 'キャラ',
+                consumers: [
+                  const DailyMaterialConsumer(
+                    id: '10000002',
+                    name: 'Ayaka',
+                    remainingStatus: DailyRemainingStatus.needed,
+                    remainingCount: 12,
+                    remainingByMaterialId: {'m1': 12},
+                  ),
+                ],
+              ),
+            ],
+            remainingByMaterialId: const {'m1': 12},
+            nextStageByMaterialId: const {'m1': 3},
+          ),
+        ],
+        weaponCards: const [],
+      );
+      final plan = const GenerateDailyPlanUseCase()(
+        userId: 'test',
+        snapshot: _testSnapshot(),
+        date: DateTime(2026, 7, 14),
+        weekday: 2,
+        materialsPlan: materialsPlan,
+      );
+      expect(plan.items, isNotEmpty);
+      expect(plan.items.first.type, DailyPlanItemType.weekdayMaterial);
+      expect(plan.items.first.characterIds, contains('10000002'));
+      expect(plan.ruleVersion, '2');
+    });
+  });
+
+  group('applyDailyPlanEnrichment', () {
+    test('reorders and overrides reasons for allowlisted ids', () {
+      final plan = DailyPlan(
+        userId: 'test',
+        date: DateTime(2026, 7, 14),
+        ruleVersion: '2',
+        items: const [
+          DailyPlanItem(
+            id: 'a',
+            type: DailyPlanItemType.weekdayMaterial,
+            title: 'A',
+            priority: 90,
+            reasons: ['local-a'],
+          ),
+          DailyPlanItem(
+            id: 'b',
+            type: DailyPlanItemType.weeklyBoss,
+            title: 'B',
+            priority: 85,
+            reasons: ['local-b'],
+          ),
+        ],
+      );
+      final next = applyDailyPlanEnrichment(
+        plan,
+        const DailyPlanEnrichment(
+          orderedItemIds: ['b', 'invented', 'a'],
+          reasonsByItemId: {
+            'b': ['樹脂に余裕があるので週ボス'],
+          },
+          enriched: true,
+          model: 'deepseek-v4-flash',
+        ),
+      );
+      expect(next.items.map((e) => e.id).toList(), ['b', 'a']);
+      expect(next.items.first.reasons.first, contains('週ボス'));
+      expect(next.ruleVersion, '2+ds');
+    });
+
+    test('ignores enrichment when not enriched', () {
+      final plan = DailyPlan(
+        userId: 'test',
+        date: DateTime(2026, 7, 14),
+        items: const [
+          DailyPlanItem(
+            id: 'a',
+            type: DailyPlanItemType.growthGoal,
+            title: 'A',
+          ),
+        ],
+      );
+      final next = applyDailyPlanEnrichment(
+        plan,
+        const DailyPlanEnrichment(orderedItemIds: ['a'], enriched: false),
+      );
+      expect(identical(next, plan) || next.ruleVersion == plan.ruleVersion, isTrue);
+      expect(next.items.single.id, 'a');
     });
   });
 
