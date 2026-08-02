@@ -177,14 +177,41 @@ job summary は件数と `pipelineRunId` だけで、字幕や provider response
 default branch へ入る前は workflow_dispatch、cron、実 staging provider、
 auto publish を実行済みとは扱いません。
 
+### Staging 進捗（PR #25 / tip `fc7b762` 時点）
+
+| Tier | 内容 | 状態 |
+|------|------|------|
+| A（gate-only） | 全 flags `false` のまま `dryRun:true`。provider 前に `skipped=true`。DB 件数増なし | **PASS**（`2026-08-01` 前後。再検証は下の smoke） |
+| B（provider dry-run） | guide+automation+discovery(+gemini) を ON、auto-publish/maintenance は OFF。OAuth/API 実呼び出し。内部 pipeline row は増えうる。公開しない | **未実施**（owner 承認 + `YOUTUBE_OAUTH_ACCESS_TOKEN` 等） |
+
+実施済み（secrets / 値は記録しない）:
+
+- Vercel `ois/staging` に feature tip を redeploy（admin / v2 routes が実 API）
+- Neon staging に automation migrations（`20260731120000` 以降）適用済み
+- 公開 API は published guide なしで JSON `notFound`（500 ではない）
+- Gate-only smoke: `genshin-builder-app/scripts/gate-only-smoke.mjs`
+
+```powershell
+# PowerShell（秘密はチャットに貼らない。Clipboard なら Trim）
+$env:BUILD_GUIDE_ADMIN_SECRET = (Get-Clipboard).Trim()
+node genshin-builder-app/scripts/gate-only-smoke.mjs
+Remove-Item Env:BUILD_GUIDE_ADMIN_SECRET
+```
+
+期待: `GATE_SMOKE=PASS`、全 flag `false`、`skipped=true`、`*_delta=0`。
+Admin GET の flags / control / runs は **`automation` 配下**（UI と同じ）。
+
+まだ触らない（要承認）: いずれかの kill switch を `true`、OAuth token 追加、
+GHA `environment: staging` / repo var 解錠、auto-publish、PR Ready / merge、production。
+
 ### merge-ready 後の staging 段階導入チェックリスト
 
 コードが default branch に入ったあとも、フラグはすべて `false` のまま開始する。
 
-1. Neon staging に automation migrations（`20260731120000` 以降）を `migrate deploy`
+1. Neon staging に automation migrations（`20260731120000` 以降）を `migrate deploy` — **staging は適用済み**
 2. GitHub `environment: staging` に `STAGING_API_BASE_URL` / `STAGING_BUILD_GUIDE_ADMIN_SECRET`、repo var `YOUTUBE_AUTOMATION_ENABLED`（job 解錠用）を用意。schedule はまだ実質 OFF（アプリ flags false）
-3. Vercel staging に staging 専用 provider secrets を登録（チャット・git に書かない）
-4. dry-run → discovery → transcript/analysis → 単一 source auto-publish → maintenance → schedule の順で一段ずつ有効化
+3. Vercel staging に staging 専用 provider secrets を登録（チャット・git に書かない）。字幕経路には `YOUTUBE_OAUTH_ACCESS_TOKEN` が必要
+4. Tier A smoke 再確認 → Tier B（provider dry-run）→ discovery → transcript/analysis → 単一 source auto-publish → maintenance → schedule の順で一段ずつ有効化
 5. 各段で `/admin/guides` の自動化監視と公開 API を確認。問題時は緊急停止 + 全 flags `false`
 
 ## 障害時の手順
