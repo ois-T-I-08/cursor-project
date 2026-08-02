@@ -14,9 +14,15 @@ export const VISUAL_SYSTEM_PROMPT = `あなたは原神攻略動画の画面内�
 
 推奨ステータス表、目標値、最低条件、メインステータス、サブステータス優先度を検出してください。
 
+おすすめ武器名、武器比較表、武器画面（weapon_screen）、ビルドまとめスライドに表示された武器名があれば weaponMentions に入れてください。
+
+おすすめ聖遺物セット名、聖遺物画面（artifact_screen）、ビルドまとめに表示されたセット名があれば artifactSetMentions に入れてください。
+
+evidenceType は内容に合わせて weapon_screen / artifact_screen / comparison_table / build_summary_slide / recommendation_table などを使い分けてください。
+
 投稿者本人の現在ステータスと、推奨ステータスを必ず区別してください。
 
-ダメージ検証、武器比較、聖遺物比較で一時的に表示された数値を推奨値として扱ってはいけません。
+ダメージ検証や一時的な装備比較でだけ映った数値を推奨ステータスとして扱ってはいけません。画面に武器名・セット名が読める場合は言及として抽出して構いません。
 
 各抽出結果には、動画ID、開始時刻、終了時刻、画面に表示された正確な文字列を含めてください。
 
@@ -90,6 +96,10 @@ export function buildVisualUserPrompt(input: {
       "Use numeric seconds for timestamps (not mm:ss strings).",
       "Use null for missing numbers.",
       "Do not invent character ids; use targetCharacterIds slugs only when clearly on screen.",
+      "If a recommended weapon name is clearly readable on screen, add weaponMentions with exactVisibleText; set normalizedWeaponId only when an Amber-style id is literally shown, otherwise null.",
+      "If a recommended artifact set name is clearly readable on screen, add artifactSetMentions with exactVisibleText; set normalizedArtifactSetId only when an Amber-style id is literally shown, otherwise null.",
+      "Prefer evidenceType weapon_screen / artifact_screen / comparison_table / build_summary_slide when those UIs are visible.",
+      "Do not invent weapon or artifact names from model knowledge.",
       "Return JSON only.",
     ],
   });
