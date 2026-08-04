@@ -107,9 +107,7 @@ class _GrowthTimelineScreenState extends ConsumerState<GrowthTimelineScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('\u6210\u9577\u30bf\u30a4\u30e0\u30e9\u30a4\u30f3'),
-      ),
+      appBar: AppBar(title: const Text('\u6210\u9577\u5c65\u6b74')),
       body: timelineAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error:

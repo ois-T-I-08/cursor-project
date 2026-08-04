@@ -328,6 +328,18 @@ class _TeamBuilderScreenState extends ConsumerState<TeamBuilderScreen> {
                 if (_selectedCount > 0) _buildTeamPriorityButton(context),
                 const SizedBox(height: 24),
                 _buildFutureHint(theme),
+                const SizedBox(height: 16),
+                Text('編成を分析する', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.auto_graph_outlined),
+                    title: const Text('深境螺旋統計'),
+                    subtitle: const Text('所持キャラと攻略状況を確認'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/abyss'),
+                  ),
+                ),
               ],
             ),
           ),

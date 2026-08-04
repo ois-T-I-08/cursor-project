@@ -10,11 +10,12 @@ import 'features/characters/character_detail_screen.dart';
 import 'features/characters/character_list_screen.dart';
 import 'features/daily_materials/daily_materials_screen.dart';
 import 'features/gacha/gacha_screen.dart';
-import 'features/home/home_screen.dart';
 import 'features/hoyolab/hoyolab_settings_screen.dart';
+import 'features/more/more_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/teams/team_builder_screen.dart';
 import 'features/growth/daily_plan_screen.dart';
+import 'features/growth/growth_hub_screen.dart';
 import 'features/growth/growth_timeline_screen.dart';
 import 'features/growth/account_health_screen.dart';
 import 'features/growth/growth_route_screen.dart';
@@ -29,24 +30,22 @@ import 'navigation/android_system_back.dart';
 /// Root Navigator for /bootstrap etc.
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
-/// Home branch Navigator.
-final _homeNavKey = GlobalKey<NavigatorState>(debugLabel: 'homeBranch');
+/// Today branch Navigator.
+final _todayNavKey = GlobalKey<NavigatorState>(debugLabel: 'todayBranch');
 
 /// Characters branch Navigator.
 final _charactersNavKey = GlobalKey<NavigatorState>(
   debugLabel: 'charactersBranch',
 );
 
+/// Growth branch Navigator.
+final _growthNavKey = GlobalKey<NavigatorState>(debugLabel: 'growthBranch');
+
 /// Teams branch Navigator.
 final _teamsNavKey = GlobalKey<NavigatorState>(debugLabel: 'teamsBranch');
 
-/// Daily branch Navigator.
-final _dailyNavKey = GlobalKey<NavigatorState>(debugLabel: 'dailyBranch');
-
-/// Materials branch Navigator.
-final _materialsNavKey = GlobalKey<NavigatorState>(
-  debugLabel: 'materialsBranch',
-);
+/// More branch Navigator.
+final _moreNavKey = GlobalKey<NavigatorState>(debugLabel: 'moreBranch');
 
 // ---------------------------------------------------------------------------
 // GoRouter
@@ -65,62 +64,17 @@ final appRouter = GoRouter(
           (context, state, navigationShell) =>
               AppShell(navigationShell: navigationShell),
       branches: [
-        // 0: Home
+        // 0: Today
         StatefulShellBranch(
-          navigatorKey: _homeNavKey,
+          navigatorKey: _todayNavKey,
           routes: [
-            GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
             GoRoute(
-              path: '/abyss',
-              builder: (context, state) => const AbyssStatisticsScreen(),
-            ),
-            GoRoute(
-              path: '/artifacts',
-              builder: (context, state) => const ArtifactSetsScreen(),
-            ),
-            GoRoute(
-              path: '/gacha',
-              builder: (context, state) => const GachaScreen(),
+              path: '/',
+              builder: (context, state) => const DailyPlanScreen(),
             ),
             GoRoute(
               path: '/daily-plan',
               builder: (context, state) => const DailyPlanScreen(),
-            ),
-            GoRoute(
-              path: '/growth-timeline',
-              builder: (context, state) => const GrowthTimelineScreen(),
-            ),
-            GoRoute(
-              path: '/account-health',
-              builder: (context, state) => const AccountHealthScreen(),
-            ),
-            GoRoute(
-              path: '/growth-route',
-              builder: (context, state) {
-                final request =
-                    state.extra is GrowthRouteRequest
-                        ? state.extra as GrowthRouteRequest
-                        : null;
-                return GrowthRouteScreen(request: request);
-              },
-            ),
-            GoRoute(
-              path: '/team-priority',
-              builder: (context, state) {
-                final teamId =
-                    state.extra is String ? state.extra as String : null;
-                return TeamGrowthPriorityScreen(teamId: teamId);
-              },
-            ),
-            GoRoute(
-              path: '/settings',
-              builder: (context, state) => const SettingsScreen(),
-              routes: [
-                GoRoute(
-                  path: 'hoyolab',
-                  builder: (context, state) => const HoyolabSettingsScreen(),
-                ),
-              ],
             ),
           ],
         ),
@@ -143,7 +97,47 @@ final appRouter = GoRouter(
             ),
           ],
         ),
-        // 2: Teams
+        // 2: Growth
+        StatefulShellBranch(
+          navigatorKey: _growthNavKey,
+          routes: [
+            GoRoute(
+              path: '/growth',
+              builder: (context, state) => const GrowthHubScreen(),
+            ),
+            GoRoute(
+              path: '/daily',
+              builder: (context, state) => const DailyMaterialsScreen(),
+            ),
+            GoRoute(
+              path: '/bookmarks',
+              builder: (context, state) => const BookmarksScreen(),
+            ),
+            GoRoute(
+              path: '/artifacts',
+              builder: (context, state) => const ArtifactSetsScreen(),
+            ),
+            GoRoute(
+              path: '/growth-timeline',
+              builder: (context, state) => const GrowthTimelineScreen(),
+            ),
+            GoRoute(
+              path: '/account-health',
+              builder: (context, state) => const AccountHealthScreen(),
+            ),
+            GoRoute(
+              path: '/growth-route',
+              builder: (context, state) {
+                final request =
+                    state.extra is GrowthRouteRequest
+                        ? state.extra as GrowthRouteRequest
+                        : null;
+                return GrowthRouteScreen(request: request);
+              },
+            ),
+          ],
+        ),
+        // 3: Teams
         StatefulShellBranch(
           navigatorKey: _teamsNavKey,
           routes: [
@@ -151,25 +145,41 @@ final appRouter = GoRouter(
               path: '/teams',
               builder: (context, state) => const TeamBuilderScreen(),
             ),
-          ],
-        ),
-        // 3: Daily
-        StatefulShellBranch(
-          navigatorKey: _dailyNavKey,
-          routes: [
             GoRoute(
-              path: '/daily',
-              builder: (context, state) => const DailyMaterialsScreen(),
+              path: '/team-priority',
+              builder: (context, state) {
+                final teamId =
+                    state.extra is String ? state.extra as String : null;
+                return TeamGrowthPriorityScreen(teamId: teamId);
+              },
+            ),
+            GoRoute(
+              path: '/abyss',
+              builder: (context, state) => const AbyssStatisticsScreen(),
             ),
           ],
         ),
-        // 4: Bookmarks
+        // 4: More
         StatefulShellBranch(
-          navigatorKey: _materialsNavKey,
+          navigatorKey: _moreNavKey,
           routes: [
             GoRoute(
-              path: '/bookmarks',
-              builder: (context, state) => const BookmarksScreen(),
+              path: '/more',
+              builder: (context, state) => const MoreScreen(),
+            ),
+            GoRoute(
+              path: '/gacha',
+              builder: (context, state) => const GachaScreen(),
+            ),
+            GoRoute(
+              path: '/settings',
+              builder: (context, state) => const SettingsScreen(),
+              routes: [
+                GoRoute(
+                  path: 'hoyolab',
+                  builder: (context, state) => const HoyolabSettingsScreen(),
+                ),
+              ],
             ),
           ],
         ),
@@ -180,11 +190,11 @@ final appRouter = GoRouter(
 
 /// Branch NavigatorKey array (index order).
 final _branchNavKeys = [
-  _homeNavKey,
+  _todayNavKey,
   _charactersNavKey,
+  _growthNavKey,
   _teamsNavKey,
-  _dailyNavKey,
-  _materialsNavKey,
+  _moreNavKey,
 ];
 
 // ---------------------------------------------------------------------------
@@ -245,10 +255,10 @@ class _NavItem {
 
 final _bottomNavItems = <_NavItem>[
   const _NavItem(
-    tab: MainTab.home,
-    label: '\u30db\u30fc\u30e0',
-    icon: Icons.home_outlined,
-    selectedIcon: Icons.home,
+    tab: MainTab.today,
+    label: '今日',
+    icon: Icons.today_outlined,
+    selectedIcon: Icons.today,
   ),
   const _NavItem(
     tab: MainTab.characters,
@@ -257,30 +267,30 @@ final _bottomNavItems = <_NavItem>[
     selectedIcon: Icons.people,
   ),
   const _NavItem(
+    tab: MainTab.growth,
+    label: '育成',
+    icon: Icons.trending_up_outlined,
+    selectedIcon: Icons.trending_up,
+  ),
+  const _NavItem(
     tab: MainTab.teams,
-    label: '\u7de8\u6210',
+    label: '編成',
     icon: Icons.groups_outlined,
     selectedIcon: Icons.groups,
   ),
   const _NavItem(
-    tab: MainTab.daily,
-    label: '\u66dc\u65e5',
-    icon: Icons.calendar_today_outlined,
-    selectedIcon: Icons.calendar_today,
-  ),
-  const _NavItem(
-    tab: MainTab.materials,
-    label: '\u7d20\u6750',
-    icon: Icons.inventory_2_outlined,
-    selectedIcon: Icons.inventory_2,
+    tab: MainTab.more,
+    label: 'その他',
+    icon: Icons.apps_outlined,
+    selectedIcon: Icons.apps,
   ),
 ];
 
 final _drawerDestinations = <_DrawerDestination>[
   _DrawerDestination.branch(
-    label: '\u30db\u30fc\u30e0',
-    icon: Icons.home_outlined,
-    branchIndex: MainTab.home.index,
+    label: '今日',
+    icon: Icons.today_outlined,
+    branchIndex: MainTab.today.index,
   ),
   _DrawerDestination.branch(
     label: '\u30ad\u30e3\u30e9',
@@ -288,43 +298,43 @@ final _drawerDestinations = <_DrawerDestination>[
     branchIndex: MainTab.characters.index,
   ),
   _DrawerDestination.branch(
-    label: '\u7de8\u6210',
-    icon: Icons.groups_outlined,
-    branchIndex: MainTab.teams.index,
+    label: '育成',
+    icon: Icons.trending_up_outlined,
+    branchIndex: MainTab.growth.index,
   ),
   _DrawerDestination.branch(
-    label: '\u66dc\u65e5',
-    icon: Icons.calendar_today_outlined,
-    branchIndex: MainTab.daily.index,
+    label: '編成',
+    icon: Icons.groups_outlined,
+    branchIndex: MainTab.teams.index,
   ),
   _DrawerDestination.route(
     label: '\u8056\u907a\u7269',
     icon: Icons.diamond_outlined,
     path: '/artifacts',
-    branchIndex: MainTab.home.index,
+    branchIndex: MainTab.growth.index,
   ),
   _DrawerDestination.branch(
-    label: '\u7d20\u6750',
-    icon: Icons.bookmark_outline,
-    branchIndex: MainTab.materials.index,
+    label: 'その他',
+    icon: Icons.apps_outlined,
+    branchIndex: MainTab.more.index,
   ),
   _DrawerDestination.route(
     label: '\u6df1\u5883\u87ba\u65cb\u7d71\u8a08',
     icon: Icons.auto_graph_outlined,
     path: '/abyss',
-    branchIndex: MainTab.home.index,
+    branchIndex: MainTab.teams.index,
   ),
   _DrawerDestination.route(
     label: '\u30ac\u30c1\u30e3',
     icon: Icons.casino_outlined,
     path: '/gacha',
-    branchIndex: MainTab.home.index,
+    branchIndex: MainTab.more.index,
   ),
   _DrawerDestination.route(
     label: '\u8a2d\u5b9a',
     icon: Icons.settings_outlined,
     path: '/settings',
-    branchIndex: MainTab.home.index,
+    branchIndex: MainTab.more.index,
   ),
 ];
 
@@ -334,15 +344,23 @@ int _drawerSelectedIndex(String currentPath) {
     final d = _drawerDestinations[i];
     if (d.path != null && currentPath.startsWith(d.path!)) return i;
     if (d.isMainTabSwitch) {
-      if ((d.branchIndex == MainTab.home.index && currentPath == '/') ||
+      if ((d.branchIndex == MainTab.today.index &&
+              (currentPath == '/' || currentPath == '/daily-plan')) ||
           (d.branchIndex == MainTab.characters.index &&
               currentPath.startsWith('/characters')) ||
+          (d.branchIndex == MainTab.growth.index &&
+              (currentPath.startsWith('/growth') ||
+                  currentPath.startsWith('/daily') ||
+                  currentPath.startsWith('/bookmarks') ||
+                  currentPath.startsWith('/artifacts'))) ||
           (d.branchIndex == MainTab.teams.index &&
-              currentPath.startsWith('/teams')) ||
-          (d.branchIndex == MainTab.daily.index &&
-              currentPath.startsWith('/daily')) ||
-          (d.branchIndex == MainTab.materials.index &&
-              currentPath.startsWith('/bookmarks'))) {
+              (currentPath.startsWith('/teams') ||
+                  currentPath.startsWith('/team-priority') ||
+                  currentPath.startsWith('/abyss'))) ||
+          (d.branchIndex == MainTab.more.index &&
+              (currentPath.startsWith('/more') ||
+                  currentPath.startsWith('/gacha') ||
+                  currentPath.startsWith('/settings')))) {
         return i;
       }
     }
@@ -426,7 +444,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   /// Common footer tab switching logic.
-  /// Home always resets to the initial route `/`.
+  /// Today always resets to the initial route `/`.
   /// Other tabs preserve their existing navigation history.
   void _switchToTab(int index) {
     // Cancel any pending drawer-triggered navigation.
@@ -437,10 +455,10 @@ class _AppShellState extends State<AppShell> {
       _scaffoldKey.currentState?.closeEndDrawer();
     }
 
-    if (index == MainTab.home.index) {
-      // Home tab always goes to root, regardless of current branch state.
+    if (index == MainTab.today.index) {
+      // Today tab always goes to root, regardless of current branch state.
       widget.navigationShell.goBranch(
-        MainTab.home.index,
+        MainTab.today.index,
         initialLocation: true,
       );
       return;
@@ -469,9 +487,9 @@ class _AppShellState extends State<AppShell> {
     final shell = widget.navigationShell;
 
     if (destination.isMainTabSwitch) {
-      if (destination.branchIndex == MainTab.home.index) {
-        // Home drawer item: always go to root.
-        shell.goBranch(MainTab.home.index, initialLocation: true);
+      if (destination.branchIndex == MainTab.today.index) {
+        // Today drawer item: always go to root.
+        shell.goBranch(MainTab.today.index, initialLocation: true);
       } else if (destination.branchIndex != shell.currentIndex) {
         // Non-Home branches: preserve history.
         shell.goBranch(destination.branchIndex!);
@@ -500,7 +518,7 @@ class _AppShellState extends State<AppShell> {
     // Compute PopScope conditions with state-tracked drawer.
     final canPop =
         !_isEndDrawerOpen &&
-        (_branchCanPop || shell.currentIndex == MainTab.home.index);
+        (_branchCanPop || shell.currentIndex == MainTab.today.index);
 
     Widget body = shell;
 
@@ -516,13 +534,13 @@ class _AppShellState extends State<AppShell> {
             return;
           }
 
-          // 2. Non-home tab with no history - switch to home.
-          if (shell.currentIndex != MainTab.home.index) {
-            shell.goBranch(MainTab.home.index);
+          // 2. Non-today tab with no history - switch to Today.
+          if (shell.currentIndex != MainTab.today.index) {
+            shell.goBranch(MainTab.today.index);
             return;
           }
 
-          // 3. Home tab root - delegate to system.
+          // 3. Today tab root - delegate to system.
         },
         child: shell,
       );
@@ -530,7 +548,9 @@ class _AppShellState extends State<AppShell> {
 
     final scaffold = Scaffold(
       key: _scaffoldKey,
-      endDrawerEnableOpenDragGesture: true,
+      // Normal UI enters secondary tools through the visible "その他" tab.
+      // The legacy drawer remains only for old deep-link/back compatibility.
+      endDrawerEnableOpenDragGesture: false,
       onEndDrawerChanged: (isOpen) {
         if (_isEndDrawerOpen == isOpen) return;
         setState(() => _isEndDrawerOpen = isOpen);

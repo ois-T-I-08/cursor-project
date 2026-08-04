@@ -7,7 +7,6 @@ import '../../providers/artifact_sets_page_providers.dart';
 import '../../providers/character_detail_providers.dart';
 import '../../providers/hoyolab_game_providers.dart';
 import '../shared/game_icon_image.dart';
-import '../shared/shell_menu_button.dart';
 import 'widgets/artifact_set_detail_dialog.dart';
 
 /// 画面幅に応じたグリッド列数（横スクロールなし）。
@@ -40,7 +39,6 @@ class ArtifactSetsScreen extends ConsumerWidget {
               ref.invalidate(artifactSetOverviewsProvider);
             },
           ),
-          const ShellMenuButton(),
         ],
       ),
       body: async.when(

@@ -18,7 +18,6 @@ import '../../providers/hoyolab_providers.dart' show featureFlagsProvider;
 import '../../domain/recommendation/recommendation.dart';
 import '../../domain/planning/investment_diagnosis.dart';
 import '../../domain/planning/growth_goal.dart';
-import '../shared/shell_menu_button.dart';
 import 'character_detail_state.dart';
 import 'widgets/character_detail_bookmark_actions.dart';
 import 'widgets/character_detail_header.dart';
@@ -266,7 +265,6 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen>
                     ? null
                     : () => unawaited(_confirmResetToFetched(detail)),
           ),
-          const ShellMenuButton(),
         ],
       ),
       body: Column(

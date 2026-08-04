@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,8 +14,12 @@ import '../../../domain/planning/daily_plan_item_key.dart';
 import '../../../domain/planning/daily_plan_proposal.dart';
 import '../../../domain/recommendation/recommendation.dart';
 import '../../../providers/app_providers.dart';
+import '../../../providers/background_master_repair_provider.dart';
+import '../../../providers/daily_materials_providers.dart';
 import '../../../providers/daily_plan_completion_providers.dart';
 import '../../../providers/growth_providers.dart';
+import '../../../providers/hoyolab_home_providers.dart';
+import '../hoyolab/widgets/daily_note_card.dart';
 import 'widgets/daily_plan_proposal_panel.dart';
 import 'widgets/daily_plan_task_tile.dart';
 
@@ -32,6 +38,17 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   bool _proposalClosed = false;
   bool _adopting = false;
   String? _adoptedInputHash;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final repair = ref.read(backgroundMasterRepairProvider);
+      unawaited(repair.ensureStartedAfterHome());
+      repair.ensureHoyolabPrefetch(() => prefetchHoyolabHomeData(ref));
+    });
+  }
 
   Future<void> _toggleItem({
     required DailyPlanItem item,
@@ -135,6 +152,9 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 起動直後の曜日素材プリフェッチを、旧ホーム廃止後も維持する。
+    ref.listen(dailyProgressPrefetchProvider, (_, __) {});
+
     final planAsync = ref.watch(adoptedDailyPlanProvider);
     final proposalAsync = ref.watch(
       dailyPlanProposalProvider(_proposalGeneration),
@@ -154,40 +174,57 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     final today = DateTime(now.year, now.month, now.day);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('今日やること')),
+      appBar: AppBar(title: const Text('今日')),
       body: planAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => const Center(child: Text('読み込みエラー')),
         data: (plan) {
           if (plan.items.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.task_alt,
-                      size: 36,
-                      color: theme.colorScheme.primary,
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.task_alt,
+                          size: 36,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '今日は優先する育成がありません',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '育成目標やブックマークを追加すると提案できます',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          onPressed: () => context.go('/characters'),
+                          icon: const Icon(Icons.people_outline),
+                          label: const Text('キャラから目標を作る'),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () => context.go('/growth'),
+                          child: const Text('育成機能を見る'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '今日は優先する育成がありません',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '育成目標やブックマークを追加すると提案できます',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                const DailyNoteCard(),
+              ],
             );
           }
 
@@ -228,10 +265,29 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
+              const DailyNoteCard(),
+              const SizedBox(height: 16),
               _PlanStatusHeader(
                 plan: plan,
                 doneCount: doneCount,
                 totalCount: plan.items.length,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => context.push('/daily'),
+                    icon: const Icon(Icons.calendar_today_outlined),
+                    label: const Text('今日の曜日素材'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/growth'),
+                    icon: const Icon(Icons.trending_up),
+                    label: const Text('育成全体を見る'),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Text('やること一覧', style: theme.textTheme.titleMedium),
