@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../application/daily_plan_notifications/daily_plan_user_scope.dart';
+import '../../../application/planning/build_deterministic_daily_plan_proposal.dart';
 import '../../../application/planning/build_growth_route_request.dart';
 import '../../../application/planning/daily_plan_fingerprint.dart';
 import '../../../domain/planning/daily_plan.dart';
@@ -13,6 +14,8 @@ import '../../../domain/recommendation/recommendation.dart';
 import '../../../providers/app_providers.dart';
 import '../../../providers/daily_plan_completion_providers.dart';
 import '../../../providers/growth_providers.dart';
+import 'widgets/daily_plan_proposal_panel.dart';
+import 'widgets/daily_plan_task_tile.dart';
 
 /// Existing daily-plan screen with an optional, explicitly adopted proposal.
 class DailyPlanScreen extends ConsumerStatefulWidget {
@@ -101,7 +104,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         setState(() => _adoptedInputHash = proposal.inputHash);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('今日の提案を採用しました')));
+        ).showSnackBar(const SnackBar(content: Text('今日のリストに追加しました')));
       }
     } catch (_) {
       if (mounted) {
@@ -121,6 +124,15 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     });
   }
 
+  void _openTask(DailyPlanItem item, Object routeRequest) {
+    if (item.characterIds.isNotEmpty) {
+      final characterId = Uri.encodeComponent(item.characterIds.first);
+      context.push('/characters/$characterId');
+      return;
+    }
+    context.push('/growth-route', extra: routeRequest);
+  }
+
   @override
   Widget build(BuildContext context) {
     final planAsync = ref.watch(adoptedDailyPlanProvider);
@@ -128,6 +140,15 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
       dailyPlanProposalProvider(_proposalGeneration),
     );
     final completionsAsync = ref.watch(dailyPlanTodayCompletionsProvider);
+    final materialsById =
+        ref.watch(materialsMapProvider).valueOrNull ?? const {};
+    final characters = ref.watch(charactersProvider).valueOrNull ?? const [];
+    final charactersById = {
+      for (final character in characters) character.id: character,
+    };
+    final characterNamesById = {
+      for (final character in characters) character.id: character.name,
+    };
     final theme = Theme.of(context);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -142,10 +163,29 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text(
-                  '育成目標の設定、または今日開放の曜日素材の不足があると、おすすめが表示されます。',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyLarge,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.task_alt,
+                      size: 36,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '今日は優先する育成がありません',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '育成目標やブックマークを追加すると提案できます',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -154,112 +194,76 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           final baseline = completionsAsync.valueOrNull ?? const <String>{};
           final completed = _optimisticCompleted ?? baseline;
           final routeReq = buildGrowthRouteRequest(plan, today);
+          final doneCount =
+              plan.items
+                  .where((item) => completed.contains(dailyPlanItemKey(item)))
+                  .length;
+          final fallbackProposal = buildDeterministicDailyPlanProposal(plan);
 
-          return Column(
+          DailyPlanProposalPanel proposalPanel(DailyPlanProposal proposal) {
+            return DailyPlanProposalPanel(
+              proposal: proposal,
+              items: plan.items,
+              charactersById: charactersById,
+              materialsById: materialsById,
+              currentResin: plan.currentResin,
+              availableMinutes: plan.availableMinutes,
+              adding: _adopting,
+              added: _adoptedInputHash == proposal.inputHash,
+              onOpenTask: (item) => _openTask(item, routeReq),
+              onAddToList: () => _adoptProposal(proposal),
+              onRegenerate: _regenerateProposal,
+              onClose: () => setState(() => _proposalClosed = true),
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
-              if (!_proposalClosed)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: proposalAsync.when(
-                    loading:
-                        () => const Card(
-                          child: Padding(
-                            padding: EdgeInsets.all(20),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                                SizedBox(width: 12),
-                                Text('今日のおすすめを考えています…'),
-                              ],
-                            ),
-                          ),
-                        ),
-                    error:
-                        (_, __) => _ProposalUnavailableCard(
-                          onRetry: _regenerateProposal,
-                          onClose: () => setState(() => _proposalClosed = true),
-                        ),
-                    data:
-                        (proposal) => _DailyPlanProposalCard(
-                          proposal: proposal,
-                          items: plan.items,
-                          adopting: _adopting,
-                          adopted: _adoptedInputHash == proposal.inputHash,
-                          onRegenerate: _regenerateProposal,
-                          onAdopt: () => _adoptProposal(proposal),
-                          onClose: () => setState(() => _proposalClosed = true),
-                        ),
-                  ),
+              if (!_proposalClosed) ...[
+                proposalAsync.when(
+                  loading: () => proposalPanel(fallbackProposal),
+                  error: (_, __) => proposalPanel(fallbackProposal),
+                  data: proposalPanel,
                 ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: plan.items.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == plan.items.length) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: OutlinedButton.icon(
-                          onPressed:
-                              () => context.push(
-                                '/growth-route',
-                                extra: routeReq,
-                              ),
-                          icon: const Icon(Icons.route),
-                          label: const Text('育成ルートを作成'),
-                        ),
-                      );
-                    }
-                    final item = plan.items[index];
-                    final key = dailyPlanItemKey(item);
-                    final isDone = completed.contains(key);
-                    final subtitle = <String>[
-                      '優先度: ${item.priority}',
-                      if (item.reasons.isNotEmpty) item.reasons.first,
-                      if (!item.availableToday) '本日は対象素材を入手できません',
-                    ].join(' · ');
-                    return Card(
-                      child: CheckboxListTile(
-                        value: isDone,
-                        onChanged:
-                            _busyKeys.contains(key)
-                                ? null
-                                : (value) => _toggleItem(
-                                  item: item,
-                                  complete: value ?? false,
-                                  baseline: baseline,
-                                ),
-                        title: Text(
-                          item.title,
-                          style:
-                              isDone
-                                  ? TextStyle(
-                                    decoration: TextDecoration.lineThrough,
-                                    color: theme.disabledColor,
-                                  )
-                                  : null,
-                        ),
-                        subtitle: Text(subtitle),
-                        secondary:
-                            item.confidence == RecommendationConfidence.high
-                                ? const Icon(
-                                  Icons.check_circle,
-                                  color: Colors.green,
-                                )
-                                : const Icon(Icons.info_outline),
+                const SizedBox(height: 16),
+              ],
+              _PlanStatusHeader(
+                plan: plan,
+                doneCount: doneCount,
+                totalCount: plan.items.length,
+              ),
+              const SizedBox(height: 16),
+              Text('やること一覧', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                'チップで「何が必要か」を確認。詳しく見るで理由と素材名を開けます。',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              for (final item in plan.items) ...[
+                DailyPlanTaskTile(
+                  item: item,
+                  completed: completed.contains(dailyPlanItemKey(item)),
+                  enabled: !_busyKeys.contains(dailyPlanItemKey(item)),
+                  materialsById: materialsById,
+                  characterNamesById: characterNamesById,
+                  onChanged:
+                      (value) => _toggleItem(
+                        item: item,
+                        complete: value ?? false,
+                        baseline: baseline,
                       ),
-                    );
-                  },
                 ),
+                const SizedBox(height: 8),
+              ],
+              const SizedBox(height: 4),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/growth-route', extra: routeReq),
+                icon: const Icon(Icons.route),
+                label: const Text('育成ルートを作成'),
               ),
             ],
           );
@@ -269,31 +273,29 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   }
 }
 
-class _DailyPlanProposalCard extends StatelessWidget {
-  const _DailyPlanProposalCard({
-    required this.proposal,
-    required this.items,
-    required this.adopting,
-    required this.adopted,
-    required this.onRegenerate,
-    required this.onAdopt,
-    required this.onClose,
+class _PlanStatusHeader extends StatelessWidget {
+  const _PlanStatusHeader({
+    required this.plan,
+    required this.doneCount,
+    required this.totalCount,
   });
 
-  final DailyPlanProposal proposal;
-  final List<DailyPlanItem> items;
-  final bool adopting;
-  final bool adopted;
-  final VoidCallback onRegenerate;
-  final VoidCallback onAdopt;
-  final VoidCallback onClose;
+  final DailyPlan plan;
+  final int doneCount;
+  final int totalCount;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final itemById = {for (final item in items) item.id: item};
+    final resinText =
+        plan.currentResin == null
+            ? '樹脂 未取得'
+            : plan.maxResin == null
+            ? '樹脂 ${plan.currentResin}'
+            : '樹脂 ${plan.currentResin} / ${plan.maxResin}';
+    final progress = totalCount == 0 ? 0.0 : doneCount / totalCount;
+
     return Card(
-      color: theme.colorScheme.secondaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -301,117 +303,62 @@ class _DailyPlanProposalCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  proposal.isAiGenerated ? Icons.auto_awesome : Icons.rule,
-                  size: 20,
-                ),
+                Icon(Icons.today_outlined, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '今日のおすすめ · ${proposal.sourceLabel}',
+                    '今日の進捗 $doneCount / $totalCount',
                     style: theme.textTheme.titleMedium,
                   ),
                 ),
-                IconButton(
-                  tooltip: '提案を閉じる',
-                  onPressed: onClose,
-                  icon: const Icon(Icons.close),
+                Text(
+                  resinText,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
-            Text(proposal.summary, style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 8),
-            for (final recommendation in proposal.recommendations)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 12,
-                      child: Text('${recommendation.priority}'),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            itemById[recommendation.taskId]?.title ??
-                                recommendation.taskId,
-                            style: theme.textTheme.labelLarge,
-                          ),
-                          Text(
-                            '${recommendation.reason} · 約${recommendation.suggestedMinutes}分',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (proposal.warnings.isNotEmpty)
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(value: progress, minHeight: 8),
+            ),
+            if (plan.missingData.isNotEmpty) ...[
+              const SizedBox(height: 10),
               Text(
-                proposal.warnings.first,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSecondaryContainer,
+                'データ不足: ${_missingDataLabel(plan)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  onPressed: adopting || adopted ? null : onAdopt,
-                  icon: Icon(adopted ? Icons.check : Icons.playlist_add_check),
-                  label: Text(adopted ? '採用済み' : '提案を採用'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: onRegenerate,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('再生成'),
-                ),
-              ],
-            ),
+            ],
           ],
         ),
       ),
     );
   }
-}
 
-class _ProposalUnavailableCard extends StatelessWidget {
-  const _ProposalUnavailableCard({
-    required this.onRetry,
-    required this.onClose,
-  });
-
-  final VoidCallback onRetry;
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        title: const Text('おすすめを読み込めませんでした'),
-        subtitle: const Text('通常の今日やることはそのまま利用できます。'),
-        trailing: Wrap(
-          children: [
-            IconButton(
-              tooltip: '再試行',
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-            ),
-            IconButton(
-              tooltip: '閉じる',
-              onPressed: onClose,
-              icon: const Icon(Icons.close),
-            ),
-          ],
-        ),
-      ),
-    );
+  String _missingDataLabel(DailyPlan plan) {
+    final labels = <String>[];
+    for (final missing in plan.missingData) {
+      switch (missing) {
+        case MissingData.materialInventory:
+          labels.add('素材所持');
+        case MissingData.currentResin:
+          labels.add('樹脂');
+        case MissingData.masterUpgradeData:
+          labels.add('育成マスタ');
+        case MissingData.unequippedWeapons:
+          labels.add('未装備武器');
+        case MissingData.currentAbyssEnemies:
+          labels.add('螺旋敵情報');
+        case MissingData.currentTheaterRules:
+          labels.add('シアター条件');
+        case MissingData.teamUsageStatistics:
+          labels.add('編成統計');
+      }
+    }
+    return labels.isEmpty ? '一部不明' : labels.join('、');
   }
 }
