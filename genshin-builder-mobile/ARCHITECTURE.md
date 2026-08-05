@@ -3,6 +3,10 @@
 原神育成管理の **非公式** Flutter アプリ。  
 仕様の正は Web 版 `../genshin-builder-app/`。参考実装は [genshin_material](https://github.com/chika3742/genshin_material)（MIT 相当のオープンソース。コードは **コピーせず概念のみ参考** し、本プロジェクト用に書き直す）。
 
+## Cross-platform identity (proposed)
+
+Web/Flutter共通account、端末別session、匿名昇格、同期境界、Daily Plan共有の設計判断は、リポジトリ共通の [`../docs/architecture/CROSS_PLATFORM_IDENTITY.md`](../docs/architecture/CROSS_PLATFORM_IDENTITY.md) と [`../docs/architecture/ACCOUNT_SYNC_THREAT_MODEL.md`](../docs/architecture/ACCOUNT_SYNC_THREAT_MODEL.md) を正とする。`localUserId`/`clientScope`は端末内・cache scopeであり認証情報ではない。HoYoLAB Cookie/UIDはGenshin Builder認証・同期から除外する。実装は未着手で、Drift migrationやprovider/secret追加をこの文書は許可しない。
+
 ---
 
 ## 1. 全体像

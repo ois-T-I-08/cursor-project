@@ -2,6 +2,12 @@
 
 セッションごとの設計判断ログ。重要な決定のみ追記する。
 
+## 2026-08-06 — Cross-platform account/device session設計（実装前ADR）
+
+- Flutterの`localUserId`はDrift所有キー、`clientScope`はその短縮hashによるcache/notification scopeであり、remote account認証には使わない。HoYoLAB Cookie/UID/regionとDB keyはSecure Storage/device-localのままaccount syncから除外する。
+- 将来はserver-generated canonical `Account.id`と端末別`DeviceSession`を用い、短命access token、Secure Storage内のopaque refresh token、毎回rotation、replay時family revoke、device一覧/失効を実装する。初回syncはユーザー明示開始、preview/件数/確認、chunk/idempotency/resume/conflict/tombstone、stagingからのatomic finalizeを必須とする。
+- 詳細は`../../docs/architecture/CROSS_PLATFORM_IDENTITY.md`、脅威分析は`../../docs/architecture/ACCOUNT_SYNC_THREAT_MODEL.md`。Drift migration、認証provider/secret、token、同期実装は未着手。cloud sync前にSQLCipher ADRを再検討する。
+
 ## 2026-08-05 — 日次提案のstale採用拒否と「その他」導線補完
 
 - 日次共通DTOへ`schemaVersion: 1`と`proposalFingerprint`を追加。候補生成時のfingerprintをサーバーがそのまま検証済みDTOへ返し、Flutterは応答時・store保存時・採用直前に現在planとの一致を確認する。不一致時は保存せず日本語案内と再生成を行う。

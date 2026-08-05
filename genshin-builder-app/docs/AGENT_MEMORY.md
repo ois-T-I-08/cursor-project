@@ -4,6 +4,12 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-08-06 — Cross-platform account identity設計（実装前ADR）
+
+- **決定案:** server-generated canonical `Account.id`、DB-backed Web session、Flutter端末別session + short access/rotating refresh、server-managed anonymous identityを共通境界とする。`gb_user_id`、Flutter `clientScope`、HoYoLAB Cookie/UID、game UIDはaccount認証に使わない。
+- **移行:** loginだけでは匿名データを移管せず、server検出→preview→明示確認→revision再検証→原子的移管→audit→旧匿名session失効。Flutter初回同期も明示開始、dry-run/件数preview、chunk/idempotency/resume/conflict/tombstone、最終atomic promoteを必須とする。
+- **文書:** `../../docs/architecture/CROSS_PLATFORM_IDENTITY.md`、`../../docs/architecture/ACCOUNT_SYNC_THREAT_MODEL.md`、`../../docs/adr/0001-cross-platform-account-identity.md`。認証provider、Prisma/Drift migration、secret、route、同期、deployは未実装。
+
 ## 2026-08-05 — Consumer Web application foundation
 
 - **目的:** Flutterの情報設計に合わせ、Next.js一般利用者向けWebを管理画面・公開APIから分離したroute groupとresponsive shellへ移行。
