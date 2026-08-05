@@ -8,6 +8,10 @@
 - **マスタデータ:** 外部 API から同期し DB に永続化（オフライン耐性）
 - **表示用リッチデータ:** スキル説明・ステータス計算等は表示時に API 取得（キャッシュ付き）
 
+## Cross-platform identity (proposed)
+
+Web/Flutter共通account、server-managed Web session、Flutter device session、匿名昇格、同期、Daily Plan共有の設計判断は、リポジトリ共通の [`../docs/architecture/CROSS_PLATFORM_IDENTITY.md`](../docs/architecture/CROSS_PLATFORM_IDENTITY.md) と [`../docs/architecture/ACCOUNT_SYNC_THREAT_MODEL.md`](../docs/architecture/ACCOUNT_SYNC_THREAT_MODEL.md) を正とする。現時点の`gb_user_id`はlegacy匿名所有キーであり、production account認証には使わない。実装は未着手で、Prisma migrationやprovider/secret追加をこの文書は許可しない。
+
 ---
 
 ## 技術スタック
