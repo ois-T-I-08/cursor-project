@@ -4,6 +4,15 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-08-06 — Provider-neutral Account schema / Web session foundation
+
+- **実装:** expand-only PostgreSQL migrationで`Account`、`AuthIdentity`、`WebSession`、`AnonymousIdentity`を追加。既存`UserProgress.userId` / `gb_user_id`は変更・backfillせず、SQLite archiveとFlutterも変更していない。
+- **session境界:** server-onlyの256-bit opaque token、SHA-256 hash-at-rest、expiry/revoke/rotation、account-version fencing、revoke one/all、lastSeen throttle、cleanup、sanitized metadata listing、`__Host-gb_session` Cookie primitive、中央`AuthContext`を追加。raw token、Cookie、provider subject、owner IDをlog/auditへ渡さない。
+- **安全停止:** `ACCOUNT_IDENTITY_ENABLED` / `WEB_ACCOUNT_SESSION_ENABLED`は未設定をfalseとし、両方exact trueでない限り発行・rotation不可。公開login/logout route、OAuth/Passkey、実ユーザーsession、匿名claim、account data切替、sync、Daily Plan接続、deployは未実装。
+- **設計差分:** 新secret追加禁止のためkeyed hashではなく高entropy tokenのSHA-256を採用。server-held hash key/rotationはruntime login前のrelease blocker。durable consumer auditもretention/access policy決定後。
+- **検証:** Prisma 6.19.3 generate/validate、typecheck、lint error 0（既存warning 1）、Vitest 454成功・DB専用50 skip、Next production build、production audit 0、`git diff --check`成功。使い捨てPostgreSQL向けにbase upgrade、既存progress非変更、中断rollback/retry、constraints/FK/concurrency/rollback testをCIへ追加。
+- **次回:** Web anonymous-session準備またはWeb login adapterを別PRでレビューする。feature flag有効化、staging/production migration、provider/secret、Flutter認証は引き続き禁止/未実施。
+
 ## 2026-08-06 — Cross-platform account identity設計（実装前ADR）
 
 - **決定案:** server-generated canonical `Account.id`、DB-backed Web session、Flutter端末別session + short access/rotating refresh、server-managed anonymous identityを共通境界とする。`gb_user_id`、Flutter `clientScope`、HoYoLAB Cookie/UID、game UIDはaccount認証に使わない。
