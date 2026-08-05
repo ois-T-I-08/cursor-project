@@ -8,6 +8,7 @@ import 'package:genshin_builder_mobile/domain/planning/investment_diagnosis.dart
 import 'package:genshin_builder_mobile/domain/planning/upgrade_option.dart';
 import 'package:genshin_builder_mobile/domain/team/team_models.dart';
 import 'package:genshin_builder_mobile/application/planning/apply_daily_plan_enrichment.dart';
+import 'package:genshin_builder_mobile/application/planning/daily_plan_fingerprint.dart';
 import 'package:genshin_builder_mobile/application/planning/generate_daily_plan_use_case.dart';
 import 'package:genshin_builder_mobile/application/planning/diagnose_investment_use_case.dart';
 import 'package:genshin_builder_mobile/application/history/detect_growth_events_use_case.dart';
@@ -271,6 +272,7 @@ void main() {
           generatedAt: DateTime(2026, 7, 14),
           inputHash:
               'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          proposalFingerprint: dailyPlanFingerprint(plan),
           modelIdentifier: 'deepseek-v4-flash',
         ),
       );
@@ -302,6 +304,7 @@ void main() {
           generatedAt: DateTime(2026, 7, 14),
           inputHash:
               'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          proposalFingerprint: dailyPlanFingerprint(plan),
         ),
       );
       expect(

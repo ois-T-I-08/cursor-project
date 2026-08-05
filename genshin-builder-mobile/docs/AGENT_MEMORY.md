@@ -2,6 +2,13 @@
 
 セッションごとの設計判断ログ。重要な決定のみ追記する。
 
+## 2026-08-05 — 日次提案のstale採用拒否と「その他」導線補完
+
+- 日次共通DTOへ`schemaVersion: 1`と`proposalFingerprint`を追加。候補生成時のfingerprintをサーバーがそのまま検証済みDTOへ返し、Flutterは応答時・store保存時・採用直前に現在planとの一致を確認する。不一致時は保存せず日本語案内と再生成を行う。
+- Web/Mobileが`shared/domain-golden/daily-plan-proposal-v1.json`を同じfixtureとしてparseし、未知schemaをfail-closedにする。既存Golden期待値と計算ロジックは変更しない。
+- 「その他」へデイリー素材、聖遺物セット、ブックマーク、螺旋統計の導線を追加し、ガチャ、HoYoLAB、設定と合わせて指定された既存機能へ到達可能にした。
+- DB migration、実DeepSeek、feature flag、staging/production、既存完了キーへの変更なし。
+
 ## 2026-08-04 — 全画面の情報設計を5タブへ再編
 
 - ボトムナビを機能名中心の「ホーム／キャラ／編成／曜日／素材」から、目的中心の「今日／キャラ／育成／編成／その他」へ変更。最重要の日次行動を`/`の`DailyPlanScreen`へ昇格した。

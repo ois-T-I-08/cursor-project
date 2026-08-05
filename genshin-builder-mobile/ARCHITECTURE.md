@@ -388,3 +388,5 @@ pigeon                   # dev — ネイティブ Cookie 取得
 提案は既存の `DailyPlanScreen` と `DailyPlanItem` を再利用し、`DailyPlanProposalPanel` で「今日の最優先」1件を先頭に強調、「次にやること」を最大2件、それ以降を件数付き展開で表示する。初期表示の理由はローカル事実から決定的に作るバッジ最大2個と一行理由に限定し、AI自由文、提案方法、生成時刻、警告は「AIがこの順番にした理由」内だけに置く。見送り候補も初期非表示とし、内部コードではなく自然な日本語理由に変換する。候補取得中や失敗時は通常ルール提案を同じ階層で表示し、画面全体をエラーにしない。
 
 生成だけでは進捗・目標・完了状態を変更しない。「今日のリストに追加」後だけ、検証済み提案を既存 `app_settings` へ日付・匿名スコープ・plan fingerprint付きで保存し、既存の `DailyPlanItem` IDと完了キーを維持したまま並びと理由へ反映する。候補、進捗、樹脂、日付、rules版が変われば採用済み提案は自動的に無効になる。DBマイグレーションは不要。
+
+共通DTOは `schemaVersion: 1` と `proposalFingerprint` を必須とする。Flutterは候補生成時のfingerprintをリクエストへ含め、応答で同値を確認し、採用直前にも現在planから再計算して一致しないstale proposalを保存せず再生成する。Web/Mobile parserは `shared/domain-golden/daily-plan-proposal-v1.json` を共有fixtureとして利用し、schema不一致をfail-closedにする。

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { DAILY_PLAN_ITEM_TYPES } from "./types";
+import { DAILY_PLAN_SCHEMA_VERSION } from "./versions";
 import type {
   DailyPlanAiResult,
   DailyPlanEnrichRequest,
@@ -16,6 +17,7 @@ const relatedIdSchema = z
   .trim()
   .regex(/^[A-Za-z0-9:_|.-]{1,96}$/);
 const safeTextSchema = z.string().trim().min(1).max(120);
+const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
 const candidateSchema = z.strictObject({
   taskId: taskIdSchema,
@@ -37,6 +39,7 @@ const candidateSchema = z.strictObject({
 const requestSchema = z
   .strictObject({
     clientScope: z.string().regex(/^[a-f0-9]{12,64}$/),
+    proposalFingerprint: sha256Schema,
     date: z.iso.date(),
     timezone: z
       .string()
@@ -101,9 +104,11 @@ const aiResponseSchema = z.strictObject({
 });
 
 const proposalSchema = aiResponseSchema.extend({
+  schemaVersion: z.literal(DAILY_PLAN_SCHEMA_VERSION),
   source: z.enum(["deepseek", "deterministic_fallback"]),
   generatedAt: z.iso.datetime({ offset: true }),
-  inputHash: z.string().regex(/^[a-f0-9]{64}$/),
+  inputHash: sha256Schema,
+  proposalFingerprint: sha256Schema,
   modelIdentifier: z.string().trim().min(1).max(80).optional(),
 });
 

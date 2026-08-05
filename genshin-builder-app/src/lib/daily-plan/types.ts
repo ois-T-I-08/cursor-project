@@ -30,6 +30,7 @@ export interface DailyPlanCandidate {
 
 export interface DailyPlanEnrichRequest {
   clientScope: string;
+  proposalFingerprint: string;
   date: string;
   timezone: string;
   weekday: number;
@@ -53,6 +54,7 @@ export interface DailyPlanRecommendation {
 }
 
 export interface DailyPlanProposal {
+  schemaVersion: 1;
   summary: string;
   recommendations: DailyPlanRecommendation[];
   deferredTaskIds: string[];
@@ -60,6 +62,7 @@ export interface DailyPlanProposal {
   source: DailyPlanRecommendationSource;
   generatedAt: string;
   inputHash: string;
+  proposalFingerprint: string;
   modelIdentifier?: string;
 }
 
@@ -72,6 +75,7 @@ export interface DailyPlanAiResult {
 
 export interface DailyPlanCacheIdentity {
   clientScope: string;
+  proposalFingerprint: string;
   date: string;
   timezone: string;
   candidateHash: string;

@@ -1,5 +1,7 @@
 enum DailyPlanRecommendationSource { deepseek, deterministicFallback }
 
+const dailyPlanProposalSchemaVersion = 1;
+
 class DailyPlanRecommendation {
   const DailyPlanRecommendation({
     required this.taskId,
@@ -16,6 +18,7 @@ class DailyPlanRecommendation {
 
 class DailyPlanProposal {
   const DailyPlanProposal({
+    this.schemaVersion = dailyPlanProposalSchemaVersion,
     required this.summary,
     required this.recommendations,
     required this.deferredTaskIds,
@@ -23,9 +26,11 @@ class DailyPlanProposal {
     required this.source,
     required this.generatedAt,
     required this.inputHash,
+    required this.proposalFingerprint,
     this.modelIdentifier,
   });
 
+  final int schemaVersion;
   final String summary;
   final List<DailyPlanRecommendation> recommendations;
   final List<String> deferredTaskIds;
@@ -33,6 +38,7 @@ class DailyPlanProposal {
   final DailyPlanRecommendationSource source;
   final DateTime generatedAt;
   final String inputHash;
+  final String proposalFingerprint;
   final String? modelIdentifier;
 
   bool get isAiGenerated => source == DailyPlanRecommendationSource.deepseek;

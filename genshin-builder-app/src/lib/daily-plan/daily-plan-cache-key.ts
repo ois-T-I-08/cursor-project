@@ -41,6 +41,7 @@ export function dailyPlanCacheIdentity(
 
   return {
     clientScope: request.clientScope,
+    proposalFingerprint: request.proposalFingerprint,
     date: request.date,
     timezone: request.timezone,
     candidateHash: hash(candidates),

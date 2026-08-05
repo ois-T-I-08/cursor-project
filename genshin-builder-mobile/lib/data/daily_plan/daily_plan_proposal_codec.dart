@@ -18,6 +18,7 @@ DailyPlanProposal? parseDailyPlanProposal(
   if (value is! Map) return null;
   final map = Map<String, dynamic>.from(value);
   if (!_hasOnlyKeys(map, const {
+    'schemaVersion',
     'summary',
     'recommendations',
     'deferredTaskIds',
@@ -25,6 +26,7 @@ DailyPlanProposal? parseDailyPlanProposal(
     'source',
     'generatedAt',
     'inputHash',
+    'proposalFingerprint',
     'modelIdentifier',
   })) {
     return null;
@@ -33,15 +35,18 @@ DailyPlanProposal? parseDailyPlanProposal(
   final summary = _safeText(map['summary']);
   final generatedAt = DateTime.tryParse('${map['generatedAt'] ?? ''}');
   final inputHash = '${map['inputHash'] ?? ''}';
+  final proposalFingerprint = '${map['proposalFingerprint'] ?? ''}';
   final source = switch (map['source']) {
     'deepseek' => DailyPlanRecommendationSource.deepseek,
     'deterministic_fallback' =>
       DailyPlanRecommendationSource.deterministicFallback,
     _ => null,
   };
-  if (summary == null ||
+  if (map['schemaVersion'] != dailyPlanProposalSchemaVersion ||
+      summary == null ||
       generatedAt == null ||
       !_hashPattern.hasMatch(inputHash) ||
+      !_hashPattern.hasMatch(proposalFingerprint) ||
       source == null) {
     return null;
   }
@@ -110,6 +115,7 @@ DailyPlanProposal? parseDailyPlanProposal(
   if (modelIdentifier != null && modelIdentifier.length > 80) return null;
 
   return DailyPlanProposal(
+    schemaVersion: dailyPlanProposalSchemaVersion,
     summary: summary,
     recommendations: recommendations,
     deferredTaskIds: deferred,
@@ -117,6 +123,7 @@ DailyPlanProposal? parseDailyPlanProposal(
     source: source,
     generatedAt: generatedAt,
     inputHash: inputHash,
+    proposalFingerprint: proposalFingerprint,
     modelIdentifier: modelIdentifier,
   );
 }
@@ -148,6 +155,7 @@ bool _fitsPlanBudgets(
 }
 
 Map<String, dynamic> dailyPlanProposalToJson(DailyPlanProposal proposal) => {
+  'schemaVersion': proposal.schemaVersion,
   'summary': proposal.summary,
   'recommendations': [
     for (final recommendation in proposal.recommendations)
@@ -164,6 +172,7 @@ Map<String, dynamic> dailyPlanProposalToJson(DailyPlanProposal proposal) => {
   'source': proposal.isAiGenerated ? 'deepseek' : 'deterministic_fallback',
   'generatedAt': proposal.generatedAt.toUtc().toIso8601String(),
   'inputHash': proposal.inputHash,
+  'proposalFingerprint': proposal.proposalFingerprint,
   if (proposal.modelIdentifier != null)
     'modelIdentifier': proposal.modelIdentifier,
 };

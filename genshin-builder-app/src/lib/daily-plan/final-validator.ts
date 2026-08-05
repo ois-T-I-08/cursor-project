@@ -5,6 +5,7 @@ import type {
   DailyPlanProposal,
   DailyPlanRecommendation,
 } from "./types";
+import { DAILY_PLAN_SCHEMA_VERSION } from "./versions";
 
 const MAX_RECOMMENDATIONS = 5;
 const DEFAULT_MINUTES = 20;
@@ -28,6 +29,7 @@ export function buildDeterministicDailyPlanProposal(
   const finalized = selectWithinBudgets(request, ranked);
   const warnings = deterministicWarnings(request, safeErrorCode);
   return {
+    schemaVersion: DAILY_PLAN_SCHEMA_VERSION,
     summary:
       finalized.recommendations.length > 0
         ? "今日実行できる候補を、入手日・目標差・既存優先度から並べました"
@@ -38,6 +40,7 @@ export function buildDeterministicDailyPlanProposal(
     source: "deterministic_fallback",
     generatedAt: generatedAt.toISOString(),
     inputHash,
+    proposalFingerprint: request.proposalFingerprint,
   };
 }
 
@@ -84,6 +87,7 @@ export function validateAndFinalizeDailyPlan(
   }
 
   return {
+    schemaVersion: DAILY_PLAN_SCHEMA_VERSION,
     summary: sanitizeSummary(raw.summary),
     recommendations: finalized.recommendations,
     deferredTaskIds: [...rawDeferred],
@@ -98,6 +102,7 @@ export function validateAndFinalizeDailyPlan(
     source: "deepseek",
     generatedAt: generatedAt.toISOString(),
     inputHash,
+    proposalFingerprint: request.proposalFingerprint,
     modelIdentifier,
   };
 }

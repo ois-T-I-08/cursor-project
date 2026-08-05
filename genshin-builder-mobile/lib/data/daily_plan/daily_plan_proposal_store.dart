@@ -27,7 +27,8 @@ class DailyPlanProposalStore {
           map['planFingerprint'] != planFingerprint) {
         return null;
       }
-      return parseDailyPlanProposal(map['proposal'], plan: plan);
+      final proposal = parseDailyPlanProposal(map['proposal'], plan: plan);
+      return proposal?.proposalFingerprint == planFingerprint ? proposal : null;
     } catch (_) {
       return null;
     }
@@ -39,6 +40,10 @@ class DailyPlanProposalStore {
     required String planFingerprint,
     required DailyPlanProposal proposal,
   }) {
+    if (proposal.schemaVersion != dailyPlanProposalSchemaVersion ||
+        proposal.proposalFingerprint != planFingerprint) {
+      throw ArgumentError('stale daily plan proposal');
+    }
     final encoded = jsonEncode({
       'version': 1,
       'planFingerprint': planFingerprint,

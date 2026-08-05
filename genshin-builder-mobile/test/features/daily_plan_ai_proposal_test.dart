@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:genshin_builder_mobile/application/daily_plan_notifications/daily_plan_user_scope.dart';
+import 'package:genshin_builder_mobile/application/planning/apply_daily_plan_enrichment.dart';
+import 'package:genshin_builder_mobile/application/planning/build_deterministic_daily_plan_proposal.dart';
 import 'package:genshin_builder_mobile/application/planning/daily_plan_fingerprint.dart';
 import 'package:genshin_builder_mobile/data/daily_plan/daily_plan_proposal_store.dart';
 import 'package:genshin_builder_mobile/data/db/app_database_facade.dart';
@@ -301,7 +303,9 @@ void main() {
       items: [item],
       availableMinutes: 30,
     );
-    final proposal = _proposal([item]);
+    final proposal = _proposal([
+      item,
+    ], proposalFingerprint: dailyPlanFingerprint(plan));
 
     Future<DailyPlanProposal?> savedProposal() => store.read(
       userScope: dailyPlanSafeUserScope(plan.userId),
@@ -338,6 +342,68 @@ void main() {
     expect(await savedProposal(), isNotNull);
     expect(find.text('追加済み'), findsOneWidget);
   });
+
+  testWidgets('stale proposal is rejected and regenerated without saving', (
+    tester,
+  ) async {
+    final db = await AppDatabase.openInMemory();
+    addTearDown(db.close);
+    final store = DailyPlanProposalStore(db);
+    final currentPlan = DailyPlan(
+      userId: 'proposal-stale-test-user',
+      date: DateTime(2026, 8, 4),
+      items: [_item(0, title: '更新後の育成タスク')],
+      availableMinutes: 30,
+    );
+    final stalePlan = currentPlan.copyWith(
+      items: [currentPlan.items.single.copyWith(priority: 999)],
+    );
+    final staleProposal = _proposal(
+      stalePlan.items,
+      proposalFingerprint: dailyPlanFingerprint(stalePlan),
+    );
+
+    expect(canAdoptDailyPlanProposal(currentPlan, staleProposal), isFalse);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          dailyPlanProvider.overrideWith((ref) async => currentPlan),
+          adoptedDailyPlanProvider.overrideWith((ref) async => currentPlan),
+          dailyPlanProposalProvider(
+            0,
+          ).overrideWith((ref) async => staleProposal),
+          dailyPlanProposalProvider(1).overrideWith(
+            (ref) async => buildDeterministicDailyPlanProposal(currentPlan),
+          ),
+          dailyPlanProposalStoreProvider.overrideWith((ref) async => store),
+          dailyPlanTodayCompletionsProvider.overrideWith(
+            (ref) async => <String>{},
+          ),
+          charactersProvider.overrideWith((ref) async => <MasterCharacter>[]),
+          materialsMapProvider.overrideWith(
+            (ref) async => <String, MasterMaterial>{},
+          ),
+        ],
+        child: const MaterialApp(home: DailyPlanScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('daily-plan-add-to-list')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('提案が古くなったため、再生成します'), findsOneWidget);
+    expect(
+      await store.read(
+        userScope: dailyPlanSafeUserScope(currentPlan.userId),
+        localDate: formatLocalDate(currentPlan.date),
+        planFingerprint: dailyPlanFingerprint(currentPlan),
+        plan: currentPlan,
+      ),
+      isNull,
+    );
+  });
 }
 
 DailyPlanItem _item(
@@ -372,6 +438,8 @@ DailyPlanProposal _proposal(
   String reason = '今日進める効果が大きいため',
   List<String> deferredTaskIds = const [],
   DailyPlanRecommendationSource source = DailyPlanRecommendationSource.deepseek,
+  String proposalFingerprint =
+      'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
 }) {
   return DailyPlanProposal(
     summary: summary,
@@ -390,6 +458,7 @@ DailyPlanProposal _proposal(
     generatedAt: DateTime.utc(2026, 8, 4, 3, 5),
     inputHash:
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    proposalFingerprint: proposalFingerprint,
   );
 }
 

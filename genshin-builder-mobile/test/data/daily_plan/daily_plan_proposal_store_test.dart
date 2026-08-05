@@ -39,6 +39,7 @@ void main() {
     generatedAt: DateTime.utc(2026, 8, 2, 3),
     inputHash:
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    proposalFingerprint: fingerprint,
     modelIdentifier: 'deepseek-v4-flash',
   );
 
@@ -86,4 +87,17 @@ void main() {
       );
     },
   );
+
+  test('refuses to save a stale proposal under a new fingerprint', () async {
+    expect(
+      () => store.save(
+        userScope: scope,
+        localDate: localDate,
+        planFingerprint:
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+        proposal: proposal,
+      ),
+      throwsArgumentError,
+    );
+  });
 }

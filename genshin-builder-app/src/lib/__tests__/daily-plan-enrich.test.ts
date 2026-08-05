@@ -12,6 +12,7 @@ import type {
 import {
   parseDailyPlanAiResponse,
   parseDailyPlanEnrichRequest,
+  parseDailyPlanProposal,
 } from "@/lib/daily-plan/validation";
 
 const NOW = new Date("2026-08-02T03:00:00.000Z");
@@ -21,6 +22,7 @@ function request(
 ): DailyPlanEnrichRequest {
   return {
     clientScope: "0123456789ab",
+    proposalFingerprint: "f".repeat(64),
     date: "2026-08-02",
     timezone: "UTC+09:00",
     weekday: 7,
@@ -129,9 +131,66 @@ describe("daily-plan strict validation", () => {
       parseDailyPlanAiResponse({ ...aiResult(), chainOfThought: "secret" }),
     ).toThrow();
   });
+
+  it("fails closed on an unsupported proposal schema version", () => {
+    const proposal = {
+      schemaVersion: 2,
+      ...aiResult(),
+      source: "deepseek",
+      generatedAt: NOW.toISOString(),
+      inputHash: "a".repeat(64),
+      proposalFingerprint: "f".repeat(64),
+      modelIdentifier: "deepseek-v4-flash",
+    };
+    expect(() => parseDailyPlanProposal(proposal)).toThrow();
+  });
 });
 
 describe("deterministic final validation", () => {
+  it("never emits unknown or duplicate task ids and normalizes priorities", () => {
+    const result = validateAndFinalizeDailyPlan(
+      aiResult({
+        recommendations: [
+          {
+            taskId: "invented",
+            priority: 1,
+            category: "do_today",
+            reason: "候補外の項目",
+            suggestedMinutes: 20,
+          },
+          {
+            taskId: "wd_freedom",
+            priority: 1,
+            category: "do_today",
+            reason: "今日開放されているため",
+            suggestedMinutes: 20,
+          },
+          {
+            taskId: "wd_freedom",
+            priority: 2,
+            category: "do_today",
+            reason: "重複した項目",
+            suggestedMinutes: 20,
+          },
+        ],
+      }),
+      request(),
+      "d".repeat(64),
+      "deepseek-v4-flash",
+      NOW,
+    );
+
+    expect(result.recommendations.map((item) => item.taskId)).not.toContain(
+      "invented",
+    );
+    expect(new Set(result.recommendations.map((item) => item.taskId)).size).toBe(
+      result.recommendations.length,
+    );
+    expect(result.recommendations.map((item) => item.priority)).toEqual(
+      result.recommendations.map((_, index) => index + 1),
+    );
+  });
+
   it("rejects unavailable tasks and enforces resin/time budgets", () => {
     const result = validateAndFinalizeDailyPlan(
       aiResult({
@@ -227,6 +286,8 @@ describe("enrichDailyPlan", () => {
     expect(result.source).toBe("deterministic_fallback");
     expect(evaluate).not.toHaveBeenCalled();
     expect(result.recommendations[0]?.taskId).toBe("wd_freedom");
+    expect(result.schemaVersion).toBe(1);
+    expect(result.proposalFingerprint).toBe("f".repeat(64));
   });
 
   it("uses the shared DeepSeek wrapper result and caches by input", async () => {
@@ -253,6 +314,33 @@ describe("enrichDailyPlan", () => {
     expect(second).toEqual(first);
     expect(evaluate).toHaveBeenCalledOnce();
     expect(first.inputHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(first.proposalFingerprint).toBe("f".repeat(64));
+  });
+
+  it("invalidates the cache when the proposal fingerprint changes", async () => {
+    const evaluate = vi.fn().mockResolvedValue({
+      result: aiResult(),
+      modelIdentifier: "deepseek-v4-flash",
+      usage: {},
+      attempts: 1,
+    });
+    const options = {
+      env: {
+        DEEPSEEK_ENABLED: "true",
+        DEEPSEEK_DAILY_PLAN_ENABLED: "true",
+        DEEPSEEK_API_KEY: "test-key",
+      },
+      client: { evaluate } as never,
+      now: NOW,
+    };
+
+    await enrichDailyPlan(request(), options);
+    await enrichDailyPlan(
+      request({ proposalFingerprint: "e".repeat(64) }),
+      options,
+    );
+
+    expect(evaluate).toHaveBeenCalledTimes(2);
   });
 
   it("force bypasses cache without changing the cache identity", async () => {

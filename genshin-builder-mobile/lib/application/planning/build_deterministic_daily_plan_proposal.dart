@@ -56,5 +56,6 @@ DailyPlanProposal buildDeterministicDailyPlanProposal(
     source: DailyPlanRecommendationSource.deterministicFallback,
     generatedAt: generatedAt ?? DateTime.now(),
     inputHash: dailyPlanFingerprint(plan),
+    proposalFingerprint: dailyPlanFingerprint(plan),
   );
 }

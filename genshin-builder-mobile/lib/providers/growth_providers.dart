@@ -221,6 +221,7 @@ final dailyPlanProposalProvider = FutureProvider.family<DailyPlanProposal, int>(
             plan: plan,
             weekday: plan.date.weekday,
             clientScope: dailyPlanSafeUserScope(plan.userId),
+            proposalFingerprint: dailyPlanFingerprint(plan),
             force: generation > 0,
           );
       return proposal ?? buildDeterministicDailyPlanProposal(plan);

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "summary": "今日は曜日素材を優先します",
+  "recommendations": [
+    {
+      "taskId": "wd_freedom",
+      "priority": 1,
+      "category": "do_today",
+      "reason": "今日開放されているため",
+      "suggestedMinutes": 20
+    },
+    {
+      "taskId": "goal_level",
+      "priority": 2,
+      "category": "do_today",
+      "reason": "目標との差が大きいため",
+      "suggestedMinutes": 30
+    }
+  ],
+  "deferredTaskIds": ["goal_talent_locked"],
+  "warnings": [],
+  "source": "deepseek",
+  "generatedAt": "2026-08-02T03:00:00.000Z",
+  "inputHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "proposalFingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "modelIdentifier": "deepseek-v4-flash"
+}

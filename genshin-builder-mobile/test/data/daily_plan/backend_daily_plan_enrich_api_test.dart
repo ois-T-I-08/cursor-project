@@ -7,6 +7,8 @@ import 'package:genshin_builder_mobile/data/daily_plan/backend_daily_plan_enrich
 import 'package:genshin_builder_mobile/domain/planning/daily_plan.dart';
 
 void main() {
+  const proposalFingerprint =
+      'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
   final plan = DailyPlan(
     userId: 'raw-user-id-must-not-leave-device',
     date: DateTime(2026, 8, 2),
@@ -54,6 +56,7 @@ void main() {
             jsonEncode({
               'ok': true,
               'data': {
+                'schemaVersion': 1,
                 'summary': '今日は曜日素材を優先します',
                 'recommendations': [
                   {
@@ -70,6 +73,7 @@ void main() {
                 'generatedAt': '2026-08-02T03:00:00.000Z',
                 'inputHash':
                     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                'proposalFingerprint': proposalFingerprint,
                 'modelIdentifier': 'deepseek-v4-flash',
               },
             }),
@@ -83,12 +87,14 @@ void main() {
       plan: plan,
       weekday: 7,
       clientScope: '0123456789ab',
+      proposalFingerprint: proposalFingerprint,
       force: true,
     );
 
     expect(proposal?.isAiGenerated, isTrue);
     expect(proposal?.recommendations.single.taskId, 'wd_freedom');
     expect(sent['clientScope'], '0123456789ab');
+    expect(sent['proposalFingerprint'], proposalFingerprint);
     expect(sent['force'], isTrue);
     expect(sent.toString(), isNot(contains(plan.userId)));
     expect(sent.toString().toLowerCase(), isNot(contains('cookie')));
@@ -113,12 +119,14 @@ void main() {
             plan: plan,
             weekday: 7,
             clientScope: '0123456789ab',
+            proposalFingerprint: proposalFingerprint,
           ),
           isNull,
         );
       }
 
       Map<String, dynamic> payload(String taskId) => {
+        'schemaVersion': 1,
         'summary': '候補を選びました',
         'recommendations': [
           {
@@ -135,9 +143,16 @@ void main() {
         'generatedAt': '2026-08-02T03:00:00.000Z',
         'inputHash':
             'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        'proposalFingerprint': proposalFingerprint,
       };
 
       await expectRejected({...payload('wd_freedom'), 'rawAiOutput': 'secret'});
+      await expectRejected({...payload('wd_freedom'), 'schemaVersion': 2});
+      await expectRejected({
+        ...payload('wd_freedom'),
+        'proposalFingerprint':
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      });
       await expectRejected(payload('invented'));
       await expectRejected(payload('talent_locked'));
     },
@@ -152,6 +167,7 @@ void main() {
             jsonEncode({
               'ok': true,
               'data': {
+                'schemaVersion': 1,
                 'summary': '候補を選びました',
                 'recommendations': [
                   {
@@ -168,6 +184,7 @@ void main() {
                 'generatedAt': '2026-08-02T03:00:00.000Z',
                 'inputHash':
                     'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+                'proposalFingerprint': proposalFingerprint,
               },
               'raw': 'must not be accepted',
             }),
@@ -178,7 +195,12 @@ void main() {
     );
 
     expect(
-      await api.suggest(plan: plan, weekday: 7, clientScope: '0123456789ab'),
+      await api.suggest(
+        plan: plan,
+        weekday: 7,
+        clientScope: '0123456789ab',
+        proposalFingerprint: proposalFingerprint,
+      ),
       isNull,
     );
   });
@@ -194,7 +216,12 @@ void main() {
     );
 
     expect(
-      await api.suggest(plan: plan, weekday: 7, clientScope: '0123456789ab'),
+      await api.suggest(
+        plan: plan,
+        weekday: 7,
+        clientScope: '0123456789ab',
+        proposalFingerprint: proposalFingerprint,
+      ),
       isNull,
     );
     expect(called, isFalse);

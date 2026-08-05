@@ -85,13 +85,84 @@ void main() {
         ),
       );
 
-      expect(find.text('ゲーム情報'), findsOneWidget);
+      expect(find.text('育成と記録'), findsOneWidget);
+      expect(find.text('デイリー素材'), findsOneWidget);
+      expect(find.text('聖遺物セット'), findsOneWidget);
+      expect(find.text('ブックマーク'), findsOneWidget);
+      expect(find.text('螺旋統計'), findsOneWidget);
       expect(find.text('ガチャ'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('開催中の情報'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('開催中の情報'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('アカウント'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('アカウント'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('設定'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+
       expect(find.text('連携と管理'), findsOneWidget);
       expect(find.text('HoYoLAB連携'), findsOneWidget);
       expect(find.text('設定'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('指定された既存機能の全導線が対応routeを開く', (tester) async {
+      const destinations = {
+        'デイリー素材': '/daily',
+        '聖遺物セット': '/artifacts',
+        'ブックマーク': '/bookmarks',
+        '螺旋統計': '/abyss',
+        'ガチャ': '/gacha',
+        'HoYoLAB連携': '/settings/hoyolab',
+        '設定': '/settings',
+      };
+      final router = GoRouter(
+        initialLocation: '/more',
+        routes: [
+          GoRoute(path: '/more', builder: (_, __) => const MoreScreen()),
+          for (final path in destinations.values)
+            GoRoute(
+              path: path,
+              builder: (_, __) => Scaffold(body: Text('route:$path')),
+            ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            homeCalendarEventsProvider.overrideWith((ref) async => const []),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+
+      for (final destination in destinations.entries) {
+        router.go('/more');
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.scrollUntilVisible(
+          find.text(destination.key),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.tap(find.text(destination.key));
+        await tester.pumpAndSettle();
+        expect(find.text('route:${destination.value}'), findsOneWidget);
+      }
       expect(tester.takeException(), isNull);
     });
   });

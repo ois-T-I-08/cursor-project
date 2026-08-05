@@ -4,6 +4,13 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-08-05 — 日次提案DTOと採用境界のクロスプラットフォーム固定
+
+- **目的:** ナビ再設計ブランチの最終監査で、表示後に進捗が変わった提案を新しいfingerprintで保存できる採用raceと、共通DTOの版情報不足を解消。
+- **決定事項:** 日次リクエスト/応答へ64桁SHA-256形式の`proposalFingerprint`を追加し、応答へ`schemaVersion: 1`を必須化。cache identityにもfingerprintを含める。Flutterは応答時・保存時・採用直前の3境界でschema/fingerprintを検証し、不一致なら保存せず再生成する。
+- **パリティ:** `shared/domain-golden/daily-plan-proposal-v1.json`を追加し、Web Zod parserとFlutter parserが同じfixtureを受理し、schema不一致をfail-closedにする。既存Golden期待値は変更しない。
+- **影響:** Prisma migration、実DeepSeek、feature flag、production/staging、既存ドメイン計算への変更なし。
+
 ## 2026-08-02 — 「今日やること」DeepSeek優先タスク提案
 
 - **目的:** 既存のFlutter「今日やること」画面・モデル・完了キーと、共通`DeepSeekJsonClient`を再利用し、候補外を生成しない今日の優先タスク提案を追加。

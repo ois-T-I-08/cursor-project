@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../application/daily_plan_notifications/daily_plan_user_scope.dart';
 import '../../../application/planning/build_deterministic_daily_plan_proposal.dart';
+import '../../../application/planning/apply_daily_plan_enrichment.dart';
 import '../../../application/planning/build_growth_route_request.dart';
 import '../../../application/planning/daily_plan_fingerprint.dart';
 import '../../../domain/planning/daily_plan.dart';
@@ -109,6 +110,18 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     setState(() => _adopting = true);
     try {
       final plan = await ref.read(dailyPlanProvider.future);
+      if (!canAdoptDailyPlanProposal(plan, proposal)) {
+        if (mounted) {
+          setState(() {
+            _proposalClosed = false;
+            _proposalGeneration++;
+          });
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('提案が古くなったため、再生成します')));
+        }
+        return;
+      }
       final store = await ref.read(dailyPlanProposalStoreProvider.future);
       await store.save(
         userScope: dailyPlanSafeUserScope(plan.userId),

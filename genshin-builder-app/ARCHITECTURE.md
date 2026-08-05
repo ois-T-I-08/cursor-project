@@ -278,6 +278,8 @@ FlutterはHoYoLAB情報を端末内で`SimulationBuildSnapshot`へ縮約し、Co
 
 Flutter は既存の `GenerateDailyPlanUseCase` で、曜日素材・週ボス・育成目標・突破・天賦・武器候補を通常コードだけで最大20件へ絞る。送信するのは候補ID、種別、関連ID、数値進捗、樹脂・時間見積、当日入手可否、ブックマーク有無、短い構造化理由だけである。HoYoLAB Cookie、UID、未加工レスポンス、自由入力原文は送らない。
 
+リクエストは候補生成時の端末側 `proposalFingerprint` を含み、レスポンスは `schemaVersion: 1` と同じfingerprintを返す。Flutterは未知schemaをfail-closedにし、採用時に現在planから再計算したfingerprintと一致しない提案を保存せず再生成する。Web/Mobileのparserは `shared/domain-golden/daily-plan-proposal-v1.json` を同じ正本として検証する。
+
 ```
 Flutter Today screen
   → deterministic candidates（目安10〜20件、上限20件）

@@ -34,6 +34,7 @@ class BackendDailyPlanEnrichApi {
     required DailyPlan plan,
     required int weekday,
     required String clientScope,
+    required String proposalFingerprint,
     bool force = false,
   }) async {
     if (plan.items.isEmpty) return null;
@@ -41,6 +42,7 @@ class BackendDailyPlanEnrichApi {
     if (uri == null) return null;
     final body = jsonEncode({
       'clientScope': clientScope,
+      'proposalFingerprint': proposalFingerprint,
       'date': formatLocalDate(plan.date),
       'timezone': _timezoneLabel(DateTime.now().timeZoneOffset),
       'weekday': weekday,
@@ -105,7 +107,9 @@ class BackendDailyPlanEnrichApi {
           envelope['data'] == null) {
         return null;
       }
-      return parseDailyPlanProposal(envelope['data'], plan: plan);
+      final proposal = parseDailyPlanProposal(envelope['data'], plan: plan);
+      if (proposal?.proposalFingerprint != proposalFingerprint) return null;
+      return proposal;
     } catch (_) {
       return null;
     }

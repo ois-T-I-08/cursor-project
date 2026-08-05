@@ -24,8 +24,32 @@ class MoreScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           FeatureHubSection(
-            title: 'ゲーム情報',
+            title: '育成と記録',
             children: [
+              FeatureHubDestination(
+                icon: Icons.calendar_today_outlined,
+                title: 'デイリー素材',
+                description: '本日入手できる天賦・武器素材を確認',
+                onTap: () => context.go('/daily'),
+              ),
+              FeatureHubDestination(
+                icon: Icons.diamond_outlined,
+                title: '聖遺物セット',
+                description: 'セット効果と装備キャラを確認',
+                onTap: () => context.go('/artifacts'),
+              ),
+              FeatureHubDestination(
+                icon: Icons.bookmark_outline,
+                title: 'ブックマーク',
+                description: '不足している素材をまとめて確認',
+                onTap: () => context.go('/bookmarks'),
+              ),
+              FeatureHubDestination(
+                icon: Icons.auto_graph_outlined,
+                title: '螺旋統計',
+                description: '深境螺旋の採用率と編成傾向を確認',
+                onTap: () => context.go('/abyss'),
+              ),
               FeatureHubDestination(
                 icon: Icons.casino_outlined,
                 title: 'ガチャ',
