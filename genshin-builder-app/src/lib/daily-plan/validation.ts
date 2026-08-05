@@ -16,7 +16,13 @@ const relatedIdSchema = z
   .string()
   .trim()
   .regex(/^[A-Za-z0-9:_|.-]{1,96}$/);
-const safeTextSchema = z.string().trim().min(1).max(120);
+const forbiddenDisplayFormat = /https?:\/\/|www\.|<[^>]*>|\[[^\]]+\]\([^)]*\)|[*_`#]/i;
+const safeTextSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(120)
+  .refine((value) => !forbiddenDisplayFormat.test(value));
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
 const candidateSchema = z.strictObject({
@@ -103,14 +109,46 @@ const aiResponseSchema = z.strictObject({
   warnings: z.array(safeTextSchema).max(5),
 });
 
-const proposalSchema = aiResponseSchema.extend({
-  schemaVersion: z.literal(DAILY_PLAN_SCHEMA_VERSION),
-  source: z.enum(["deepseek", "deterministic_fallback"]),
-  generatedAt: z.iso.datetime({ offset: true }),
-  inputHash: sha256Schema,
-  proposalFingerprint: sha256Schema,
-  modelIdentifier: z.string().trim().min(1).max(80).optional(),
-});
+const proposalSchema = aiResponseSchema
+  .extend({
+    schemaVersion: z.literal(DAILY_PLAN_SCHEMA_VERSION),
+    source: z.enum(["deepseek", "deterministic_fallback"]),
+    generatedAt: z.iso.datetime({ offset: true }),
+    inputHash: sha256Schema,
+    proposalFingerprint: sha256Schema,
+    modelIdentifier: z.string().trim().min(1).max(80).optional(),
+  })
+  .superRefine((value, context) => {
+    const recommendationIds = new Set<string>();
+    const priorities = new Set<number>();
+    value.recommendations.forEach((recommendation, index) => {
+      if (!recommendationIds.add(recommendation.taskId)) {
+        context.addIssue({
+          code: "custom",
+          path: ["recommendations", index, "taskId"],
+          message: "duplicate taskId",
+        });
+      }
+      if (!priorities.add(recommendation.priority)) {
+        context.addIssue({
+          code: "custom",
+          path: ["recommendations", index, "priority"],
+          message: "duplicate priority",
+        });
+      }
+    });
+
+    const deferredIds = new Set<string>();
+    value.deferredTaskIds.forEach((taskId, index) => {
+      if (!deferredIds.add(taskId) || recommendationIds.has(taskId)) {
+        context.addIssue({
+          code: "custom",
+          path: ["deferredTaskIds", index],
+          message: "duplicate or recommended taskId",
+        });
+      }
+    });
+  });
 
 export function parseDailyPlanEnrichRequest(value: unknown): DailyPlanEnrichRequest {
   return requestSchema.parse(value);

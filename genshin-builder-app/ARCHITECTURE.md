@@ -60,6 +60,12 @@
 
 ## レイヤー責務
 
+### Consumer Web route group
+
+一般利用者向けWebは `src/app/(consumer)/` に分離し、URLにはroute group名を露出しない。`/today`、`/characters`、`/growth`、`/teams`、`/more` の5分類をFlutterと揃え、モバイルは下部ナビ、タブレット以上は同じ項目のサイドバーを使う。`/settings` と `/characters/[id]` も既存URLのままconsumer layout配下に置く。
+
+root layoutはHTML・body・全体テーマだけを担当する。consumer layoutが匿名ユーザー向けproviderとapp shellを持ち、`/admin/*` は専用layoutでconsumer navigationから分離する。詳細は `docs/CONSUMER_WEB_FOUNDATION.md`。
+
 ### `src/app/` — ルーティング・ページ
 
 - **Server Component がデフォルト。** データ取得はここで完結させ、Client に props 渡し
@@ -77,6 +83,7 @@
 | `home/` | ホーム（ブックマーク合算表示） |
 | `providers/` | `BookmarkProvider`（Context ラッパー） |
 | `ui/` | 汎用 UI（Slider, Accordion） |
+| `consumer/` | responsive app shell、5分類navigation、共通状態表示、Today read-only表示 |
 
 ### `src/contexts/` — クライアント状態
 
@@ -309,6 +316,8 @@ Server Component (page)
 ```
 
 **ルール:** 状態・イベント・デバウンス = Client。DB・外部 API の初回取得 = Server。
+
+Consumer navigationだけが現在pathnameを得るためClient Componentとなる。consumer API clientは `server-only` のGET/read-only境界であり、CookieやBearer tokenをClient Componentへ渡さない。WebとFlutterの共有対象はDTO、schema version、validation、fixtureであり、UIコードと端末内保存は共有しない。
 
 ---
 

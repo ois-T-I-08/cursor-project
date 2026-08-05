@@ -9,10 +9,10 @@ export default function RootLoading() {
     <div className="flex min-h-[60vh] items-center justify-center">
       <div className="text-center" role="status" aria-label="読み込み中">
         <div
-          className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-accent"
+          className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-app-border border-t-accent"
           aria-hidden="true"
         />
-        <p className="text-sm text-white/40">読み込み中...</p>
+        <p className="consumer-muted text-sm">読み込み中...</p>
       </div>
     </div>
   );
