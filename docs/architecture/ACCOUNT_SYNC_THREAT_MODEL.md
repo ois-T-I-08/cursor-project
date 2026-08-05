@@ -96,6 +96,7 @@ Severity here means impact on safely releasing common accounts/sync, not necessa
 2. Web bookmarks are unscoped localStorage and disappear with browser storage; they require an explicit, conflict-aware account migration.
 3. Team-recommendation job reads currently rely on UUID job IDs rather than account ownership. Do not reuse this capability-style pattern for account data.
 4. Current user-data audit is limited to non-account operational domains; merge/sync/adopt/revoke/delete require a minimal separate audit model.
+5. Full development-dependency audit reports high-severity `brace-expansion` denial-of-service advisories through the ESLint toolchain, while `npm audit --omit=dev` reports zero production vulnerabilities. Update and verify the lint dependency chain in a separate supply-chain PR rather than applying an unreviewed audit fix here.
 
 ### LOW / POSITIVE CONTROLS
 
