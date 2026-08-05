@@ -4,7 +4,7 @@ Status: Proposed
 
 Date: 2026-08-06
 
-Scope: design, audit, and API contracts only
+Scope: design, audit, API contracts, and disabled foundation implementation status
 
 Related: `ACCOUNT_SYNC_THREAT_MODEL.md`, `../adr/0001-cross-platform-account-identity.md`
 
@@ -17,6 +17,27 @@ The following labels keep observed behavior separate from design:
 - **FACT**: verified in the repository at base `92edeec1c83a2ad08b1fc1be011f56a8142a1aa8`.
 - **INFERENCE**: an expected consequence that is not explicitly guaranteed by code or platform configuration.
 - **PROPOSAL**: a future contract. It is not implemented by this change.
+
+### 1.1 Disabled foundation implementation (2026-08-06)
+
+The separately authorized `feature/account-schema-session` implementation adds only the disabled provider-neutral foundation. This ADR remains Proposed, and this status does not authorize runtime login or production/staging rollout.
+
+| Design item | Foundation implementation | Runtime state |
+|---|---|---|
+| Canonical `Account` | Prisma model, additive PostgreSQL migration, server-generated UUID, active-account repository | Empty table; no automatic account creation |
+| `AuthIdentity` | Provider-neutral model and `(provider, providerSubject)` uniqueness | No Google, Apple, email, Passkey, or provider adapter |
+| `WebSession` | Opaque 256-bit token generation, SHA-256 hash-at-rest, revocation, rotation, account-version fencing, expiry, bounded last-seen writes, cleanup, metadata-only listing | No public route issues a token or Cookie |
+| `AnonymousIdentity` | Expand-only model with hashed secret, expiry/revoke/claim fields | No legacy mapping, backfill, Cookie issuance, or claim |
+| Web Cookie | Internal `__Host-gb_session` builder/parser/deletion primitives | Existing `gb_user_id` Cookie is unchanged |
+| `AuthContext` | Central server-only `unauthenticated` / `legacyAnonymous` / `account` union; account state derives only from a resolved session | Existing consumer routes still use legacy behavior |
+| Ownership boundary | Server-owned-field rejection helper and account-scoped session repository operations | No account-owned consumer repository or API cutover |
+| Feature gates | `ACCOUNT_IDENTITY_ENABLED=false`, `WEB_ACCOUNT_SESSION_ENABLED=false`; both exact `true` values are required for issuance/rotation | CI and examples remain false |
+| Audit | Token-free minimal interface and call points with non-reversible short correlations | No durable account audit table until retention/access policy is approved |
+| Verification | Unit security tests, PostgreSQL concurrency/FK/rollback tests, migration interruption/retry test, disposable-Postgres CI | Production/staging databases are not used |
+
+The design proposal preferred a keyed token hash. This foundation cannot add or change a secret, so it hashes the 256-bit random opaque token with SHA-256. The token's entropy prevents practical offline guessing, but selecting and rotating a server-held hash key remains a release blocker before runtime login.
+
+Not implemented here: login UI/routes, OAuth/OIDC, Passkey/WebAuthn, Flutter authentication, anonymous claim, account data sync, Daily Plan account connection, deletion/export jobs, deployment, and feature enablement. The next reviewed PR may implement the Web anonymous-session preparation or a Web login adapter, but neither is enabled by this foundation.
 
 ## 2. Identity vocabulary
 

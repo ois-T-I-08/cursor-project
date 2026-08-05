@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:migration:account-session": "node scripts/test-account-session-migration.mjs",
     "test:migration:youtube-hardening": "node scripts/test-youtube-hardening-migration.mjs",
     "postinstall": "prisma generate"
   },

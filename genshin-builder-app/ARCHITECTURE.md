@@ -8,9 +8,13 @@
 - **マスタデータ:** 外部 API から同期し DB に永続化（オフライン耐性）
 - **表示用リッチデータ:** スキル説明・ステータス計算等は表示時に API 取得（キャッシュ付き）
 
-## Cross-platform identity (proposed)
+## Cross-platform identity (disabled foundation)
 
-Web/Flutter共通account、server-managed Web session、Flutter device session、匿名昇格、同期、Daily Plan共有の設計判断は、リポジトリ共通の [`../docs/architecture/CROSS_PLATFORM_IDENTITY.md`](../docs/architecture/CROSS_PLATFORM_IDENTITY.md) と [`../docs/architecture/ACCOUNT_SYNC_THREAT_MODEL.md`](../docs/architecture/ACCOUNT_SYNC_THREAT_MODEL.md) を正とする。現時点の`gb_user_id`はlegacy匿名所有キーであり、production account認証には使わない。実装は未着手で、Prisma migrationやprovider/secret追加をこの文書は許可しない。
+Web/Flutter共通account、server-managed Web session、Flutter device session、匿名昇格、同期、Daily Plan共有の設計判断は、リポジトリ共通の [`../docs/architecture/CROSS_PLATFORM_IDENTITY.md`](../docs/architecture/CROSS_PLATFORM_IDENTITY.md) と [`../docs/architecture/ACCOUNT_SYNC_THREAT_MODEL.md`](../docs/architecture/ACCOUNT_SYNC_THREAT_MODEL.md) を正とする。現時点の`gb_user_id`はlegacy匿名所有キーであり、production account認証には使わない。
+
+2026-08-06のfoundationでは、`Account` / `AuthIdentity` / `WebSession` / `AnonymousIdentity` のexpand-only PostgreSQL schema、server-only session repository/service、Cookie primitive、`AuthContext`、既定falseのfeature flagだけを追加した。公開login/logout route、provider、実ユーザーsession発行、既存consumer routeの認証切替、`gb_user_id`移行、Flutter変更、staging/production migrationはない。
+
+`ACCOUNT_IDENTITY_ENABLED` と `WEB_ACCOUNT_SESSION_ENABLED` は未設定をfalseとし、両方がexact `true`でない限りsessionの新規発行・rotationを拒否する。既存sessionの検証・失効用primitiveとmigration/model/testはflagに関係なく利用できる。
 
 ---
 
@@ -128,6 +132,21 @@ root layoutはHTML・body・全体テーマだけを担当する。consumer layo
 - DB 空時は `dummy-data.ts` にフォールバック（キャラのみ）
 - **書き込み禁止**
 
+Account foundationだけは、認証・失効を原子的に扱うため `src/lib/repository/account-session.ts` を専用のsession data-access boundaryとする。一般repositoryの読み取り専用規則を横断的に緩めるものではない。このrepositoryはclient payloadを受けず、Account作成、active Account参照、session作成/解決/rotation/revoke/cleanup/metadata listingだけを扱う。
+
+### `src/lib/auth/` — provider-neutral auth foundation
+
+| ファイル | 責務 |
+|---|---|
+| `tokens.ts` | 256-bit opaque token生成、SHA-256 hash、短縮相関値。raw tokenを保存・ログしない |
+| `cookies.ts` | `__Host-gb_session` のstrict parser、Secure/HttpOnly/SameSite=Lax/Path=/ builder、確実な削除 |
+| `web-session-service.ts` | feature gate、expiry/revoke/disabled検証、rotation、lastSeen throttle、safe audit call point |
+| `auth-context.ts` | `unauthenticated` / `legacyAnonymous` / `account` のserver-only中央context。request owner IDは読まない |
+| `ownership.ts` | owner/account/session/clientScope等のclient注入をfail-closedで拒否 |
+| `audit.ts` | retention未決定のため永続化せず、許可フィールドだけのinterfaceを固定 |
+
+この層はadmin/sync Bearer認証と別物であり、公開consumer routeへまだ接続しない。raw tokenはCookie設定直前の戻り値として一度だけ扱い、`AuthContext`・repository・DB・auditには残さない。
+
 ### `src/lib/sync.ts` + `sync-upgrade.ts` — マスタ書き込み
 
 - `syncMasterData()`: リスト upsert + 差分/完全突破同期
@@ -173,6 +192,10 @@ root layoutはHTML・body・全体テーマだけを担当する。consumer layo
 | Model | 内容 |
 |-------|------|
 | `UserProgress` | 匿名 userId × characterId で一意。artifacts は JSON 文字列 |
+| `Account` | server-generated canonical principal。status/version/disabled/deletion requestのみ。自動作成なし |
+| `AuthIdentity` | provider-neutral binding。`(provider, providerSubject)`一意。provider未接続 |
+| `WebSession` | hash-only opaque Web session。expiry/revoke/rotation/account-version fencing |
+| `AnonymousIdentity` | 将来のserver-managed匿名owner。legacy mapping/backfill/claimは未実装 |
 
 ### 運用
 
