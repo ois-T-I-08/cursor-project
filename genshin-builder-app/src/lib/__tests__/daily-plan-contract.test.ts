@@ -33,4 +33,31 @@ describe("daily-plan cross-platform contract", () => {
       parseDailyPlanProposal({ ...fixture(), schemaVersion: 2 }),
     ).toThrow();
   });
+
+  it("rejects unknown fields", () => {
+    expect(() => parseDailyPlanProposal({ ...fixture(), unexpected: true })).toThrow();
+  });
+
+  it("rejects an invalid task ID", () => {
+    const value = fixture();
+    const recommendations = structuredClone(value.recommendations) as Array<Record<string, unknown>>;
+    recommendations[0] = { ...recommendations[0], taskId: "invalid task id" };
+    expect(() => parseDailyPlanProposal({ ...value, recommendations })).toThrow();
+  });
+
+  it("rejects an invalid proposal fingerprint", () => {
+    expect(() =>
+      parseDailyPlanProposal({ ...fixture(), proposalFingerprint: "not-a-sha256" }),
+    ).toThrow();
+  });
+
+  it("rejects an unknown enum value", () => {
+    expect(() => parseDailyPlanProposal({ ...fixture(), source: "unknown" })).toThrow();
+  });
+
+  it("rejects a missing required field", () => {
+    const value = fixture();
+    delete value.generatedAt;
+    expect(() => parseDailyPlanProposal(value)).toThrow();
+  });
 });
