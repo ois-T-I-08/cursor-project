@@ -4,6 +4,15 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-08-05 — Consumer Web application foundation
+
+- **目的:** Flutterの情報設計に合わせ、Next.js一般利用者向けWebを管理画面・公開APIから分離したroute groupとresponsive shellへ移行。
+- **実装:** `(consumer)` に `/today`、`/characters`、`/growth`、`/teams`、`/more` を配置。モバイル下部ナビ、タブレットcompact sidebar、PC sidebar、OS追従light/dark token、safe area、focus/skip link/reduced motion、共通loading/empty/error/unavailableを追加。既存 `/characters/[id]` と `/settings` はURLを維持し、`/admin/*` は専用layoutへ分離。
+- **契約/Today:** PR #38のschema v1 DTOと共通fixtureを維持し、Web Zod parserをFlutter同等のfail-closed条件へ強化。Todayは最優先1件、次点最大2件、残り/見送り/AI理由を初期折りたたみにするread-only表示境界を追加し、内部ID/hash/category/priorityを表示しない。安全な共有認証・読取APIがないため実データ接続、提案採用、保存は未実装。
+- **API/認証:** server-only、GET-only、no-storeのconsumer API client基盤を追加。HTTPS/loopback、timeout/AbortSignal、JSON/Zod、401/403/404/409/429/5xx、request IDを安全に処理。Webは既存`gb_user_id`匿名CookieのみでFlutterとの共通account/sessionはない。
+- **検証:** Prisma generate/validate、typecheck、lint error 0（既存warning 1）、Vitest 438成功・DB専用46 skip、Next production build、production audit 0、Flutter共有fixture Golden 2件、`git diff --check`成功。DB migration、実DeepSeek、feature flag、secret、staging/production、Flutterコード変更なし。
+- **未完了 / 次回:** account/sessionと認可済みread APIを設計後にのみ、Flutter提案のWeb表示・採用・同期を接続する。
+
 ## 2026-08-05 — 日次提案DTOと採用境界のクロスプラットフォーム固定
 
 - **目的:** ナビ再設計ブランチの最終監査で、表示後に進捗が変わった提案を新しいfingerprintで保存できる採用raceと、共通DTOの版情報不足を解消。
