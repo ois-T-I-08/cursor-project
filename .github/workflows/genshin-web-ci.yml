@@ -29,7 +29,10 @@ jobs:
       RUN_REPLACEMENT_DB_TEST: "true"
       RUN_BUILD_GUIDE_DB_TEST: "true"
       RUN_YOUTUBE_AUTOMATION_DB_TEST: "true"
+      RUN_ACCOUNT_SESSION_DB_TEST: "true"
       CI_DISPOSABLE_DATABASE: "true"
+      ACCOUNT_IDENTITY_ENABLED: "false"
+      WEB_ACCOUNT_SESSION_ENABLED: "false"
       # External guide providers stay OFF in CI (no network keys).
       YOUTUBE_GUIDE_ENABLED: "false"
       YOUTUBE_DISCOVERY_ENABLED: "false"
@@ -74,6 +77,9 @@ jobs:
 
       - name: Verify YouTube hardening migration upgrade and atomic rollback
         run: npm run test:migration:youtube-hardening
+
+      - name: Verify account session migration upgrade and atomic rollback
+        run: npm run test:migration:account-session
 
       - name: Apply PostgreSQL migrations
         run: npx prisma migrate deploy
