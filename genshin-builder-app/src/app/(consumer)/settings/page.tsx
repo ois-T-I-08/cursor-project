@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getSyncStatus } from "@/lib/repository/characters";
 import { getUserId } from "@/lib/user";
 import SyncSection from "@/components/settings/SyncSection";
+import ConsumerPage from "@/components/consumer/ConsumerPage";
 
 export const metadata: Metadata = {
   title: "設定",
@@ -27,8 +28,11 @@ export default async function SettingsPage() {
   const counts = syncStatus;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-bold">設定</h1>
+    <ConsumerPage
+      title="設定"
+      description="ゲームデータの同期状況と、このブラウザで利用している匿名データの状態を確認します。"
+    >
+      <div className="legacy-dark-surface space-y-4 rounded-2xl bg-[#0f1419] p-3 text-[#e8e6e3] sm:p-5">
 
       <section className="rounded-xl border border-white/10 bg-[#1e2a3a] p-5">
         <h2 className="font-bold">ゲームデータ同期</h2>
@@ -94,6 +98,7 @@ export default async function SettingsPage() {
           </code>
         </p>
       </section>
-    </div>
+      </div>
+    </ConsumerPage>
   );
 }

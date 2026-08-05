@@ -79,7 +79,7 @@ export default async function CharacterDetailPage({ params }: Props) {
     : null;
 
   return (
-    <div className="space-y-4">
+    <div className="legacy-dark-surface space-y-4 rounded-2xl bg-[#0f1419] p-3 text-[#e8e6e3] sm:p-5">
       <Link href="/characters" className="text-sm text-accent hover:underline">
         ← キャラクター一覧へ戻る
       </Link>

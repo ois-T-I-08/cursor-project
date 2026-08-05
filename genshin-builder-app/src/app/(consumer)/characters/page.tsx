@@ -6,6 +6,7 @@ import { getUserId } from "@/lib/user";
 import CharacterList, {
   type CharacterListItem,
 } from "@/components/character/CharacterList";
+import ConsumerPage from "@/components/consumer/ConsumerPage";
 
 export const metadata: Metadata = {
   title: "キャラクター一覧",
@@ -53,9 +54,13 @@ export default async function CharactersPage() {
   });
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-bold">キャラクター一覧</h1>
-      <CharacterList items={items} />
-    </div>
+    <ConsumerPage
+      title="キャラ"
+      description="キャラクターごとの育成状況を確認します。登録済みの内容だけを表示し、未登録の進捗を補いません。"
+    >
+      <div className="legacy-dark-surface rounded-2xl bg-[#0f1419] p-3 text-[#e8e6e3] sm:p-5">
+        <CharacterList items={items} />
+      </div>
+    </ConsumerPage>
   );
 }
