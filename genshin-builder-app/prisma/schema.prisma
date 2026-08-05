@@ -126,6 +126,84 @@ model UserProgress {
   @@index([userId])
 }
 
+/// Providerに依存しない、サーバー発行のcanonical account。
+/// gb_user_idやFlutterのclientScopeをこのIDへ昇格させない。
+model Account {
+  id                  String    @id @default(uuid()) @db.Uuid
+  status              String    @default("active")
+  version             Int       @default(1)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  disabledAt          DateTime?
+  deletionRequestedAt DateTime?
+
+  authIdentities              AuthIdentity[]
+  webSessions                 WebSession[]
+  claimedAnonymousIdentities  AnonymousIdentity[]
+
+  @@index([status])
+  @@index([deletionRequestedAt])
+}
+
+/// 外部認証providerとのbinding。emailはaccount merge keyにしない。
+model AuthIdentity {
+  id              String    @id @default(uuid()) @db.Uuid
+  accountId       String    @db.Uuid
+  account         Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  provider        String
+  providerSubject String
+  createdAt       DateTime  @default(now())
+  lastUsedAt      DateTime?
+  disabledAt      DateTime?
+
+  @@unique([provider, providerSubject])
+  @@index([accountId])
+}
+
+/// Webブラウザ用の失効可能なopaque session。
+/// raw tokenは保存せず、tokenHashだけを永続化する。
+model WebSession {
+  id                   String       @id @default(uuid()) @db.Uuid
+  accountId            String       @db.Uuid
+  account              Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tokenHash            String       @unique @db.Char(64)
+  createdAt            DateTime     @default(now())
+  expiresAt            DateTime
+  lastSeenAt           DateTime     @default(now())
+  revokedAt            DateTime?
+  rotationCounter      Int          @default(0)
+  version              Int          @default(1)
+  accountVersion       Int
+  deviceLabel          String       @default("") @db.VarChar(80)
+  platform             String       @default("unknown") @db.VarChar(32)
+  replacedBySessionId  String?      @unique @db.Uuid
+  replacedBySession    WebSession?  @relation("WebSessionRotation", fields: [replacedBySessionId], references: [id], onDelete: SetNull)
+  replaces             WebSession?  @relation("WebSessionRotation")
+
+  @@index([accountId, revokedAt])
+  @@index([expiresAt])
+  @@index([lastSeenAt])
+}
+
+/// Account作成前の匿名ブラウザ所有境界。
+/// legacy gb_user_idのmapping/backfill/claimは後続PRで実装する。
+model AnonymousIdentity {
+  id                String    @id @default(uuid()) @db.Uuid
+  secretHash        String    @unique @db.Char(64)
+  createdAt         DateTime  @default(now())
+  expiresAt         DateTime
+  lastSeenAt        DateTime  @default(now())
+  revokedAt         DateTime?
+  claimedAt         DateTime?
+  claimedAccountId  String?   @db.Uuid
+  claimedAccount    Account?  @relation(fields: [claimedAccountId], references: [id], onDelete: SetNull)
+  version           Int       @default(1)
+
+  @@index([expiresAt])
+  @@index([revokedAt])
+  @@index([claimedAccountId])
+}
+
 /// マスターデータ同期の実行履歴（デバッグ・Cron監視用）
 model SyncLog {
   id        Int      @id @default(autoincrement())
