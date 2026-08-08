@@ -69,6 +69,34 @@ class UpgradeOption {
   final String ruleVersion;
 
   bool get isCalculable => calculationMode != CalculationMode.unavailable;
+
+  UpgradeOption copyWith({int? estimatedResinCost}) {
+    return UpgradeOption(
+      optionId: optionId,
+      characterId: characterId,
+      optionType: optionType,
+      relatedGoalId: relatedGoalId,
+      fromValue: fromValue,
+      toValue: toValue,
+      stepCount: stepCount,
+      materialsCost: materialsCost,
+      moraCost: moraCost,
+      expItemCost: expItemCost,
+      estimatedResinCost: estimatedResinCost ?? this.estimatedResinCost,
+      ownedMaterials: ownedMaterials,
+      remainingMaterials: remainingMaterials,
+      inventoryStatus: inventoryStatus,
+      impact: impact,
+      priority: priority,
+      confidence: confidence,
+      completeness: completeness,
+      missingData: missingData,
+      usedDataSources: usedDataSources,
+      calculationMode: calculationMode,
+      generatedAt: generatedAt,
+      ruleVersion: ruleVersion,
+    );
+  }
 }
 
 enum ImpactBand { veryHigh, high, medium, low, minimal, unknown }

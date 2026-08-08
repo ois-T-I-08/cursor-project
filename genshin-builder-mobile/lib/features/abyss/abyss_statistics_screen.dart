@@ -6,7 +6,6 @@ import '../../core/errors/user_facing_error.dart';
 import '../../domain/abyss/abyss_statistics.dart';
 import '../../providers/abyss_statistics_providers.dart';
 import '../shared/game_icon_image.dart';
-import '../shared/shell_menu_button.dart';
 
 class AbyssStatisticsScreen extends ConsumerWidget {
   const AbyssStatisticsScreen({super.key});
@@ -24,7 +23,6 @@ class AbyssStatisticsScreen extends ConsumerWidget {
             onPressed: () => ref.invalidate(abyssStatisticsProvider),
             icon: const Icon(Icons.refresh),
           ),
-          const ShellMenuButton(),
         ],
       ),
       body: statistics.when(

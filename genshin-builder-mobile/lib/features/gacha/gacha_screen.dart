@@ -8,7 +8,6 @@ import '../../domain/gacha/gacha_banner.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/gacha_providers.dart';
 import '../shared/game_icon_image.dart';
-import '../shared/shell_menu_button.dart';
 
 class GachaScreen extends ConsumerWidget {
   const GachaScreen({super.key});
@@ -28,7 +27,6 @@ class GachaScreen extends ConsumerWidget {
             tooltip: '再読み込み',
             onPressed: () => ref.invalidate(gachaBannersProvider),
           ),
-          const ShellMenuButton(),
         ],
       ),
       body: async.when(

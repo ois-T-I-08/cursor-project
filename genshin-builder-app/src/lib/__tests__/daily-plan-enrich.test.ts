@@ -1,166 +1,383 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { enrichDailyPlan } from "@/lib/daily-plan/enrich-daily-plan";
-import { parseDailyPlanEnrichRequest } from "@/lib/daily-plan/validation";
+import {
+  enrichDailyPlan,
+  resetDailyPlanCacheForTest,
+} from "@/lib/daily-plan/enrich-daily-plan";
+import { validateAndFinalizeDailyPlan } from "@/lib/daily-plan/final-validator";
+import type {
+  DailyPlanEnrichRequest,
+  DailyPlanAiResult,
+} from "@/lib/daily-plan/types";
+import {
+  parseDailyPlanAiResponse,
+  parseDailyPlanEnrichRequest,
+  parseDailyPlanProposal,
+} from "@/lib/daily-plan/validation";
 
-describe("parseDailyPlanEnrichRequest", () => {
-  it("accepts a minimal valid payload", () => {
-    const parsed = parseDailyPlanEnrichRequest({
-      weekday: 2,
-      currentResin: 120,
-      maxResin: 200,
-      items: [
-        {
-          id: "wd_a",
-          type: "weekdayMaterial",
-          title: "天光",
-          priority: 90,
-          reasons: ["今日開放"],
-          characterIds: ["10000002"],
-          materialIds: ["104301"],
-        },
-      ],
-    });
-    expect(parsed.items).toHaveLength(1);
-    expect(parsed.weekday).toBe(2);
+const NOW = new Date("2026-08-02T03:00:00.000Z");
+
+function request(
+  overrides: Partial<DailyPlanEnrichRequest> = {},
+): DailyPlanEnrichRequest {
+  return {
+    clientScope: "0123456789ab",
+    proposalFingerprint: "f".repeat(64),
+    date: "2026-08-02",
+    timezone: "UTC+09:00",
+    weekday: 7,
+    currentResin: 100,
+    maxResin: 200,
+    availableMinutes: 60,
+    candidates: [
+      {
+        taskId: "wd_freedom",
+        type: "weekdayMaterial",
+        title: "自由の導き",
+        characterIds: ["10000002"],
+        materialIds: ["104301"],
+        currentLevel: 6,
+        targetLevel: 9,
+        estimatedResinCost: 40,
+        estimatedMinutes: 20,
+        availableToday: true,
+        requiresResin: true,
+        bookmarked: true,
+        existingPriority: 95,
+        reasonFacts: ["今日開放", "不足12個"],
+      },
+      {
+        taskId: "goal_level",
+        type: "characterLevel",
+        title: "キャラクターをLv.90へ",
+        characterIds: ["10000003"],
+        materialIds: ["104003"],
+        currentLevel: 80,
+        targetLevel: 90,
+        estimatedResinCost: 80,
+        estimatedMinutes: 30,
+        availableToday: true,
+        requiresResin: true,
+        bookmarked: false,
+        existingPriority: 82,
+        reasonFacts: ["目標との差10"],
+      },
+      {
+        taskId: "goal_talent_locked",
+        type: "talent",
+        title: "天賦をLv.9へ",
+        characterIds: ["10000004"],
+        materialIds: ["104399"],
+        currentLevel: 6,
+        targetLevel: 9,
+        estimatedResinCost: 20,
+        estimatedMinutes: 20,
+        availableToday: false,
+        requiresResin: true,
+        bookmarked: false,
+        existingPriority: 90,
+        reasonFacts: ["本日は対象素材の開放日ではない"],
+      },
+    ],
+    ...overrides,
+  };
+}
+
+function aiResult(
+  overrides: Partial<DailyPlanAiResult> = {},
+): DailyPlanAiResult {
+  return {
+    summary: "今日は曜日素材を優先すると効率的です",
+    recommendations: [
+      {
+        taskId: "goal_level",
+        priority: 1,
+        category: "do_today",
+        reason: "目標との差が大きいため",
+        suggestedMinutes: 30,
+      },
+      {
+        taskId: "wd_freedom",
+        priority: 2,
+        category: "do_today",
+        reason: "今日開放されているため",
+        suggestedMinutes: 20,
+      },
+    ],
+    deferredTaskIds: ["goal_talent_locked"],
+    warnings: [],
+    ...overrides,
+  };
+}
+
+describe("daily-plan strict validation", () => {
+  it("accepts a bounded structured request", () => {
+    const parsed = parseDailyPlanEnrichRequest(request());
+    expect(parsed.candidates).toHaveLength(3);
+    expect(parsed.date).toBe("2026-08-02");
   });
 
-  it("rejects unknown item types", () => {
+  it("rejects unknown fields and duplicate task ids", () => {
     expect(() =>
-      parseDailyPlanEnrichRequest({
-        weekday: 1,
-        items: [
+      parseDailyPlanEnrichRequest({ ...request(), unexpected: true }),
+    ).toThrow();
+    const duplicate = request();
+    duplicate.candidates = [duplicate.candidates[0]!, duplicate.candidates[0]!];
+    expect(() => parseDailyPlanEnrichRequest(duplicate)).toThrow();
+  });
+
+  it("strictly rejects extra AI fields", () => {
+    expect(() =>
+      parseDailyPlanAiResponse({ ...aiResult(), chainOfThought: "secret" }),
+    ).toThrow();
+  });
+
+  it("fails closed on an unsupported proposal schema version", () => {
+    const proposal = {
+      schemaVersion: 2,
+      ...aiResult(),
+      source: "deepseek",
+      generatedAt: NOW.toISOString(),
+      inputHash: "a".repeat(64),
+      proposalFingerprint: "f".repeat(64),
+      modelIdentifier: "deepseek-v4-flash",
+    };
+    expect(() => parseDailyPlanProposal(proposal)).toThrow();
+  });
+});
+
+describe("deterministic final validation", () => {
+  it("never emits unknown or duplicate task ids and normalizes priorities", () => {
+    const result = validateAndFinalizeDailyPlan(
+      aiResult({
+        recommendations: [
           {
-            id: "x",
-            type: "unknown",
-            title: "x",
+            taskId: "invented",
             priority: 1,
-            reasons: [],
-            characterIds: [],
-            materialIds: [],
+            category: "do_today",
+            reason: "候補外の項目",
+            suggestedMinutes: 20,
+          },
+          {
+            taskId: "wd_freedom",
+            priority: 1,
+            category: "do_today",
+            reason: "今日開放されているため",
+            suggestedMinutes: 20,
+          },
+          {
+            taskId: "wd_freedom",
+            priority: 2,
+            category: "do_today",
+            reason: "重複した項目",
+            suggestedMinutes: 20,
           },
         ],
       }),
-    ).toThrow();
+      request(),
+      "d".repeat(64),
+      "deepseek-v4-flash",
+      NOW,
+    );
+
+    expect(result.recommendations.map((item) => item.taskId)).not.toContain(
+      "invented",
+    );
+    expect(new Set(result.recommendations.map((item) => item.taskId)).size).toBe(
+      result.recommendations.length,
+    );
+    expect(result.recommendations.map((item) => item.priority)).toEqual(
+      result.recommendations.map((_, index) => index + 1),
+    );
+  });
+
+  it("rejects unavailable tasks and enforces resin/time budgets", () => {
+    const result = validateAndFinalizeDailyPlan(
+      aiResult({
+        recommendations: [
+          {
+            taskId: "goal_talent_locked",
+            priority: 1,
+            category: "do_today",
+            reason: "モデル知識でおすすめ",
+            suggestedMinutes: 20,
+          },
+          {
+            taskId: "goal_level",
+            priority: 2,
+            category: "do_today",
+            reason: "目標との差が大きいため",
+            suggestedMinutes: 30,
+          },
+          {
+            taskId: "wd_freedom",
+            priority: 3,
+            category: "do_today",
+            reason: "今日開放されているため",
+            suggestedMinutes: 20,
+          },
+        ],
+      }),
+      request({ currentResin: 40, availableMinutes: 30 }),
+      "a".repeat(64),
+      "deepseek-v4-flash",
+      NOW,
+    );
+    expect(result.recommendations.map((item) => item.taskId)).toEqual([
+      "wd_freedom",
+    ]);
+    expect(result.deferredTaskIds).toEqual(
+      expect.arrayContaining(["goal_level", "goal_talent_locked"]),
+    );
+    expect(result.source).toBe("deepseek");
+  });
+
+  it("removes markup from AI reasons by falling back to structured facts", () => {
+    const result = validateAndFinalizeDailyPlan(
+      aiResult({
+        recommendations: [
+          {
+            taskId: "wd_freedom",
+            priority: 1,
+            category: "do_today",
+            reason: "[こちら](https://example.com)を参照",
+            suggestedMinutes: 20,
+          },
+        ],
+      }),
+      request(),
+      "b".repeat(64),
+      "deepseek-v4-flash",
+      NOW,
+    );
+    expect(result.recommendations[0]?.reason).toBe("今日開放");
+  });
+
+  it("keeps deterministic uncertainty warnings on successful AI output", () => {
+    const result = validateAndFinalizeDailyPlan(
+      aiResult(),
+      request({ currentResin: null, availableMinutes: null }),
+      "c".repeat(64),
+      "deepseek-v4-flash",
+      NOW,
+    );
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        "樹脂残量を取得できないため、樹脂予算は最終確認してください",
+        "利用可能時間が未設定のため、所要時間は目安です",
+      ]),
+    );
   });
 });
 
 describe("enrichDailyPlan", () => {
-  it("pass-through when DeepSeek is disabled", async () => {
-    const result = await enrichDailyPlan(
-      {
-        weekday: 3,
-        items: [
-          {
-            id: "a",
-            type: "weekdayMaterial",
-            title: "A",
-            priority: 90,
-            reasons: ["r"],
-            characterIds: [],
-            materialIds: [],
-          },
-          {
-            id: "b",
-            type: "growthGoal",
-            title: "B",
-            priority: 50,
-            reasons: ["r"],
-            characterIds: [],
-            materialIds: [],
-          },
-        ],
+  beforeEach(() => resetDailyPlanCacheForTest());
+
+  it("uses deterministic fallback unless both feature flags are true", async () => {
+    const evaluate = vi.fn();
+    const result = await enrichDailyPlan(request(), {
+      env: {
+        DEEPSEEK_ENABLED: "true",
+        DEEPSEEK_DAILY_PLAN_ENABLED: "false",
       },
-      { env: { DEEPSEEK_DAILY_PLAN_ENABLED: "false" } },
-    );
-    expect(result.enriched).toBe(false);
-    expect(result.orderedItemIds).toEqual(["a", "b"]);
+      client: { evaluate } as never,
+      now: NOW,
+    });
+    expect(result.source).toBe("deterministic_fallback");
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(result.recommendations[0]?.taskId).toBe("wd_freedom");
+    expect(result.schemaVersion).toBe(1);
+    expect(result.proposalFingerprint).toBe("f".repeat(64));
   });
 
-  it("allowlists ids and appends missing ones", async () => {
-    const completeJson = vi.fn().mockResolvedValue({
-      content: JSON.stringify({
-        orderedItemIds: ["b", "invented", "a", "a"],
-        reasonsByItemId: {
-          b: ["樹脂に余裕があるので週ボスを優先"],
-          invented: ["無視される"],
-        },
-      }),
+  it("uses the shared DeepSeek wrapper result and caches by input", async () => {
+    const evaluate = vi.fn().mockResolvedValue({
+      result: aiResult(),
+      modelIdentifier: "deepseek-v4-flash",
+      usage: { total_tokens: 123 },
+      attempts: 1,
+    });
+    const options = {
+      env: {
+        DEEPSEEK_ENABLED: "true",
+        DEEPSEEK_DAILY_PLAN_ENABLED: "true",
+        DEEPSEEK_API_KEY: "test-key",
+        DEEPSEEK_MODEL: "deepseek-v4-flash",
+      },
+      client: { evaluate } as never,
+      now: NOW,
+    };
+
+    const first = await enrichDailyPlan(request(), options);
+    const second = await enrichDailyPlan(request(), options);
+    expect(first.source).toBe("deepseek");
+    expect(second).toEqual(first);
+    expect(evaluate).toHaveBeenCalledOnce();
+    expect(first.inputHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(first.proposalFingerprint).toBe("f".repeat(64));
+  });
+
+  it("invalidates the cache when the proposal fingerprint changes", async () => {
+    const evaluate = vi.fn().mockResolvedValue({
+      result: aiResult(),
       modelIdentifier: "deepseek-v4-flash",
       usage: {},
       attempts: 1,
     });
+    const options = {
+      env: {
+        DEEPSEEK_ENABLED: "true",
+        DEEPSEEK_DAILY_PLAN_ENABLED: "true",
+        DEEPSEEK_API_KEY: "test-key",
+      },
+      client: { evaluate } as never,
+      now: NOW,
+    };
 
-    const result = await enrichDailyPlan(
-      {
-        weekday: 1,
-        currentResin: 160,
-        maxResin: 200,
-        items: [
-          {
-            id: "a",
-            type: "weekdayMaterial",
-            title: "A",
-            priority: 90,
-            reasons: ["local"],
-            characterIds: [],
-            materialIds: [],
-          },
-          {
-            id: "b",
-            type: "weeklyBoss",
-            title: "B",
-            priority: 85,
-            reasons: ["local"],
-            characterIds: [],
-            materialIds: [],
-          },
-        ],
-      },
-      {
-        env: {
-          DEEPSEEK_DAILY_PLAN_ENABLED: "true",
-          DEEPSEEK_DAILY_PLAN_API_KEY: "test-key",
-          DEEPSEEK_DAILY_PLAN_MODEL: "deepseek-v4-flash",
-        },
-        client: { completeJson } as never,
-      },
+    await enrichDailyPlan(request(), options);
+    await enrichDailyPlan(
+      request({ proposalFingerprint: "e".repeat(64) }),
+      options,
     );
 
-    expect(result.enriched).toBe(true);
-    expect(result.orderedItemIds).toEqual(["b", "a"]);
-    expect(result.reasonsByItemId.b?.[0]).toContain("週ボス");
-    expect(result.reasonsByItemId.invented).toBeUndefined();
-    expect(completeJson).toHaveBeenCalledOnce();
+    expect(evaluate).toHaveBeenCalledTimes(2);
   });
 
-  it("fail-closed to pass-through on DeepSeek errors", async () => {
-    const result = await enrichDailyPlan(
-      {
-        weekday: 1,
-        items: [
-          {
-            id: "a",
-            type: "growthGoal",
-            title: "A",
-            priority: 50,
-            reasons: [],
-            characterIds: [],
-            materialIds: [],
-          },
-        ],
+  it("force bypasses cache without changing the cache identity", async () => {
+    const evaluate = vi.fn().mockResolvedValue({
+      result: aiResult(),
+      modelIdentifier: "deepseek-v4-flash",
+      usage: {},
+      attempts: 1,
+    });
+    const options = {
+      env: {
+        DEEPSEEK_ENABLED: "true",
+        DEEPSEEK_DAILY_PLAN_ENABLED: "true",
+        DEEPSEEK_API_KEY: "test-key",
       },
-      {
-        env: {
-          DEEPSEEK_DAILY_PLAN_ENABLED: "true",
-          DEEPSEEK_DAILY_PLAN_API_KEY: "test-key",
-        },
-        client: {
-          completeJson: vi.fn().mockRejectedValue(new Error("boom")),
-        } as never,
+      client: { evaluate } as never,
+      now: NOW,
+    };
+    const first = await enrichDailyPlan(request(), options);
+    const regenerated = await enrichDailyPlan(request({ force: true }), options);
+    expect(evaluate).toHaveBeenCalledTimes(2);
+    expect(regenerated.inputHash).toBe(first.inputHash);
+  });
+
+  it("fails closed to the deterministic plan on DeepSeek errors", async () => {
+    const result = await enrichDailyPlan(request(), {
+      env: {
+        DEEPSEEK_ENABLED: "true",
+        DEEPSEEK_DAILY_PLAN_ENABLED: "true",
+        DEEPSEEK_API_KEY: "test-key",
       },
+      client: { evaluate: vi.fn().mockRejectedValue(new Error("boom")) } as never,
+      now: NOW,
+    });
+    expect(result.source).toBe("deterministic_fallback");
+    expect(result.warnings).toContain(
+      "AI提案を利用できなかったため、通常ルールで提案しました",
     );
-    expect(result.enriched).toBe(false);
-    expect(result.orderedItemIds).toEqual(["a"]);
   });
 });

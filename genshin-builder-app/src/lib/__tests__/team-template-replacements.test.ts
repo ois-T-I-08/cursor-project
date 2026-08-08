@@ -205,6 +205,7 @@ describe("DeepSeek JSON mode client", () => {
       },
     );
     const client = new DeepSeekReplacementClient({
+      skipEmergencyGate: true,
       fetchImpl: fetchImpl as unknown as typeof fetch,
       sleep: async () => undefined,
       random: () => 0,

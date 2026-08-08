@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { assertGlobalAiEmergencyAllowsExternalCall } from "@/lib/ai/global-ai-emergency";
 import {
   TRANSCRIPT_ANALYSIS_JSON_SCHEMA,
   TRANSCRIPT_ANALYSIS_SCHEMA_VERSION,
@@ -49,12 +50,16 @@ export class GeminiTranscriptAnalysisProvider
   private readonly model: string;
   private readonly timeoutMs: number;
 
+  private readonly skipEmergencyGate: boolean;
+
   constructor(
     options: {
       fetchImpl?: typeof fetch;
       apiKey?: string;
       model?: string;
       timeoutMs?: number;
+      /** Test-only: skip Global AI Emergency preflight. */
+      skipEmergencyGate?: boolean;
     } = {},
   ) {
     this.fetchImpl = options.fetchImpl ?? fetch;
@@ -65,11 +70,22 @@ export class GeminiTranscriptAnalysisProvider
       process.env.YOUTUBE_GUIDE_TRANSCRIPT_GEMINI_MODEL?.trim() ||
       "gemini-2.5-flash";
     this.timeoutMs = Math.min(120_000, Math.max(5_000, options.timeoutMs ?? 30_000));
+    this.skipEmergencyGate = options.skipEmergencyGate === true;
   }
 
   async analyze(
     input: TranscriptAnalysisInput,
   ): Promise<TranscriptAnalysisCompletion> {
+    if (!this.skipEmergencyGate) {
+      try {
+        await assertGlobalAiEmergencyAllowsExternalCall();
+      } catch (error) {
+        if (error instanceof Error && error.message === "EMERGENCY_STOPPED") {
+          throw new SafeProviderError(this.providerId, "EMERGENCY_STOPPED", false);
+        }
+        throw new SafeProviderError(this.providerId, "EMERGENCY_STOPPED", false);
+      }
+    }
     if (!this.apiKey) {
       throw new SafeProviderError(this.providerId, "AUTH_NOT_CONFIGURED", false);
     }

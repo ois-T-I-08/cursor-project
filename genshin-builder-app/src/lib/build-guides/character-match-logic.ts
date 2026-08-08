@@ -3,6 +3,60 @@ export interface CharacterHint {
   name: string;
 }
 
+/**
+ * Deterministic short-name → official master name.
+ * Only unambiguous nicknames. Do not add speculative / AI aliases.
+ */
+export const CHARACTER_TITLE_ALIASES: Readonly<Record<string, string>> = {
+  召使: "アルレッキーノ",
+  心海: "珊瑚宮心海",
+  万葉: "楓原万葉",
+};
+
+/**
+ * Multi-character / artifact-meta titles — never force a single primary.
+ * Applied only when no clear 「quoted」 primary was resolved.
+ */
+export function isAmbiguousMultiCharacterTitle(title: string): boolean {
+  return /おすすめキャラ|評価が変わるキャラ|装備すべきキャラ|避けるべきキャラ|乗り換え必須キャラ|残すべき聖遺物|残す基準|おすすめキャラと/.test(
+    title,
+  );
+}
+
+function resolveOfficialNameToId(
+  officialName: string,
+  byName: Map<string, string>,
+): string | null {
+  return byName.get(officialName.trim().toLowerCase()) ?? null;
+}
+
+/** Resolve a quoted or bare token via official name or deterministic alias. */
+export function resolveCharacterTokenToId(
+  token: string,
+  hints: CharacterHint[],
+): string | null {
+  const trimmed = token.trim();
+  if (!trimmed) return null;
+  const byName = new Map(
+    hints
+      .filter((h) => h.name.trim().length > 0)
+      .map((h) => [h.name.trim().toLowerCase(), h.id] as const),
+  );
+  const direct = byName.get(trimmed.toLowerCase());
+  if (direct) return direct;
+  const aliasedOfficial = CHARACTER_TITLE_ALIASES[trimmed];
+  if (aliasedOfficial) {
+    return resolveOfficialNameToId(aliasedOfficial, byName);
+  }
+  // Case-insensitive alias keys (Japanese typically unchanged)
+  for (const [alias, official] of Object.entries(CHARACTER_TITLE_ALIASES)) {
+    if (alias.toLowerCase() === trimmed.toLowerCase()) {
+      return resolveOfficialNameToId(official, byName);
+    }
+  }
+  return null;
+}
+
 export function resolveCharacterCandidates(
   title: string,
   description: string,
@@ -23,7 +77,8 @@ export function resolveCharacterCandidates(
 
 /**
  * 動画タイトルから「主対象キャラ」を1人に絞る。
- * 「名前」表記を最優先し、なければタイトル内の最長名一致を使う。
+ * 「名前」表記を最優先（公式名 → deterministic alias）、なければ最長公式名一致。
+ * 複数キャラ聖遺物メタタイトルは primary を返さない。
  */
 export function resolvePrimaryCharacterFromTitle(
   title: string,
@@ -36,10 +91,14 @@ export function resolvePrimaryCharacterFromTitle(
   );
 
   for (const match of title.matchAll(/「([^」]{1,40})」/g)) {
-    const quoted = match[1]?.trim().toLowerCase();
+    const quoted = match[1]?.trim();
     if (!quoted) continue;
-    const id = byName.get(quoted);
+    const id = resolveCharacterTokenToId(quoted, hints);
     if (id) return id;
+  }
+
+  if (isAmbiguousMultiCharacterTitle(title)) {
+    return null;
   }
 
   const haystack = title.toLowerCase();
@@ -52,7 +111,19 @@ export function resolvePrimaryCharacterFromTitle(
       best = { id: hint.id, len: name.length };
     }
   }
-  return best?.id ?? null;
+  if (best) return best.id;
+
+  // Bare alias match (non-quoted) — only when a single alias hits uniquely.
+  const aliasHits: string[] = [];
+  for (const [alias, official] of Object.entries(CHARACTER_TITLE_ALIASES)) {
+    if (!haystack.includes(alias.toLowerCase())) continue;
+    const id = resolveOfficialNameToId(official, byName);
+    if (id) aliasHits.push(id);
+  }
+  const unique = [...new Set(aliasHits)];
+  if (unique.length === 1) return unique[0] ?? null;
+
+  return null;
 }
 
 /** 育成ガイド寄りのタイトルか（ガチャ優先度・評価のみは除外） */

@@ -7,7 +7,6 @@ import '../../core/errors/user_facing_error.dart';
 import '../../providers/daily_materials_providers.dart';
 import '../shared/detail_section_accordion.dart';
 import '../shared/game_icon_image.dart';
-import '../shared/shell_menu_button.dart';
 import 'widgets/series_card.dart';
 
 enum _DailyMaterialViewKind { talent, weapon }
@@ -137,7 +136,6 @@ class _DailyMaterialsScreenState extends ConsumerState<DailyMaterialsScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('曜日素材'),
-        actions: const [ShellMenuButton()],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: false,

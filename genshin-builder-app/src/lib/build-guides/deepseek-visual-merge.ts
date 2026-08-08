@@ -4,6 +4,7 @@ import { z } from "zod";
 import { DeepSeekError, DeepSeekJsonClient } from "@/lib/ai/deepseek-json-client";
 import { deepSeekGuideAnalysisSettings } from "./deepseek-guide-settings";
 import { PUBLISHABLE_PURPOSES, guideStatKeySchema } from "./visual-schemas";
+import { sanitizeStatPriority } from "./visual-stat-sanitize";
 
 const mergeOutputSchema = z.strictObject({
   characterId: z.string(),
@@ -99,7 +100,11 @@ export async function mergeVisualRecommendationsWithDeepSeek(
   } catch {
     throw new DeepSeekError("invalidJson", false);
   }
-  return mergeOutputSchema.parse(decoded);
+  const parsed = mergeOutputSchema.parse(decoded);
+  return {
+    ...parsed,
+    substatPriority: sanitizeStatPriority(parsed.substatPriority),
+  };
 }
 
 /** Deterministic fallback when DeepSeek is disabled: pick validated stats as-is. */
@@ -194,10 +199,8 @@ export function mergeVisualRecommendationsDeterministic(
         mainBySlot.set(slot, set);
       }
     }
-    for (const key of evidence.statPriority ?? []) {
-      if (typeof key === "string" && key && !priority.includes(key)) {
-        priority.push(key);
-      }
+    for (const key of sanitizeStatPriority(evidence.statPriority ?? [])) {
+      if (!priority.includes(key)) priority.push(key);
     }
   }
 
@@ -208,7 +211,7 @@ export function mergeVisualRecommendationsDeterministic(
       slot,
       stats: [...stats].slice(0, 6),
     })),
-    substatPriority: priority.slice(0, 10),
+    substatPriority: sanitizeStatPriority(priority),
     targets: [...byStat.entries()].map(([stat, value]) => ({
       stat,
       min: value.min,

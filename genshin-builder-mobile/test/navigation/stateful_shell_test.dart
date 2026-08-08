@@ -363,12 +363,27 @@ const _drawerSettings = 8;
 
 void main() {
   group('MainTab', () {
-    test('tab order is home, characters, teams, daily, materials', () {
-      expect(MainTab.home.index, 0);
+    test('tab order is today, characters, growth, teams, more', () {
+      expect(MainTab.today.index, 0);
       expect(MainTab.characters.index, 1);
-      expect(MainTab.teams.index, 2);
-      expect(MainTab.daily.index, 3);
-      expect(MainTab.materials.index, 4);
+      expect(MainTab.growth.index, 2);
+      expect(MainTab.teams.index, 3);
+      expect(MainTab.more.index, 4);
+    });
+
+    testWidgets('bottom navigation uses goal-oriented Japanese labels', (
+      tester,
+    ) async {
+      final tr = _TestShell(useProductionAppShell: true);
+      addTearDown(tr.dispose);
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: tr.router));
+
+      expect(find.text('今日'), findsOneWidget);
+      expect(find.text('キャラ'), findsOneWidget);
+      expect(find.text('育成'), findsOneWidget);
+      expect(find.text('編成'), findsOneWidget);
+      expect(find.text('その他'), findsOneWidget);
     });
   });
 

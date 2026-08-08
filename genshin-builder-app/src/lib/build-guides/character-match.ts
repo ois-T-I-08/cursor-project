@@ -5,6 +5,9 @@ import {
   resolveCharacterCandidates,
   resolvePrimaryCharacterFromTitle,
   isCharacterBuildGuideTitle,
+  isAmbiguousMultiCharacterTitle,
+  resolveCharacterTokenToId,
+  CHARACTER_TITLE_ALIASES,
   type CharacterHint,
 } from "./character-match-logic";
 
@@ -13,6 +16,9 @@ export {
   resolveCharacterCandidates,
   resolvePrimaryCharacterFromTitle,
   isCharacterBuildGuideTitle,
+  isAmbiguousMultiCharacterTitle,
+  resolveCharacterTokenToId,
+  CHARACTER_TITLE_ALIASES,
 };
 
 export async function loadCharacterHints(): Promise<CharacterHint[]> {

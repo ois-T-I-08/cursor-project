@@ -9,7 +9,6 @@ import '../../domain/game_display.dart';
 import '../../providers/hoyolab_game_providers.dart';
 import '../../providers/hoyolab_game_refresh.dart';
 import '../shared/game_icon_image.dart';
-import '../shared/shell_menu_button.dart';
 import '../artifacts/artifact_sets_screen.dart';
 
 /// キャラ一覧（聖遺物一覧と同じ: 地域セクション + グリッド）。
@@ -30,7 +29,6 @@ class CharacterListScreen extends ConsumerWidget {
             tooltip: '所持情報を更新',
             onPressed: () => refreshHoyolabOwnedCharacters(ref),
           ),
-          const ShellMenuButton(),
         ],
       ),
       body: entriesAsync.when(

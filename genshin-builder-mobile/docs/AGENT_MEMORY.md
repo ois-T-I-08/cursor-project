@@ -2,6 +2,35 @@
 
 セッションごとの設計判断ログ。重要な決定のみ追記する。
 
+## 2026-08-05 — 日次提案のstale採用拒否と「その他」導線補完
+
+- 日次共通DTOへ`schemaVersion: 1`と`proposalFingerprint`を追加。候補生成時のfingerprintをサーバーがそのまま検証済みDTOへ返し、Flutterは応答時・store保存時・採用直前に現在planとの一致を確認する。不一致時は保存せず日本語案内と再生成を行う。
+- Web/Mobileが`shared/domain-golden/daily-plan-proposal-v1.json`を同じfixtureとしてparseし、未知schemaをfail-closedにする。既存Golden期待値と計算ロジックは変更しない。
+- 「その他」へデイリー素材、聖遺物セット、ブックマーク、螺旋統計の導線を追加し、ガチャ、HoYoLAB、設定と合わせて指定された既存機能へ到達可能にした。
+- DB migration、実DeepSeek、feature flag、staging/production、既存完了キーへの変更なし。
+
+## 2026-08-04 — 全画面の情報設計を5タブへ再編
+
+- ボトムナビを機能名中心の「ホーム／キャラ／編成／曜日／素材」から、目的中心の「今日／キャラ／育成／編成／その他」へ変更。最重要の日次行動を`/`の`DailyPlanScreen`へ昇格した。
+- `GrowthHubScreen`で曜日素材・育成ルート・素材ブックマーク・聖遺物・成長履歴・健康診断を目的別に集約。`MoreScreen`でガチャ・開催中イベント・冒険状況・HoYoLAB・設定を集約し、全機能に通常UIから到達できるようにした。
+- 詳細画面の重複メニューボタンを除去。設定は同期／連携／通知／データ管理／アプリ情報に区切り、編成には深境螺旋統計への分析導線を追加した。文字サイズ2倍・狭幅のハブ表示をWidgetテストで固定した。
+- 旧ホームだけにあったバックグラウンドマスタ修復、曜日素材prefetch、HoYoLAB prefetchを`DailyPlanScreen`へ移し、DailyNoteは今日、イベント／冒険状況はその他へ再配置した。API契約、AI判定、DB schema、保存境界は変更していない。
+- 検証: Flutter analyze 0件、全790テスト成功。A202SO (Android 14)へdebug APKをインストールし、ダークテーマで5タブ、育成ハブ、その他下部のHoYoLAB／設定、編成下部の深境螺旋統計導線を実機確認した。
+
+## 2026-08-04 — 「今日やること」3秒で分かる表示階層
+
+- 既存`DailyPlanScreen`の先頭を「今日の最優先」1件→「次にやること」最大2件→残りの展開の順へ変更。キャラ/素材アイコン、目標差、樹脂/時間、「この育成を開く」を最優先カードに集約する。
+- 初期理由は`DailyPlanItem`のローカル事実から作る決定的バッジ最大2個と一行に限定。AI自由文/出典/生成時刻/警告と、見送り候補は別の`ExpansionTile`に収め、見送り理由は内部コードを表示せず自然な日本語へ変換する。
+- AI候補の取得中/失敗はローカル通常ルール提案を即時表示。AI生成だけで保存せず、「今日のリストに追加」操作が既存`DailyPlanProposalStore`への唯一の保存境界。
+- 検証: Flutter analyze 0件、全784テスト成功。A202SO (Android 14)へdebug APKをビルド/インストールし、アプリプロセス起動まで確認。端末がセキュアロック中のため、画面操作は実施しない。
+
+## 2026-08-02 — 「今日やること」AI優先タスク提案
+
+- 既存`DailyPlanScreen`、`DailyPlan`、`DailyPlanItem`、`UpgradeOption`、曜日素材、樹脂見積、ブックマーク、安定した完了キーを再利用し、通常コードで安定ID付き候補を上限20件へ絞る。
+- 同一Next.jsバックエンドへ匿名化スコープと必要最小限の構造化DTOだけを送る。Cookie、UID、未加工HoYoLABレスポンスは送らず、HTTPS必須（localhost/loopback/emulatorのみHTTP許可）。応答は未知フィールド、未知/重複ID、当日不可、樹脂/時間超過、危険な表示文字列を拒否する。
+- AI無効・通信・検証失敗時はローカル通常ルールへ戻す。画面に出典、上位1〜5件、短い根拠、警告、再生成、採用、閉じるを追加。採用前は既存状態を変更せず、採用後だけ検証済み提案を既存`app_settings`へ日付・匿名スコープ・plan fingerprint付きで保存する。DB migrationなし。
+- 検証: Flutter analyze 0件、全776テスト成功。セキュリティ自己監査はBLOCKER/HIGH/MEDIUMなし。実バックエンド疎通と実機UI確認はデプロイ時に実施。
+
 ## 2026-07-30 — gcsim 完全廃止（おすすめ編成は維持）
 
 - gcsim クレジット・DPS・`result.gcsim` パースを削除。AZA/ルール推薦 UI と Job polling は維持。

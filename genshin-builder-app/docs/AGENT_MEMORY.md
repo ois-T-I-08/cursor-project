@@ -4,6 +4,46 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-08-08 — Release Security Audit 2B: Secrets / HoYoLAB / Android
+
+- **目的:** Play公開前に Cookie・SecureStorage・Manifest・backup・logs・API key・CI・admin を経路追跡で監査。
+- **決定事項:** CookieはSecureStorageのみ（SharedPreferences/Drift/backend/AIへ非送信）。FLAG_SECUREはCookie/token非表示のため追加しない。`allowBackup=false` + extraction excludeでbackup閉。MethodChannelはFlutter IPCのみ。
+- **P1修正:** ログイン成功後にWebView Cookie clear（二重保持解消）。Settings unlinkにdaily-plan通知cancel追加。visual-analysisのraw Error loggingを`logSafeFailure`へ。`.tmp-qa`をgitignore。
+- **検証:** Flutter 856 / analyze 0。Vitest 427 / 46 skip。報告: `.tmp-qa/audit-2b-secrets-hoyolab-android-report.md`。
+- **残課題:** daily-plan enrichのHMAC（DeepSeek本番ON前）、Prisma raw console.error sanitize、SQLCipher本番方針、Privacy Policy文言差分確認。
+
+## 2026-08-08 — Release Security Audit 2A: Global AI Kill Switch & Manual Publish
+
+- **目的:** 全AIの kill switch 実態を確定し、Daily-plan/Team bypass と manual publish 仕様を閉じる。
+- **決定事項:** `GuideAutomationControl.emergencyStopped` を **Global AI Emergency** として扱う（新DBカラムなし）。precedence = Global Emergency → feature/env → stage → AutoPublish。Manual publish は **案B break-glass**（通常拒否、理由≥8文字+actor、audit `emergencyPublishOverride`、auto-publishへ波及しない）。
+- **P0修正:** `DeepSeekJsonClient.request` / Gemini visual・transcript provider の **HTTP直前**に `assertGlobalAiEmergencyAllowsExternalCall`。`setRecommendationStatus(published)` に `evaluateManualPublishGate`。Admin UI 文言と break-glass prompt。
+- **検証:** Vitest 426 passed / 46 skipped。Flutter analyze 0・855 tests。報告: `.tmp-qa/audit-2a-global-ai-kill-switch-report.md`。
+- **残課題:** Team専用env未分離、in-flight HTTP abortなし、control row id名は互換のため `youtube-guide` のまま。
+
+## 2026-08-08 — Release Security Audit: Safety Switch v3
+
+- **目的:** Google Play前に YouTube ガイド「安全スイッチ」実装を監査し、緊急停止回避経路を塞ぐ。
+- **決定事項:** `flags.enabled` は字幕パイプライン Master Enable（Safety Switch機構そのものではない）。Safety Switch 状態は `GuideAutomationControl.emergencyStopped` + 単調増加 `version`。env flags は fail-closed。control 欠落/読取失敗も fail-closed（stopped）。
+- **P0修正:** 映像 Gemini 解析と visual auto-publish が緊急停止を見ていなかった。`safety-gates.ts` を追加し、`analyzeVideoVisuals` / visual auto-publish を emergency + `autoPublishEnabled` でゲート。
+- **検証:** Vitest safety-gates + visual-auto-publish + phase2/3 + gemini provider。Flutter 855 tests / analyze 後で確認。
+- **残課題:** Daily-plan DeepSeek / team-replacement DeepSeek は YouTube Safety Switch 外（各自の env kill switch）。手動 admin publish は緊急停止中も可能（運用リカバリ想定）。
+
+## 2026-08-05 — 日次提案DTOと採用境界のクロスプラットフォーム固定
+
+- **目的:** ナビ再設計ブランチの最終監査で、表示後に進捗が変わった提案を新しいfingerprintで保存できる採用raceと、共通DTOの版情報不足を解消。
+- **決定事項:** 日次リクエスト/応答へ64桁SHA-256形式の`proposalFingerprint`を追加し、応答へ`schemaVersion: 1`を必須化。cache identityにもfingerprintを含める。Flutterは応答時・保存時・採用直前の3境界でschema/fingerprintを検証し、不一致なら保存せず再生成する。
+- **パリティ:** `shared/domain-golden/daily-plan-proposal-v1.json`を追加し、Web Zod parserとFlutter parserが同じfixtureを受理し、schema不一致をfail-closedにする。既存Golden期待値は変更しない。
+- **影響:** Prisma migration、実DeepSeek、feature flag、production/staging、既存ドメイン計算への変更なし。
+
+## 2026-08-02 — 「今日やること」DeepSeek優先タスク提案
+
+- **目的:** 既存のFlutter「今日やること」画面・モデル・完了キーと、共通`DeepSeekJsonClient`を再利用し、候補外を生成しない今日の優先タスク提案を追加。
+- **決定事項:** Flutterの通常コードが曜日素材、週ボス、`UpgradeOption`、目標、樹脂見積、ブックマークから安定ID付き候補を上限20件で生成する。Next.jsはstrict Zod → DeepSeek JSON → allowlist/重複/当日可否/樹脂/時間/表示文字列の決定論的最終検証を行い、全失敗時は通常ルールへ戻す。AIは`DEEPSEEK_ENABLED`と`DEEPSEEK_DAILY_PLAN_ENABLED`の両方がtrueの場合だけ共通キー・モデル・timeout・retryで呼ぶ。
+- **プライバシー/永続化:** Cookie、UID、未加工HoYoLABレスポンス、AI原文を送信・保存しない。匿名化スコープと構造化済み最小DTOだけをHTTPS（ローカル開発先を除く）へ送る。process-local 15分キャッシュと端末`app_settings`には最終検証済み提案と安全なメタデータだけを保存し、採用前は進捗・目標・完了状態を変更しない。DB migrationなし。
+- **UI:** 既存画面内に出典、上位1〜5件、短い根拠、警告、再生成、採用、閉じるを追加。明示採用後だけ既存ID/完了キーを維持して並び・理由へ反映し、候補・進捗・樹脂・日付・rules版変更時はfingerprint不一致で無効化。
+- **検証:** Web typecheck成功、lintはerror 0（既存/対象外warning 2）、Vitest 398成功・DB専用46 skip、Next production build成功。Flutter analyze 0件、全776テスト成功。`git diff --check`成功。セキュリティ自己監査はBLOCKER/HIGH/MEDIUMなし。
+- **未完了 / 次回:** 本番環境の`DEEPSEEK_DAILY_PLAN_ENABLED`は既定false。実DeepSeek疎通、staging/実機UI確認、段階的flag有効化はデプロイ運用時に実施。
+
 ## 2026-08-01 — YouTube feature を main 取り込み・merge-ready へ
 
 - **目的:** PR #25（Draft）を main と整合させ、GHA checkout 欠落を直し、ローカル検証まで完走する。本番/フラグ ON はしない。

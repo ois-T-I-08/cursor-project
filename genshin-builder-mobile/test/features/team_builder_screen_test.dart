@@ -123,5 +123,21 @@ void main() {
       expect(find.text('\u30b5\u30dd\u30fc\u30c8'), findsOneWidget);
       expect(find.text('\u30d2\u30fc\u30e9\u30fc'), findsOneWidget);
     });
+
+    testWidgets('深境螺旋統計への分析導線がある', (tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(child: MaterialApp(home: TeamBuilderScreen())),
+      );
+
+      await tester.scrollUntilVisible(
+        find.text('深境螺旋統計'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.text('編成を分析する'), findsOneWidget);
+      expect(find.text('深境螺旋統計'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

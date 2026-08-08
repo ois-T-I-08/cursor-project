@@ -1,16 +1,15 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { logSafeFailure } from "@/lib/safe-error-log";
 import { buildVisualRequestHash } from "./cache-key";
 import { loadCharacterHints, resolveCharacterCandidates } from "./character-match";
 import {
-  isCharacterBuildGuideTitle,
-  resolvePrimaryCharacterFromTitle,
-} from "./character-match-logic";
-import {
-  mergeVisualRecommendationsDeterministic,
-  mergeVisualRecommendationsWithDeepSeek,
-} from "./deepseek-visual-merge";
+  buildUncoveredEligibleQueue,
+  getCoverageMetrics,
+  type CoverageMetrics,
+} from "./visual-coverage";
+import { runSequentialPendingGenshinBatch } from "./pending-genshin-batch";
 import {
   AnalysisRangeError,
   normalizeAnalysisRanges,
@@ -31,10 +30,36 @@ import {
 } from "./versions";
 import { GENSIN_VIDEO_TITLE_MARKER } from "./genshin-video-title";
 import {
-  autoPublishVisualRecommendations,
-  isVisualAutoPublishEnabled,
-} from "./visual-auto-publish";
+  assertEmergencyStopAllowsWork,
+  evaluateVisualAutoPublishGate,
+} from "./automation/safety-gates";
+import { autoPublishVisualRecommendations } from "./visual-auto-publish";
 import type { VisualAutoPublishResult } from "./visual-auto-publish";
+import {
+  assertVisualProviderNotCoolingDown,
+  assertVisualTokenBudget,
+  classifyVisualAnalysisFailure,
+  logVisualAnalysisEvent,
+  noteVisualProviderCooldown,
+  VISUAL_PROVIDER_DEFAULT_COOLDOWN_MS,
+} from "./visual-analysis-safety";
+import { readGlobalAiEmergencyControl } from "@/lib/ai/global-ai-emergency";
+import {
+  runVisualPostProcess,
+  VisualPostProcessError,
+} from "./visual-postprocess";
+import {
+  buildLongformChunkUsageRecord,
+  buildLongformPartialState,
+  isLongformPublishable,
+  LongformPlanningError,
+  needsLongformFullDiscovery,
+  planLongformChunks,
+  reduceLongformChunkResults,
+  type LongformChunkUsageRecord,
+  type LongformPlan,
+} from "./visual-longform";
+import type { VideoVisualAnalysisResult } from "./visual-schemas";
 
 export class GuideVisualAnalysisError extends Error {
   constructor(public readonly code: string) {
@@ -44,6 +69,9 @@ export class GuideVisualAnalysisError extends Error {
 }
 
 const activeJobs = new Set<string>();
+
+/** Idempotency: videoId + analysisStage + config versions (via requestHash). */
+const VISUAL_ANALYSIS_STAGE = "visual_full_or_clipped";
 
 export async function analyzeVideoVisuals(input: {
   videoId: string;
@@ -55,6 +83,17 @@ export async function analyzeVideoVisuals(input: {
   }>;
   targetCharacterIds?: string[];
   provider?: VideoVisualAnalysisProvider;
+  /**
+   * When full_discovery exceeds the 80k hard max, run chunked long-form.
+   * Pending/batch callers should pass false to avoid runaway cost.
+   */
+  allowLongform?: boolean;
+  /**
+   * Canary / manual override: never auto-publish regardless of gate flags.
+   * Production default: omit / false — after success, evaluateVisualAutoPublishGate
+   * may auto-approve+publish when env + Emergency allow.
+   */
+  skipAutoPublish?: boolean;
 }): Promise<{
   jobId: string;
   cacheKey: string;
@@ -65,6 +104,18 @@ export async function analyzeVideoVisuals(input: {
   fps: number;
   autoPublish?: VisualAutoPublishResult | null;
 }> {
+  try {
+    await assertEmergencyStopAllowsWork();
+  } catch {
+    throw new GuideVisualAnalysisError("emergencyStopped");
+  }
+
+  try {
+    assertVisualProviderNotCoolingDown();
+  } catch {
+    throw new GuideVisualAnalysisError("geminiProviderCoolingDown");
+  }
+
   const video = await prisma.guideVideo.findUnique({
     where: { videoId: input.videoId },
     include: { channel: true },
@@ -122,6 +173,12 @@ export async function analyzeVideoVisuals(input: {
       include: { evidences: true },
     });
     if (cached?.status === "validated") {
+      logVisualAnalysisEvent({
+        videoId: video.videoId,
+        stage: VISUAL_ANALYSIS_STAGE,
+        retryReason: "cache_hit",
+        terminal: true,
+      });
       return {
         jobId: "cache-hit",
         cacheKey: requestHash,
@@ -132,9 +189,63 @@ export async function analyzeVideoVisuals(input: {
         fps,
       };
     }
+    // Terminal success: do not requeue paid AI for already-analyzed videos.
+    if (video.analysisStatus === "analyzed") {
+      const latest = await prisma.guideVisualAnalysisResult.findFirst({
+        where: { videoId: video.videoId, status: "validated" },
+        orderBy: { generatedAt: "desc" },
+        include: { evidences: true },
+      });
+      if (latest) {
+        logVisualAnalysisEvent({
+          videoId: video.videoId,
+          stage: VISUAL_ANALYSIS_STAGE,
+          retryReason: "already_analyzed",
+          terminal: true,
+        });
+        return {
+          jobId: "already-analyzed",
+          cacheKey: latest.cacheKey,
+          status: "already_analyzed",
+          evidenceCount: latest.evidences.length,
+          recommendationIds: [],
+          analysisMode,
+          fps,
+        };
+      }
+    }
+  }
+
+  const recentRateLimit = await prisma.guideVisualAnalysisJob.findFirst({
+    where: {
+      errorCode: {
+        in: ["http429", "providerRateLimited", "geminiProviderCoolingDown"],
+      },
+      createdAt: {
+        gte: new Date(Date.now() - VISUAL_PROVIDER_DEFAULT_COOLDOWN_MS),
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, createdAt: true },
+  });
+  if (recentRateLimit) {
+    noteVisualProviderCooldown(VISUAL_PROVIDER_DEFAULT_COOLDOWN_MS);
+    throw new GuideVisualAnalysisError("providerRateLimited");
   }
 
   if (activeJobs.has(video.videoId)) {
+    throw new GuideVisualAnalysisError("analysisAlreadyRunning");
+  }
+
+  const inflight = await prisma.guideVisualAnalysisJob.findFirst({
+    where: {
+      videoId: video.videoId,
+      status: "running",
+      startedAt: { gte: new Date(Date.now() - 30 * 60_000) },
+    },
+    select: { id: true },
+  });
+  if (inflight) {
     throw new GuideVisualAnalysisError("analysisAlreadyRunning");
   }
 
@@ -161,12 +272,14 @@ export async function analyzeVideoVisuals(input: {
       rangesPayload: JSON.stringify({
         analysisMode,
         fps,
+        stage: VISUAL_ANALYSIS_STAGE,
         ranges: requestedRanges ?? [],
       }),
       startedAt: new Date(),
     },
   });
 
+  let jobMarkedSucceeded = false;
   try {
     const hints = await loadCharacterHints();
     const known = new Set(hints.map((h) => h.id));
@@ -175,50 +288,176 @@ export async function analyzeVideoVisuals(input: {
       input.targetCharacterIds?.filter((id) => known.has(id)) ??
       (fromTitle.length > 0 ? fromTitle : hints.slice(0, 40).map((h) => h.id));
 
-    const provider = input.provider ?? new GeminiYouTubeVisualAnalysisProvider();
-    const analysis = await provider.analyze({
+    const rangeSecondsTotal = (requestedRanges ?? []).reduce(
+      (sum, range) => sum + Math.max(0, range.endSeconds - range.startSeconds),
+      0,
+    );
+    const allowLongform = input.allowLongform !== false && !clipped;
+    const wantsLongform =
+      allowLongform &&
+      analysisMode === "full_discovery" &&
+      needsLongformFullDiscovery({
+        durationSeconds: video.durationSeconds,
+        fps,
+        targetCharacterCount: targetCharacterIds.length,
+      });
+
+    let estimatedTokens = 0;
+    let longformPlan: LongformPlan | null = null;
+    if (wantsLongform) {
+      try {
+        longformPlan = planLongformChunks({
+          videoId: video.videoId,
+          durationSeconds: video.durationSeconds ?? 0,
+          fps: settings.discoveryFps,
+          targetCharacterCount: targetCharacterIds.length,
+          maxRangeSeconds: settings.maxRangeSeconds,
+        });
+        estimatedTokens = longformPlan.estimatedInputTokens;
+      } catch (error) {
+        if (error instanceof LongformPlanningError) {
+          throw new GuideVisualAnalysisError(error.code);
+        }
+        throw error;
+      }
+    } else {
+      try {
+        estimatedTokens = assertVisualTokenBudget({
+          durationSeconds: video.durationSeconds,
+          fps,
+          analysisMode,
+          rangeSecondsTotal,
+          targetCharacterCount: targetCharacterIds.length,
+        }).estimatedTokens;
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === "videoTooLargeForFullDiscovery"
+        ) {
+          throw new GuideVisualAnalysisError("videoTooLargeForFullDiscovery");
+        }
+        throw error;
+      }
+    }
+
+    const control = await readGlobalAiEmergencyControl();
+    logVisualAnalysisEvent({
+      jobId: job.id,
       videoId: video.videoId,
-      youtubeUrl: `https://www.youtube.com/watch?v=${video.videoId}`,
-      channelId: video.channelId,
-      title: video.title,
-      publishedAt: video.publishedAt?.toISOString() ?? null,
-      durationSeconds: video.durationSeconds,
-      targetCharacterIds,
-      requestedRanges,
-      analysisMode,
-      fps,
-      gameDataVersion: GUIDE_GAME_DATA_VERSION,
+      stage: longformPlan ? "visual-longform" : VISUAL_ANALYSIS_STAGE,
+      provider: GEMINI_PROVIDER_ID,
+      controlVersion: control.version,
+      estimatedTokens,
+      terminal: false,
     });
+
+    const provider = input.provider ?? new GeminiYouTubeVisualAnalysisProvider();
+
+    let analysisResult: VideoVisualAnalysisResult;
+    let analysisRawContent: string;
+    let analysisModelIdentifier: string;
+    let analysisUsage: Record<string, number>;
+    let analysisAttempts: number;
+    let finalRequestHash = requestHash;
+    let finalAllowedWindows = clipped ? requestedRanges : undefined;
+
+    if (longformPlan) {
+      const longformOutcome = await runLongformChunkPipeline({
+        video,
+        jobId: job.id,
+        plan: longformPlan,
+        targetCharacterIds,
+        known,
+        provider,
+        settings,
+        baseRequest: {
+          videoMetadataHash: video.metadataHash,
+          videoPublishedAt: video.publishedAt?.toISOString() ?? null,
+          videoDuration: video.durationSeconds,
+          modelIdentifier: settings.model,
+        },
+      });
+      analysisResult = longformOutcome.result;
+      analysisRawContent = longformOutcome.rawContent;
+      analysisModelIdentifier = longformOutcome.modelIdentifier;
+      analysisUsage = longformOutcome.usage;
+      analysisAttempts = longformOutcome.attempts;
+      finalRequestHash = longformOutcome.requestHash;
+      finalAllowedWindows = longformPlan.chunks.map((c) => ({
+        startSeconds: c.startSeconds,
+        endSeconds: c.endSeconds,
+        reason: c.reason,
+      }));
+      await prisma.guideVisualAnalysisJob.update({
+        where: { id: job.id },
+        data: {
+          requestHash: finalRequestHash,
+          rangesPayload: JSON.stringify(
+            buildLongformRangesPayload({
+              plan: longformPlan,
+              partialState: longformOutcome.partialState,
+              chunkUsage: longformOutcome.chunkUsage,
+            }),
+          ),
+        },
+      });
+    } else {
+      const analysis = await provider.analyze({
+        videoId: video.videoId,
+        youtubeUrl: `https://www.youtube.com/watch?v=${video.videoId}`,
+        channelId: video.channelId,
+        title: video.title,
+        publishedAt: video.publishedAt?.toISOString() ?? null,
+        durationSeconds: video.durationSeconds,
+        targetCharacterIds,
+        requestedRanges,
+        analysisMode,
+        fps,
+        gameDataVersion: GUIDE_GAME_DATA_VERSION,
+      });
+      analysisResult = analysis.result;
+      analysisRawContent = analysis.rawContent;
+      analysisModelIdentifier = analysis.modelIdentifier;
+      analysisUsage = analysis.usage;
+      analysisAttempts = analysis.attempts;
+    }
+
+    // Emergency may have flipped during provider HTTP — block persistence/publish.
+    try {
+      await assertEmergencyStopAllowsWork();
+    } catch {
+      throw new GuideVisualAnalysisError("emergencyStopped");
+    }
 
     const validated = validateVisualAnalysisResult({
       expectedVideoId: video.videoId,
       durationSeconds: video.durationSeconds,
       allowedCharacterIds: new Set(targetCharacterIds),
       knownCharacterIds: known,
-      result: analysis.result,
-      allowedWindows: clipped ? requestedRanges : undefined,
+      result: analysisResult,
+      allowedWindows: finalAllowedWindows,
     });
 
     const result = await prisma.guideVisualAnalysisResult.upsert({
-      where: { cacheKey: requestHash },
+      where: { cacheKey: finalRequestHash },
       create: {
-        cacheKey: requestHash,
+        cacheKey: finalRequestHash,
         videoId: video.videoId,
-        requestHash,
+        requestHash: finalRequestHash,
         providerId: provider.providerId,
-        modelIdentifier: analysis.modelIdentifier,
+        modelIdentifier: analysisModelIdentifier,
         promptVersion: VISUAL_PROMPT_VERSION,
         schemaVersion: VISUAL_SCHEMA_VERSION,
         gameDataVersion: GUIDE_GAME_DATA_VERSION,
         status: "validated",
-        rawAiOutput: analysis.rawContent.slice(0, 200_000),
-        validatedPayload: JSON.stringify(analysis.result),
+        rawAiOutput: analysisRawContent.slice(0, 200_000),
+        validatedPayload: JSON.stringify(analysisResult),
         generatedAt: new Date(),
       },
       update: {
         status: "validated",
-        rawAiOutput: analysis.rawContent.slice(0, 200_000),
-        validatedPayload: JSON.stringify(analysis.result),
+        rawAiOutput: analysisRawContent.slice(0, 200_000),
+        validatedPayload: JSON.stringify(analysisResult),
         errorCode: "",
         generatedAt: new Date(),
       },
@@ -280,11 +519,12 @@ export async function analyzeVideoVisuals(input: {
       where: { id: job.id },
       data: {
         status: "succeeded",
-        attempts: analysis.attempts,
-        tokenUsage: JSON.stringify(analysis.usage),
+        attempts: analysisAttempts,
+        tokenUsage: JSON.stringify(analysisUsage),
         completedAt: new Date(),
       },
     });
+    jobMarkedSucceeded = true;
     await prisma.guideVideo.update({
       where: { videoId: video.videoId },
       data: { analysisStatus: "analyzed", lastAnalyzedAt: new Date() },
@@ -294,43 +534,95 @@ export async function analyzeVideoVisuals(input: {
         channelId: video.channelId,
         videoId: video.videoId,
         providerId: provider.providerId,
-        modelIdentifier: analysis.modelIdentifier,
+        modelIdentifier: analysisModelIdentifier,
         success: true,
-        tokenUsage: JSON.stringify(analysis.usage),
+        tokenUsage: JSON.stringify(analysisUsage),
       },
     });
 
-    const recommendationIds = await createPendingRecommendationsFromVisuals({
+    // AI analysis terminal success is already recorded. Post-process never
+    // calls Gemini and must not flip job status back to failed.
+    const postProcess = await runVisualPostProcess({
       videoId: video.videoId,
       evidenceIds,
+      jobId: job.id,
+      knownCharacterIds: known,
     });
+    const recommendationIds = postProcess.recommendationIds;
 
+    // Production normal path: auto-publish when gate allows (Canary passes skipAutoPublish).
     let autoPublish: VisualAutoPublishResult | null = null;
-    if (isVisualAutoPublishEnabled() && recommendationIds.length > 0) {
-      autoPublish = await autoPublishVisualRecommendations({
-        evidenceIds,
-        recommendationIds,
-      });
+    if (!input.skipAutoPublish) {
+      const publishGate = await evaluateVisualAutoPublishGate();
+      if (publishGate.allowed && recommendationIds.length > 0) {
+        // Re-check emergency immediately before publish (race with admin stop).
+        try {
+          await assertEmergencyStopAllowsWork();
+        } catch {
+          throw new GuideVisualAnalysisError("emergencyStopped");
+        }
+        autoPublish = await autoPublishVisualRecommendations({
+          evidenceIds,
+          recommendationIds,
+        });
+      }
     }
+
+    logVisualAnalysisEvent({
+      jobId: job.id,
+      videoId: video.videoId,
+      stage: longformPlan ? "visual-longform" : VISUAL_ANALYSIS_STAGE,
+      attempt: analysisAttempts,
+      provider: GEMINI_PROVIDER_ID,
+      terminal: true,
+      estimatedTokens,
+    });
 
     return {
       jobId: job.id,
-      cacheKey: requestHash,
+      cacheKey: finalRequestHash,
       status: "validated",
       evidenceCount: validated.length,
       recommendationIds,
-      analysisMode,
-      fps,
+      analysisMode: longformPlan ? "full_discovery" : analysisMode,
+      fps: longformPlan?.fps ?? fps,
       autoPublish,
     };
   } catch (error) {
     const code = resolveAnalysisErrorCode(error);
+    // Never log the raw Error object (may embed request/URL/auth material).
     if (process.env.NODE_ENV !== "production") {
-      console.error("[build-guide-analysis]", video.videoId, code, error);
+      logSafeFailure("build-guide-analysis", code, { videoId: video.videoId });
+    }
+    const failureClass = classifyVisualAnalysisFailure(code);
+    if (failureClass.providerCooldown) {
+      noteVisualProviderCooldown(VISUAL_PROVIDER_DEFAULT_COOLDOWN_MS);
+    }
+    // Never overwrite a terminal succeeded job (post-process failures stay annotated).
+    if (jobMarkedSucceeded) {
+      await prisma.guideVisualAnalysisJob.update({
+        where: { id: job.id },
+        data: { errorCode: `postProcess:${code}` },
+      });
+      logVisualAnalysisEvent({
+        jobId: job.id,
+        videoId: video.videoId,
+        stage: VISUAL_ANALYSIS_STAGE,
+        retryReason: `postProcess:${code}`,
+        provider: GEMINI_PROVIDER_ID,
+        terminal: true,
+      });
+      throw new GuideVisualAnalysisError(
+        code === "emergencyStopped" ? code : `postProcess:${code}`,
+      );
     }
     await prisma.guideVisualAnalysisJob.update({
       where: { id: job.id },
-      data: { status: "failed", errorCode: code, completedAt: new Date() },
+      data: {
+        status: "failed",
+        errorCode: code,
+        completedAt: new Date(),
+      },
     });
     await prisma.guideVisualUsageLog.create({
       data: {
@@ -342,6 +634,14 @@ export async function analyzeVideoVisuals(input: {
         tokenUsage: "",
       },
     });
+    logVisualAnalysisEvent({
+      jobId: job.id,
+      videoId: video.videoId,
+      stage: VISUAL_ANALYSIS_STAGE,
+      retryReason: code,
+      provider: GEMINI_PROVIDER_ID,
+      terminal: !failureClass.retryable,
+    });
     throw new GuideVisualAnalysisError(code);
   } finally {
     activeJobs.delete(video.videoId);
@@ -350,6 +650,8 @@ export async function analyzeVideoVisuals(input: {
 
 function resolveAnalysisErrorCode(error: unknown): string {
   if (error instanceof GuideVisualAnalysisError) return error.message;
+  if (error instanceof VisualPostProcessError) return error.code;
+  if (error instanceof LongformPlanningError) return error.code;
   if (error instanceof AnalysisRangeError) return error.code;
   if (error instanceof GeminiError) return error.code;
   if (error instanceof VisualValidationError) return error.code;
@@ -359,6 +661,7 @@ function resolveAnalysisErrorCode(error: unknown): string {
       return `prisma${maybeCode}`;
     }
     const message = error.message;
+    if (message.startsWith("postProcess:")) return message.slice("postProcess:".length);
     if (/^[a-zA-Z][a-zA-Z0-9]{0,63}$/.test(message)) return message;
     if (message.includes("Unique constraint")) return "prismaUniqueConstraint";
     if (message.includes("ON CONFLICT clause")) return "prismaMissingUniqueIndex";
@@ -371,118 +674,407 @@ function resolveAnalysisErrorCode(error: unknown): string {
   return "analysisFailed";
 }
 
-async function createPendingRecommendationsFromVisuals(input: {
-  videoId: string;
-  evidenceIds: string[];
-}): Promise<string[]> {
-  const evidences = await prisma.guideVisualEvidence.findMany({
-    where: {
-      id: { in: input.evidenceIds },
-      validationStatus: "validated",
-      approvalStatus: { not: "rejected" },
-    },
-  });
-  if (evidences.length === 0) return [];
+async function runLongformChunkPipeline(input: {
+  video: {
+    videoId: string;
+    channelId: string;
+    title: string;
+    publishedAt: Date | null;
+    durationSeconds: number | null;
+    metadataHash: string;
+  };
+  jobId: string;
+  plan: LongformPlan;
+  targetCharacterIds: string[];
+  known: Set<string>;
+  provider: VideoVisualAnalysisProvider;
+  settings: ReturnType<typeof geminiVideoSettings>;
+  baseRequest: {
+    videoMetadataHash: string;
+    videoPublishedAt: string | null;
+    videoDuration: number | null;
+    modelIdentifier: string;
+  };
+}): Promise<{
+  result: VideoVisualAnalysisResult;
+  rawContent: string;
+  modelIdentifier: string;
+  usage: Record<string, number>;
+  attempts: number;
+  requestHash: string;
+  partialState: ReturnType<typeof buildLongformPartialState>;
+  chunkUsage: LongformChunkUsageRecord[];
+}> {
+  const completedIndexes: number[] = [];
+  const chunkResults: Array<{
+    chunkIndex: number;
+    result: VideoVisualAnalysisResult;
+  }> = [];
+  const rawParts: string[] = [];
+  const usageTotals: Record<string, number> = {};
+  const chunkUsage: LongformChunkUsageRecord[] = [];
+  let attemptsUsed = 0;
+  let failedChunkIndex: number | null = null;
+  let failedCode: string | null = null;
+  let emergency = false;
+  let rateLimited = false;
 
-  const byCharacter = new Map<string, typeof evidences>();
-  for (const evidence of evidences) {
-    const payload = safeJson<{
-      targetCharacterIds?: string[];
-      publishableStatValues?: unknown[];
-    }>(evidence.normalizedPayload, {});
-    const characterIds = payload.targetCharacterIds ?? [];
-    for (const characterId of characterIds) {
-      const list = byCharacter.get(characterId) ?? [];
-      list.push(evidence);
-      byCharacter.set(characterId, list);
-    }
-  }
-
-  const recommendationIds: string[] = [];
-  for (const [characterId, list] of byCharacter) {
-    const mergeInput = {
-      characterId,
-      visualEvidences: list.map((evidence) => {
-        const payload = safeJson<{
-          publishableStatValues?: unknown[];
-          recommendedMainStats?: unknown;
-          statPriority?: string[];
-        }>(evidence.normalizedPayload, {});
-        return {
-          evidenceId: evidence.id,
-          videoId: evidence.videoId,
-          startSeconds: evidence.startSeconds,
-          endSeconds: evidence.endSeconds,
-          evidenceType: evidence.evidenceType,
-          visibleTexts: [evidence.exactVisibleText],
-          statValues: payload.publishableStatValues ?? [],
-          mainStats: payload.recommendedMainStats ?? null,
-          statPriority: payload.statPriority ?? [],
-          confidence: evidence.confidence,
-        };
-      }),
-      allowedVideoIds: [input.videoId],
-      allowedCharacterIds: [characterId],
-      gameDataVersion: GUIDE_GAME_DATA_VERSION,
-    };
-
-    let merged;
-    try {
-      merged = await mergeVisualRecommendationsWithDeepSeek(mergeInput);
-    } catch {
-      merged = mergeVisualRecommendationsDeterministic(mergeInput);
-    }
-
-    const { buildStructuredPayloadFromEvidences } = await import(
-      "./public-recommendation-normalize"
-    );
-    const structuredPayload = buildStructuredPayloadFromEvidences(
-      list.map((e) => ({
-        videoId: e.videoId,
-        normalizedPayload: e.normalizedPayload,
-      })),
-    );
-
-    const recommendation = await prisma.characterBuildRecommendation.create({
+  const persistLongformProgress = async (
+    state: ReturnType<typeof buildLongformPartialState>,
+  ) => {
+    await prisma.guideVisualAnalysisJob.update({
+      where: { id: input.jobId },
       data: {
-        characterId,
-        status: "pending_review",
-        origin: "single_video",
-        contextPayload: JSON.stringify(merged.context),
-        mainStatsPayload: JSON.stringify(merged.mainStats),
-        priorityPayload: JSON.stringify(merged.substatPriority),
-        targetsPayload: JSON.stringify(merged.targets),
-        structuredPayload,
-        overallConfidence: merged.overallConfidence,
-        notes: [...merged.caveats, merged.adminSummary].filter(Boolean).join("\n"),
+        rangesPayload: JSON.stringify(
+          buildLongformRangesPayload({
+            plan: input.plan,
+            partialState: state,
+            chunkUsage,
+          }),
+        ),
+      },
+    });
+  };
+
+  for (const chunk of input.plan.chunks) {
+    try {
+      await assertEmergencyStopAllowsWork();
+    } catch {
+      emergency = true;
+      failedChunkIndex = chunk.chunkIndex;
+      failedCode = "emergencyStopped";
+      break;
+    }
+    try {
+      assertVisualProviderNotCoolingDown();
+    } catch {
+      rateLimited = true;
+      failedChunkIndex = chunk.chunkIndex;
+      failedCode = "geminiProviderCoolingDown";
+      break;
+    }
+
+    const chunkRanges = [
+      {
+        startSeconds: chunk.startSeconds,
+        endSeconds: chunk.endSeconds,
+        reason: chunk.reason,
+      },
+    ];
+    const chunkHash = buildVisualRequestHash({
+      videoId: input.video.videoId,
+      videoMetadataHash: input.baseRequest.videoMetadataHash,
+      videoPublishedAt: input.baseRequest.videoPublishedAt,
+      videoDuration: input.baseRequest.videoDuration,
+      providerId: GEMINI_PROVIDER_ID,
+      modelIdentifier: input.baseRequest.modelIdentifier,
+      visualPromptVersion: VISUAL_PROMPT_VERSION,
+      visualSchemaVersion: VISUAL_SCHEMA_VERSION,
+      gameDataVersion: GUIDE_GAME_DATA_VERSION,
+      analysisMode: "clipped_detail",
+      fps: input.plan.fps,
+      requestedRanges: chunkRanges,
+    });
+
+    const cached = await prisma.guideVisualAnalysisResult.findUnique({
+      where: { cacheKey: chunkHash },
+      select: {
+        status: true,
+        validatedPayload: true,
+        rawAiOutput: true,
+        modelIdentifier: true,
       },
     });
 
-    for (const evidence of list) {
-      await prisma.recommendationVisualContribution.create({
-        data: {
-          recommendationId: recommendation.id,
-          evidenceId: evidence.id,
-          videoId: evidence.videoId,
-          startSeconds: evidence.startSeconds,
-          endSeconds: evidence.endSeconds,
-          exactVisibleText: evidence.exactVisibleText.slice(0, 200),
-          contributionRole: "primary",
-          decision: "adopted",
-          decisionSummary: "auto-candidate from validated visual evidence",
-          usedInPublishedResult: false,
+    if (cached?.status === "validated" && cached.validatedPayload) {
+      try {
+        const parsed = JSON.parse(
+          cached.validatedPayload,
+        ) as VideoVisualAnalysisResult;
+        chunkResults.push({ chunkIndex: chunk.chunkIndex, result: parsed });
+        completedIndexes.push(chunk.chunkIndex);
+        rawParts.push(cached.rawAiOutput.slice(0, 20_000));
+        chunkUsage.push(
+          buildLongformChunkUsageRecord({
+            chunkIndex: chunk.chunkIndex,
+            rangeStart: chunk.startSeconds,
+            rangeEnd: chunk.endSeconds,
+            estimatedTokens: chunk.estimatedTokens,
+            usage: null,
+            attempts: 0,
+            cacheHit: true,
+            provider: GEMINI_PROVIDER_ID,
+            requestHash: chunkHash,
+          }),
+        );
+        logVisualAnalysisEvent({
+          jobId: input.jobId,
+          videoId: input.video.videoId,
+          stage: "visual-longform-chunk",
+          attempt: chunk.chunkIndex + 1,
+          retryReason: "chunk_cache_hit",
+          estimatedTokens: chunk.estimatedTokens,
+          terminal: false,
+        });
+        continue;
+      } catch {
+        // Fall through to re-analyze this chunk.
+      }
+    }
+
+    try {
+      const analysis = await input.provider.analyze({
+        videoId: input.video.videoId,
+        youtubeUrl: `https://www.youtube.com/watch?v=${input.video.videoId}`,
+        channelId: input.video.channelId,
+        title: input.video.title,
+        publishedAt: input.video.publishedAt?.toISOString() ?? null,
+        durationSeconds: input.video.durationSeconds,
+        targetCharacterIds: input.targetCharacterIds,
+        requestedRanges: chunkRanges,
+        analysisMode: "clipped_detail",
+        fps: input.plan.fps,
+        gameDataVersion: GUIDE_GAME_DATA_VERSION,
+      });
+
+      // Re-check after HTTP response before accepting work.
+      try {
+        await assertEmergencyStopAllowsWork();
+      } catch {
+        emergency = true;
+        failedChunkIndex = chunk.chunkIndex;
+        failedCode = "emergencyStopped";
+        // Keep paid-call usage if the HTTP already completed.
+        chunkUsage.push(
+          buildLongformChunkUsageRecord({
+            chunkIndex: chunk.chunkIndex,
+            rangeStart: chunk.startSeconds,
+            rangeEnd: chunk.endSeconds,
+            estimatedTokens: chunk.estimatedTokens,
+            usage: analysis.usage,
+            attempts: analysis.attempts,
+            cacheHit: false,
+            provider: GEMINI_PROVIDER_ID,
+            requestHash: chunkHash,
+          }),
+        );
+        break;
+      }
+
+      validateVisualAnalysisResult({
+        expectedVideoId: input.video.videoId,
+        durationSeconds: input.video.durationSeconds,
+        allowedCharacterIds: new Set(input.targetCharacterIds),
+        knownCharacterIds: input.known,
+        result: analysis.result,
+        allowedWindows: chunkRanges,
+      });
+
+      await prisma.guideVisualAnalysisResult.upsert({
+        where: { cacheKey: chunkHash },
+        create: {
+          cacheKey: chunkHash,
+          videoId: input.video.videoId,
+          requestHash: chunkHash,
+          providerId: input.provider.providerId,
+          modelIdentifier: analysis.modelIdentifier,
+          promptVersion: VISUAL_PROMPT_VERSION,
+          schemaVersion: VISUAL_SCHEMA_VERSION,
+          gameDataVersion: GUIDE_GAME_DATA_VERSION,
+          status: "validated",
+          rawAiOutput: analysis.rawContent.slice(0, 200_000),
+          validatedPayload: JSON.stringify(analysis.result),
+          generatedAt: new Date(),
+        },
+        update: {
+          status: "validated",
+          rawAiOutput: analysis.rawContent.slice(0, 200_000),
+          validatedPayload: JSON.stringify(analysis.result),
+          errorCode: "",
+          generatedAt: new Date(),
         },
       });
+
+      chunkResults.push({
+        chunkIndex: chunk.chunkIndex,
+        result: analysis.result,
+      });
+      completedIndexes.push(chunk.chunkIndex);
+      rawParts.push(analysis.rawContent.slice(0, 20_000));
+      attemptsUsed = Math.max(attemptsUsed, analysis.attempts);
+      for (const [key, value] of Object.entries(analysis.usage)) {
+        usageTotals[key] = (usageTotals[key] ?? 0) + value;
+      }
+      chunkUsage.push(
+        buildLongformChunkUsageRecord({
+          chunkIndex: chunk.chunkIndex,
+          rangeStart: chunk.startSeconds,
+          rangeEnd: chunk.endSeconds,
+          estimatedTokens: chunk.estimatedTokens,
+          usage: analysis.usage,
+          attempts: analysis.attempts,
+          cacheHit: false,
+          provider: GEMINI_PROVIDER_ID,
+          requestHash: chunkHash,
+        }),
+      );
+      logVisualAnalysisEvent({
+        jobId: input.jobId,
+        videoId: input.video.videoId,
+        stage: "visual-longform-chunk",
+        attempt: chunk.chunkIndex + 1,
+        provider: GEMINI_PROVIDER_ID,
+        estimatedTokens: chunk.estimatedTokens,
+        terminal: false,
+      });
+    } catch (error) {
+      const code = resolveAnalysisErrorCode(error);
+      failedChunkIndex = chunk.chunkIndex;
+      failedCode = code;
+      chunkUsage.push(
+        buildLongformChunkUsageRecord({
+          chunkIndex: chunk.chunkIndex,
+          rangeStart: chunk.startSeconds,
+          rangeEnd: chunk.endSeconds,
+          estimatedTokens: chunk.estimatedTokens,
+          usage: null,
+          attempts: 0,
+          cacheHit: false,
+          provider: GEMINI_PROVIDER_ID,
+          requestHash: chunkHash,
+        }),
+      );
+      if (
+        code === "emergencyStopped" ||
+        code === "EMERGENCY_STOPPED"
+      ) {
+        emergency = true;
+      }
+      if (
+        code === "http429" ||
+        code === "providerRateLimited" ||
+        code === "geminiProviderCoolingDown"
+      ) {
+        rateLimited = true;
+        noteVisualProviderCooldown(VISUAL_PROVIDER_DEFAULT_COOLDOWN_MS);
+      }
+      break;
     }
-    recommendationIds.push(recommendation.id);
   }
-  return recommendationIds;
+
+  const partialState = buildLongformPartialState({
+    plan: input.plan,
+    completedChunkIndexes: completedIndexes,
+    failedChunkIndex,
+    failedCode,
+    emergency,
+    rateLimited,
+  });
+
+  if (!isLongformPublishable(partialState)) {
+    // Persist observed chunkUsage even on partial/abort (no invented actuals).
+    await persistLongformProgress(partialState);
+    // Do not merge/publish incomplete discovery. Cached chunks remain for resume.
+    throw new GuideVisualAnalysisError(
+      partialState.failedCode ?? "longformPartialFailure",
+    );
+  }
+
+  // Emergency again before merge (no new HTTP, but no publish of stale work).
+  try {
+    await assertEmergencyStopAllowsWork();
+  } catch {
+    await persistLongformProgress({
+      ...partialState,
+      status: "aborted_emergency",
+      failedCode: "emergencyStopped",
+    });
+    throw new GuideVisualAnalysisError("emergencyStopped");
+  }
+
+  const reduced = reduceLongformChunkResults(
+    input.video.videoId,
+    chunkResults,
+  );
+
+  const requestHash = buildVisualRequestHash({
+    videoId: input.video.videoId,
+    videoMetadataHash: input.baseRequest.videoMetadataHash,
+    videoPublishedAt: input.baseRequest.videoPublishedAt,
+    videoDuration: input.baseRequest.videoDuration,
+    providerId: GEMINI_PROVIDER_ID,
+    modelIdentifier: input.baseRequest.modelIdentifier,
+    visualPromptVersion: VISUAL_PROMPT_VERSION,
+    visualSchemaVersion: VISUAL_SCHEMA_VERSION,
+    gameDataVersion: GUIDE_GAME_DATA_VERSION,
+    analysisMode: "clipped_detail",
+    fps: input.plan.fps,
+    requestedRanges: input.plan.chunks.map((c) => ({
+      startSeconds: c.startSeconds,
+      endSeconds: c.endSeconds,
+    })),
+  });
+
+  return {
+    result: reduced.result,
+    rawContent: rawParts.join("\n---\n").slice(0, 200_000),
+    modelIdentifier: input.baseRequest.modelIdentifier,
+    usage: {
+      ...usageTotals,
+      longformChunks: input.plan.chunks.length,
+      longformMergeLevels: reduced.levels,
+      longformMergeTokensEst: reduced.estimatedMergeTokens,
+    },
+    attempts: Math.max(1, attemptsUsed),
+    requestHash,
+    partialState,
+    chunkUsage,
+  };
+}
+
+function buildLongformRangesPayload(input: {
+  plan: LongformPlan;
+  partialState: ReturnType<typeof buildLongformPartialState>;
+  chunkUsage: LongformChunkUsageRecord[];
+}): Record<string, unknown> {
+  return {
+    analysisMode: "longform_chunked",
+    fps: input.plan.fps,
+    stage: "visual-longform",
+    longform: {
+      ...input.partialState,
+      chunkUsage: input.chunkUsage,
+    },
+    plan: {
+      version: input.plan.version,
+      chunkCount: input.plan.chunks.length,
+      estimatedInputTokens: input.plan.estimatedInputTokens,
+      estimatedAiCalls: input.plan.estimatedAiCalls,
+      chunks: input.plan.chunks.map((c) => ({
+        i: c.chunkIndex,
+        s: c.startSeconds,
+        e: c.endSeconds,
+        tokens: c.estimatedTokens,
+      })),
+    },
+    /** Top-level mirror for easy admin/ops parsing (same records as longform.chunkUsage). */
+    chunkUsage: input.chunkUsage,
+  };
 }
 
 /**
+ * Production pending batch (stock).
+ *
+ * NOT for Limited Batch Canary — use `runLimitedBatchCanary` instead.
+ * Stock path: allowLongform=true (reuses production-ready long-form pipeline for
+ * >80k videos). Does not set skipAutoPublish (Production auto-publish when
+ * evaluateVisualAutoPublishGate allows). May scan uncovered queue.
+ * Sequential concurrency=1; aborts remainder on 429 / Emergency / cooldown.
+ *
  * タイトルに「【原神】」を含み未解析の公開動画を解析する。
  * mode=uncoveredCharacters: 育成ガイド寄り・未カバーキャラ優先で1キャラ1本。
- * 各動画の成功時は証拠 + キャラ別 pending 推奨ドラフトまで作成する。
+ * Covered = CharacterBuildRecommendation status != rejected（pending_review 含む）。
+ * analysis succeeded + postProcess failed は AI キューから外れ、recoverPostProcessFailures で復旧する。
  */
 export async function analyzePendingGenshinVideos(input: {
   limit?: number;
@@ -496,7 +1088,13 @@ export async function analyzePendingGenshinVideos(input: {
   attempted: number;
   succeeded: number;
   failed: number;
+  /**
+   * @deprecated Use remainingEligibleVideos. This is eligible-queue remainder, NOT master uncovered count.
+   */
   remainingUncoveredEstimate: number | null;
+  remainingEligibleVideos: number | null;
+  eligiblePendingVideos: number | null;
+  coverage: CoverageMetrics;
   results: Array<{
     videoId: string;
     title: string;
@@ -543,103 +1141,74 @@ export async function analyzePendingGenshinVideos(input: {
 
   let selected: Array<{ videoId: string; title: string; characterId?: string | null }> =
     [];
-  let remainingUncoveredEstimate: number | null = null;
+  let remainingEligibleVideos: number | null = null;
+  let eligiblePendingVideos: number | null = null;
 
   if (mode === "uncoveredCharacters") {
     const hints = await loadCharacterHints();
     const coveredRows = await prisma.characterBuildRecommendation.findMany({
       where: { status: { not: "rejected" } },
-      distinct: ["characterId"],
       select: { characterId: true },
     });
-    const claimed = new Set(coveredRows.map((r) => r.characterId));
-    const queue: Array<{ videoId: string; title: string; characterId: string }> =
-      [];
-    for (const video of pending) {
-      if (!isCharacterBuildGuideTitle(video.title)) continue;
-      const characterId = resolvePrimaryCharacterFromTitle(video.title, hints);
-      if (!characterId || claimed.has(characterId)) continue;
-      claimed.add(characterId);
-      queue.push({ ...video, characterId });
-    }
-    remainingUncoveredEstimate = Math.max(0, queue.length - limit);
-    selected = queue.slice(0, limit);
+    const coveredIds = new Set(coveredRows.map((r) => r.characterId));
+    const built = buildUncoveredEligibleQueue({
+      pendingVideos: pending,
+      hints,
+      coveredIds,
+      limit,
+    });
+    selected = built.selected;
+    eligiblePendingVideos = built.eligiblePendingVideos;
+    remainingEligibleVideos = built.remainingEligibleVideos;
   } else {
     selected = pending.slice(0, limit).map((v) => ({ ...v, characterId: null }));
+    eligiblePendingVideos = pending.length;
+    remainingEligibleVideos = Math.max(0, pending.length - limit);
   }
 
-  const results: Array<{
-    videoId: string;
-    title: string;
-    characterId?: string | null;
-    ok: boolean;
-    status?: string;
-    evidenceCount?: number;
-    recommendationIds?: string[];
-    error?: string;
-  }> = [];
-
-  for (const video of selected) {
-    try {
+  const results = await runSequentialPendingGenshinBatch({
+    selected,
+    assertEmergencyAllowsWork: assertEmergencyStopAllowsWork,
+    analyze: async ({ videoId, targetCharacterIds, allowLongform }) => {
       const outcome = await analyzeVideoVisuals({
-        videoId: video.videoId,
-        targetCharacterIds: video.characterId ? [video.characterId] : undefined,
+        videoId,
+        targetCharacterIds,
+        // Production stock: enable verified long-form pipeline for >80k videos.
+        allowLongform,
       });
-      results.push({
-        videoId: video.videoId,
-        title: video.title,
-        characterId: video.characterId,
-        ok: true,
+      return {
         status: outcome.status,
         evidenceCount: outcome.evidenceCount,
         recommendationIds: outcome.recommendationIds,
-      });
-    } catch (error) {
-      const code =
-        error instanceof GuideVisualAnalysisError
-          ? error.code
-          : error instanceof Error
-            ? error.message
-            : "analysisFailed";
-      results.push({
-        videoId: video.videoId,
-        title: video.title,
-        characterId: video.characterId,
-        ok: false,
-        error: code,
-      });
-      if (
-        code === "channelDailyLimit" ||
-        code === "geminiDisabled" ||
-        code === "analysisAlreadyRunning"
-      ) {
-        break;
-      }
-    }
-  }
+      };
+    },
+  });
 
   const succeeded = results.filter((r) => r.ok).length;
   const failed = results.filter((r) => !r.ok).length;
+  const attempted = results.length;
+  const coverage = await getCoverageMetrics({ eligibleLimit: limit });
+  // Compat alias: historically misnamed; equals eligible-queue remainder only.
+  const remainingUncoveredEstimate = remainingEligibleVideos;
+
   return {
     titleMarker: GENSIN_VIDEO_TITLE_MARKER,
     mode,
     limit,
-    attempted: results.length,
+    attempted,
     succeeded,
     failed,
     remainingUncoveredEstimate,
+    remainingEligibleVideos,
+    eligiblePendingVideos,
+    coverage,
     results,
     note:
       mode === "uncoveredCharacters"
-        ? "未カバーキャラの育成ガイド動画を優先解析しました。HTTPタイムアウト回避のため1回あたり最大10件です。管理画面の全キャラボタンは残件がなくなるまで繰り返します。公開には証拠確認→構造化→publishが必要です。"
+        ? attempted === 0
+          ? "未カバーキャラを確認しましたが、解析対象はありませんでした。タイトルに「【原神】」を含み未解析・公開・許可済みチャンネルの育成ガイド動画が無い、または該当キャラが既に推奨（rejected以外）でカバー済みの可能性があります。postProcess失敗の復旧は recoverPostProcessFailures を使います（AI再解析しません）。HTTPタイムアウト回避のため1回あたり最大10件です。"
+          : "未カバーキャラの育成ガイド動画を優先解析しました。HTTPタイムアウト回避のため1回あたり最大10件です。管理画面の全キャラボタンは残件がなくなるまで繰り返します。公開には証拠確認→構造化→publishが必要です。"
         : "解析成功分は証拠（pending_review）と推奨ドラフトまで作成済みです。公開するには証拠確認→構造化編集→publish が必要です。",
   };
 }
 
-function safeJson<T>(raw: string, fallback: T): T {
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}

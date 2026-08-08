@@ -9,7 +9,16 @@ import {
 export function isDeepSeekDailyPlanEnabled(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): boolean {
-  return env.DEEPSEEK_DAILY_PLAN_ENABLED === "true";
+  return (
+    env.DEEPSEEK_ENABLED === "true" &&
+    env.DEEPSEEK_DAILY_PLAN_ENABLED === "true"
+  );
+}
+
+export function configuredDailyPlanModel(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string {
+  return env.DEEPSEEK_MODEL?.trim() || "deepseek-v4-flash";
 }
 
 export function deepSeekDailyPlanSettings(
@@ -19,22 +28,16 @@ export function deepSeekDailyPlanSettings(
     throw new DeepSeekError("dailyPlanDisabled", false);
   }
   const apiKey =
-    env.DEEPSEEK_DAILY_PLAN_API_KEY?.trim() ||
     env.DEEPSEEK_API_KEY?.trim() ||
+    env.DEEPSEEK_DAILY_PLAN_API_KEY?.trim() ||
     env.DEEPSEEK_GUIDE_ANALYSIS_API_KEY?.trim();
   if (!apiKey) throw new DeepSeekError("notConfigured", false);
-  const model =
-    env.DEEPSEEK_DAILY_PLAN_MODEL?.trim() || "deepseek-v4-flash";
+  const model = configuredDailyPlanModel(env);
   assertAllowedDeepSeekModel(model);
   return {
     apiKey,
     model,
-    timeoutMs: clampEnvNumber(
-      env.DEEPSEEK_DAILY_PLAN_TIMEOUT_MS,
-      25_000,
-      5_000,
-      60_000,
-    ),
-    maxAttempts: clampEnvNumber(env.DEEPSEEK_DAILY_PLAN_MAX_ATTEMPTS, 2, 1, 3),
+    timeoutMs: clampEnvNumber(env.DEEPSEEK_TIMEOUT_MS, 45_000, 5_000, 60_000),
+    maxAttempts: clampEnvNumber(env.DEEPSEEK_MAX_ATTEMPTS, 3, 1, 3),
   };
 }

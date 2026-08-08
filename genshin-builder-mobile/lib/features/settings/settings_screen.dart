@@ -17,7 +17,6 @@ import '../../providers/hoyolab_home_providers.dart';
 import '../../providers/hoyolab_providers.dart';
 import '../../providers/hoyolab_reminder_providers.dart';
 import '../../providers/legal_url_launcher_provider.dart';
-import '../shared/shell_menu_button.dart';
 import 'legal_documents_section.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -384,13 +383,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final reminderStoreAsync = ref.watch(reminderSettingsStoreProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('設定'),
-        actions: const [ShellMenuButton()],
-      ),
+      appBar: AppBar(title: const Text('設定')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const _SettingsSectionLabel('データ同期'),
+          const SizedBox(height: 6),
           syncStatusAsync.when(
             data: (status) => _SyncStatusBanner(status: status),
             loading: () => const SizedBox.shrink(),
@@ -479,6 +477,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          const _SettingsSectionLabel('アカウント連携'),
+          const SizedBox(height: 6),
           Card(
             child: ListTile(
               leading: const Icon(Icons.link),
@@ -489,6 +489,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          const _SettingsSectionLabel('通知'),
+          const SizedBox(height: 6),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(8),
@@ -579,6 +581,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          const _SettingsSectionLabel('データ管理'),
+          const SizedBox(height: 6),
           Card(
             child: Column(
               children: [
@@ -609,6 +613,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          const _SettingsSectionLabel('アプリ情報'),
+          const SizedBox(height: 6),
           LegalDocumentsSection(launcher: ref.watch(legalUrlLauncherProvider)),
           const SizedBox(height: 16),
           const ListTile(
@@ -618,6 +624,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SettingsSectionLabel extends StatelessWidget {
+  const _SettingsSectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(label, style: Theme.of(context).textTheme.titleMedium),
     );
   }
 }

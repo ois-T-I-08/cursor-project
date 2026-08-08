@@ -306,7 +306,7 @@ class _DailyPlanHomeCard extends ConsumerWidget {
   const _DailyPlanHomeCard();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final planAsync = ref.watch(dailyPlanProvider);
+    final planAsync = ref.watch(adoptedDailyPlanProvider);
     final theme = Theme.of(context);
     return Card(
       child: Padding(

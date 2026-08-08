@@ -85,6 +85,8 @@ type Props = {
   recommendations: RecommendationRow[];
   busy: boolean;
   postAction: (payload: Record<string, unknown>) => Promise<unknown>;
+  /** Global AI Emergency ON → publish requires break-glass reason. */
+  emergencyStopped?: boolean;
 };
 
 type WeaponDraft = {
@@ -382,6 +384,7 @@ export default function StructuredRecommendationEditor({
   recommendations,
   busy,
   postAction,
+  emergencyStopped = false,
 }: Props) {
   const [selectedId, setSelectedId] = useState("");
   const [masters, setMasters] = useState<{
@@ -837,10 +840,29 @@ export default function StructuredRecommendationEditor({
     if (!selected) return;
     setLocalError(null);
     setLocalOk(null);
+    let emergencyPublishOverrideReason: string | undefined;
+    if (action === "publishRecommendation" && emergencyStopped) {
+      const reason = window.prompt(
+        "Global AI Emergency 中です。手動公開の break-glass 理由（8文字以上）を入力してください。",
+      );
+      if (!reason || reason.trim().length < 8) {
+        setLocalError(
+          "緊急停止中の公開には break-glass 理由（8文字以上）が必要です。",
+        );
+        return;
+      }
+      emergencyPublishOverrideReason = reason.trim();
+    }
     const result = (await postAction({
       action,
       recommendationId: selected.id,
       expectedUpdatedAt: selected.updatedAt,
+      ...(emergencyPublishOverrideReason
+        ? {
+            emergencyPublishOverrideReason,
+            emergencyPublishOverrideActor: "admin-ui",
+          }
+        : {}),
     })) as { error?: string; detail?: string };
     if (result?.error) {
       if (
@@ -853,7 +875,9 @@ export default function StructuredRecommendationEditor({
       setLocalError(
         result.error === "conflictUpdatedAt"
           ? "他の編集と衝突しました。入力内容を保持したまま再読み込みしてください。"
-          : `${result.error}${result.detail ? `: ${result.detail}` : ""}`,
+          : result.error === "emergencyStoppedPublishBlocked"
+            ? "緊急停止中のため公開できません。break-glass 理由付きで再試行してください。"
+            : `${result.error}${result.detail ? `: ${result.detail}` : ""}`,
       );
       return;
     }
@@ -1961,7 +1985,7 @@ export default function StructuredRecommendationEditor({
                 );
               }}
             >
-              公開
+              {emergencyStopped ? "公開（break-glass）" : "公開"}
             </button>
             <button
               type="button"
