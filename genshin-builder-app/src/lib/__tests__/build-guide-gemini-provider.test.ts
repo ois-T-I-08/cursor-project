@@ -110,6 +110,7 @@ describe("GeminiYouTubeVisualAnalysisProvider", () => {
     });
 
     const provider = new GeminiYouTubeVisualAnalysisProvider({
+      skipEmergencyGate: true,
       fetchImpl: fetchImpl as unknown as typeof fetch,
       sleep: async () => undefined,
       random: () => 0,
@@ -179,6 +180,7 @@ describe("GeminiYouTubeVisualAnalysisProvider", () => {
     });
 
     const provider = new GeminiYouTubeVisualAnalysisProvider({
+      skipEmergencyGate: true,
       fetchImpl: fetchImpl as unknown as typeof fetch,
       sleep: async () => undefined,
       random: () => 0,
@@ -236,6 +238,7 @@ describe("GeminiYouTubeVisualAnalysisProvider", () => {
     });
 
     const provider = new GeminiYouTubeVisualAnalysisProvider({
+      skipEmergencyGate: true,
       fetchImpl: fetchImpl as unknown as typeof fetch,
       sleep: async () => undefined,
       random: () => 0,

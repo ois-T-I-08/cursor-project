@@ -4,6 +4,7 @@ const {
   prismaMock,
   setVisualEvidenceStatusMock,
   setRecommendationStatusMock,
+  evaluateVisualAutoPublishGateMock,
 } = vi.hoisted(() => ({
   prismaMock: {
     guideVisualEvidence: {
@@ -13,6 +14,10 @@ const {
     characterBuildRecommendation: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
+      update: vi.fn(),
+    },
+    weapon: {
+      findMany: vi.fn(),
     },
     guideAdminAuditLog: {
       create: vi.fn(),
@@ -20,12 +25,20 @@ const {
   },
   setVisualEvidenceStatusMock: vi.fn(),
   setRecommendationStatusMock: vi.fn(),
+  evaluateVisualAutoPublishGateMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/api/amber-details", () => ({
+  fetchArtifactSets: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("@/lib/build-guides/store", () => ({
   setVisualEvidenceStatus: setVisualEvidenceStatusMock,
   setRecommendationStatus: setRecommendationStatusMock,
+}));
+vi.mock("@/lib/build-guides/automation/safety-gates", () => ({
+  evaluateVisualAutoPublishGate: evaluateVisualAutoPublishGateMock,
+  assertEmergencyStopAllowsWork: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { isVisualAutoPublishEnabled } from "../build-guides/visual-auto-publish-settings";
@@ -57,6 +70,25 @@ describe("autoPublishVisualRecommendations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prismaMock.guideAdminAuditLog.create.mockResolvedValue({});
+    prismaMock.weapon.findMany.mockResolvedValue([]);
+    prismaMock.characterBuildRecommendation.update.mockResolvedValue({});
+    evaluateVisualAutoPublishGateMock.mockResolvedValue({ allowed: true });
+  });
+
+  it("skips all work when Safety Switch / autoPublish gate denies", async () => {
+    evaluateVisualAutoPublishGateMock.mockResolvedValue({
+      allowed: false,
+      reason: "EMERGENCY_STOPPED",
+    });
+    const result = await autoPublishVisualRecommendations({
+      evidenceIds: ["ev-1"],
+      recommendationIds: ["rec-1"],
+    });
+    expect(result.recommendationsPublished).toBe(0);
+    expect(result.skipped).toEqual([
+      { recommendationId: "rec-1", reason: "EMERGENCY_STOPPED" },
+    ]);
+    expect(setRecommendationStatusMock).not.toHaveBeenCalled();
   });
 
   it("approves evidence and publishes recommendations when validation allows", async () => {
@@ -69,6 +101,8 @@ describe("autoPublishVisualRecommendations", () => {
       id: "rec-1",
       status: "pending_review",
       updatedAt,
+      structuredPayload: "{}",
+      contributions: [],
     });
     setRecommendationStatusMock
       .mockResolvedValueOnce({
@@ -121,6 +155,8 @@ describe("autoPublishVisualRecommendations", () => {
       id: "rec-1",
       status: "approved",
       updatedAt,
+      structuredPayload: "{}",
+      contributions: [],
     });
     setRecommendationStatusMock.mockRejectedValue(
       new Error("structuredPublishBlocked:missingWeapon"),
@@ -145,7 +181,10 @@ describe("approvePendingVisualRecommendations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prismaMock.guideAdminAuditLog.create.mockResolvedValue({});
+    prismaMock.weapon.findMany.mockResolvedValue([]);
+    prismaMock.characterBuildRecommendation.update.mockResolvedValue({});
     prismaMock.guideVisualEvidence.findMany = vi.fn().mockResolvedValue([]);
+    evaluateVisualAutoPublishGateMock.mockResolvedValue({ allowed: true });
   });
 
   it("approves evidence and recommendations without publishing", async () => {
@@ -166,6 +205,8 @@ describe("approvePendingVisualRecommendations", () => {
       id: "rec-1",
       status: "pending_review",
       updatedAt,
+      structuredPayload: "{}",
+      contributions: [],
     });
     setRecommendationStatusMock.mockResolvedValueOnce({
       id: "rec-1",
@@ -190,6 +231,9 @@ describe("publishPendingVisualRecommendations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prismaMock.guideAdminAuditLog.create.mockResolvedValue({});
+    prismaMock.weapon.findMany.mockResolvedValue([]);
+    prismaMock.characterBuildRecommendation.update.mockResolvedValue({});
+    evaluateVisualAutoPublishGateMock.mockResolvedValue({ allowed: true });
   });
 
   it("scans pending visual recommendations and auto-publishes them", async () => {
@@ -210,6 +254,8 @@ describe("publishPendingVisualRecommendations", () => {
       id: "rec-1",
       status: "pending_review",
       updatedAt,
+      structuredPayload: "{}",
+      contributions: [],
     });
     setRecommendationStatusMock
       .mockResolvedValueOnce({

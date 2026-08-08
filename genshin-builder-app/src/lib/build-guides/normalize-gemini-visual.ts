@@ -233,7 +233,7 @@ function normalizeEvidence(
     visibleTexts,
     statValues,
     recommendedMainStats: normalizeMainStats(raw.recommendedMainStats),
-    statPriority: stringArray(raw.statPriority, 20, 100),
+    statPriority: normalizeStatPriorityList(raw.statPriority),
     weaponMentions: normalizeMentions(raw.weaponMentions, "normalizedWeaponId"),
     artifactSetMentions: normalizeMentions(
       raw.artifactSetMentions,
@@ -392,9 +392,33 @@ function normalizeIdList(raw: unknown): string[] {
 function stringArray(raw: unknown, maxItems: number, maxLen: number): string[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .map((item) => String(item ?? "").trim().slice(0, maxLen))
+    .map((item) => {
+      if (typeof item === "string") return item.trim().slice(0, maxLen);
+      if (typeof item === "number" || typeof item === "boolean") {
+        return String(item).slice(0, maxLen);
+      }
+      // Never String(object) → "[object Object]" (QPj post-process failure).
+      return "";
+    })
     .filter(Boolean)
     .slice(0, maxItems);
+}
+
+/** Prefer mapped GuideStatKey; accept object shapes {statKey|key|stat}. */
+function normalizeStatPriorityList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const item of raw.slice(0, 20)) {
+    let candidate: unknown = item;
+    if (isRecord(item)) {
+      candidate = item.statKey ?? item.key ?? item.stat ?? item.id ?? "";
+    }
+    if (typeof candidate !== "string" && typeof candidate !== "number") continue;
+    const mapped = mapStatKey(candidate);
+    if (!mapped) continue;
+    if (!out.includes(mapped)) out.push(mapped);
+  }
+  return out;
 }
 
 function coerceConfidence(raw: unknown): number | null {

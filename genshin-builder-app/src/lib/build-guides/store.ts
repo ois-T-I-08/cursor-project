@@ -37,6 +37,7 @@ import {
 } from "./genshin-video-title";
 import { GUIDE_GAME_DATA_VERSION } from "./versions";
 import { getYoutubeAutomationAdminOverview } from "./automation/admin-overview";
+import { evaluateManualPublishGate } from "@/lib/ai/global-ai-emergency";
 
 async function audit(action: string, status: string, detail: unknown): Promise<void> {
   await prisma.guideAdminAuditLog.create({
@@ -65,8 +66,18 @@ function parseExpectedUpdatedAt(raw: string): Date {
 }
 
 export async function getGuideAdminOverview() {
-  const [channels, videos, jobs, evidences, recommendations, audits, automation] =
-    await Promise.all([
+  const { getCoverageMetrics } = await import("./visual-coverage");
+  const { getBuildProvenance } = await import("@/lib/build-provenance");
+  const [
+    channels,
+    videos,
+    jobs,
+    evidences,
+    recommendations,
+    audits,
+    automation,
+    coverage,
+  ] = await Promise.all([
       prisma.guideChannel.findMany({ orderBy: { updatedAt: "desc" }, take: 100 }),
       prisma.guideVideo.findMany({
         where: { title: { contains: GENSIN_VIDEO_TITLE_MARKER } },
@@ -95,6 +106,7 @@ export async function getGuideAdminOverview() {
       }),
       prisma.guideAdminAuditLog.findMany({ orderBy: { createdAt: "desc" }, take: 40 }),
       getYoutubeAutomationAdminOverview(),
+      getCoverageMetrics({ eligibleLimit: 3 }),
     ]);
 
   const evidenceMentions = evidences.map((row) => {
@@ -123,6 +135,7 @@ export async function getGuideAdminOverview() {
     channels,
     videos,
     jobs,
+    coverage,
     evidences: evidenceMentions,
     recommendations: recommendations.map((row) => {
       const structuredRaw = safeJson<Record<string, unknown>>(row.structuredPayload, {});
@@ -176,6 +189,7 @@ export async function getGuideAdminOverview() {
     automation,
     geminiCost: geminiVideoCostHints(),
     visualAutoPublishEnabled: isVisualAutoPublishEnabled(),
+    buildProvenance: getBuildProvenance(),
   };
 }
 
@@ -507,6 +521,12 @@ export async function setRecommendationStatus(input: {
   status: "approved" | "rejected" | "published" | "pending_review";
   adminNotes?: string;
   expectedUpdatedAt: string;
+  /**
+   * Break-glass only: required when Global AI Emergency is ON.
+   * Must never be supplied by auto-publish paths.
+   */
+  emergencyPublishOverrideReason?: string;
+  emergencyPublishOverrideActor?: string;
 }) {
   const existing = await prisma.characterBuildRecommendation.findUnique({
     where: { id: input.recommendationId },
@@ -520,7 +540,32 @@ export async function setRecommendationStatus(input: {
     throw new Error("conflictUpdatedAt");
   }
 
+  let emergencyPublishOverride:
+    | {
+        overrideUsed: true;
+        actor: string;
+        reason: string;
+        controlVersion: number;
+      }
+    | undefined;
+
   if (input.status === "published") {
+    const publishGate = await evaluateManualPublishGate({
+      overrideReason: input.emergencyPublishOverrideReason,
+      overrideActor: input.emergencyPublishOverrideActor,
+    });
+    if (!publishGate.allowed) {
+      throw new Error(publishGate.reason);
+    }
+    if (publishGate.overrideUsed) {
+      emergencyPublishOverride = {
+        overrideUsed: true,
+        actor: publishGate.actor,
+        reason: publishGate.reason,
+        controlVersion: publishGate.controlVersion,
+      };
+    }
+
     const publishableContributions = existing.contributions.filter((contribution) =>
       ["adopted", "partially_adopted"].includes(contribution.decision),
     );
@@ -703,12 +748,23 @@ export async function setRecommendationStatus(input: {
     });
     await tx.guideAdminAuditLog.create({
       data: {
-        action: "setRecommendationStatus",
+        action: emergencyPublishOverride
+          ? "emergencyPublishOverride"
+          : "setRecommendationStatus",
         status: "ok",
         detail: JSON.stringify({
           recommendationId: updated.id,
           requestedStatus: input.status,
           resultingStatus: updated.status,
+          ...(emergencyPublishOverride
+            ? {
+                overrideUsed: true,
+                actor: emergencyPublishOverride.actor,
+                reason: emergencyPublishOverride.reason,
+                controlVersion: emergencyPublishOverride.controlVersion,
+                timestamp: new Date().toISOString(),
+              }
+            : {}),
         }).slice(0, 4_000),
       },
     });

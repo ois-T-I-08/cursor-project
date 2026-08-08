@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { assertGlobalAiEmergencyAllowsExternalCall } from "@/lib/ai/global-ai-emergency";
 import { GEMINI_PROVIDER_ID } from "./versions";
 import { GeminiError, geminiVideoSettings } from "./gemini-settings";
 import { parseGeminiVisualResult } from "./normalize-gemini-visual";
@@ -16,6 +17,11 @@ import {
   videoVisualAnalysisResultSchema,
   type VideoVisualAnalysisResult,
 } from "./visual-schemas";
+import {
+  geminiHttpRetryDelayMs,
+  logVisualAnalysisEvent,
+  noteVisualProviderCooldown,
+} from "./visual-analysis-safety";
 
 const GEMINI_HOST = "https://generativelanguage.googleapis.com";
 
@@ -59,6 +65,8 @@ export class GeminiYouTubeVisualAnalysisProvider
       fetchImpl?: typeof fetch;
       sleep?: (ms: number) => Promise<void>;
       random?: () => number;
+      /** Test-only: skip Global AI Emergency preflight. */
+      skipEmergencyGate?: boolean;
     } = {},
   ) {}
 
@@ -96,7 +104,14 @@ export class GeminiYouTubeVisualAnalysisProvider
       for (let attempt = 1; attempt <= settings.maxAttempts; attempt++) {
         attemptsUsed = Math.max(attemptsUsed, attempt);
         try {
-          const completion = await this.request(fetchImpl, settings, input, clip);
+          const completion = await this.request(
+            fetchImpl,
+            settings,
+            input,
+            clip,
+            attempt,
+            random,
+          );
           if (!completion.content.trim()) {
             throw new GeminiError("emptyResponse", true);
           }
@@ -121,11 +136,40 @@ export class GeminiYouTubeVisualAnalysisProvider
               : error instanceof z.ZodError
                 ? new GeminiError("invalidResult", false)
                 : new GeminiError("requestFailed", true);
-          if (!lastError.retryable || attempt === settings.maxAttempts) break;
-          await sleep(
-            Math.min(8_000, 500 * 2 ** (attempt - 1)) +
-              Math.floor(random() * 100),
-          );
+          if (!lastError.retryable || attempt === settings.maxAttempts) {
+            logVisualAnalysisEvent({
+              videoId: input.videoId,
+              stage: "gemini-visual",
+              attempt,
+              retryReason: lastError.code,
+              provider: GEMINI_PROVIDER_ID,
+              terminal: true,
+            });
+            break;
+          }
+          const status =
+            lastError.code === "http429"
+              ? 429
+              : lastError.code.startsWith("http5")
+                ? 500
+                : 0;
+          const nextRetryMs =
+            lastError.retryAfterMs ??
+            geminiHttpRetryDelayMs({
+              attempt,
+              status,
+              random,
+            });
+          logVisualAnalysisEvent({
+            videoId: input.videoId,
+            stage: "gemini-visual",
+            attempt,
+            retryReason: lastError.code,
+            nextRetryMs,
+            provider: GEMINI_PROVIDER_ID,
+            terminal: false,
+          });
+          await sleep(nextRetryMs);
         }
       }
       if (!succeeded) throw lastError;
@@ -145,7 +189,21 @@ export class GeminiYouTubeVisualAnalysisProvider
     settings: ReturnType<typeof geminiVideoSettings>,
     input: VideoVisualAnalysisInput,
     clip: ClipWindow | null,
+    attempt: number,
+    random: () => number,
   ): Promise<{ content: string; usage: Record<string, number> }> {
+    // Re-check Global AI Emergency on every provider attempt (no bypass).
+    if (!this.options.skipEmergencyGate) {
+      try {
+        await assertGlobalAiEmergencyAllowsExternalCall();
+      } catch (error) {
+        if (error instanceof Error && error.message === "EMERGENCY_STOPPED") {
+          throw new GeminiError("EMERGENCY_STOPPED", false);
+        }
+        throw new GeminiError("EMERGENCY_STOPPED", false);
+      }
+    }
+
     const endpoint = `${GEMINI_HOST}/v1beta/models/${encodeURIComponent(settings.model)}:generateContent`;
     const url = new URL(endpoint);
     if (url.origin !== GEMINI_HOST) throw new GeminiError("invalidGeminiHost", false);
@@ -201,6 +259,16 @@ export class GeminiYouTubeVisualAnalysisProvider
       });
       if (!response.ok) {
         const retryable = [429, 500, 503].includes(response.status);
+        if (response.status === 429) {
+          const retryAfterMs = geminiHttpRetryDelayMs({
+            attempt,
+            status: 429,
+            retryAfterHeader: response.headers.get("retry-after"),
+            random,
+          });
+          noteVisualProviderCooldown(retryAfterMs);
+          throw new GeminiError("http429", true, retryAfterMs);
+        }
         throw new GeminiError(`http${response.status}`, retryable);
       }
       const raw = await response.text();

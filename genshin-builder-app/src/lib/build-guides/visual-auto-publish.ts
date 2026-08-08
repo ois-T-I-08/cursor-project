@@ -7,6 +7,7 @@ import {
   setVisualEvidenceStatus,
 } from "@/lib/build-guides/store";
 import { isVisualAutoPublishEnabled } from "@/lib/build-guides/visual-auto-publish-settings";
+import { evaluateVisualAutoPublishGate } from "@/lib/build-guides/automation/safety-gates";
 import {
   applyEntityMatchesToArtifactMentions,
   applyEntityMatchesToWeaponMentions,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/build-guides/visual-gear-promote";
 
 export { isVisualAutoPublishEnabled };
+export { evaluateVisualAutoPublishGate };
 
 export type VisualAutoPublishResult = Readonly<{
   evidenceApproved: number;
@@ -151,7 +153,8 @@ function extractEvidenceMentions(
 export async function applyGearPromotionToRecommendation(
   recommendationId: string,
 ): Promise<GearPromotionResult | null> {
-  if (!isVisualAutoPublishEnabled()) return null;
+  const gate = await evaluateVisualAutoPublishGate();
+  if (!gate.allowed) return null;
 
   const row = await prisma.characterBuildRecommendation.findUnique({
     where: { id: recommendationId },
@@ -364,6 +367,21 @@ export async function autoPublishVisualRecommendations(input: {
   /** When false, stop after approve (一括採用). Default true. */
   publish?: boolean;
 }): Promise<VisualAutoPublishResult> {
+  const gate = await evaluateVisualAutoPublishGate();
+  if (!gate.allowed) {
+    return {
+      evidenceApproved: 0,
+      recommendationsApproved: 0,
+      recommendationsPublished: 0,
+      gearPromotedWeapons: 0,
+      gearPromotedArtifacts: 0,
+      skipped: input.recommendationIds.map((recommendationId) => ({
+        recommendationId,
+        reason: gate.reason,
+      })),
+    };
+  }
+
   const shouldPublish = input.publish !== false;
   const evidenceApproved = await approveValidatedEvidence(input.evidenceIds);
 
@@ -415,6 +433,16 @@ export async function autoPublishVisualRecommendations(input: {
 
       if (!shouldPublish) {
         continue;
+      }
+
+      // Re-evaluate Safety Switch before each publish (mid-batch emergency stop).
+      const publishGate = await evaluateVisualAutoPublishGate();
+      if (!publishGate.allowed) {
+        skipped.push({
+          recommendationId,
+          reason: publishGate.reason,
+        });
+        break;
       }
 
       await setRecommendationStatus({
@@ -553,7 +581,8 @@ export async function repromoteVisualGearMentions(input: {
   }
 > {
   const limit = Math.min(Math.max(input.limit ?? 20, 1), 50);
-  if (!isVisualAutoPublishEnabled()) {
+  const gate = await evaluateVisualAutoPublishGate();
+  if (!gate.allowed) {
     return {
       evidenceApproved: 0,
       recommendationsApproved: 0,

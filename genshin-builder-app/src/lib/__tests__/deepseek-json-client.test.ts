@@ -34,6 +34,7 @@ describe("DeepSeekJsonClient", () => {
       return new Response(envelope('{"ok":true}'), { status: 200 });
     });
     const client = new DeepSeekJsonClient({
+      skipEmergencyGate: true,
       fetchImpl: fetchImpl as typeof fetch,
       sleep: async () => {},
       random: () => 0,
@@ -54,6 +55,7 @@ describe("DeepSeekJsonClient", () => {
   it("rejects malformed and oversized provider responses without retry", async () => {
     const malformedFetch = vi.fn(async () => new Response("not-json"));
     const malformed = new DeepSeekJsonClient({
+      skipEmergencyGate: true,
       fetchImpl: malformedFetch as typeof fetch,
       sleep: async () => {},
     });
@@ -67,6 +69,7 @@ describe("DeepSeekJsonClient", () => {
     expect(malformedFetch).toHaveBeenCalledOnce();
 
     const oversized = new DeepSeekJsonClient({
+      skipEmergencyGate: true,
       fetchImpl: (async () =>
         new Response(envelope('{"value":"too large"}'))) as typeof fetch,
       sleep: async () => {},
@@ -100,6 +103,7 @@ describe("DeepSeekJsonClient", () => {
     ]) {
       const fetchImpl = vi.fn(async () => testCase.response());
       const client = new DeepSeekJsonClient({
+        skipEmergencyGate: true,
         fetchImpl: fetchImpl as typeof fetch,
         sleep: async () => {},
         random: () => 0,
@@ -126,6 +130,7 @@ describe("DeepSeekJsonClient", () => {
         }),
     );
     const client = new DeepSeekJsonClient({
+      skipEmergencyGate: true,
       fetchImpl: fetchImpl as typeof fetch,
       sleep: async () => {},
     });

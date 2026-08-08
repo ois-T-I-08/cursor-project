@@ -14,8 +14,9 @@ export type LockedAutomationControl = Readonly<{
 type ControlReader = Pick<PrismaClient, "guideAutomationControl">;
 
 /**
- * Missing or unreadable control state is stopped. Automatic work must never
- * infer permission from an absent singleton row.
+ * Global AI Emergency control row (legacy id `youtube-guide`).
+ * Missing or unreadable control state is stopped (fail-closed). Automatic work
+ * and external AI calls must never infer permission from an absent singleton.
  */
 export async function readYoutubeAutomationControl(
   client: ControlReader = prisma,

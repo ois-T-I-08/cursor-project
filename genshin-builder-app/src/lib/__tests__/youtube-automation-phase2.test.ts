@@ -232,6 +232,7 @@ describe("YouTube automation Phase 2", () => {
 
   it("rejects invalid provider JSON without embedding the response", async () => {
     const provider = new GeminiTranscriptAnalysisProvider({
+      skipEmergencyGate: true,
       apiKey: "test-only-key",
       fetchImpl: vi.fn(async () =>
         new Response(

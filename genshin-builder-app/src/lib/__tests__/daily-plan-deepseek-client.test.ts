@@ -52,6 +52,7 @@ describe("DeepSeekDailyPlanClient", () => {
   it("fails closed before fetch when the API key is missing", async () => {
     const fetchImpl = vi.fn();
     const client = new DeepSeekDailyPlanClient({
+      skipEmergencyGate: true,
       fetchImpl: fetchImpl as typeof fetch,
     });
 
@@ -66,6 +67,7 @@ describe("DeepSeekDailyPlanClient", () => {
 
   it("rejects malformed JSON and invalid categories", async () => {
     const malformed = new DeepSeekDailyPlanClient({
+      skipEmergencyGate: true,
       fetchImpl: (async () => providerEnvelope("not-json")) as typeof fetch,
       sleep: async () => {},
     });
@@ -74,6 +76,7 @@ describe("DeepSeekDailyPlanClient", () => {
     ).rejects.toMatchObject({ code: "dailyPlanInvalidJson" });
 
     const invalidCategory = new DeepSeekDailyPlanClient({
+      skipEmergencyGate: true,
       fetchImpl: (async () =>
         providerEnvelope(
           JSON.stringify({
@@ -122,6 +125,7 @@ describe("DeepSeekDailyPlanClient", () => {
       );
     });
     const client = new DeepSeekDailyPlanClient({
+      skipEmergencyGate: true,
       fetchImpl: fetchImpl as typeof fetch,
       sleep: async () => {},
     });

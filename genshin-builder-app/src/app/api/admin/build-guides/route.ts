@@ -10,6 +10,18 @@ import {
   analyzeVideoVisuals,
   GuideVisualAnalysisError,
 } from "@/lib/build-guides/visual-analysis-service";
+import {
+  LimitedBatchCanaryError,
+  runLimitedBatchCanary,
+} from "@/lib/build-guides/limited-batch-canary";
+import {
+  retryVisualPostProcessOnly,
+  VisualPostProcessError,
+} from "@/lib/build-guides/visual-postprocess";
+import {
+  getCoverageMetrics,
+  recoverPostProcessFailures,
+} from "@/lib/build-guides/visual-coverage";
 import { permissionStatusSchema } from "@/lib/build-guides/visual-schemas";
 import {
   getGuideAdminOverview,
@@ -37,6 +49,7 @@ import {
 } from "@/lib/build-guides/visual-auto-publish";
 import { parseYoutubePlaylistId } from "@/lib/build-guides/youtube-client";
 import { setYoutubeAutomationEmergencyStop } from "@/lib/build-guides/automation/admin-overview";
+import { getBuildProvenance } from "@/lib/build-provenance";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -93,10 +106,20 @@ const actionSchema = z.discriminatedUnion("action", [
     targetCharacterIds: z.array(z.string().max(64)).max(20).optional(),
   }),
   z.strictObject({
+    /** Production pending batch — not Limited Batch Canary. */
     action: z.literal("analyzePendingGenshinVideos"),
     limit: z.number().int().min(1).max(10).optional(),
     mode: z.enum(["newest", "uncoveredCharacters"]).optional(),
     raiseDailyLimitTo: z.number().int().min(1).max(1000).optional(),
+  }),
+  z.strictObject({
+    /**
+     * Limited Batch Canary only.
+     * Explicit videoIds (max 3), sequential, force=false, skipAutoPublish=true, allowLongform=true.
+     * Does not scan uncovered queue / does not call analyzePendingGenshinVideos.
+     */
+    action: z.literal("runLimitedBatchCanary"),
+    videoIds: z.array(videoId).min(1).max(3),
   }),
   z.strictObject({
     action: z.literal("reanalyzeVideoVisuals"),
@@ -131,6 +154,24 @@ const actionSchema = z.discriminatedUnion("action", [
     evidenceIds: z.array(cuid).min(1).max(40),
   }),
   z.strictObject({
+    /** Re-run merge/persistence only — never calls Gemini. */
+    action: z.literal("retryVisualPostProcess"),
+    videoId,
+  }),
+  z.strictObject({
+    action: z.literal("getCoverageSnapshot"),
+    eligibleLimit: z.number().int().min(1).max(10).optional(),
+  }),
+  z.strictObject({
+    /** Secret-free build provenance (commit SHA / builtAt / runtime). */
+    action: z.literal("getBuildProvenance"),
+  }),
+  z.strictObject({
+    /** Deterministic postProcess recovery only — never calls Gemini. Max 5. */
+    action: z.literal("recoverPostProcessFailures"),
+    limit: z.number().int().min(1).max(5).optional(),
+  }),
+  z.strictObject({
     action: z.literal("approveRecommendation"),
     recommendationId: cuid,
     adminNotes: z.string().max(2_000).optional(),
@@ -146,6 +187,9 @@ const actionSchema = z.discriminatedUnion("action", [
     action: z.literal("publishRecommendation"),
     recommendationId: cuid,
     expectedUpdatedAt: z.string().datetime(),
+    /** Break-glass during Global AI Emergency (min 8 chars). Never used by auto-publish. */
+    emergencyPublishOverrideReason: z.string().min(8).max(500).optional(),
+    emergencyPublishOverrideActor: z.string().min(1).max(128).optional(),
   }),
   z.strictObject({
     action: z.literal("unpublishRecommendation"),
@@ -250,6 +294,7 @@ export async function POST(request: Request): Promise<Response> {
           }),
         );
       case "analyzePendingGenshinVideos":
+        // Production batch only — Limited Batch Canary must use runLimitedBatchCanary.
         return NextResponse.json(
           await analyzePendingGenshinVideos({
             limit: input.limit,
@@ -257,6 +302,20 @@ export async function POST(request: Request): Promise<Response> {
             raiseDailyLimitTo: input.raiseDailyLimitTo,
           }),
         );
+      case "runLimitedBatchCanary":
+        try {
+          return NextResponse.json(
+            await runLimitedBatchCanary({ videoIds: input.videoIds }),
+          );
+        } catch (error) {
+          if (error instanceof LimitedBatchCanaryError) {
+            return NextResponse.json(
+              { error: error.code, kind: "limited_batch_canary" },
+              { status: 400 },
+            );
+          }
+          throw error;
+        }
       case "reanalyzeVideoVisuals":
         return NextResponse.json(
           await analyzeVideoVisuals({
@@ -293,6 +352,44 @@ export async function POST(request: Request): Promise<Response> {
         return NextResponse.json({
           evidence: await overrideVisualEvidencePurpose(input),
         });
+      case "retryVisualPostProcess":
+        try {
+          return NextResponse.json(
+            await retryVisualPostProcessOnly(input.videoId),
+          );
+        } catch (error) {
+          if (error instanceof VisualPostProcessError) {
+            return NextResponse.json(
+              { error: error.code },
+              { status: 422 },
+            );
+          }
+          throw error;
+        }
+      case "getCoverageSnapshot":
+        return NextResponse.json({
+          coverage: await getCoverageMetrics({
+            eligibleLimit: input.eligibleLimit,
+          }),
+        });
+      case "getBuildProvenance":
+        return NextResponse.json(getBuildProvenance(), {
+          headers: { "Cache-Control": "no-store" },
+        });
+      case "recoverPostProcessFailures":
+        try {
+          return NextResponse.json(
+            await recoverPostProcessFailures({ limit: input.limit }),
+          );
+        } catch (error) {
+          if (error instanceof VisualPostProcessError) {
+            return NextResponse.json(
+              { error: error.code },
+              { status: 422 },
+            );
+          }
+          throw error;
+        }
       case "mergeVisualRecommendations":
         return NextResponse.json(await mergeVisualRecommendations(input));
       case "approveRecommendation":
@@ -319,6 +416,8 @@ export async function POST(request: Request): Promise<Response> {
             recommendationId: input.recommendationId,
             status: "published",
             expectedUpdatedAt: input.expectedUpdatedAt,
+            emergencyPublishOverrideReason: input.emergencyPublishOverrideReason,
+            emergencyPublishOverrideActor: input.emergencyPublishOverrideActor,
           }),
         });
       case "unpublishRecommendation":
@@ -371,6 +470,12 @@ export async function POST(request: Request): Promise<Response> {
     if (error instanceof Error) {
       if (error.message === "conflictUpdatedAt") {
         return NextResponse.json({ error: "conflictUpdatedAt" }, { status: 409 });
+      }
+      if (error.message === "emergencyStoppedPublishBlocked") {
+        return NextResponse.json(
+          { error: "emergencyStoppedPublishBlocked" },
+          { status: 423 },
+        );
       }
       if (error.message.startsWith("structuredPublishBlocked:")) {
         return NextResponse.json(

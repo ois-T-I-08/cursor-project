@@ -37,6 +37,13 @@ vi.mock("@/lib/db", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/api/amber-details", () => ({
   fetchArtifactSets: fetchArtifactSetsMock,
 }));
+vi.mock("@/lib/ai/global-ai-emergency", () => ({
+  evaluateManualPublishGate: vi.fn(async () => ({
+    allowed: true,
+    overrideUsed: false,
+  })),
+  assertGlobalAiEmergencyAllowsExternalCall: vi.fn(async () => undefined),
+}));
 
 import { setRecommendationStatus } from "../build-guides/store";
 

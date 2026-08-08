@@ -27,7 +27,10 @@ export function deepSeekDailyPlanSettings(
   if (!isDeepSeekDailyPlanEnabled(env)) {
     throw new DeepSeekError("dailyPlanDisabled", false);
   }
-  const apiKey = env.DEEPSEEK_API_KEY?.trim();
+  const apiKey =
+    env.DEEPSEEK_API_KEY?.trim() ||
+    env.DEEPSEEK_DAILY_PLAN_API_KEY?.trim() ||
+    env.DEEPSEEK_GUIDE_ANALYSIS_API_KEY?.trim();
   if (!apiKey) throw new DeepSeekError("notConfigured", false);
   const model = configuredDailyPlanModel(env);
   assertAllowedDeepSeekModel(model);

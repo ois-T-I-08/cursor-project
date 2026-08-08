@@ -103,6 +103,19 @@ interface Overview {
     adminNotes: string;
   }>;
   audits: Array<{ id: number; action: string; status: string; detail: string }>;
+  coverage?: {
+    coverageRule: string;
+    totalCharacters: number;
+    coveredCharacters: number;
+    uncoveredCharacters: number;
+    publishedCharacters: number;
+    pendingReviewCharacters: number;
+    evidenceOnlyCharacters: number;
+    recoverablePostProcessFailures: number;
+    eligiblePendingVideos: number;
+    remainingEligibleVideos: number;
+    titleResolutionFailedVideos: number;
+  };
   automation?: {
     flags: {
       enabled: boolean;
@@ -166,6 +179,13 @@ interface Overview {
     note: string;
   };
   visualAutoPublishEnabled?: boolean;
+  buildProvenance?: {
+    commitSha: string;
+    builtAt: string;
+    runtime: "LOCAL" | "VERCEL";
+    environment: string;
+    appVersion: string | null;
+  };
 }
 
 const MODULES: Array<{ id: ModuleId; label: string }> = [
@@ -202,6 +222,7 @@ export default function GuideAdminWorkbench() {
   const [playlistId, setPlaylistId] = useState("");
   const [permissionStatus, setPermissionStatus] = useState("unknown");
   const [selectedVideoId, setSelectedVideoId] = useState("");
+  const [limitedBatchVideoIds, setLimitedBatchVideoIds] = useState("");
   const [rangeStart, setRangeStart] = useState("0");
   const [rangeEnd, setRangeEnd] = useState("60");
   const [mergeCharacterId, setMergeCharacterId] = useState("");
@@ -317,6 +338,8 @@ export default function GuideAdminWorkbench() {
           succeeded?: number;
           failed?: number;
           remainingUncoveredEstimate?: number | null;
+          remainingEligibleVideos?: number | null;
+          coverage?: Overview["coverage"];
           results?: Array<{ ok: boolean; error?: string }>;
         };
         aggregate.push(body);
@@ -330,11 +353,23 @@ export default function GuideAdminWorkbench() {
         }
         totalSucceeded += body.succeeded ?? 0;
         totalFailed += body.failed ?? 0;
-        const hitLimit = (body.results ?? []).some(
-          (r) => r.error === "channelDailyLimit",
+        const abortCodes = new Set([
+          "channelDailyLimit",
+          "http429",
+          "providerRateLimited",
+          "geminiProviderCoolingDown",
+          "emergencyStopped",
+          "EMERGENCY_STOPPED",
+          "geminiDisabled",
+          "geminiVideoDisabled",
+          "geminiNotConfigured",
+        ]);
+        const hitAbort = (body.results ?? []).some(
+          (r) => r.error != null && abortCodes.has(r.error),
         );
+        // AI queue empty → stop. postProcess recovery is a separate action (no Gemini).
         const noMore = (body.attempted ?? 0) === 0;
-        if (hitLimit || noMore) break;
+        if (hitAbort || noMore) break;
       }
       setLastResult(
         JSON.stringify(
@@ -395,6 +430,15 @@ export default function GuideAdminWorkbench() {
           </button>
         </div>
         {error ? <p className="mt-2 text-sm text-red-400">エラー: {error}</p> : null}
+        {overview?.buildProvenance ? (
+          <p className="mt-2 font-mono text-[11px] text-gray-500">
+            build {overview.buildProvenance.runtime} ·{" "}
+            {overview.buildProvenance.environment} · sha{" "}
+            {overview.buildProvenance.commitSha.slice(0, 12)}
+            {overview.buildProvenance.commitSha.length > 12 ? "…" : ""} · builtAt{" "}
+            {overview.buildProvenance.builtAt}
+          </p>
+        ) : null}
       </header>
 
       <nav className="flex flex-wrap gap-2">
@@ -520,6 +564,65 @@ export default function GuideAdminWorkbench() {
             タイトルに「{GENSIN_VIDEO_TITLE_MARKER}」を含む動画のみ表示（公開日が新しい順・最大200件 /{" "}
             {genshinVideos.length} 件）
           </p>
+          {overview?.coverage ? (
+            <div className="rounded-lg border border-white/10 bg-[#151d2a] px-3 py-3 text-xs text-gray-300 space-y-1">
+              <div className="font-medium text-sm text-white">Coverage（covered = 推奨 status ≠ rejected）</div>
+              <div>
+                master {overview.coverage.totalCharacters} · covered{" "}
+                {overview.coverage.coveredCharacters} · uncovered{" "}
+                {overview.coverage.uncoveredCharacters} · published{" "}
+                {overview.coverage.publishedCharacters} · pending_review{" "}
+                {overview.coverage.pendingReviewCharacters}
+              </div>
+              <div>
+                evidence-only {overview.coverage.evidenceOnlyCharacters} ·
+                title解決失敗 {overview.coverage.titleResolutionFailedVideos} ·
+                AI対象 eligible {overview.coverage.eligiblePendingVideos}（残り{" "}
+                {overview.coverage.remainingEligibleVideos}）· postProcess復旧{" "}
+                {overview.coverage.recoverablePostProcessFailures}
+              </div>
+              <p className="text-gray-500">
+                remainingEligible はキュー残数です。master uncovered と混同しないでください。analyzed +
+                postProcess失敗は AI キューから外れ、下の復旧ボタンで Gemini なし復旧します。
+              </p>
+            </div>
+          ) : null}
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-3 text-xs text-gray-300 space-y-1">
+            <div className="font-medium text-sm text-emerald-100">
+              自動公開（通常運用）
+            </div>
+            <p>
+              通常: Production 解析成功後に自動公開（Canary / Limited Batch は
+              skipAutoPublish で除外）。
+            </p>
+            <ul className="list-disc pl-4 space-y-0.5 text-gray-400">
+              <li>
+                visual env (BUILD_GUIDE_VISUAL_AUTO_PUBLISH):{" "}
+                {overview?.visualAutoPublishEnabled ? "ON" : "OFF"}
+              </li>
+              <li>
+                automation master:{" "}
+                {overview?.automation?.flags?.enabled ? "ON" : "OFF"} ·
+                autoPublish flag:{" "}
+                {overview?.automation?.flags?.autoPublishEnabled ? "ON" : "OFF"}
+              </li>
+              <li>
+                Emergency:{" "}
+                {overview?.automation?.control?.emergencyStopped
+                  ? `ON (v${overview.automation.control.version}) — 自動公開ブロック中`
+                  : `OFF (v${overview?.automation?.control?.version ?? "?"})`}
+              </li>
+              <li>
+                実効:{" "}
+                {overview?.visualAutoPublishEnabled &&
+                overview?.automation?.flags?.enabled &&
+                overview?.automation?.flags?.autoPublishEnabled &&
+                !overview?.automation?.control?.emergencyStopped
+                  ? "自動公開可能"
+                  : "自動公開不可（上記のいずれかが未達）"}
+              </li>
+            </ul>
+          </div>
           {overview?.geminiCost ? (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
               コスト目安: {overview.geminiCost.note} 主モデル{" "}
@@ -554,6 +657,73 @@ export default function GuideAdminWorkbench() {
               />
             </label>
           </div>
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 px-3 py-3 space-y-2">
+            <div className="text-sm font-medium text-sky-100">
+              Limited Batch Canary（専用経路・Production batch とは別）
+            </div>
+            <ul className="text-xs text-gray-400 list-disc pl-4 space-y-0.5">
+              <li>
+                Emergency:{" "}
+                {overview?.automation?.control?.emergencyStopped
+                  ? `ON (v${overview.automation.control.version})`
+                  : `OFF (v${overview?.automation?.control?.version ?? "?"})`}
+              </li>
+              <li>
+                eligible candidates:{" "}
+                {overview?.coverage?.eligiblePendingVideos ?? "—"}
+              </li>
+              <li>
+                max 3 · concurrency 1（逐次）·{" "}
+                <span className="text-amber-200">auto publish 強制 OFF</span> ·
+                abort on 429
+              </li>
+              <li>force=false · allowLongform=true · stock analyzePending は使いません</li>
+            </ul>
+            <label className="block text-xs text-gray-300">
+              videoIds（最大3・カンマまたは改行区切り）
+              <textarea
+                className="mt-1 w-full rounded-lg border border-white/10 bg-[#151d2a] px-3 py-2 text-sm"
+                rows={2}
+                value={limitedBatchVideoIds}
+                onChange={(e) => setLimitedBatchVideoIds(e.target.value)}
+                placeholder="xxxxxxxxxxx,yyyyyyyyyyy,zzzzzzzzzzz"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={
+                !secret ||
+                busy ||
+                (overview?.coverage?.eligiblePendingVideos ?? 0) < 1 ||
+                overview?.automation?.control?.emergencyStopped === true ||
+                limitedBatchVideoIds
+                  .split(/[\s,]+/)
+                  .map((s) => s.trim())
+                  .filter(Boolean).length < 1
+              }
+              className="rounded-lg border border-sky-400/50 px-3 py-2 text-sm text-sky-100 disabled:opacity-40"
+              onClick={() => {
+                const videoIds = limitedBatchVideoIds
+                  .split(/[\s,]+/)
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+                  .slice(0, 3);
+                void postAction({
+                  action: "runLimitedBatchCanary",
+                  videoIds,
+                });
+              }}
+            >
+              Limited Batch Canary を実行
+            </button>
+            {(overview?.coverage?.eligiblePendingVideos ?? 0) < 1 ? (
+              <p className="text-xs text-amber-200/90">
+                eligible=0 のため実行ボタンは disabled（入力条件は緩和しません）。
+              </p>
+            ) : null}
+          </div>
+
+          <p className="text-xs text-gray-500 pt-1">Production batch（通常運用）</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -576,7 +746,46 @@ export default function GuideAdminWorkbench() {
                 })
               }
             >
-              未カバーを3件だけ
+              未カバーを3件だけ（Production）
+            </button>
+            <button
+              type="button"
+              disabled={!secret || busy}
+              className="rounded-lg border border-emerald-400/40 px-3 py-2 text-sm disabled:opacity-40"
+              onClick={() =>
+                void postAction({
+                  action: "recoverPostProcessFailures",
+                  limit: 3,
+                })
+              }
+            >
+              postProcess失敗を復旧（最大3・AIなし）
+            </button>
+            <button
+              type="button"
+              disabled={!secret || busy}
+              className="rounded-lg border border-white/20 px-3 py-2 text-sm disabled:opacity-40"
+              onClick={() =>
+                void postAction({
+                  action: "getCoverageSnapshot",
+                  eligibleLimit: 3,
+                })
+              }
+            >
+              Coverage再取得
+            </button>
+            <button
+              type="button"
+              disabled={!secret || !selectedVideoId || busy}
+              className="rounded-lg border border-emerald-400/40 px-3 py-2 text-sm disabled:opacity-40"
+              onClick={() =>
+                void postAction({
+                  action: "retryVisualPostProcess",
+                  videoId: selectedVideoId,
+                })
+              }
+            >
+              選択動画のpostProcessのみ再実行
             </button>
             <button
               type="button"
@@ -678,10 +887,14 @@ export default function GuideAdminWorkbench() {
             </button>
           </div>
           <p className="text-xs text-gray-500">
-            「全キャラ解析」は育成ガイド寄りの未解析動画から、まだ推奨のないキャラを1人1本ずつ解析します（目安50〜60本・数時間・Gemini費用あり）。日次上限は自動で300まで引き上げます。
+            「全キャラ解析」は Production batch です（Limited Batch Canary とは別経路）。育成ガイド寄りの未解析動画から、まだ推奨のないキャラを1人1本ずつ解析します（目安50〜60本・数時間・Gemini費用あり）。日次上限は自動で300まで引き上げます。
+            通常運用では解析成功後に自動公開します（visual env + automation/autoPublish flag + Emergency OFF）。
             {overview?.visualAutoPublishEnabled
-              ? " BUILD_GUIDE_VISUAL_AUTO_PUBLISH が ON のため、解析成功後は証拠承認→推奨承認→公開まで自動実行します（構造化バリデーション失敗時は承認済みドラフトのまま公開だけスキップ）。"
-              : " 成功すると証拠と推奨ドラフトが作成されます。「一括採用」で証拠＋推奨を承認し、「一括公開」で publish まで進めます。"}
+              ? " BUILD_GUIDE_VISUAL_AUTO_PUBLISH=ON。構造化バリデーション失敗時は承認済みドラフトのまま公開だけスキップ。"
+              : " いま visual env が OFF のため自動公開しません。「一括採用／一括公開」で手動対応できます。"}
+            {overview?.automation?.control?.emergencyStopped
+              ? " Global AI Emergency=ON のため自動公開はブロック中です。"
+              : ""}
           </p>
           <ul className="max-h-[28rem] space-y-2 overflow-auto text-sm">
             {genshinVideos.map((video) => (
@@ -840,6 +1053,9 @@ export default function GuideAdminWorkbench() {
           }))}
           busy={busy || !secret}
           postAction={postAction}
+          emergencyStopped={
+            overview?.automation?.control.emergencyStopped === true
+          }
         />
       ) : null}
 
@@ -934,15 +1150,38 @@ export default function GuideAdminWorkbench() {
                     type="button"
                     className="rounded border border-accent/40 px-2 py-1 text-xs"
                     disabled={busy}
-                    onClick={() =>
+                    onClick={() => {
+                      const emergencyOn =
+                        overview?.automation?.control.emergencyStopped === true;
+                      let emergencyPublishOverrideReason: string | undefined;
+                      if (emergencyOn) {
+                        const reason = window.prompt(
+                          "Global AI Emergency 中です。手動公開の break-glass 理由（8文字以上）を入力してください。",
+                        );
+                        if (!reason || reason.trim().length < 8) {
+                          window.alert(
+                            "公開を中止しました。緊急停止中の公開には理由が必要です。",
+                          );
+                          return;
+                        }
+                        emergencyPublishOverrideReason = reason.trim();
+                      }
                       void postAction({
                         action: "publishRecommendation",
                         recommendationId: rec.id,
                         expectedUpdatedAt: rec.updatedAt,
-                      })
-                    }
+                        ...(emergencyPublishOverrideReason
+                          ? {
+                              emergencyPublishOverrideReason,
+                              emergencyPublishOverrideActor: "admin-ui",
+                            }
+                          : {}),
+                      });
+                    }}
                   >
-                    公開
+                    {overview?.automation?.control.emergencyStopped
+                      ? "公開（break-glass）"
+                      : "公開"}
                   </button>
                   <button
                     type="button"
@@ -1021,9 +1260,11 @@ export default function GuideAdminWorkbench() {
         <section className="space-y-4 rounded-xl border border-white/10 bg-[#1e2a3a] p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-bold">YouTube 自動化パイプライン</h2>
+              <h2 className="font-bold">Global AI Emergency / YouTube 自動化</h2>
               <p className="text-sm text-gray-400">
-                字幕本文・AI prompt・provider response はこの画面へ返しません。
+                「緊急停止」は全AI（YouTube・Gemini・DeepSeek
+                daily-plan/team/guide）と自動公開を止めます。字幕本文・AI
+                prompt・provider response はこの画面へ返しません。
               </p>
             </div>
             <div className="flex gap-2">
@@ -1060,12 +1301,32 @@ export default function GuideAdminWorkbench() {
 
           <div className="grid gap-3 text-sm sm:grid-cols-2">
             <div className="rounded-lg bg-[#151d2a] p-3">
-              <div className="font-medium">安全スイッチ</div>
+              <div className="font-medium">Global AI Emergency（安全スイッチ）</div>
               <div className="mt-1 text-gray-400">
                 緊急停止:{" "}
                 {overview?.automation?.control.emergencyStopped ? "ON" : "OFF"} ·
                 version {overview?.automation?.control.version ?? 0}
               </div>
+              <p className="mt-2 text-xs text-amber-200/80">
+                ON中は新規AI呼び出しと自動公開を拒否します。手動公開は通常拒否され、理由付き
+                break-glass override
+                のみ許可（緊急停止自体は解除しません）。Daily-plan /
+                Team は別env kill switchもありますが、Emergencyが優先されます。
+              </p>
+              <p className="mt-2 text-xs text-emerald-200/80">
+                自動公開は通常運用です（visual=
+                {overview?.visualAutoPublishEnabled ? "ON" : "OFF"} ·
+                autoPublish=
+                {overview?.automation?.flags?.autoPublishEnabled ? "ON" : "OFF"}
+                ）。Canary 経路のみ skipAutoPublish で除外。実効:{" "}
+                {overview?.visualAutoPublishEnabled &&
+                overview?.automation?.flags?.enabled &&
+                overview?.automation?.flags?.autoPublishEnabled &&
+                !overview?.automation?.control?.emergencyStopped
+                  ? "自動公開可能"
+                  : "ブロック中"}
+                。
+              </p>
               <pre className="mt-2 whitespace-pre-wrap text-xs text-gray-500">
                 {JSON.stringify(overview?.automation?.flags ?? {}, null, 2)}
               </pre>

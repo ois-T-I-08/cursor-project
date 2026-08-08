@@ -2,6 +2,8 @@ import "server-only";
 
 import { z } from "zod";
 
+import { assertGlobalAiEmergencyAllowsExternalCall } from "@/lib/ai/global-ai-emergency";
+
 const DEEPSEEK_ENDPOINT = "https://api.deepseek.com/chat/completions";
 export const DEEPSEEK_ALLOWED_MODELS = new Set([
   "deepseek-v4-flash",
@@ -43,6 +45,11 @@ export interface DeepSeekJsonClientOptions {
   fetchImpl?: typeof fetch;
   sleep?: (milliseconds: number) => Promise<void>;
   random?: () => number;
+  /**
+   * Test-only: skip Global AI Emergency preflight when no control DB is available.
+   * Production callers must leave this unset/false.
+   */
+  skipEmergencyGate?: boolean;
 }
 
 export interface DeepSeekJsonCompletion {
@@ -61,6 +68,7 @@ export class DeepSeekJsonClient {
   private readonly fetchImpl: typeof fetch;
   private readonly sleep: (milliseconds: number) => Promise<void>;
   private readonly random: () => number;
+  private readonly skipEmergencyGate: boolean;
 
   constructor(options: DeepSeekJsonClientOptions = {}) {
     this.fetchImpl = options.fetchImpl ?? fetch;
@@ -68,6 +76,7 @@ export class DeepSeekJsonClient {
       options.sleep ??
       ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
     this.random = options.random ?? Math.random;
+    this.skipEmergencyGate = options.skipEmergencyGate === true;
   }
 
   async completeJson(input: {
@@ -96,6 +105,9 @@ export class DeepSeekJsonClient {
           attempts: attempt,
         };
       } catch (error) {
+        if (error instanceof DeepSeekError && error.code === "EMERGENCY_STOPPED") {
+          throw error;
+        }
         lastError =
           error instanceof DeepSeekError
             ? error
@@ -117,6 +129,18 @@ export class DeepSeekJsonClient {
     finishReason?: string | null;
     usage: Record<string, number>;
   }> {
+    if (!this.skipEmergencyGate) {
+      try {
+        await assertGlobalAiEmergencyAllowsExternalCall();
+      } catch (error) {
+        if (error instanceof Error && error.message === "EMERGENCY_STOPPED") {
+          throw new DeepSeekError("EMERGENCY_STOPPED", false);
+        }
+        // Fail closed: unknown control failures must not reach the provider.
+        throw new DeepSeekError("EMERGENCY_STOPPED", false);
+      }
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), settings.timeoutMs);
     const maxResponseBytes = settings.maxResponseBytes ?? 2_097_152;

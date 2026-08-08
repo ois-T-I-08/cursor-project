@@ -4,6 +4,30 @@
 >
 > **運用:** タスク完了時に最新エントリを先頭（`##` 見出し）に追記。古いエントリは削除しない。
 
+## 2026-08-08 — Release Security Audit 2B: Secrets / HoYoLAB / Android
+
+- **目的:** Play公開前に Cookie・SecureStorage・Manifest・backup・logs・API key・CI・admin を経路追跡で監査。
+- **決定事項:** CookieはSecureStorageのみ（SharedPreferences/Drift/backend/AIへ非送信）。FLAG_SECUREはCookie/token非表示のため追加しない。`allowBackup=false` + extraction excludeでbackup閉。MethodChannelはFlutter IPCのみ。
+- **P1修正:** ログイン成功後にWebView Cookie clear（二重保持解消）。Settings unlinkにdaily-plan通知cancel追加。visual-analysisのraw Error loggingを`logSafeFailure`へ。`.tmp-qa`をgitignore。
+- **検証:** Flutter 856 / analyze 0。Vitest 427 / 46 skip。報告: `.tmp-qa/audit-2b-secrets-hoyolab-android-report.md`。
+- **残課題:** daily-plan enrichのHMAC（DeepSeek本番ON前）、Prisma raw console.error sanitize、SQLCipher本番方針、Privacy Policy文言差分確認。
+
+## 2026-08-08 — Release Security Audit 2A: Global AI Kill Switch & Manual Publish
+
+- **目的:** 全AIの kill switch 実態を確定し、Daily-plan/Team bypass と manual publish 仕様を閉じる。
+- **決定事項:** `GuideAutomationControl.emergencyStopped` を **Global AI Emergency** として扱う（新DBカラムなし）。precedence = Global Emergency → feature/env → stage → AutoPublish。Manual publish は **案B break-glass**（通常拒否、理由≥8文字+actor、audit `emergencyPublishOverride`、auto-publishへ波及しない）。
+- **P0修正:** `DeepSeekJsonClient.request` / Gemini visual・transcript provider の **HTTP直前**に `assertGlobalAiEmergencyAllowsExternalCall`。`setRecommendationStatus(published)` に `evaluateManualPublishGate`。Admin UI 文言と break-glass prompt。
+- **検証:** Vitest 426 passed / 46 skipped。Flutter analyze 0・855 tests。報告: `.tmp-qa/audit-2a-global-ai-kill-switch-report.md`。
+- **残課題:** Team専用env未分離、in-flight HTTP abortなし、control row id名は互換のため `youtube-guide` のまま。
+
+## 2026-08-08 — Release Security Audit: Safety Switch v3
+
+- **目的:** Google Play前に YouTube ガイド「安全スイッチ」実装を監査し、緊急停止回避経路を塞ぐ。
+- **決定事項:** `flags.enabled` は字幕パイプライン Master Enable（Safety Switch機構そのものではない）。Safety Switch 状態は `GuideAutomationControl.emergencyStopped` + 単調増加 `version`。env flags は fail-closed。control 欠落/読取失敗も fail-closed（stopped）。
+- **P0修正:** 映像 Gemini 解析と visual auto-publish が緊急停止を見ていなかった。`safety-gates.ts` を追加し、`analyzeVideoVisuals` / visual auto-publish を emergency + `autoPublishEnabled` でゲート。
+- **検証:** Vitest safety-gates + visual-auto-publish + phase2/3 + gemini provider。Flutter 855 tests / analyze 後で確認。
+- **残課題:** Daily-plan DeepSeek / team-replacement DeepSeek は YouTube Safety Switch 外（各自の env kill switch）。手動 admin publish は緊急停止中も可能（運用リカバリ想定）。
+
 ## 2026-08-05 — 日次提案DTOと採用境界のクロスプラットフォーム固定
 
 - **目的:** ナビ再設計ブランチの最終監査で、表示後に進捗が変わった提案を新しいfingerprintで保存できる採用raceと、共通DTOの版情報不足を解消。

@@ -26,6 +26,8 @@ export class GeminiError extends Error {
   constructor(
     public readonly code: string,
     public readonly retryable: boolean,
+    /** Hint for Retry-After / computed backoff (ms). */
+    public readonly retryAfterMs?: number,
   ) {
     super(code);
     this.name = "GeminiError";
