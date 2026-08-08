@@ -9,7 +9,8 @@ export type SafeProviderErrorCode =
   | "NETWORK_ERROR"
   | "INVALID_RESPONSE"
   | "RESPONSE_TOO_LARGE"
-  | "TRANSCRIPT_UNAVAILABLE";
+  | "TRANSCRIPT_UNAVAILABLE"
+  | "EMERGENCY_STOPPED";
 
 export class SafeProviderError extends Error {
   constructor(

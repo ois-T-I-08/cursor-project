@@ -103,7 +103,7 @@ export type LimitedBatchAnalyzeOutcome = {
   status: string;
   evidenceCount?: number;
   recommendationIds?: string[];
-  autoPublish?: { publishedCount?: number } | null;
+  autoPublish?: { recommendationsPublished?: number } | null;
   providerCalls?: number;
   retries?: number;
   cacheHit?: boolean;
@@ -231,7 +231,8 @@ function defaultDeps(): LimitedBatchCanaryDeps {
       });
       const cacheHit =
         outcome.status === "cache_hit" || outcome.status === "already_analyzed";
-      const publishDelta = outcome.autoPublish?.publishedCount ?? 0;
+      const publishDelta =
+        outcome.autoPublish?.recommendationsPublished ?? 0;
       return {
         status: outcome.status,
         evidenceCount: outcome.evidenceCount,

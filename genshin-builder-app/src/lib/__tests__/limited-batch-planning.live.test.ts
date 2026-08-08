@@ -236,7 +236,6 @@ describe.skipIf(!enabled)("Limited Batch Canary Planning Gate", () => {
           emergencyStopped: emergency.emergencyStopped,
           version: emergency.version,
           reason: emergency.reason,
-          updatedAt: emergency.updatedAt,
         },
         queueSnapshot: {
           eligiblePendingVideos: coverage.eligiblePendingVideos,
