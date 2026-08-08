@@ -9,6 +9,7 @@ import {
   getCoverageMetrics,
   type CoverageMetrics,
 } from "./visual-coverage";
+import { runSequentialPendingGenshinBatch } from "./pending-genshin-batch";
 import {
   AnalysisRangeError,
   normalizeAnalysisRanges,
@@ -40,7 +41,6 @@ import {
   classifyVisualAnalysisFailure,
   logVisualAnalysisEvent,
   noteVisualProviderCooldown,
-  shouldAbortPendingBatch,
   VISUAL_PROVIDER_DEFAULT_COOLDOWN_MS,
 } from "./visual-analysis-safety";
 import { readGlobalAiEmergencyControl } from "@/lib/ai/global-ai-emergency";
@@ -1066,8 +1066,10 @@ function buildLongformRangesPayload(input: {
  * Production pending batch (stock).
  *
  * NOT for Limited Batch Canary — use `runLimitedBatchCanary` instead.
- * Stock path: allowLongform=false; does not set skipAutoPublish (Production =
- * auto-publish when evaluateVisualAutoPublishGate allows). May scan uncovered queue.
+ * Stock path: allowLongform=true (reuses production-ready long-form pipeline for
+ * >80k videos). Does not set skipAutoPublish (Production auto-publish when
+ * evaluateVisualAutoPublishGate allows). May scan uncovered queue.
+ * Sequential concurrency=1; aborts remainder on 429 / Emergency / cooldown.
  *
  * タイトルに「【原神】」を含み未解析の公開動画を解析する。
  * mode=uncoveredCharacters: 育成ガイド寄り・未カバーキャラ優先で1キャラ1本。
@@ -1164,79 +1166,23 @@ export async function analyzePendingGenshinVideos(input: {
     remainingEligibleVideos = Math.max(0, pending.length - limit);
   }
 
-  const results: Array<{
-    videoId: string;
-    title: string;
-    characterId?: string | null;
-    ok: boolean;
-    status?: string;
-    evidenceCount?: number;
-    recommendationIds?: string[];
-    error?: string;
-  }> = [];
-
-  for (const video of selected) {
-    try {
-      await assertEmergencyStopAllowsWork();
-    } catch {
-      results.push({
-        videoId: video.videoId,
-        title: video.title,
-        characterId: video.characterId,
-        ok: false,
-        error: "emergencyStopped",
-      });
-      break;
-    }
-    try {
+  const results = await runSequentialPendingGenshinBatch({
+    selected,
+    assertEmergencyAllowsWork: assertEmergencyStopAllowsWork,
+    analyze: async ({ videoId, targetCharacterIds, allowLongform }) => {
       const outcome = await analyzeVideoVisuals({
-        videoId: video.videoId,
-        targetCharacterIds: video.characterId ? [video.characterId] : undefined,
-        // Pending/batch must not auto-start expensive long-form.
-        allowLongform: false,
+        videoId,
+        targetCharacterIds,
+        // Production stock: enable verified long-form pipeline for >80k videos.
+        allowLongform,
       });
-      results.push({
-        videoId: video.videoId,
-        title: video.title,
-        characterId: video.characterId,
-        ok: true,
+      return {
         status: outcome.status,
         evidenceCount: outcome.evidenceCount,
         recommendationIds: outcome.recommendationIds,
-      });
-    } catch (error) {
-      const code =
-        error instanceof GuideVisualAnalysisError
-          ? error.code
-          : error instanceof Error
-            ? error.message
-            : "analysisFailed";
-      results.push({
-        videoId: video.videoId,
-        title: video.title,
-        characterId: video.characterId,
-        ok: false,
-        error: code,
-      });
-      if (
-        shouldAbortPendingBatch(code) ||
-        code === "channelDailyLimit" ||
-        code === "geminiDisabled" ||
-        code === "geminiVideoDisabled" ||
-        code === "geminiNotConfigured" ||
-        code === "analysisAlreadyRunning" ||
-        code === "emergencyStopped" ||
-        code === "EMERGENCY_STOPPED" ||
-        code === "videoTooLargeForFullDiscovery"
-      ) {
-        break;
-      }
-      // Non-retryable failures: continue to next video, never tight-retry same one.
-      if (!classifyVisualAnalysisFailure(code).retryable) {
-        continue;
-      }
-    }
-  }
+      };
+    },
+  });
 
   const succeeded = results.filter((r) => r.ok).length;
   const failed = results.filter((r) => !r.ok).length;
