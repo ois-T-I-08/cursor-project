@@ -1,22 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/generated/build-provenance.generated", () => ({
-  BUILD_PROVENANCE_EMBEDDED: {
-    commitSha: "embedded-sha-abc",
-    builtAt: "2026-08-09T00:00:00.000Z",
-  },
-}));
-
 describe("getBuildProvenance", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.resetModules();
   });
 
-  it("returns embedded SHA for local runtime without Vercel metadata", async () => {
+  it("returns build-time embed for local runtime without Vercel metadata", async () => {
     vi.stubEnv("VERCEL", "");
     vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "");
     vi.stubEnv("GIT_COMMIT_SHA", "");
+    vi.stubEnv("GENSIN_BUILD_COMMIT_SHA", "embedded-sha-abc");
+    vi.stubEnv("GENSIN_BUILD_BUILT_AT", "2026-08-09T00:00:00.000Z");
     vi.stubEnv("NODE_ENV", "development");
     const { getBuildProvenance } = await import("../build-provenance");
     const p = getBuildProvenance();
@@ -30,6 +25,7 @@ describe("getBuildProvenance", () => {
     vi.stubEnv("VERCEL", "1");
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "vercel-deploy-sha");
+    vi.stubEnv("GENSIN_BUILD_COMMIT_SHA", "embedded-sha-abc");
     const { getBuildProvenance } = await import("../build-provenance");
     const p = getBuildProvenance();
     expect(p.runtime).toBe("VERCEL");
@@ -39,6 +35,8 @@ describe("getBuildProvenance", () => {
 
   it("does not expose arbitrary env dumps", async () => {
     vi.stubEnv("VERCEL", "");
+    vi.stubEnv("GENSIN_BUILD_COMMIT_SHA", "embedded-sha-abc");
+    vi.stubEnv("GENSIN_BUILD_BUILT_AT", "2026-08-09T00:00:00.000Z");
     vi.stubEnv("BUILD_GUIDE_ADMIN_SECRET", "should-not-appear");
     const { getBuildProvenance } = await import("../build-provenance");
     const json = JSON.stringify(getBuildProvenance());

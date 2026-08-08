@@ -1,7 +1,5 @@
 import "server-only";
 
-import { BUILD_PROVENANCE_EMBEDDED } from "@/lib/generated/build-provenance.generated";
-
 export type BuildProvenance = {
   commitSha: string;
   builtAt: string;
@@ -15,24 +13,20 @@ export type BuildProvenance = {
 
 /**
  * Secret-free build provenance for admin diagnostics.
- * Prefers platform commit metadata (Vercel) over embedded SHA; builtAt is build-time.
+ * Prefers platform commit metadata (Vercel) over build-time embed from next.config;
+ * builtAt comes from build-time embed (GENSIN_BUILD_BUILT_AT).
  * Does not dump env values, cookies, or tokens.
  */
 export function getBuildProvenance(): BuildProvenance {
   const onVercel = process.env.VERCEL === "1";
-  const embeddedSha = String(BUILD_PROVENANCE_EMBEDDED.commitSha);
-  const embeddedBuiltAt = String(BUILD_PROVENANCE_EMBEDDED.builtAt);
 
   const commitSha =
     (process.env.VERCEL_GIT_COMMIT_SHA || "").trim() ||
     (process.env.GIT_COMMIT_SHA || "").trim() ||
-    embeddedSha ||
+    (process.env.GENSIN_BUILD_COMMIT_SHA || "").trim() ||
     "unknown";
 
-  const builtAt =
-    embeddedBuiltAt && embeddedBuiltAt !== "unknown"
-      ? embeddedBuiltAt
-      : (process.env.GENSIN_BUILD_BUILT_AT || "").trim() || "unknown";
+  const builtAt = (process.env.GENSIN_BUILD_BUILT_AT || "").trim() || "unknown";
 
   let environment: string;
   if (onVercel) {

@@ -6,18 +6,15 @@
     "node": "24.x"
   },
   "scripts": {
-    "predev": "node scripts/write-build-provenance.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/write-build-provenance.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "pretypecheck": "node scripts/write-build-provenance.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:migration:youtube-hardening": "node scripts/test-youtube-hardening-migration.mjs",
-    "postinstall": "prisma generate && node scripts/write-build-provenance.mjs"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
